@@ -45,7 +45,8 @@ Size: S ≈ 1–2 sessions, M ≈ 3–5, L ≈ 6–10, XL > 10 (one session = on
 | 12 | `release-and-docs` | Release packaging (client zip: Mods/UserLibs; server zip), install + hosting guide (incl. moving a server save to another host), changelog, version bump policy, log collection for bug reports. | S (+S for the M1 dev build) |
 | 13 | `sync-test-drive-and-diagnostics` | A car taken to the test track or test path (and dyno runs in the garage): the car is claimed by the driver while away, others see it as away and cannot edit it, and the results (examined/discovered parts, mileage, dyno measurements `EngineData.measured`) reach the server before the returning client applies the garage snapshot. Upstream's most reported car bug (#18, #83, #85, #95: repairs and job progress reset after a test drive). | M |
 | 14 | `desync-detection-and-resync` | (a) Unsynced-action guard: while connected, actions whose sync has not landed yet are blocked with an on-screen message instead of silently desyncing (lets friends play between milestones). (b) Per-section state checksums from the server, client compares and logs/auto-requests a resync. (c) Manual resync key/button that reruns the late-join snapshot. (d) One-key bug-report bundle (client + server logs, dump). | M |
-| 15 | `shared-outdoor-scenes` | Junkyard and barn shared by everyone in them (user wants to scavenge together): the first visitor's generated scene (cars, loose parts/items and their positions) is stored by the server and replayed to later visitors; picking up parts and buying cars there go through the server; remote players visible in the barn too. Planned after M4. | L |
+| 15 | `shared-outdoor-scenes` | Junkyard, barn and auction shared by everyone in them (user wants to scavenge together). Car selection runs on the server by adapting LvxBetterCarSpawns (LvxMagick; decompiled reference in `CMS21-TestInstalls\reference\LvxBetterCarSpawns-decompiled`): vehicle candidates per location, weighted selection, spawn history, all spawn points filled; clients load exactly the server's cars. Loose parts/items: the first visitor's generated layout is stored by the server and replayed to later visitors. Picking up parts and buying cars go through the server; remote players visible in the barn too. Needs the author's permission/credit before adapted code is published (user decides when to ask). Planned after M4. | L |
+| 16 | `server-game-logic` | The game gets no more updates, so game logic moves to the server: prices/fees (feeds row 10), job payout/XP and order generation (replaces row 3's elected generator), random damage/colour of spawned cars (replaces row 1's spawner roll). Built from native code read with Cpp2IL/Il2CppDumper + Ghidra and game data exported to `Database/*.json` (shared exporter with row 9). Rows 1 and 3 keep their client-computed approach as the interim until this row lands. | L |
 
 Backlog (not planned): import a single-player save as server start state; multiplayer tutorial (tutorial is
 disabled in multiplayer games); driving sync
@@ -84,6 +85,9 @@ definition of done (Working rules) holds. Rows listed as "part N" are split by t
    the rest) → `sync-workshop-car-tools` → rest of `sync-players-and-scenes` → `economy-audit` →
    `hosting-and-join-ui` part 2.
 6. M5, M6 as in the table.
+7. `server-game-logic` (16): price/fee and payout parts as soon as the decompile spike confirms them (they feed
+   rows 3 and 10); order generation and spawn damage before or right after M3, depending on the spike.
+   `shared-outdoor-scenes` (15) after M4.
 
 ### Early spikes (de-risk before the row starts)
 
@@ -94,6 +98,7 @@ definition of done (Working rules) holds. Rows listed as "part N" are split by t
 | In-game UI technology on IL2CPP (IMGUI vs. cloning the game's UI like 0.4.17's `NewUI`) | Row 8 and the guard messages need it | M1 |
 | Hook trace per change (logging-only Harmony patches, verify each hook fires once per action) | IL2CPP-inlined methods never hit their patch; coroutine methods only fire on start | First task of every change |
 | Test drive round trip: what the game saves before leaving and loads on return | Row 13 and row 6's "return = late join" | Start of M3 |
+| Native decompile: set up Cpp2IL/Il2CppDumper + Ghidra, read `EndJob` payout and map the size of `OrderGenerator` | Decides how big row 16 is and whether row 3's elected generator can be skipped | M0, background |
 
 ### Integration notes (cross-change decisions to keep consistent)
 
