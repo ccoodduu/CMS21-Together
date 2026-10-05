@@ -64,3 +64,13 @@ Third round (review questions, 2026-10-05):
   cannot be parked while connected; parking-level price from the client until row 10; parts changed just before
   parking may be lost (v1); no new orders while nobody is in the garage; engine swap disabled while connected if
   it cannot be replayed cleanly.
+
+Fourth round (2026-10-06):
+
+- CMS21 gets no more updates (CMS 2026 is coming), so porting game logic to the server has no maintenance cost.
+  Move to the server: prices/fees, job payout/XP, order generation, random damage/colour of spawned cars
+  (ROADMAP row 16 `server-game-logic`, decompile spike with Cpp2IL/Il2CppDumper + Ghidra in M0).
+- Junkyard: not ported from the game; instead adapt the user's LvxBetterCarSpawns mod (author LvxMagick)
+  on the server (row 15). Lvx also covers barn and auction, so the same approach is planned there.
+  Adapting Lvx code for a public fork needs the author's permission/credit — asking is outward communication,
+  so the user decides when.
