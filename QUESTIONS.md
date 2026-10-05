@@ -31,3 +31,24 @@ Answered by the user on 2026-10-05:
 5. **Story missions** synced like normal orders. Yes. Tutorial: make it multiplayer only if cheap; otherwise
    drop the tutorial from multiplayer games (decision: drop it now, multiplayer tutorial is backlog).
 6. **Wheel balancer minigame** is kept (not skipped). Yes.
+
+Second round (2026-10-05):
+
+- Tutorial: disabled in multiplayer (confirmed).
+- Remote bolt/part animation: user asked how hard → planned as polish after M2 (visual-only replay).
+- Two players on the same car: yes — already the design (only the same part at the same time is reserved).
+- Random values of a spawned car: the server decides which client's roll counts (it cannot roll itself: the
+  game's generation code is native). Same principle for order generation and job payout: the server owns and
+  validates the result; computing it server-side would mean re-implementing hidden native game logic (revisit later).
+- Joining player's local-save cars are not shown while connected: ok.
+- Steam achievements/stats for a finished job: ALL connected players get them.
+- Shared junkyard/barn ("scavenge together"): wanted → new ROADMAP row 15 `shared-outdoor-scenes` (after M4).
+  Until then: barn hides other players (ok for now).
+- Seated player hidden instead of posed: ok. Name from config until the UI exists: ok.
+- Engine stand 2 synced like stand 1, disabled while connected if unstable: ok (explained to user).
+- Parking scene blocked while connected: ok for now. No auto-reconnect; unloadable save refuses to start: ok.
+- Playtest with a friend: later, date unknown.
+- DLC: nobody owns any DLC → the handshake just compares DLC sets.
+- Mods: for now no gameplay mods, only visual mods → row 9 checks only mods that change gameplay
+  (server-configured required/ignored lists + Harmony patch-target heuristic), visual mods are ignored.
+- Difficulty: chosen on the server; sandbox skipped for now.

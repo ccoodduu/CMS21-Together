@@ -44,9 +44,10 @@ Size: S ≈ 1–2 sessions, M ≈ 3–5, L ≈ 6–10, XL > 10 (one session = on
 | 12 | `release-and-docs` | Release packaging (client zip: Mods/UserLibs; server zip), install + hosting guide (incl. moving a server save to another host), changelog, version bump policy, log collection for bug reports. | S (+S for the M1 dev build) |
 | 13 | `sync-test-drive-and-diagnostics` | A car taken to the test track or test path (and dyno runs in the garage): the car is claimed by the driver while away, others see it as away and cannot edit it, and the results (examined/discovered parts, mileage, dyno measurements `EngineData.measured`) reach the server before the returning client applies the garage snapshot. Upstream's most reported car bug (#18, #83, #85, #95: repairs and job progress reset after a test drive). | M |
 | 14 | `desync-detection-and-resync` | (a) Unsynced-action guard: while connected, actions whose sync has not landed yet are blocked with an on-screen message instead of silently desyncing (lets friends play between milestones). (b) Per-section state checksums from the server, client compares and logs/auto-requests a resync. (c) Manual resync key/button that reruns the late-join snapshot. (d) One-key bug-report bundle (client + server logs, dump). | M |
+| 15 | `shared-outdoor-scenes` | Junkyard and barn shared by everyone in them (user wants to scavenge together): the first visitor's generated scene (cars, loose parts/items and their positions) is stored by the server and replayed to later visitors; picking up parts and buying cars there go through the server; remote players visible in the barn too. Planned after M4. | L |
 
 Backlog (not planned): import a single-player save as server start state; multiplayer tutorial (tutorial is
-disabled in multiplayer games); shared non-garage worlds (same junkyard/barn for everyone); driving sync
+disabled in multiplayer games); driving sync
 (test track / test path drives visible to others); garage decorations/customization; seasonal event garages
 (Christmas/Easter/Halloween — multiplayer always loads the normal `garage`); sandbox mode; text chat (Steam/
 Discord voice covers it); per-player inventory option (upstream #100); remote per-car engine sound beyond
