@@ -32,14 +32,15 @@ New-Item -ItemType Directory -Force -Path $runDir | Out-Null
 $backupDir = Join-Path $runDir "_backup"
 New-Item -ItemType Directory -Force -Path $backupDir | Out-Null
 Copy-Item -LiteralPath $saveDir -Destination (Join-Path $backupDir "LocalLow") -Recurse
-& reg export $registryKey (Join-Path $backupDir "settings.reg") /y | Out-Null
+cmd /c "reg export `"$registryKey`" `"$(Join-Path $backupDir 'settings.reg')`" /y >nul 2>&1"
 if ($LASTEXITCODE -ne 0) { throw "Registry backup failed" }
 
 function Restore-GameState {
     Get-ChildItem -LiteralPath $saveDir -Recurse -File -Include *.cms21b | Remove-Item -Force
     Copy-Item -Path (Join-Path $backupDir "LocalLow\*") -Destination $saveDir -Recurse -Force
-    & reg delete $registryKey /f | Out-Null
-    & reg import (Join-Path $backupDir "settings.reg") 2>$null | Out-Null
+    $regFile = Join-Path $backupDir "settings.reg"
+    cmd /c "reg delete `"$registryKey`" /f >nul 2>&1 & reg import `"$regFile`" >nul 2>&1"
+    if ($LASTEXITCODE -ne 0) { Write-Host "WARNING: registry restore failed, import $regFile manually" -ForegroundColor Red }
     Write-Host "Restored saves and registry settings"
 }
 
