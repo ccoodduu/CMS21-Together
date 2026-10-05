@@ -62,5 +62,5 @@ caused the reported duplicates and desyncs (upstream #87, the duplicate ADDs Fix
   `tools-latejoin`.
 - Depends on `session-persistence-and-rejoin` task groups 1–2 (contract, state lock, sections, `SyncTracker`, harness server commands), `sync-car-parts` (part keys,
   `PartTransaction`, `CarPartsSync.MarkDirty`/`UploadBaseline`, engine crane group transactions, engine swap field),
-  `sync-car-details` (`CarDetailsSync.MarkDirty`/`FlushNow`, dyno fields in `Info`), `sync-players-and-scenes`
+  `sync-car-details` (`CarDetailsSync.MarkDirty`/`FlushNow`), roadmap row 13 `sync-test-drive-and-diagnostics` (stores dyno results), `sync-players-and-scenes`
   (`ClientScene.IsGarageReady`), and `sync-car-placement-and-lifts` only for tools attached to a car place whose car moves.

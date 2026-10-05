@@ -19,14 +19,16 @@ See proposal.md for the motivation. State today:
 - Only stubs of the game are available, so the order in which vanilla code changes the inventory and calls
   `SetGroupOn…` is unknown. The design must not depend on it.
 - Contracts from the other changes that this one plugs into (names as in their drafts):
-  - `session-persistence-and-rejoin` D2/D8: `ISaveSection`, `ISnapshotProvider`, `[SessionSection]`,
-    `SyncOrder` slot **300 `workshop-tools`**, `SyncBegin`/`SyncEnd`/`SyncAck`, client `SyncTracker.Applied(key)`,
-    and `GameDataManager.StateLock` held around every server packet dispatch.
+  - `session-persistence-and-rejoin` D2–D4 (task groups 1–2, land before this change): `ISaveSection`,
+    `ISnapshotProvider` (`int SendSnapshot(clientId)` returns the item count), `[SessionSection]`, `SyncOrder` slot
+    **300 `workshop-tools`**, `SyncBegin`/`SyncEnd{Items}`/`SyncAck`, client `SyncTracker.Applied(key)` (rows count
+    items instead of adding own "synced" flags), and `GameDataManager.StateLock` held around every server dispatch,
+    `Client.Disconnect` and save build.
   - `sync-car-parts`: part keys (`PartKeys`, `CarSubPartIdentity.BuildKey`), the nested record
     `CarSubPartUpdatePacket`, `PartTransaction` + `InventoryDelta`, `CarPartsChange`, and the client API
     `CarPartsSync.MarkDirty(loaderId, part)` / `UploadBaseline(loaderId)`.
   - `sync-car-details` D6: `CarDetailsSync.MarkDirty(CarLoader, CarDetailSection, IEnumerable<int> = null)` and
-    `CarDetailsSync.FlushNow(CarLoader)`; sections `Fluids`, `Paint`, `BodyCosmetics`, `Info`.
+    `CarDetailsSync.FlushNow(CarLoader)`; sections `Paint`, `BodyCosmetics` (fluids are polled by row 4).
   - `sync-players-and-scenes` D6: `ClientScene.IsGarageReady`; returning to the garage is a full resync.
 
 What went wrong in 0.4.x and FixForTogether (read, not copied):
@@ -58,7 +60,9 @@ What went wrong in 0.4.x and FixForTogether (read, not copied):
   (dependency, D7). Engine swap state is stored with the car by `sync-car-parts` (D7).
 - Headlamp alignment, wheel alignment and window tint results (row 4). Only the positions of the headlamp aligner and
   the tinting kit are synced here.
-- Mirroring another player's minigame or camera (balance window, repair table bar, paint shop camera, dyno run).
+- Mirroring another player's minigame or camera (balance window, repair table bar, paint shop camera).
+- Storing and replaying dyno results (`EngineData.measured`, `MeasuredDragIndex`): roadmap row 13
+  `sync-test-drive-and-diagnostics`. This change only detects the end of a dyno run (D8, group 21).
 - Costs of tool use (paint, wash, welder, repair) beyond "the remote side never pays again": `economy-audit`.
 - Save versioning and rejoin identity (`session-persistence-and-rejoin`).
 
@@ -69,7 +73,7 @@ What went wrong in 0.4.x and FixForTogether (read, not copied):
 | Category | Machines | Server stores | Server relays only |
 |---|---|---|---|
 | Slot machine | tire changer, wheel balancer, spring clamp, engine stand 1/2, brake lathe, battery charger | `ToolSlotState` per machine (held item or group, flags, angle, part overlay for the stands) | — |
-| Car-effect tool | welder, car wash, interior detailing (portable and stationary), oil bin, engine crane, paint shop (car), dyno | nothing new: results land in car state owned by rows 1/4 | `ToolAction` (visual effect) |
+| Car-effect tool | welder, car wash, interior detailing (portable and stationary), oil bin, engine crane, paint shop (car), dyno | nothing new: results land in car state owned by rows 1/4/13 | `ToolAction` (visual effect) |
 | Item processing | repair table, paint shop (part) | the updated item in `InventoryState` | — |
 | Tool position | welder, interior detailing kit, oil bin, engine crane, headlamp aligner, tinting kit | `Positions[IOSpecialType]` (CarPlace or default) | — |
 
@@ -91,7 +95,7 @@ action (put, take, separate/connect, balance finished). The server accepts it on
 
 On accept it stores the state and relays it to everyone else. On reject it sends
 `ToolSlotRejectedPacket { ToolSlotState Current; string Reason }` to the sender only. Handlers run under
-`GameDataManager.StateLock` (held by the dispatcher, row 7 task 2.5); they take no lock of their own.
+`GameDataManager.StateLock` (held by the dispatcher, row 7 D3); they take no lock of their own.
 
 - A full snapshot makes every apply idempotent and gives late join the same code path ("apply snapshot").
 - CAS on the UID, not a revision number: content changes (balanced, separated) keep the UID and never conflict;
@@ -216,12 +220,12 @@ then calls the result sender.
 |---|---|---|
 | Welder | `WelderLogic.DoWorkAnim(CarLoader)` prefix → action + watcher | `CarPartsSync.MarkDirty(loaderId, part)` for the welded body `CarPart`s (row 1) |
 | Car wash | `CarWashLogic.DoWorkAnim(CarLoader)` prefix → action + watcher | `CarDetailsSync.MarkDirty(loader, CarDetailSection.BodyCosmetics)` + `FlushNow` (row 4 D6) |
-| Interior detailing | `InteriorDetailingToolkitLogic.DoWorkAnim(CarLoader)`, `ToolsMoveManager.UseInteriorDetailingToolkitStationary()` | `CarPartsSync.MarkDirty(loaderId, part)` for the interior `PartScript`s (row 4 D6 says interior is row 1's); dust ownership is open, see open question 4 |
-| Oil bin | `CarLoader.UseOilbin()` prefix → action | `CarDetailsSync.MarkDirty(loader, CarDetailSection.Fluids)` after the drain (row 4 also polls fluids at 1 Hz) |
+| Interior detailing | `InteriorDetailingToolkitLogic.DoWorkAnim(CarLoader)`, `ToolsMoveManager.UseInteriorDetailingToolkitStationary()` | split per row 4 D6, fields decided by row 4's probe (its task 1.2): `CarPart` dust → `CarDetailsSync.MarkDirty(loader, BodyCosmetics)`; part condition and `PartScript` dust → `CarPartsSync.MarkDirty(loaderId, part)` (row 1's attribute-only `CarPartsChange`) |
+| Oil bin | `CarLoader.UseOilbin()` prefix → action | nothing to send: row 4's 1 Hz Fluids poll sees the drain; optional `CarDetailsSync.FlushNow(loader)` after it |
 | Paint shop (car) | `PaintshopManager.MakeCarPaintEffects()` prefix → action + watcher | `CarDetailsSync.MarkDirty(PaintshopManager.carLoader, Paint \| BodyCosmetics)` + `FlushNow` (row 4 D6) |
 | Engine crane | `CarLoader.UseEngineCrane()` (out), `NotificationCenter.InsertEngineToCar(GroupItem)` (in) → action | engine out/in is a group unmount/mount: a `CarPartsChange` transaction of row 1 (needs row 1 to hook `NotificationCenter.ActionUnMountGroup(InteractiveObject)` and `ActionInsertEngineToCar(GroupItem)`, task 1.2) |
+| Dyno | `CarLoader.MeasurePower()` postfix, fallback `DynoManager.CloseDyno()` | row 13's dyno result sender (group 21 waits for row 13) |
 | Engine swap | `InsertEngineToCar(group)` where `group.ID` differs from `GetEngineName()` and `CanSwapEngineTo` | stored as `EngineSwap` in row 1's per-loader car entry; a swap is a re-baseline (D9) |
-| Dyno | `CarLoader.MeasurePower()` postfix, fallback `DynoManager.CloseDyno()` | `CarDetailsSync.MarkDirty(loader, CarDetailSection.Info)` with dyno fields added to row 4's `Info` (task 1.2) |
 
 ### D9. Engine swap
 
@@ -256,25 +260,26 @@ The client keeps `ClientToolsState`, a mirror of the server's `ToolsState`, used
 re-applying.
 
 - In the garage after sync: every tool packet updates the mirror and is applied.
-- During initial sync (between the `ToolsState` snapshot and sync completion): packets update the mirror and are
-  applied after the snapshot apply. They are not dropped, because the server sends live changes after `SyncEnd`.
+- During initial sync (until `SyncTracker` sends `SyncAck` and sets `IsInitialSyncFinished`): packets update the
+  mirror and are applied after the snapshot apply. They are not dropped, because the server sends live changes after
+  `SyncEnd`.
 - Away from the garage (`ClientData.LocalScene != Garage`): tool packets are dropped; returning to the garage is a
   full resync (row 6 D6), which replaces the mirror.
 
 Late-join path: `AskForSync` → `SyncBegin` → … `cars` (100) … `car-placement` (200) → **`workshop-tools` (300):
-one `ToolsStatePacket { Slots, Positions }`** → … `SyncEnd`. The client handles it after the inventory is synced:
-it first clears every machine its own save loaded (inventory-neutral, D3.3), then applies all slots
-(`instant = true`) and stand overlays, then positions, then reports `SyncTracker.Applied("workshop-tools")` (the
-provider's `CountItems` is 1). Car-effect results arrive with car state (rows 1/4).
+one `ToolsStatePacket { Slots, Positions }`** → … `SyncEnd`. It arrives after the `inventory` section (20) on the
+same stream, so no extra wait flag is needed. The client first clears every machine its own save loaded (inventory-neutral, D3.3), then applies all slots
+(`instant = true`) and stand overlays, then positions, then reports `SyncTracker.Applied("workshop-tools")` once (the
+provider's `SendSnapshot` returns 1). A return to the garage and a repeated `AskForSync` use the same path. Car-effect results arrive with car state (rows 1/4).
 
 ### D13. Server-side state and persistence
 
 `ModGameState.ToolsState { Dictionary<ModToolId, ToolSlotState> Slots; Dictionary<int, int> Positions }` is the
 stored object. `WorkshopToolsSection` (`[SessionSection]`, `ISaveSection` + `ISnapshotProvider`, key
-`workshop-tools`, `Version = 1`, `SyncOrder = 300`) serializes it, resets it to empty, and sends the snapshot. Until
-row 7's provider pipeline (its task 6.1) and section-based save (its task 4.1) are merged, `OnAskForSync` calls the
-provider before `SyncEnd` and the existing `SaveSession` saves `ModGameState.ToolsState`; row 7 then only removes the
-interim call. The server does not simulate machines (no charging or lathe timers); it stores what the acting client
+`workshop-tools`, `Version = 1`, `SyncOrder = 300`) is a thin adapter (row 7 D1): `Save()` serializes it,
+`Load()` replaces it, `Reset()` empties it, `Migrate` has no steps yet, and `SendSnapshot` sends one `ToolsStatePacket`
+and returns 1. It is discovered by `SessionRegistry`; nothing is added to `OnAskForSync` or `SaveSession` by hand.
+Adding a field needs no version bump; renaming or reshaping `ToolSlotState` does, with a `JToken` migration. The server does not simulate machines (no charging or lathe timers); it stores what the acting client
 reports.
 
 ### D14. Failure cases
@@ -318,11 +323,11 @@ Decisions taken without the user (recorded here instead of asking):
 3. **Engine crane out/in, the stand part overlay and engine swap storage** depend on `sync-car-parts` (D7, D8, D9).
    If row 1 is merged without them, task 1.2 parks those tasks and records the gap in ROADMAP/QUESTIONS instead of
    building a parallel mechanism here.
-4. **Interior dust** (`PartScript.Dust`) has no owner: `sync-car-details` D6 assigns interior detailing to
-   `sync-car-parts`, whose sub-part record has no dust field. Assumed: row 1 adds `Dust` to `CarSubPartUpdatePacket`.
+4. **Interior detailing** results are split between row 4 (`CarPart` dust) and row 1 (part condition, `PartScript`
+   dust, sent as an attribute-only `CarPartsChange`); row 4's probe (its task 1.2) decides the exact fields.
 5. **Dyno results:** this change owns the trigger; the values are stored by ROADMAP row 13
-   `sync-test-drive-and-diagnostics` (decision 2026-10-05, overrides the row-4 `Info` idea elsewhere in this
-   design). No dyno run is mirrored.
+   `sync-test-drive-and-diagnostics` (decision 2026-10-05).
+   No dyno run is mirrored.
 6. **Minigames are not skipped or mirrored.** The balance result is taken from `FinishBalance()`.
 7. No FixForTogether code is adapted. Its findings (final-state-only for car-effect tools, ADD duplication, new UID on
    stand take-off, engine stand 2, `MeasurePower` as the dyno commit point) inform this design. If code is adapted

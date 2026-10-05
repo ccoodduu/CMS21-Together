@@ -13,9 +13,9 @@ steps and can be merged on its own once its scenario step passes. Groups 16–21
       `CarDetailsSync.MarkDirty`/`FlushNow`, `CarDetailSection`). Done when design.md names only types that exist.
 - [ ] 1.2 Check that `sync-car-parts` provides what D7–D9 need: its hooks ignore `PartScript`s outside a car registry;
       `PartTransaction` can be opened for a non-car root; engine out/in via `NotificationCenter.ActionUnMountGroup` /
-      `ActionInsertEngineToCar` is a `CarPartsChange`; `EngineSwap` in the per-loader entry with re-baseline; and that
-      `sync-car-details` has dyno fields in `Info`. Done when each item is confirmed or recorded as a gap in
-      `QUESTIONS.md`, with the dependent tasks (11.3, 16.x, 21.x) marked parked.
+      `ActionInsertEngineToCar` is a `CarPartsChange`; `EngineSwap` in the per-loader entry with re-baseline; and whether row 13 has a dyno
+      result sender yet. Done when each item is confirmed or recorded as a gap in
+      `QUESTIONS.md`, with the dependent tasks (11.3, 16.x, 21.x) marked parked. Copy the interior-detailing field split found by `sync-car-details`' probe (its task 1.2) into D8.
 - [ ] 1.3 Add a harness `tool-trace on|off` command that logs, in order and with UIDs, every `Inventory.Add/Delete/AddGroup/DeleteGroup`
       (including `Add(List<BaseItem>)`) and every tool method hooked by this change. **Needs the user:** one ~10-minute
       session using each machine through the normal UI in one instance; save the trace under `tools/runs/`. Done when
@@ -37,8 +37,7 @@ steps and can be merged on its own once its scenario step passes. Groups 16–21
       `ToolPartChangePacket`, `ToolPositionPacket`, `ToolActionPacket` and `ToolsStatePacket`, appended at the end of
       `PacketTypes`. Done when `PacketRouter` registers all seven (log line on server start).
 - [ ] 2.3 Add `ItemActionType.Update`. Done when Core builds.
-- [ ] 2.4 Add `ToolsState { Slots, Positions }` to `ModGameState`. Done when a server save → load round trip keeps a
-      hand-filled `ToolsState` (check `Saves/server_save.json`).
+- [ ] 2.4 Add `ToolsState { Slots, Positions }` to `ModGameState`. Done when Core builds.
 
 ## 3. Server
 
@@ -50,9 +49,10 @@ steps and can be merged on its own once its scenario step passes. Groups 16–21
 - [ ] 3.2 Make inventory ADD idempotent by UID in `InventoryHandlers` (item and group) and handle `Update` (replace by
       UID and relay; unknown UID → log and ignore). Done when a duplicated ADD is logged as ignored and the count is unchanged.
 - [ ] 3.3 Add `Data/Persistence/WorkshopToolsSection.cs`: `[SessionSection]`, `ISaveSection` (key `workshop-tools`,
-      `Version = 1`, wraps `ModGameState.ToolsState`) and `ISnapshotProvider` (`SyncOrder = 300`, `CountItems = 1`,
-      sends `ToolsStatePacket`). Until row 7's provider pipeline is merged, call it from `AuthHandler.OnAskForSync`
-      before `SyncEnd`. Done when the server log shows the snapshot in `SyncOrder` position.
+      `Version = 1`, thin adapter over `ModGameState.ToolsState`, `Reset()` = empty) and `ISnapshotProvider`
+      (`SyncOrder = 300`, `SendSnapshot` sends one `ToolsStatePacket` and returns 1). Done when the server logs the key
+      at start, the `connect` log lists `workshop-tools` between `car-placement` and `jobs`, and a hand-filled
+      `ToolsState` survives `Send-ServerCommand save` + restart (section `workshop-tools` v1 in `server_save.json`).
 
 ## 4. Client framework
 
@@ -68,10 +68,10 @@ steps and can be merged on its own once its scenario step passes. Groups 16–21
 - [ ] 4.3 Add `Network/Handlers/ToolHandlers.cs`: update the mirror and apply in the garage; during initial sync queue
       the apply after the snapshot; drop while away from the garage (D12); `ToolSlotRejected` → put or take
       compensation per D3.2. Done when the client builds; behaviour is covered by the machine groups.
-- [ ] 4.4 Late join: handle `ToolsStatePacket` after the inventory is synced: clear every machine the local save loaded
-      (inventory-neutral), apply all slots (`instant = true`) and overlays, then positions, then
-      `SyncTracker.Applied("workshop-tools")` (or today's `IsInitialSyncFinished` gate until row 7 lands). Done when
-      covered by `tools-latejoin`.
+- [ ] 4.4 Late join: handle `ToolsStatePacket` (it follows the `inventory` section on the stream; no own synced flag):
+      clear every machine the local save loaded (inventory-neutral), apply all slots (`instant = true`) and overlays,
+      then positions, then call `SyncTracker.Applied("workshop-tools")` once. Done when `syncAcked` is true in
+      `tools-latejoin` and a forced apply failure shows `workshop-tools` in the sync timeout log.
 
 ## 5. Harness foundation
 
@@ -121,8 +121,8 @@ steps and can be merged on its own once its scenario step passes. Groups 16–21
 
 - [ ] 9.1 Hook `BrakeLatheLogic.SetItem(Item,bool)` (postfix) and `Clear()` (prefix). Remote: `SetItem(item, true)` /
       neutral `Clear()`. Done when the client builds.
-- [ ] 9.2 `tools-slots` steps with a brake disc: A puts, A disconnects, B still sees it and takes it → one copy in
-      the inventory; A reconnects → equal. Done when the steps pass.
+- [ ] 9.2 `tools-slots` steps with a brake disc: A puts, A `to-menu` (disconnect), B still sees it and takes it → one
+      copy in the inventory; A reconnects → equal. Done when the steps pass.
 
 ## 10. Battery charger
 
@@ -197,7 +197,8 @@ steps and can be merged on its own once its scenario step passes. Groups 16–21
 
 - [ ] 18.1 Hook `CarWashLogic.DoWorkAnim(CarLoader)`, `InteriorDetailingToolkitLogic.DoWorkAnim(CarLoader)` and
       `ToolsMoveManager.UseInteriorDetailingToolkitStationary()` (prefix → `ToolAction` + watcher). Results per D8
-      (`CarDetailsSync.MarkDirty(…, BodyCosmetics)` / `CarPartsSync.MarkDirty` for interior parts). Remote: particles
+      (car wash: `CarDetailsSync.MarkDirty(…, BodyCosmetics)` + `FlushNow`; interior: `CarPart` dust via
+      `CarDetailsSync.MarkDirty(…, BodyCosmetics)`, part condition and `PartScript` dust via `CarPartsSync.MarkDirty`). Remote: particles
       and SFX only. Done when the client builds.
 - [ ] 18.2 Add `tool-use <CarWash|InteriorDetailing|InteriorDetailingStationary> <loader>`. Steps: equal `cars`
       dirt/interior fields after the effect; B's `toolActionsSeen` is 1 each; B stays `playable`; `stats` money equal.
@@ -205,7 +206,8 @@ steps and can be merged on its own once its scenario step passes. Groups 16–21
 
 ## 19. Oil bin
 
-- [ ] 19.1 Hook `CarLoader.UseOilbin()` (prefix → `ToolAction(DrainOil)` and a watcher → `CarDetailsSync.MarkDirty(…, Fluids)`).
+- [ ] 19.1 Hook `CarLoader.UseOilbin()` (prefix → `ToolAction(DrainOil)`; a watcher calls `CarDetailsSync.FlushNow` after the drain;
+      the value travels through row 4's Fluids poll).
       Remote: effect only. Done when the client builds.
 - [ ] 19.2 `tools-car-effects` step `tool-use OilBin <loader>` → equal fluid fields in `cars`. Done when it passes.
 
@@ -228,7 +230,7 @@ steps and can be merged on its own once its scenario step passes. Groups 16–21
 - [ ] 22.1 Run `tools/test-env/Run-Session.ps1 -Scenario tools-slots`, `tools-race`, `tools-car-effects` and
       `tools-latejoin` with instances A and B against the local server. Each must report PASSED with equal `stats`,
       `inventory`, `cars`, `tools` and `toolPositions` sections. Attach the run folders to the PR description.
-- [ ] 22.2 Add a restart step at the end of `tools-latejoin` (row 7's `Stop-TestServer -Graceful` / `Start-TestServer`,
-      inside one run because `Run-Session.ps1` restores `Saves` between runs): both reconnect and the `tools` and
-      `toolPositions` dumps equal those before the restart. Add a return step: B `travel`s away (row 6 harness), A puts a
+- [ ] 22.2 Add a restart step at the end of `tools-latejoin` (inside one run, because `Run-Session.ps1` restores `Saves`
+      afterwards): `Send-ServerCommand save`, `Stop-TestServer`, both `to-menu`, `Start-TestServer`, both reconnect;
+      the `tools` and `toolPositions` dumps equal those before the restart. Add a return step: B `travel`s away (row 6 harness), A puts a
       wheel, B returns → equal. Done when the scenario passes.

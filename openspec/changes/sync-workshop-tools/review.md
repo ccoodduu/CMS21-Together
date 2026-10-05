@@ -38,8 +38,9 @@ drafts. All hooks named in proposal/design were checked with `members.sh` (all e
 6. **Wrong owners for car-effect results.** Interior detailing was sent to row 4 (row 4 D6 says it is row 1's);
    welder used a "body-part sender" that row 1 removed. *Changed:* D8 table now names `CarPartsSync.MarkDirty(loaderId, part)`,
    `CarDetailsSync.MarkDirty(CarLoader, CarDetailSection, …)` + `FlushNow` with the sections row 4 D6 expects.
-7. **Dyno was a non-goal** although row 4 A5 assigns it here. *Changed:* trigger hook `CarLoader.MeasurePower()`
-   (fallback `DynoManager.CloseDyno()`), values stored by row 4 in `Info`; requirement scenario and group 21 added.
+7. **Dyno was a non-goal** although row 4 A5 assigned it here. *Changed:* trigger hook `CarLoader.MeasurePower()`
+   (fallback `DynoManager.CloseDyno()`); the values are stored by ROADMAP row 13 `sync-test-drive-and-diagnostics`
+   (decision 2026-10-05), so group 21 waits for row 13. Requirement scenario added.
 8. **Scene handling contradicted row 6.** The draft kept updating the mirror away from the garage; row 6 D6 drops
    garage packets while away and resyncs on return. *Changed:* D12 drops while away, queues (does not drop) during
    initial sync, return = full snapshot; spec scenario "Return from another scene" and task 22.2 step added.
@@ -65,6 +66,19 @@ drafts. All hooks named in proposal/design were checked with `members.sh` (all e
     detect inlining, so this spike stays manual.
 18. Server occupant check simplified to kind (Item/Group) + optional ID prefix table from `item_database.json`.
 
+## Updates after the other reviews (2026-10-05)
+
+- **Row 7 contract** (coordinator): `WorkshopToolsSection` is its own versioned `ISaveSection` and the
+  `ISnapshotProvider` at slot 300 (`SendSnapshot` returns 1); no hand-made `OnAskForSync`/`SaveSession` calls; the
+  client counts with `SyncTracker.Applied("workshop-tools")` instead of own synced flags; handlers rely on
+  `GameDataManager.StateLock`. Tasks 2.4, 3.3, 4.4 and 22.2 changed.
+- **Row 4 final names** (coordinator): interior detailing is split: `CarPart` dust → `CarDetailsSync.MarkDirty(…,
+  BodyCosmetics)`, part condition and `PartScript` dust → `CarPartsSync.MarkDirty` (row 1 now carries dust as an
+  attribute change, which closes the dust-ownership gap). Row 4's probe 1.2 decides the fields; task 1.2 copies them.
+  Oil bin needs no `MarkDirty` (row 4 polls fluids), only an optional `FlushNow`. The welder row never used
+  `CarBodyPartUpdate` after this review; it calls `CarPartsSync.MarkDirty`, which ends in row 1's `CarPartsChange`.
+  Engine swap: stored by `sync-car-parts`, triggered by the engine crane (D9), as row 4 now says.
+
 ## Scope: recommend splitting into two changes
 
 The change is large (14 tool ids + positions + item processing, 22 task groups) and its two halves have different
@@ -83,11 +97,10 @@ dependencies. Proposed split (not done here):
   `ActionInsertEngineToCar(GroupItem)` (and probably `MountGroup(long)`) to the transaction hooks; ignore `PartScript`s
   outside a car registry; allow a `PartTransaction` for a non-car root (engine stand); add `EngineSwap` to the
   per-loader entry with re-baseline on swap; non-goals line "engine stand/crane … row 5" should say crane out/in is row 1.
-- `sync-car-parts` vs `sync-car-details`: each says the other owns `PartScript.Dust` (row 1 non-goals "dirt … row 4";
-  row 4 D6/non-goals "dust on PartScripts … sync-car-parts"). Interior detailing needs an owner; recommend row 1 adds
-  `Dust` to `CarSubPartUpdatePacket`.
-- `sync-car-details` A5: settle as "engine swap: trigger row 5, storage row 1; dyno: trigger row 5, storage row 4
-  `Info` (add `DynoMeasured`, measured `EngineData` values, `MeasuredDragIndex`)".
+- `sync-car-details` A5 is now settled there (engine swap: storage row 1, trigger here; dyno: row 13). Open point for
+  the coordinator: the coordinator message says dyno results are "not yours", while this folder (edited 2026-10-05)
+  keeps the `MeasurePower` trigger here with storage in row 13. Kept as on disk; if row 13 takes the trigger too,
+  delete group 21, the dyno row in D1/D8 and the spec scenario "Dyno run".
 - `sync-players-and-scenes` D6: `IsGarageReady` drops packets "while initial sync is unfinished", but row 7 sends live
   changes right after `SyncEnd`, before the client finishes applying — those would be lost for every row. Should be
   "queue during sync, drop only while away". Its D3 mentions "tool claims of sync-workshop-tools": there are none.
