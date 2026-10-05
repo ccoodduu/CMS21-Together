@@ -52,3 +52,15 @@ Second round (2026-10-05):
 - Mods: for now no gameplay mods, only visual mods → row 9 checks only mods that change gameplay
   (server-configured required/ignored lists + Harmony patch-target heuristic), visual mods are ignored.
 - Difficulty: chosen on the server; sandbox skipped for now.
+
+Third round (review questions, 2026-10-05):
+
+- Headlights on/off: a feature, owned by `sync-car-details` (not backlog).
+- Wheel balancer: locked while one player has the minigame open (one person at a time).
+- Lost job car: the order reopens with its original time (explained to the user).
+- Accepted defaults: same identity twice → second refused; returning player spawns where they left; M1 guard
+  overridable via config; visual tuning (bonus) parts in `sync-car-details`; workshop split into
+  `sync-workshop-machines` + `sync-workshop-car-tools`; machine-usage spike needs the user later; customer cars
+  cannot be parked while connected; parking-level price from the client until row 10; parts changed just before
+  parking may be lost (v1); no new orders while nobody is in the garage; engine swap disabled while connected if
+  it cannot be replayed cleanly.
