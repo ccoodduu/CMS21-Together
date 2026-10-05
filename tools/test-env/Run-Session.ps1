@@ -10,6 +10,7 @@ param(
     [string]$Scenario = "connect",
     [string[]]$Instances = @("A", "B"),
     [string]$Window = "960x540",
+    [switch]$Sound,
     [switch]$KeepRunning
 )
 
@@ -59,6 +60,7 @@ try {
             "-screen-fullscreen", "0", "-screen-width", $size[0], "-screen-height", $size[1],
             "--harness.name=$name", "--harness.window=$Window"
         )
+        if (-not $Sound) { $arguments += "--harness.mute" }
         Start-Process -FilePath (Join-Path $dir "$gameProcess.exe") -WorkingDirectory $dir -ArgumentList $arguments | Out-Null
         Write-Host "Started instance $name"
     }

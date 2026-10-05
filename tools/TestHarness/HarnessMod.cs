@@ -15,6 +15,7 @@ public class HarnessMod : MelonMod
     public static string Dir { get; private set; }
     public static string InstanceName { get; private set; } = "?";
 
+    private bool mute;
     private int windowWidth;
     private int windowHeight;
     private float nextStatusWrite;
@@ -29,7 +30,9 @@ public class HarnessMod : MelonMod
 
         foreach (var arg in Environment.GetCommandLineArgs())
         {
-            if (arg.StartsWith("--harness.name="))
+            if (arg == "--harness.mute")
+                mute = true;
+            else if (arg.StartsWith("--harness.name="))
                 InstanceName = arg.Substring("--harness.name=".Length);
             else if (arg.StartsWith("--harness.window="))
             {
@@ -53,6 +56,7 @@ public class HarnessMod : MelonMod
     public override void OnUpdate()
     {
         if (!Application.runInBackground) Application.runInBackground = true;
+        if (mute && AudioListener.volume > 0f) AudioListener.volume = 0f;
 
         SceneState.Update();
         CommandChannel.Poll();
