@@ -141,8 +141,10 @@ local scene is `Loading`, movement is not sent.
 
 ### D6. Away from the garage = not in the garage; return = late join
 Garage-bound client handlers (cars, parts, lifts, tools, `GarageState`) must not touch scene objects while
-`ClientData.LocalScene != Garage` or initial sync of the current garage load is unfinished. They either drop the
-packet or only update a data mirror (row 2's parking slots in `ProfileData`, row 5's `ClientToolsState`); the
+`ClientData.LocalScene != Garage` or initial sync of the current garage load is unfinished. While the initial
+sync of a garage load is running, live packets are QUEUED and applied in order after the snapshot (row 7 sends
+live changes right after `SyncEnd`, so dropping them would lose updates). Only while the player is away from the
+garage do handlers drop the packet or only update a data mirror (row 2's parking slots in `ProfileData`, row 5's `ClientToolsState`); the
 return snapshot overwrites both. This change adds the check helper `ClientScene.IsGarageReady` and applies it to
 the handlers that exist today (`CarHandlers`, `WorldStatesPackets.HandleGarageState`); rows 1–5 use it for theirs.
 Returning runs the existing `GarageLoader.Start` override → `AskForSync`, so the returning client gets the full

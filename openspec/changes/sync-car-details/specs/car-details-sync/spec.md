@@ -10,8 +10,9 @@ plates and car info.
 
 ### Requirement: Detail sections
 The system SHALL treat each car's details as eight sections and sync each section as a whole. The sections
-are Fluids, Wheels, Alignment, Tuning, Paint, BodyCosmetics, Plates and Info. BodyCosmetics is the one
-exception: it is synced per body part. Tire pressure and wheel balance are not part of car state.
+are Fluids, Wheels, Alignment, Tuning, Paint, BodyCosmetics, Plates and Info. Fluids, BodyCosmetics and Tuning are the
+exceptions: their entries are synced one at a time (Fluids per reservoir, BodyCosmetics per body part,
+Tuning per module). Tire pressure and wheel balance are not part of car state.
 
 #### Scenario: Section content
 - **WHEN** a car's details are captured
@@ -34,7 +35,7 @@ other connected player within 3 seconds.
 
 #### Scenario: Oil refill
 - **WHEN** player A tops up the engine oil of a car
-- **THEN** player B sees the same oil level and condition on that car once A has stopped pouring
+- **THEN** player B sees the same oil level and condition on that car within 3 seconds after A stops pouring
 
 #### Scenario: Window tint
 - **WHEN** player A tints a window and confirms
@@ -67,12 +68,17 @@ debounce window.
 
 ### Requirement: Concurrent edits converge
 When two players change the same car at the same time, the system SHALL make every client end up with the
-server's merged state. Changes to different sections SHALL all be kept. For the same section, the change
-that reaches the server last SHALL win.
+server's merged state. Changes to different sections, different reservoirs, different body parts or
+different tuning modules SHALL all be kept. For the same section or entry, the change that reaches the
+server last SHALL win.
 
 #### Scenario: Different sections at once
 - **WHEN** player A changes the wheel alignment and player B refills the brake fluid on the same car at the same moment
 - **THEN** both clients and the server end up with A's alignment and B's brake fluid level
+
+#### Scenario: Two fluids at once
+- **WHEN** player A pours engine oil while player B pours coolant into the same car
+- **THEN** both clients and the server end up with A's oil level and B's coolant level
 
 #### Scenario: Same section at once
 - **WHEN** players A and B both change the Plates section of the same car at the same moment
@@ -83,21 +89,23 @@ When a car appears in the garage, every client SHALL use the detail values from 
 it, including any values that were rolled at random. The other clients' own random rolls SHALL NOT be used.
 
 #### Scenario: Customer car arrives
-- **WHEN** player A's game spawns a customer car with random dirt, fluid levels, alignment and license plates
+- **WHEN** player A's game spawns a car and rolls random dirt, fluid levels, alignment and license plates for it
 - **THEN** player B's copy of the car shows A's values for all sections
+- **AND** B sends no detail values of its own for that car before A's values are applied
 
 #### Scenario: Server has no details for a loaded car
 - **WHEN** the server has a car on a loader but no stored details for it
 - **THEN** the server asks one connected client that has the car loaded for a full snapshot, stores it and sends it to every client
+- **AND** if that client does not answer within 10 seconds, the server asks the next one
 
 ### Requirement: Late join receives details
 A client that connects while cars are in the garage SHALL get each car's stored details. The details SHALL
-be applied after that car's parts have been replayed, and before the client reports that initial sync is
-finished.
+be applied after that car's parts have been replayed, and before the client acknowledges that its initial
+sync is complete.
 
 #### Scenario: Join after changes
 - **WHEN** player A has changed the gearbox, a fluid, the plates and a body panel colour on a car, and player B then connects
-- **THEN** after B's initial sync, B's copy of that car matches A's in every section
+- **THEN** when B acknowledges its initial sync, B's copy of that car already matches A's in every section
 
 ### Requirement: Server owns and persists details
 The server SHALL keep the latest merged details for each car loader. It SHALL write them in its save
@@ -113,13 +121,17 @@ new car is spawned on that loader.
 - **THEN** none of the old car's details are sent for the new car
 
 ### Requirement: Invalid and stale updates are rejected
-The server SHALL drop a detail update when no car is on that loader, or when the update names a different
-car model than the one on the loader. The server SHALL clamp fluid levels and conditions, dust and wash
+The server SHALL drop a detail update when no car is on that loader, or when the update belongs to an
+earlier car on that loader (a car that has since been deleted, parked or replaced). The server SHALL clamp fluid levels and conditions, dust and wash
 factor to the range 0 to 1 before storing them.
 
 #### Scenario: Update for a deleted car
 - **WHEN** a detail update arrives for a loader whose car was deleted a moment ago
 - **THEN** the server drops it, logs it and does not send it to anyone
+
+#### Scenario: Update for a replaced car
+- **WHEN** a detail update for the previous car on loader 0 arrives after a new car of the same model was spawned there
+- **THEN** the server drops it and the new car's details are unchanged
 
 #### Scenario: Out-of-range value
 - **WHEN** a Fluids update has an oil level of 1.7

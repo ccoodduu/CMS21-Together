@@ -25,16 +25,24 @@ Any player SHALL be able to take the item off a machine that another player load
 - **WHEN** player A put a wheel on the tire changer and player B takes it off
 - **THEN** the wheel is in the shared inventory once for both players and both tire changers are empty
 
+#### Scenario: Other player takes the engine off the stand
+- **WHEN** player A put an engine on engine stand 1 and player B takes it off
+- **THEN** exactly one engine group is in the shared inventory for both players and both stands are empty
+
 ### Requirement: One winner when players race for a machine
-The server SHALL decide the outcome when two players change the same machine at nearly the same time. The losing player's change SHALL be undone on that player's client, and no item SHALL be lost or duplicated.
+The server SHALL decide the outcome when two players change the same machine, or load the same item, at nearly the same time. The losing player's change SHALL be undone on that player's client, and no item SHALL be lost or duplicated.
 
 #### Scenario: Two players load the same machine
 - **WHEN** players A and B each put a different wheel on the empty tire changer at the same moment
 - **THEN** exactly one wheel ends up on the tire changer for both players, and the other wheel is back in the shared inventory
 
 #### Scenario: Two players take the same item
-- **WHEN** players A and B both take the wheel off the tire changer at the same moment
-- **THEN** the wheel is in the shared inventory exactly once and the tire changer is empty for both players
+- **WHEN** players A and B both take the engine off engine stand 1 at the same moment
+- **THEN** exactly one engine group is in the shared inventory and the stand is empty for both players
+
+#### Scenario: Same item put on two machines
+- **WHEN** player A puts a wheel on the tire changer and player B puts the same wheel on the wheel balancer at the same moment
+- **THEN** the wheel is on exactly one of the two machines for both players and is not in the shared inventory
 
 ### Requirement: Machine settings are shared
 Machine settings that are visible in the world SHALL be shared: the mounted/separated state of the tire changer and spring clamp, the rotation angle of each engine stand, and whether the battery charger is switched on.
@@ -47,19 +55,41 @@ Machine settings that are visible in the world SHALL be shared: the mounted/sepa
 - **WHEN** player A separates the tire from the rim on the tire changer
 - **THEN** player B's tire changer shows the separated tire and rim
 
-### Requirement: Results of machine work on items
-Work done by a machine or the repair table SHALL change the item for every player: a balanced wheel stays balanced, a repaired or painted part has the same condition, dent and paint for every player, and the result is kept when the item is later taken off or used by another player.
+### Requirement: Parts on an engine on the stand
+Mounting or unmounting a part on an engine on an engine stand SHALL change that engine for every player, and the unmounted part SHALL appear in the shared inventory exactly once, also when two players act on the same part at once.
+
+#### Scenario: Part removed from the engine on the stand
+- **WHEN** player A unmounts a part from the engine on engine stand 1
+- **THEN** player B sees the part missing from that engine and the part is in the shared inventory once
+
+#### Scenario: Two players remove the same part on the stand
+- **WHEN** players A and B unmount the same part of the engine on the stand at the same moment
+- **THEN** the part is in the shared inventory exactly once and missing from the engine for both players
+
+### Requirement: Wheel balancing keeps its minigame
+The wheel balancer minigame SHALL be played only by the player who balances the wheel. Other players SHALL see the wheel on the balancer and the balanced result, but not the minigame.
 
 #### Scenario: Wheel balanced by one player, taken by another
-- **WHEN** player A balances the wheel on the wheel balancer and player B takes it off
-- **THEN** the wheel in the shared inventory is balanced
+- **WHEN** player A balances the wheel on the wheel balancer through the minigame and player B takes it off
+- **THEN** the wheel in the shared inventory is balanced for both players
+
+#### Scenario: Wheel taken while the minigame is open
+- **WHEN** player A has the balance minigame open and player B takes the wheel off the balancer
+- **THEN** A's minigame window closes, the wheel is in the shared inventory once and not balanced, and the balancer is empty for both players
+
+### Requirement: Results of machine work on items
+Work done by a machine, the repair table or the paint shop on an item SHALL change the item for every player: a repaired or painted part has the same condition, dent and paint for every player, and the result is kept when the item is later taken off or used by another player.
 
 #### Scenario: Part repaired on the repair table
 - **WHEN** player A repairs a part from the shared inventory on the repair table
 - **THEN** player B's inventory shows the part with the new condition
 
+#### Scenario: Part painted in the paint shop
+- **WHEN** player A paints a part from the shared inventory in the paint shop
+- **THEN** player B's inventory shows the part with the same colour and paint type
+
 ### Requirement: Results of tool work on cars
-Using the welder, car wash, interior detailing kit, oil bin, engine crane or paint shop on a car SHALL leave the car in the same state for every player, through the same car state that part and detail sync use.
+Using the welder, car wash, interior detailing kit, oil bin, engine crane, paint shop or dyno on a car SHALL leave the car in the same state for every player, through the same car state that part and detail sync use.
 
 #### Scenario: Car washed
 - **WHEN** player A washes a car in the car wash
@@ -67,14 +97,22 @@ Using the welder, car wash, interior detailing kit, oil bin, engine crane or pai
 
 #### Scenario: Engine removed with the crane
 - **WHEN** player A removes a car's engine with the engine crane
-- **THEN** player B sees the car without its engine and the engine group in the shared inventory
+- **THEN** player B sees the car without its engine and the engine group is in the shared inventory once
+
+#### Scenario: Engine swapped with the crane
+- **WHEN** player A inserts a different engine into a car with the engine crane
+- **THEN** player B, and a player who joins afterwards, see the new engine in that car
+
+#### Scenario: Dyno run
+- **WHEN** player A measures a car on the dyno
+- **THEN** player B's car shows the same measured result, without a dyno run on B's client
 
 ### Requirement: Visible tool actions
-Other players SHALL see a tool working when it acts on a car or item (sparks, wash or paint effect, sound) at the right place. Seeing the effect SHALL NOT lock the other player's controls or change state a second time.
+Other players SHALL see a tool working when it acts on a car or item (sparks, wash or paint effect, sound) at the right place. Seeing the effect SHALL NOT lock the other player's controls, cost money or give experience a second time, or change state a second time.
 
 #### Scenario: Welding seen by another player
 - **WHEN** player A welds a car on lifter 1
-- **THEN** player B sees the welding effect at that car and can keep moving and using other tools
+- **THEN** player B sees the welding effect at that car, can keep moving and using other tools, and the shared money changes only once
 
 ### Requirement: Shared tool positions
 The position of each movable tool (welder, interior detailing kit, oil bin, engine crane, headlamp aligner, window tinting kit) SHALL be the same for every player, both when moved to a car place and when sent back to its default position.
@@ -83,19 +121,27 @@ The position of each movable tool (welder, interior detailing kit, oil bin, engi
 - **WHEN** player A moves the welder to car lifter 2
 - **THEN** player B's welder stands at car lifter 2
 
-### Requirement: Machine state for players who join later
-A player who connects while machines hold items, have settings or have been moved SHALL see the same machine contents, settings and tool positions as the players already in the session, and the joining player's own save SHALL NOT add or remove anything on the machines or in the shared inventory.
+### Requirement: Machine state for players who join later or return
+A player who connects, or returns to the garage from another scene, while machines hold items, have settings or have been moved SHALL see the same machine contents, settings and tool positions as the players already in the garage, and the player's own save SHALL NOT add or remove anything on the machines or in the shared inventory.
 
 #### Scenario: Late join with a loaded machine
-- **WHEN** player A has a wheel on the tire changer, an engine rotated on engine stand 1 and the welder at lifter 1, and player B connects
-- **THEN** B sees the same wheel, engine, angle and welder position, and B's dump of machines and inventory equals A's
+- **WHEN** player A has a wheel on the tire changer, an engine with one part removed rotated on engine stand 1 and the welder at lifter 1, and player B connects
+- **THEN** B sees the same wheel, engine, missing part, angle and welder position, and B's dump of machines and inventory equals A's
 
 #### Scenario: Joining player's own save had something on a machine
 - **WHEN** player B's own save has a battery on the battery charger and the session has an empty charger
 - **THEN** after B joins, B's battery charger is empty and that battery is not added to the shared inventory
 
-### Requirement: Machine state survives a server restart
-The server SHALL keep machine contents, settings and tool positions as part of the session state that it saves and loads.
+#### Scenario: Return from another scene
+- **WHEN** player B is away from the garage while player A puts a wheel on the tire changer, and B then returns
+- **THEN** B sees the wheel on the tire changer and B's inventory equals A's
+
+### Requirement: Machine state survives a disconnect and a server restart
+Machine contents, settings and tool positions SHALL stay on the server when the player who changed them disconnects, and the server SHALL keep them as part of the session state that it saves and loads.
+
+#### Scenario: Player leaves with an item on a machine
+- **WHEN** player A puts a brake disc on the brake lathe and disconnects
+- **THEN** player B still sees the brake disc on the lathe and can take it off once
 
 #### Scenario: Restart with an engine on the stand
 - **WHEN** an engine is on engine stand 1 and the server is restarted with the saved session

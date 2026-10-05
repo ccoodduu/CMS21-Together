@@ -12,29 +12,31 @@ caused the reported duplicates and desyncs (upstream #87, the duplicate ADDs Fix
 
 - One shared pattern for all machines: the server owns a **slot state** per item-holding machine (what it holds,
   plus a few machine flags), accepts changes with a compare-and-set on the held item's UID, and rejects the loser
-  of a race. Actions that only change a car send their **result** through the existing car packets plus a
+  of a race. Actions that only change a car trigger the senders of `sync-car-parts` / `sync-car-details` plus a
   relay-only **action event** so other players see the effect.
-- Slot machines: tire changer, wheel balancer, spring clamp, engine stand 1 and 2 (engine, rotation angle, parts
-  removed from the engine on the stand), brake lathe, battery charger.
-- Car-effect tools: welder, car wash, interior detailing (portable and stationary), oil bin, engine crane
-  (engine out / in / swap), paint shop (car paint). Results go through `sync-car-parts` / `sync-car-details`.
+- Slot machines: tire changer, wheel balancer (the minigame stays, played only by the acting player), spring clamp,
+  engine stand 1 and 2 (engine, rotation angle, parts removed from the engine on the stand), brake lathe, battery charger.
+- Car-effect tools: welder, car wash, interior detailing (portable and stationary), oil bin, engine crane (effect and
+  engine swap trigger), paint shop (car paint), dyno (result trigger).
 - Item processing: repair table and paint shop part painting update the item in the shared inventory in place.
 - Positions of movable tools (`ToolsMoveManager`): welder, interior detailing kit, oil bin, engine crane, headlamp
   aligner, window tinting kit.
-- Late join: the server sends all slot states and tool positions during initial sync. A joining client first
-  clears what its own save put on the machines.
-- Game hooks (all verified in the decompiled stubs): `TireChangerLogic.SetGroupOnTireChanger`/`Clear`,
-  `WheelBalancerLogic.SetGroupOnWheelBalancer`/`FinishBalance`/`Clear`,
+- Late join: the server sends all slot states and tool positions as the `workshop-tools` snapshot section
+  (SyncOrder 300). A joining client first clears what its own save put on the machines.
+- Game hooks (all verified in the decompiled stubs): `TireChangerLogic.SetGroupOnTireChanger(GroupItem,bool,bool)`/`Clear()`,
+  `WheelBalancerLogic.SetGroupOnWheelBalancer`/`FinishBalance` (fallback `FinishBalanceInternal`)/`Clear()`,
+  `WheelBalanceWindow.CancelAction` (called, not hooked),
   `SpringClampLogic.SetGroupOnSpringClamp`/`ClearSpringClamp`,
-  `EngineStandLogic.SetGroupOnEngineStand`/`ClearEngineStand`/`IncreaseEngineStandAngle`/`SetEngineStandAngle`,
+  `EngineStandLogic.SetGroupOnEngineStand`/`SetEngineOnEngineStand`/`ClearEngineStand`/`IncreaseEngineStandAngle`/`SetEngineStandAngle`,
   `BrakeLatheLogic.SetItem`/`Clear`, `BatteryChargerLogic.SetItemOnBatteryCharger`/`ClearBatteryCharger`/`BatteryChargerActivate`,
-  `WelderLogic`/`CarWashLogic`/`InteriorDetailingToolkitLogic.DoWorkAnim`,
-  `ToolsMoveManager.MoveTo`/`SetOnDefaultPosition`/`UseInteriorDetailingToolkitStationary`, `CarLoader.UseOilbin`/`UseEngineCrane`,
+  `WelderLogic`/`CarWashLogic`/`InteriorDetailingToolkitLogic.DoWorkAnim(CarLoader)`,
+  `ToolsMoveManager.MoveTo`/`SetOnDefaultPosition`/`UseInteriorDetailingToolkitStationary`,
+  `CarLoader.UseOilbin`/`UseEngineCrane`/`SwapEngine`/`MeasurePower`, `DynoManager.CloseDyno`,
   `NotificationCenter.InsertEngineToCar`/`TakeOffEngineFromStand`, `PaintshopManager.MakeCarPaintEffects`/`MakePartPaintEffects`,
-  `RepairPartWindow.UpdateItemCondition`.
-- New packets: `ToolSlotUpdate`, `ToolSlotRejected`, `ToolSlotProperty`, `ToolPartUpdate`, `ToolPosition`,
-  `ToolAction`, `ToolsState`. Changed: `ItemActionType` gains `Update` (replace an inventory item by UID) unless
-  `sync-car-parts` already adds it. Inventory ADDs are made idempotent by UID on server and client.
+  `RepairPartWindow.UpdateItemCondition(PartInfo,bool)`.
+- New packets: `ToolSlotUpdate`, `ToolSlotRejected`, `ToolSlotProperty`, `ToolPartChange`, `ToolPosition`,
+  `ToolAction`, `ToolsState`. Changed: `ItemActionType` gains `Update` (replace an inventory item by UID), and
+  inventory ADDs become idempotent by UID on server and client (both owned here; `sync-car-parts` does not add them).
 
 ## Capabilities
 
@@ -50,13 +52,15 @@ caused the reported duplicates and desyncs (upstream #87, the duplicate ADDs Fix
 
 - Core: new `ToolPackets.cs`, `ModToolId`, `ToolSlotState`, `ToolsState` in `ModGameState`, new `PacketTypes`
   entries, `ItemActionType.Update`.
-- Server: new `Network/Handlers/ToolHandlers.cs`; `AuthHandlers.OnAskForSync` sends `ToolsState` before
-  `SyncEnd`; inventory handlers ignore duplicate UIDs. Tool state is saved with `ModGameState`, so the save format
-  grows (versioning belongs to `session-persistence-and-rejoin`).
-- Client: new `Logic/Tools/*` (one small file per machine on a shared `ToolSync` base), new `Network/Handlers/ToolHandlers.cs`,
-  a UID-scoped inventory guard in `InventoryHook`.
-- Harness: `tools/TestHarness/Features/ToolsCommands.cs`, a `tools` section in `StateDump`, scenarios
-  `tools-slots`, `tools-race`, `tools-car-effects`, `tools-latejoin`.
-- Depends on `sync-car-parts` (part identity, sub-part DTO and resolver, shared inventory flow) and
-  `sync-car-details` (wash/dirt, fluids, paint packets), and on `sync-car-placement-and-lifts` only for cars that
-  are moved while a tool is attached to their place.
+- Server: new `Network/Handlers/ToolHandlers.cs` (runs under `GameDataManager.StateLock`), new
+  `Data/Persistence/WorkshopToolsSection.cs` (`ISaveSection` + `ISnapshotProvider`, key `workshop-tools`);
+  inventory handlers ignore duplicate UIDs and handle `Update`.
+- Client: new `Logic/Tools/*` (one small file per machine on a shared `ToolSync` base), new
+  `Network/Handlers/ToolHandlers.cs`, a UID-scoped inventory guard in `InventoryHook`.
+- Harness: `tools/TestHarness/Features/ToolsCommands.cs`, `tools`/`toolPositions` sections in `StateDump`,
+  `Wait-HarnessDumpsEqual` in `HarnessClient.psm1`, scenarios `tools-slots`, `tools-race`, `tools-car-effects`,
+  `tools-latejoin`.
+- Depends on `session-persistence-and-rejoin` task groups 1–2 (contract, state lock, sections, `SyncTracker`, harness server commands), `sync-car-parts` (part keys,
+  `PartTransaction`, `CarPartsSync.MarkDirty`/`UploadBaseline`, engine crane group transactions, engine swap field),
+  `sync-car-details` (`CarDetailsSync.MarkDirty`/`FlushNow`, dyno fields in `Info`), `sync-players-and-scenes`
+  (`ClientScene.IsGarageReady`), and `sync-car-placement-and-lifts` only for tools attached to a car place whose car moves.
