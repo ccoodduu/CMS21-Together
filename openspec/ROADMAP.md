@@ -26,6 +26,20 @@ stats/inventory/cars, and see each other.
 | 6 | `sync-players-and-scenes` | Spawn positions, name tags, player in car seat, engine running/sound, scene tracking (who is where), visibility per scene, travel to junkyard/barn/auction/dealer and how purchases there flow into shared inventory/parking | — |
 | 7 | `session-persistence-and-rejoin` | Server save format + versioning for all state above, autosave, identifying a returning player (per-player data), rejoin/late join end-to-end, client-side save safety (the client must never overwrite the player's own profiles) | all |
 
+### Not yet drafted — needed for a finished product
+
+| # | Change | Owns |
+|---|--------|------|
+| 8 | `hosting-and-join-ui` | In-game multiplayer menu: host (start/stop the local dedicated server from the game), join by IP, join via Steam (server ID, invite, friends), connection status and error messages, player name setting, version-mismatch message. Today there is no UI at all: F5 = connect to 127.0.0.1, F6 = Steam to a hardcoded dev server ID. |
+| 9 | `mod-compatibility` | Mod list + version exchange on connect (warn/refuse on mismatch), modded items/parts from other mods (TK Aftermarket etc.; `RegisterModItem` exists for the shop), QoLmod settings that change game state, the user's own mods (LoadOptimizer, Lvx*). |
+| 10 | `economy-audit` | Every money/scrap path is server-authoritative: travel fees, selling cars, auction bids, barn/junkyard purchases, parking levels, paint/wash/welder costs. Rows 2/3/6 cover some; this row closes the rest (known gap from row 6: travel fees and car sales are undone by the next `WorldState`). |
+| 11 | `multiplayer-soak-and-scale` | Harness with 3–4 instances, long scripted sessions (soak), bandwidth/CPU check, artificial latency/packet loss in the harness, disconnect storms. |
+| 12 | `release-and-docs` | Release packaging (client zip: Mods/UserLibs; server zip), install + hosting guide, changelog, version bump policy, log collection for bug reports. |
+
+Backlog (not planned): import a single-player save as server start state; multiplayer tutorial (tutorial is
+disabled in multiplayer games); shared non-garage worlds (same junkyard/barn for everyone); driving sync
+(test track / test path drives visible to others); garage decorations.
+
 ### Implementation order (revised after the drafts)
 
 1. `session-persistence-and-rejoin` task group 2 (the contract: `ISaveSection`, `ISnapshotProvider`,
@@ -43,7 +57,10 @@ stats/inventory/cars, and see each other.
 - Parking API (`CarParkRequest`, `CarLoaderID = -1` for cars arriving from outside) comes from row 2 and is
   used by rows 3 and 6.
 - Car detail updates from tools use row 4's `CarDetailsUpdatePacket` / `CarDetailsSync.MarkDirty`.
-- Exp ownership: see QUESTIONS.md #1 (row 3 assumed shared, row 7 per player).
+- Money, scrap, level, XP and skills are SHARED (user decision 2026-10-05). Per-player server data is only
+  identity, name, position/scene, seat. Row 7's per-player progression must be removed.
+- Tutorial is disabled in multiplayer games; story missions sync like orders; order expiry pauses while the
+  server is empty; cars bought outside the garage go to shared parking; the balancer minigame is kept.
 
 Boundaries: a change only syncs what its row owns. When it needs something owned by another change,
 it says so in its design as an assumption/dependency instead of implementing it.

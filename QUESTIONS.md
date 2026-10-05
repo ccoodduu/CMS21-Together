@@ -3,19 +3,6 @@
 Open questions that block a decision. Each has the default we work with until answered.
 Answered ones move to the bottom with the answer.
 
-## Open — gameplay (please answer)
-
-1. **Level, XP and skills: shared or per player?** Dev today shares everything (one `WorldState`).
-   `session-persistence-and-rejoin` makes level/XP/skills per player (money, scrap, upgrades, inventory,
-   cars stay shared); `sync-orders-and-jobs` assumed shared. Default: per player, job XP goes to the
-   player who finishes the job.
-2. **Start from an existing single-player save?** Default: out of scope; a server starts a new career.
-3. **Cars bought outside the garage** (junkyard, barn, auction, dealer) always go to the shared parking,
-   never straight into the garage. Default: yes.
-4. **Order expiry** pauses while nobody is connected. Default: yes.
-5. **Story missions** synced like normal orders (tutorial excluded). Default: yes.
-6. **Wheel balancer minigame** is no longer skipped (0.4.x and FixForTogether skipped it). Default: not skipped.
-
 ## Open — smaller, defaults probably fine
 
 - Remote players see only the finished part state, not the bolt animation, while a part is reserved.
@@ -33,3 +20,14 @@ Answered ones move to the bottom with the answer.
 - No automatic reconnect after a server restart; a server that cannot load its save refuses to start.
 
 ## Answered
+
+Answered by the user on 2026-10-05:
+
+1. **Level, XP and skills: shared or per player?** Shared, as in Dev today (one `WorldState`). Per-player
+   data is only identity, name, position/scene.
+2. **Start from an existing single-player save?** Maybe a later feature (backlog), not now.
+3. **Cars bought outside the garage** always go to the shared parking. Yes.
+4. **Order expiry** pauses while nobody is connected. Yes.
+5. **Story missions** synced like normal orders. Yes. Tutorial: make it multiplayer only if cheap; otherwise
+   drop the tutorial from multiplayer games (decision: drop it now, multiplayer tutorial is backlog).
+6. **Wheel balancer minigame** is kept (not skipped). Yes.
