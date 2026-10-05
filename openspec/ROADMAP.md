@@ -59,7 +59,7 @@ definition of done (Working rules) holds. Rows listed as "part N" are split by t
 
 | M | Name — what you can try | Rows |
 |---|--------------------------|------|
-| M0 | **Foundations** (no playtest) — harness infra, regression runner, sync contract, client save safety, atomic save + backups | 7 (groups 1, 2, 4, 7) |
+| M0 | **Foundations** (no playtest) — harness infra, regression runner, sync contract, client save safety, atomic save + backups | 7 (groups 1, 2, 3, 6) |
 | M1 | **Friends connect and see each other** — host + 1–2 friends join over Steam from a dev zip, walk around with name tags, see each other after a late join, shop/warehouse/garage upgrades with shared money; working on cars (and travel, until row 1 restores garage cars on return) is blocked by the guard; nobody's own saves are touched | 6 part 1 (spawn, roster, names, scene tracking + away/return), 8 part 1 (join without hardcoded ID, status/errors), 9 part 1 (mod + game version + DLC + mod list check), 12 part 1 (dev build zip), 14 (a) |
 | M2 | **Work on one car together** — take a car from the parking onto a lift, strip and rebuild it together, travel to the junkyard (parts only) and come back to the same garage, restart the server, the car is still there; resync key fixes a broken car | 1, 2, 14 (b, c), harness latency/loss injection |
 | M3 | **Run jobs together** — accept an order, diagnose (examine, test drive, test path), replace parts, fluids and tires, hand it back, payout shared; a late joiner mid-job sees the job | 3, 4, 13 |
@@ -69,9 +69,10 @@ definition of done (Working rules) holds. Rows listed as "part N" are split by t
 
 ### Implementation order
 
-1. M0: `session-persistence-and-rejoin` group 1 (harness infra) and group 2 (the contract: `ISaveSection`,
-   `ISnapshotProvider`, `SyncOrder`, `SyncBegin/SyncEnd/SyncAck`, state lock) — every other change plugs into
-   it; then group 7 (client save safety) and group 4 (atomic save, backups), because friends play from M1.
+1. M0: `session-persistence-and-rejoin` groups 1–2 (the contract: harness server control, `ISaveSection`,
+   `ISnapshotProvider`, `SyncOrder`, `SyncBegin/SyncEnd/SyncAck`, `GameDataManager.StateLock`) — every other
+   change plugs into it; then group 6 (client save safety) and group 3 (atomic save, backups), because
+   friends play from M1. Groups 4, 5, 7 (identity, join hardening, end-to-end scenarios) belong to M5.
 2. M1: `sync-players-and-scenes` spawn fix + presence roster (fixes the idle late-join bug), names, scene
    tracking; `hosting-and-join-ui` part 1; `mod-compatibility` part 1; guard; dev zip.
 3. M2: `sync-car-parts` → `sync-car-placement-and-lifts`; resync key + checksums.
