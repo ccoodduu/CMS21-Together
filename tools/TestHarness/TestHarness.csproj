@@ -1,0 +1,33 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+    <PropertyGroup>
+        <TargetFramework>net472</TargetFramework>
+        <PlatformTarget>x64</PlatformTarget>
+        <AssemblyName>TogetherTestHarness</AssemblyName>
+        <RootNamespace>TogetherTestHarness</RootNamespace>
+        <LangVersion>latest</LangVersion>
+        <AppendTargetFrameworkToOutputPath>false</AppendTargetFrameworkToOutputPath>
+        <ClientLibs>..\..\CMS21-Together-Client\Libs</ClientLibs>
+        <CoreLibs>..\..\CMS21-Together-Core\Libs</CoreLibs>
+        <TestManagedDir>$(USERPROFILE)\CMS21-TestInstalls\A\MelonLoader\Managed</TestManagedDir>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <Reference Include="MelonLoader" Private="false"><HintPath>$(ClientLibs)\MelonLoader.dll</HintPath></Reference>
+        <Reference Include="0Harmony" Private="false"><HintPath>$(ClientLibs)\0Harmony.dll</HintPath></Reference>
+        <Reference Include="UnhollowerBaseLib" Private="false"><HintPath>$(ClientLibs)\UnhollowerBaseLib.dll</HintPath></Reference>
+        <Reference Include="Il2Cppmscorlib" Private="false"><HintPath>$(ClientLibs)\Il2Cppmscorlib.dll</HintPath></Reference>
+        <Reference Include="Assembly-CSharp" Private="false"><HintPath>$(ClientLibs)\Assembly-CSharp.dll</HintPath></Reference>
+        <Reference Include="Assembly-CSharp-firstpass" Private="false"><HintPath>$(ClientLibs)\Assembly-CSharp-firstpass.dll</HintPath></Reference>
+        <Reference Include="UnityEngine" Private="false"><HintPath>$(ClientLibs)\UnityEngine.dll</HintPath></Reference>
+        <Reference Include="UnityEngine.CoreModule" Private="false"><HintPath>$(ClientLibs)\UnityEngine.CoreModule.dll</HintPath></Reference>
+        <Reference Include="UnityEngine.ScreenCaptureModule" Private="false"><HintPath>$(TestManagedDir)\UnityEngine.ScreenCaptureModule.dll</HintPath></Reference>
+        <Reference Include="Newtonsoft.Json" Private="false"><HintPath>$(CoreLibs)\Newtonsoft.Json.dll</HintPath></Reference>
+    </ItemGroup>
+
+    <ItemGroup>
+        <ProjectReference Include="..\..\CMS21-Together-Client\CMS21-Together.csproj" Private="false" />
+        <ProjectReference Include="..\..\CMS21-Together-Core\CMS21-Together-Core.csproj" Private="false" />
+    </ItemGroup>
+
+</Project>

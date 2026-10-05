@@ -1,0 +1,73 @@
+using System;
+using System.IO;
+using MelonLoader;
+using UnityEngine;
+
+[assembly: MelonInfo(typeof(TogetherTestHarness.HarnessMod), "TogetherTestHarness", "0.1.0", "ccoodduu")]
+[assembly: MelonGame("Red Dot Games", "Car Mechanic Simulator 2021")]
+[assembly: MelonAdditionalDependencies("CMS21-Together")]
+
+namespace TogetherTestHarness;
+
+public class HarnessMod : MelonMod
+{
+    public static MelonLogger.Instance Log { get; private set; }
+    public static string Dir { get; private set; }
+    public static string InstanceName { get; private set; } = "?";
+
+    private int windowWidth;
+    private int windowHeight;
+    private float nextStatusWrite;
+
+    public override void OnInitializeMelon()
+    {
+        Log = LoggerInstance;
+        Dir = Path.Combine(MelonUtils.UserDataDirectory, "TestHarness");
+        Directory.CreateDirectory(Dir);
+        foreach (var file in Directory.GetFiles(Dir, "reply_*.json")) File.Delete(file);
+        File.Delete(Path.Combine(Dir, CommandChannel.CommandFile));
+
+        foreach (var arg in Environment.GetCommandLineArgs())
+        {
+            if (arg.StartsWith("--harness.name="))
+                InstanceName = arg.Substring("--harness.name=".Length);
+            else if (arg.StartsWith("--harness.window="))
+            {
+                var size = arg.Substring("--harness.window=".Length).Split('x');
+                if (size.Length == 2 && int.TryParse(size[0], out var w) && int.TryParse(size[1], out var h))
+                {
+                    windowWidth = w;
+                    windowHeight = h;
+                }
+            }
+        }
+        Log.Msg($"[Harness] instance {InstanceName}, dir {Dir}");
+    }
+
+    public override void OnSceneWasInitialized(int buildIndex, string sceneName)
+    {
+        Log.Msg($"[Harness] scene initialized: {sceneName}");
+        ApplyWindow();
+    }
+
+    public override void OnUpdate()
+    {
+        if (!Application.runInBackground) Application.runInBackground = true;
+
+        SceneState.Update();
+        CommandChannel.Poll();
+
+        if (Time.unscaledTime >= nextStatusWrite)
+        {
+            nextStatusWrite = Time.unscaledTime + 1f;
+            StateDump.WriteStatus();
+        }
+    }
+
+    private void ApplyWindow()
+    {
+        if (windowWidth <= 0) return;
+        if (Screen.fullScreenMode == FullScreenMode.Windowed && Screen.width == windowWidth && Screen.height == windowHeight) return;
+        Screen.SetResolution(windowWidth, windowHeight, FullScreenMode.Windowed);
+    }
+}

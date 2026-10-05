@@ -3,3 +3,5 @@
 TempTerminalGui/
 obj/
 bin/
+
+/tools/runs/

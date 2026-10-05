@@ -1,0 +1,55 @@
+#Requires -Version 5.1
+<#
+Builds client, server and test harness, then copies them into the test installs and the local server folder.
+#>
+param(
+    [string]$TestRoot = "$env:USERPROFILE\CMS21-TestInstalls",
+    [string[]]$Instances = @("A", "B"),
+    [string]$Configuration = "Release"
+)
+
+$ErrorActionPreference = "Stop"
+$repo = Resolve-Path (Join-Path $PSScriptRoot "..\..")
+
+$projects = @(
+    "CMS21-Together-Client\CMS21-Together.csproj",
+    "CMS21-Together-Server\CMS21-Together-Server.csproj",
+    "tools\TestHarness\TestHarness.csproj"
+)
+foreach ($project in $projects) {
+    $output = & dotnet build (Join-Path $repo $project) -c $Configuration -nologo -v q 2>&1
+    if ($LASTEXITCODE -ne 0) {
+        $output | Select-String -Pattern "error" | Select-Object -First 20 | ForEach-Object { Write-Host $_ }
+        throw "Build failed: $project"
+    }
+}
+
+$clientBin = Join-Path $repo "CMS21-Together-Client\bin\$Configuration"
+$harnessBin = Join-Path $repo "tools\TestHarness\bin\$Configuration"
+$serverBin = Join-Path $repo "CMS21-Together-Server\bin\$Configuration"
+
+foreach ($name in $Instances) {
+    $dir = Join-Path $TestRoot $name
+    if (-not (Test-Path -LiteralPath $dir)) { throw "Test install missing: $dir (run Setup-TestInstalls.ps1)" }
+    Copy-Item (Join-Path $clientBin "CMS21-Together.dll") (Join-Path $dir "Mods") -Force
+    Copy-Item (Join-Path $harnessBin "TogetherTestHarness.dll") (Join-Path $dir "Mods") -Force
+    foreach ($lib in @("CMS21_Together_Core.dll", "Facepunch.Steamworks.Win64.dll")) {
+        Copy-Item (Join-Path $clientBin $lib) (Join-Path $dir "UserLibs") -Force
+    }
+}
+
+$serverDir = Join-Path $TestRoot "Server"
+New-Item -ItemType Directory -Force -Path $serverDir | Out-Null
+Get-ChildItem -LiteralPath $serverBin | Where-Object { $_.Name -notin @("Log", "server_config.ini", "Saves") } |
+    Copy-Item -Destination $serverDir -Recurse -Force
+$config = Join-Path $serverDir "server_config.ini"
+if (-not (Test-Path -LiteralPath $config)) {
+    Set-Content -LiteralPath $config -Encoding ascii -Value @(
+        "max_players = 4",
+        "use_steam = False",
+        'GSLT_Token = ""',
+        "log_level = 1"
+    )
+}
+
+Write-Host "Deployed to $($Instances -join ', ') and $serverDir"
