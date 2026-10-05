@@ -39,7 +39,7 @@ Size: S ≈ 1–2 sessions, M ≈ 3–5, L ≈ 6–10, XL > 10 (one session = on
 | # | Change | Owns | Size |
 |---|--------|------|------|
 | 8 | `hosting-and-join-ui` | In-game multiplayer menu: host (start/stop the local dedicated server from the game), join by IP, join via Steam (friends list / invite / rich presence instead of a server ID), connection status and error messages, player name setting, version-mismatch message, new-session settings (difficulty), server password for DirectIP, in-game player list (name, scene, ping), join/leave notifications, kick. Today there is no UI at all: F5 = connect to 127.0.0.1, F6 = Steam to a hardcoded dev server ID. | L |
-| 9 | `mod-compatibility` | Handshake checks: mod version, **game version** and **DLC set** (refuse or warn on mismatch); mod list + version exchange on connect; a game-data exporter that regenerates the server's `Database/*.json` after a game update (no exporter exists in the repo); modded items/parts from other mods (TK Aftermarket etc.; `RegisterModItem` exists for the shop), QoLmod settings that change game state, the user's own mods (LoadOptimizer, Lvx*). | M |
+| 9 | `mod-compatibility` | Handshake checks: mod version, **game version** and **DLC set** (nobody in the group owns DLC; refuse on mismatch). Mod check covers only mods that change gameplay: server-configured required/ignored lists plus a heuristic on each mod's Harmony patch targets (gameplay classes like `Inventory`, `CarLoader`, `GlobalData` vs UI/rendering); visual-only mods are ignored. The group plays without gameplay mods for now, so modded items/parts (TK Aftermarket, `RegisterModItem`) and QoLmod support are post-1.0. A game-data exporter for the server's `Database/*.json` (none exists in the repo; shared with row 16). | M |
 | 10 | `economy-audit` | Every money/scrap/XP path is server-authoritative: travel fees, selling cars, auction bids, barn/junkyard purchases, parking levels, paint/wash/welder costs, opening crates (upstream #94: money/level desync after crates). Rows 2/3/6 cover some; this row closes the rest (known gap from row 6: travel fees and car sales are undone by the next `WorldState`). | M |
 | 11 | `multiplayer-soak-and-scale` | Harness with 3–4 instances, long scripted sessions (soak), bandwidth/CPU check, late-join time with a full garage + parking, disconnect storms. (Artificial latency/packet loss moves to M2, see below.) | M |
 | 12 | `release-and-docs` | Release packaging (client zip: Mods/UserLibs; server zip), install + hosting guide (incl. moving a server save to another host), changelog, version bump policy, log collection for bug reports. | S (+S for the M1 dev build) |
@@ -47,12 +47,10 @@ Size: S ≈ 1–2 sessions, M ≈ 3–5, L ≈ 6–10, XL > 10 (one session = on
 | 14 | `desync-detection-and-resync` | (a) Default-deny guard: while connected, only game windows, minigames and scenes on an allow-list (grown as rows land) can be opened; everything else shows "not supported in multiplayer yet" (one hook on the game's window/scene opening, instead of a list of known unsynced actions), plus an audit of single-player assumptions (pause menus, time scale, camera modes like x-ray/inspection, autosave, modal windows) — M1. (b) Continuous state reconciliation (safety net for missed hooks and inlined methods): clients send per-car and per-section state hashes every few seconds, the server compares with its own state and automatically reloads a mismatching car/section from the server, logging the diff — M2. (c) Manual resync key/button that reruns the late-join snapshot. (d) One-key bug-report bundle (client + server logs, dump). | M |
 | 15 | `shared-outdoor-scenes` | Junkyard, barn and auction shared by everyone in them (user wants to scavenge together). Car selection runs on the server by adapting LvxBetterCarSpawns (LvxMagick; decompiled reference in `CMS21-TestInstalls\reference\LvxBetterCarSpawns-decompiled`): vehicle candidates per location, weighted selection, spawn history, all spawn points filled; clients load exactly the server's cars. Loose parts/items: the first visitor's generated layout is stored by the server and replayed to later visitors. Picking up parts and buying cars go through the server; remote players visible in the barn too. Needs the author's permission/credit before adapted code is published (user decides when to ask). Planned after M4. | L |
 | 16 | `server-game-logic` | The game gets no more updates, so game logic moves to the server: prices/fees (feeds row 10), job payout/XP and order generation (replaces row 3's elected generator), random damage/colour of spawned cars (replaces row 1's spawner roll). Built from native code read with Cpp2IL/Il2CppDumper + Ghidra and game data exported to `Database/*.json` (shared exporter with row 9). Rows 1 and 3 keep their client-computed approach as the interim until this row lands. | L |
-
 | 17 | `remote-visual-feedback` | Make it feel shared, not just consistent: visual-only replay of other players' actions (bolts turning, part moving off/on, tool in hand), simple work animations on the remote avatar, then driving sync (a car driven in the garage area / test drive visible to others). Polish after M4. | M (+L for driving) |
 
 Backlog (not planned): import a single-player save as server start state; multiplayer tutorial (tutorial is
-disabled in multiplayer games); driving sync
-(test track / test path drives visible to others); garage decorations/customization; seasonal event garages
+disabled in multiplayer games); gameplay-mod support (modded items/parts, QoLmod); garage decorations/customization; seasonal event garages
 (Christmas/Easter/Halloween — multiplayer always loads the normal `garage`); sandbox mode; text chat (Steam/
 Discord voice covers it); per-player inventory option (upstream #100); remote per-car engine sound beyond
 row 6's simple loop; Linux/headless server.
@@ -70,7 +68,12 @@ definition of done (Working rules) holds. Rows listed as "part N" are split by t
 | M3 | **Run jobs together** — accept an order, diagnose (examine, test drive, test path), replace parts, fluids and tires, hand it back, payout shared; a late joiner mid-job sees the job | 3, 4, 13 |
 | M4 | **The full workshop** — every tool, junkyard/barn/auction trips with car purchases landing in the shared parking, consistent money; host and join from the in-game menu | 5a, 5b, 6 part 2 (seat/engine, purchases outside), 10, 8 part 2 |
 | M5 | **Robust sessions** — 3–4 players, multi-hour session, crashes and rejoins without loss | 7 rest (identity, rejoin end-to-end, server loss), 11, 14 (d) |
-| M6 | **Release 1.0** — a friend installs from the zip and the guide alone, with the mods you play with | 9 part 2 (modded items, QoLmod), 12 part 2 |
+| M6 | **Release 1.0** — a friend installs from the zip and the guide alone, with visual mods only | 9 part 2 (gameplay-mod heuristic tuned on real mod lists), 12 part 2 |
+| M7 | **Scavenge together + feels shared** — shared junkyard/barn/auction, see each other's work, driving | 15, 17 |
+
+Row 16 is split over milestones: prices/fees and job payout/XP land with M3 (rows 3 and 10 use them); order
+generation and spawn damage land in M3 if the decompile spike shows they are reasonable, otherwise in M4 and row 3
+ships with its interim elected generator.
 
 ### Implementation order
 
@@ -171,8 +174,15 @@ it says so in its design as an assumption/dependency instead of implementing it.
 - **Session notes** go to `STATUS.md` (newest first): what was done, scenarios run, what is next.
 - **After merge**: archive the OpenSpec change (`openspec archive <name>`) so `openspec/specs/` holds the
   current behaviour, and update the Status section above.
-- **Game updates**: the test installs do not auto-update. When CMS21 updates, the first task is: rerun the
-  regression, regenerate the server database (row 9 exporter), record the game version in `STATUS.md`.
+- **Game version**: CMS21 gets no more updates (CMS 2026 replaces it); record the game version once in `STATUS.md`.
+  If an update appears anyway: rerun the regression and regenerate the server database before anything else.
+- **Draft ahead.** While a milestone is being implemented, draft the next milestone's undrafted rows (M1 needs 8
+  part 1, 9 part 1, 12 part 1, 14 (a)) with the same draft → review → integration pass; never start a row whose
+  change is not drafted and reviewed.
+- **Unattended-run safety.** `Run-Session.ps1` must abort (not wait) when Steam shows the "KickingOtherSession"
+  prompt (the user forgot offline mode on another device) — port the check from LoadOptimizer's `testrun.sh`
+  (M0 task). If the regression run is red and two attempts to fix it fail, stop feature work, log it in
+  `STATUS.md` and send a push notification. Never leave game or server processes running at the end of a session.
 - **Milestone definition of done**: all rows of the milestone merged; full regression green; a dev zip built;
   a short "what to try" checklist for the user in `STATUS.md`; known gaps listed. The user's playtest with
   friends closes the milestone; bugs found go to `QUESTIONS.md` under a "Playtest findings" heading (or a
