@@ -68,5 +68,5 @@ None (no specs exist yet).
 - Depends on `session-persistence-and-rejoin` groups 1–2 (contract, state lock, harness server control),
   `sync-players-and-scenes` slice 1 + scene tracking (`PresenceRegistry`, `PresenceEvents`), `sync-car-parts`
   (`CarPartsSync.UploadBaseline` after `PrepareJob`, late-join car replay, part records dropped on delete) and
-  `sync-car-placement-and-lifts` (placement; its park/unpark handlers keep the job's loader current); fluid
+  `sync-car-placement-and-lifts` (placement; it refuses to park customer cars while connected; `sync-car-parts`' `LoaderCleared` event tells this change when a job car is lost); fluid
   levels checked by `EndJob` come from `sync-car-details`.

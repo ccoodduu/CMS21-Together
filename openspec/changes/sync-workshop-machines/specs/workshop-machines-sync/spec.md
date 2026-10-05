@@ -3,7 +3,8 @@
 ## Purpose
 
 Keeps the garage machines shared between all players in a session: what each machine holds, how it is set up,
-where movable tools stand, and what machine work does to items and cars, including for players who join later.
+who is using the wheel balancer, where movable tools stand, and what machine work does to items, including for
+players who join later.
 
 ## ADDED Requirements
 
@@ -66,16 +67,24 @@ Mounting or unmounting a part on an engine on an engine stand SHALL change that 
 - **WHEN** players A and B unmount the same part of the engine on the stand at the same moment
 - **THEN** the part is in the shared inventory exactly once and missing from the engine for both players
 
-### Requirement: Wheel balancing keeps its minigame
-The wheel balancer minigame SHALL be played only by the player who balances the wheel. Other players SHALL see the wheel on the balancer and the balanced result, but not the minigame.
+### Requirement: Wheel balancing keeps its minigame, one player at a time
+The wheel balancer minigame SHALL be played only by the player who balances the wheel. Other players SHALL see the wheel on the balancer and the balanced result, but not the minigame. While one player has the minigame open, the balancer SHALL be locked for everyone else: no other player SHALL be able to take the wheel off or start balancing until that player finishes, cancels, leaves the garage or disconnects.
 
 #### Scenario: Wheel balanced by one player, taken by another
 - **WHEN** player A balances the wheel on the wheel balancer through the minigame and player B takes it off
 - **THEN** the wheel in the shared inventory is balanced for both players
 
-#### Scenario: Wheel taken while the minigame is open
-- **WHEN** player A has the balance minigame open and player B takes the wheel off the balancer
-- **THEN** A's minigame window closes, the wheel is in the shared inventory once and not balanced, and the balancer is empty for both players
+#### Scenario: Balancer locked while the minigame is open
+- **WHEN** player A has the balance minigame open and player B tries to take the wheel off the balancer or to start balancing
+- **THEN** B is refused with an on-screen message, A's minigame stays open, and the wheel stays on the balancer for both players
+
+#### Scenario: Two players open the minigame at once
+- **WHEN** players A and B open the balance minigame for the same wheel at nearly the same time
+- **THEN** exactly one of them keeps the minigame open, the other's window closes with a message, and only the holder's result is applied
+
+#### Scenario: Holder leaves
+- **WHEN** player A disconnects while the balance minigame is open
+- **THEN** the balancer is free again for player B, and the wheel is still on the balancer, not balanced
 
 ### Requirement: Results of machine work on items
 Work done by a machine, the repair table or the paint shop on an item SHALL change the item for every player: a repaired or painted part has the same condition, dent and paint for every player, and the result is kept when the item is later taken off or used by another player.
@@ -87,32 +96,6 @@ Work done by a machine, the repair table or the paint shop on an item SHALL chan
 #### Scenario: Part painted in the paint shop
 - **WHEN** player A paints a part from the shared inventory in the paint shop
 - **THEN** player B's inventory shows the part with the same colour and paint type
-
-### Requirement: Results of tool work on cars
-Using the welder, car wash, interior detailing kit, oil bin, engine crane, paint shop or dyno on a car SHALL leave the car in the same state for every player, through the same car state that part and detail sync use.
-
-#### Scenario: Car washed
-- **WHEN** player A washes a car in the car wash
-- **THEN** player B sees the car clean after A's wash finishes
-
-#### Scenario: Engine removed with the crane
-- **WHEN** player A removes a car's engine with the engine crane
-- **THEN** player B sees the car without its engine and the engine group is in the shared inventory once
-
-#### Scenario: Engine swapped with the crane
-- **WHEN** player A inserts a different engine into a car with the engine crane
-- **THEN** player B, and a player who joins afterwards, see the new engine in that car
-
-#### Scenario: Dyno run
-- **WHEN** player A measures a car on the dyno
-- **THEN** player B's car shows the same measured result, without a dyno run on B's client
-
-### Requirement: Visible tool actions
-Other players SHALL see a tool working when it acts on a car or item (sparks, wash or paint effect, sound) at the right place. Seeing the effect SHALL NOT lock the other player's controls, cost money or give experience a second time, or change state a second time.
-
-#### Scenario: Welding seen by another player
-- **WHEN** player A welds a car on lifter 1
-- **THEN** player B sees the welding effect at that car, can keep moving and using other tools, and the shared money changes only once
 
 ### Requirement: Shared tool positions
 The position of each movable tool (welder, interior detailing kit, oil bin, engine crane, headlamp aligner, window tinting kit) SHALL be the same for every player, both when moved to a car place and when sent back to its default position.

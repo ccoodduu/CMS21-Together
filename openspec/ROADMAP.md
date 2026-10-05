@@ -28,8 +28,9 @@ Size: S ≈ 1–2 sessions, M ≈ 3–5, L ≈ 6–10, XL > 10 (one session = on
 | 1 | `sync-car-parts` | Mount/unmount and state (condition, examined, quality, dent, bolts in progress) of body parts (`CarPart`) and mechanical parts (`PartScript`) on cars in the garage, late-join replay of loaded cars + their parts | 7 (contract) | L |
 | 2 | `sync-car-placement-and-lifts` | Lift states, moving a car between car loaders/places, garage parking lot, car transfer to/from parking | 1 | M |
 | 3 | `sync-orders-and-jobs` | Order generation (server owns the order list), accept/decline, customer car spawn, task progress, ending a job (payout/exp), order expiry, story missions | 1, 2 | L |
-| 4 | `sync-car-details` | Fluids, wheels/tires/rims and alignment, tuning parts, paint/livery/tint, dirt/wash state, license plates, headlamp alignment, car info (mileage etc.) | 1 | L |
-| 5 | `sync-workshop-tools` | Tire changer, wheel balancer, engine stand, engine crane, spring clamp, oil bin, welder, repair table, brake lathe, battery charger, car wash, paint shop, interior detailing, tool positions | 1, 4 | XL |
+| 4 | `sync-car-details` | Fluids, wheels/tires/rims and alignment, tuning parts, paint/livery/tint, dirt/wash state, license plates, headlamp alignment, car info (mileage, headlights on/off), visual tuning (bonus) parts | 1 | L |
+| 5a | `sync-workshop-machines` | Tire changer, wheel balancer (locked while one player plays the minigame), spring clamp, engine stands 1/2 (incl. parts on the stand), brake lathe, battery charger, repair table and part painting, tool positions | 1 | L |
+| 5b | `sync-workshop-car-tools` | Engine crane (out/in effect, engine swap trigger), car paint, car wash, interior detailing, oil bin, welder, dyno trigger | 1, 4, 5a | M |
 | 6 | `sync-players-and-scenes` | Spawn positions, name tags, player in car seat, engine running/sound, scene tracking (who is where), visibility per scene, travel to junkyard/barn/auction/dealer and how purchases there flow into shared inventory/parking | 2 (purchases only) | L |
 | 7 | `session-persistence-and-rejoin` | Server save format + versioning for all state above, autosave, identifying a returning player (per-player data), rejoin/late join end-to-end, client-side save safety (the client must never overwrite the player's own profiles) | — (contract first, rest last) | L |
 
@@ -64,7 +65,7 @@ definition of done (Working rules) holds. Rows listed as "part N" are split by t
 | M1 | **Friends connect and see each other** — host + 1–2 friends join over Steam from a dev zip, walk around with name tags, see each other after a late join, shop/warehouse/garage upgrades with shared money; working on cars (and travel, until row 1 restores garage cars on return) is blocked by the guard; nobody's own saves are touched | 6 part 1 (spawn, roster, names, scene tracking + away/return), 8 part 1 (join without hardcoded ID, status/errors), 9 part 1 (mod + game version + DLC + mod list check), 12 part 1 (dev build zip), 14 (a) |
 | M2 | **Work on one car together** — take a car from the parking onto a lift, strip and rebuild it together, travel to the junkyard (parts only) and come back to the same garage, restart the server, the car is still there; resync key fixes a broken car | 1, 2, 14 (b, c), harness latency/loss injection |
 | M3 | **Run jobs together** — accept an order, diagnose (examine, test drive, test path), replace parts, fluids and tires, hand it back, payout shared; a late joiner mid-job sees the job | 3, 4, 13 |
-| M4 | **The full workshop** — every tool, junkyard/barn/auction trips with car purchases landing in the shared parking, consistent money; host and join from the in-game menu | 5, 6 part 2 (seat/engine, purchases outside), 10, 8 part 2 |
+| M4 | **The full workshop** — every tool, junkyard/barn/auction trips with car purchases landing in the shared parking, consistent money; host and join from the in-game menu | 5a, 5b, 6 part 2 (seat/engine, purchases outside), 10, 8 part 2 |
 | M5 | **Robust sessions** — 3–4 players, multi-hour session, crashes and rejoins without loss | 7 rest (identity, rejoin end-to-end, server loss), 11, 14 (d) |
 | M6 | **Release 1.0** — a friend installs from the zip and the guide alone, with the mods you play with | 9 part 2 (modded items, QoLmod), 12 part 2 |
 
@@ -79,8 +80,9 @@ definition of done (Working rules) holds. Rows listed as "part N" are split by t
 3. M2: `sync-car-parts` → `sync-car-placement-and-lifts`; resync key + checksums.
 4. M3: `sync-orders-and-jobs` → `sync-car-details` → `sync-test-drive-and-diagnostics` (or 4 before 3 if
    row 3's trace spike stalls; M3 needs both, because job completion checks fluids and wheels).
-5. M4: `sync-workshop-tools` (common tools first: tire changer, balancer, oil bin, engine crane/stand, spring
-   clamp; then the rest) → rest of `sync-players-and-scenes` → `economy-audit` → `hosting-and-join-ui` part 2.
+5. M4: `sync-workshop-machines` (common machines first: tire changer, balancer, engine stand, spring clamp; then
+   the rest) → `sync-workshop-car-tools` → rest of `sync-players-and-scenes` → `economy-audit` →
+   `hosting-and-join-ui` part 2.
 6. M5, M6 as in the table.
 
 ### Early spikes (de-risk before the row starts)
@@ -95,25 +97,51 @@ definition of done (Working rules) holds. Rows listed as "part N" are split by t
 
 ### Integration notes (cross-change decisions to keep consistent)
 
-- Late-join sends go through `ISnapshotProvider` in `SyncOrder` order, not straight into `OnAskForSync`
-  (row 1 draft says otherwise; row 7's contract wins).
-- Shared server state is guarded by one lock (`GameDataManager.StateLock` in row 1 = row 7's state lock).
-- `ItemActionType.Update` and UID-idempotent inventory ADD: implemented by whichever of rows 1/5 lands first.
-- Parking API (`CarParkRequest`, `CarLoaderID = -1` for cars arriving from outside) comes from row 2 and is
-  used by rows 3 and 6.
-- Car detail updates from tools use row 4's `CarDetailsUpdatePacket` / `CarDetailsSync.MarkDirty`.
-- Money, scrap, level, XP and skills are SHARED (user decision 2026-10-05). Per-player server data is only
-  identity, name, position/scene, seat. Row 7's per-player progression must be removed.
+Final contracts after the integration pass (2026-10-06); the full matrix is in `openspec/INTEGRATION.md`.
+
+- Contract (row 7 groups 1–2, lands first): every row plugs in as `[SessionSection]` `ISaveSection` and/or
+  `ISnapshotProvider` in its `SyncOrder` slot (`world` 0, `garage` 10, `inventory` 20, `cars` 100, `car-details` 150,
+  `car-placement` 200, `workshop-tools` 300, `jobs` 400, `self` 450, `players` 500); clients count items with
+  `SyncTracker.Applied(key)`; no row sends from `OnAskForSync`, adds a "synced" flag or its own lock — all shared
+  server state is under `GameDataManager.StateLock`.
+- Section `cars` versions: v1 contract, v2 row 1, v3 row 4 (`Details`); row 2's `Place`/`CarData` are additive.
+- Snapshot vs live on the client: snapshot packets (between `SyncBegin` and `SyncEnd`) apply as soon as the garage
+  is loaded and never wait for `IsInitialSyncFinished`. Row 6's `ClientScene.IsGarageReady` is true from the start
+  of `CustomLoad` (before `AskForSync`); its `ClientScene.GarageBound` drops (or mirror-only updates) garage-bound
+  live packets while away, queues them between `SyncEnd` and `SyncAck`, and applies them otherwise.
+- Car lifecycle on the server (row 1): every loader record is created by `CarPartsStore.RegisterSpawn` and removed
+  by `ClearLoader(loader, reason)` (`Deleted`, `Parked`, `JobEnded`, `SpawnerLeft`), which raise `SpawnRegistered`
+  / `LoaderCleared`. Later rows subscribe instead of being called: row 2 (lift reset, unparked car back to parking
+  on `SpawnerLeft`), row 3 (lost job car reopens its order). Unpark = `RegisterSpawn`, park = `ClearLoader(Parked)`,
+  job end = `ClearLoader(JobEnded)`; row 4 purges stale details lazily.
+- Baselines: `CarPartsSync.UploadBaseline(loaderId)` after unpark (row 2), `PrepareJob` (row 3) and an engine swap
+  (row 5b, after `RebuildRegistry`); each upload also triggers row 4's full details snapshot. Engine swap is stored
+  and replayed by row 1 (blocked while connected if its spike finds no clean replay).
+- Parking API (row 2): `CarParkRequest { RequestId, CarLoaderID, PreferredSlot, Car, Price }`; `CarLoaderID = -1` is
+  for cars bought outside the garage (row 6 only) and is rejected (`ParkingFull`, `NoMoney`, `Invalid`) without a
+  give-back; the answer is `CarParkResult`, raised on the client as `ParkingSync.ParkResultReceived`. Customer cars
+  cannot be parked while connected.
+- Inventory: UID-idempotent ADD is row 1's; `ItemActionType.Update` is row 5a's.
+- Car-effect results: welder, interior condition and `PartScript` dust → `CarPartsSync.MarkDirty` (row 1); `CarPart`
+  dust, wash, paint, bonus parts → `CarDetailsSync.MarkDirty`/`FlushNow` (row 4); dyno → row 13 (trigger in 5b).
+  Headlights (`LightsOn`) and bonus parts are row 4 sections.
+- Money, scrap, level, XP and skills are SHARED. Per-player server data is only identity, name, position/scene
+  (seat/engine are live only). Steam stats/achievements of a finished job go to every connected player (row 3).
 - Tutorial is disabled in multiplayer games; story missions sync like orders; order expiry pauses while the
-  server is empty; cars bought outside the garage go to shared parking; the balancer minigame is kept.
-- Row 6's "return to the garage = late join" discards local garage state on return. Anything a player
-  produced away from the garage for a garage car (test drive/test path results) must be sent before the
-  snapshot is applied — row 13 owns that; dyno results are row 13's (answers row 4's open item A5).
-- The order generator (row 3) must be a client whose scene is `Garage`; once row 6's roster exists the server
-  elects among garage clients only.
-- Claims/reservations from any row are released when their holder disconnects or leaves the garage (row 6
-  publishes the event; rows 1, 5, 13 consume it).
-- Every handler for garage-bound packets uses row 6's `ClientScene.IsGarageReady` check.
+  server is empty; no new orders while nobody is in the garage; a lost job car reopens its order with the
+  original time; cars bought outside the garage go to shared parking; the balancer minigame is kept and locks the
+  balancer for others while open.
+- Random values (spawned car rolls, order generation, payout): one client computes, the server decides which
+  result counts and stores it (interim until row 16's server-side logic).
+- Row 6's "return to the garage = late join": results produced away (test drive/path) are sent on
+  `ClientScene.LeavingScene` before the return snapshot — row 13 owns that and the dyno values.
+- The order generator (row 3) is elected among `InSession` clients whose `PresenceRegistry` scene is `Garage`.
+- Claims/reservations (row 1 parts, row 3 order claims, row 5a balancer, row 13) are released on
+  `PresenceEvents.Left`/`SceneChanged` away from the garage (row 6 publishes them).
+- Harness: verbs are globally unique (`Commands.Discover` throws on duplicates); each helper has one owner — row 7:
+  `Send-ServerCommand`, `Wait-ServerLog`, `Stop-/Start-TestServer`, `to-menu`, `stats-add`; row 6: `teleport`,
+  `travel`, `Wait-HarnessDump`; row 1: `car-spawn`, `car-ready`, `car-hold`; row 2: `net-hold`, `park`; row 5a:
+  `tool-hold`, `Wait-HarnessDumpsEqual`.
 
 Boundaries: a change only syncs what its row owns. When it needs something owned by another change,
 it says so in its design as an assumption/dependency instead of implementing it.

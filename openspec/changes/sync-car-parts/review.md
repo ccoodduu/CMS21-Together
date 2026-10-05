@@ -101,3 +101,19 @@ All hook methods in the D2 table and the D7 setters exist in `Assembly-CSharp-fi
    Default: (a) row 1 stores and replays the swap (current draft, the coordinator's decision). If spike 0.1
    finds no replay call, (b) disable engine swap while connected until a later change. Recommended: accept (b) as
    the fallback so the spike result does not block row 1.
+
+## Integration pass (2026-10-06)
+
+- D6/D11, tasks 2.2–2.3: `ClearLoader(loader, reason)` (`Deleted`, `Parked`, `JobEnded`, `SpawnerLeft`) and server
+  events `SpawnRegistered` / `LoaderCleared(loader, removedRecord, reason)`; rows 2 and 3 subscribe instead of being
+  called (lift reset, unparked car back to parking, lost job car reopens). Cars dropped on load raise no event.
+- D2 / tasks 0.1, 3.5: engine crane out/in (`NotificationCenter.ActionUnMountGroup`, `ActionInsertEngineToCar`) is a
+  group transaction here (asked by the workshop review). D3/D11, task 3.6: `PartTransaction` for a non-car root and
+  hooks ignore `PartScript`s outside a registry (engine stand, `sync-workshop-machines`).
+- D9 / task 4.2: a live re-baseline with a different `EngineSwap` swaps, then rebuilds the registry; snapshot spawn
+  info is the stored `CarSpawnResponsePacket` incl. row 2's `CarData`/place and `IsJob`/`JobID`; snapshot handlers do
+  not wait for `IsInitialSyncFinished`.
+- D5 / task 2.5: `PresenceEvents` are merged in M1, so the "if it exists" condition is gone.
+- Engine swap fallback (blocked while connected) accepted by the user; noted in D Open Questions and task 0.1.
+- D6: the spawner's roll is marked as the interim plan until ROADMAP row 16 (server-side generation).
+- References to row 5 now name `sync-workshop-machines` / `sync-workshop-car-tools`.

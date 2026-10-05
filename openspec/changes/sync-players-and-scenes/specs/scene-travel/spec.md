@@ -51,7 +51,8 @@ player's copy of that scene; only money, exp, inventory and parking changes that
 ### Requirement: Garage updates while away
 While a client is not in the garage it SHALL NOT apply garage-bound updates (cars, parts, lifts, tools, garage
 upgrades) to the game, and when it returns to the garage it SHALL receive and apply the full current garage
-state, exactly as a client joining mid-session, instead of the garage from its local save.
+state, exactly as a client joining mid-session, instead of the garage from its local save. A garage-bound update
+that arrives while that garage state is still being applied SHALL be applied after it, not dropped.
 
 #### Scenario: Car changed while away
 - **WHEN** player A is in the junkyard and player B removes a door from a car in the garage, then A returns
@@ -60,6 +61,10 @@ state, exactly as a client joining mid-session, instead of the garage from its l
 #### Scenario: Update arrives during travel
 - **WHEN** a garage-bound update for player A arrives while A's scene is `Loading`
 - **THEN** A does not apply it and A's game raises no error, and the state after A's return includes the change
+
+#### Scenario: Update arrives while the returning garage is synced
+- **WHEN** player B changes a lift while player A's garage is loaded but A has not finished applying its garage state
+- **THEN** A applies B's change after the garage state, and A's lift ends equal to B's
 
 ### Requirement: Results sent when leaving a scene precede the return snapshot
 When travel away from a scene starts, the client SHALL give other modules a chance to send state produced in that

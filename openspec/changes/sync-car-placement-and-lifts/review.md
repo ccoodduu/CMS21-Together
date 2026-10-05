@@ -100,3 +100,15 @@ exist. `openspec validate --strict` passes.
 2. The parking level price is taken from the client (server checks money and "next level only"). Default: yes until
    an economy audit (row 10) adds a server price table.
 3. Part changes another player makes in the last moment before a car is parked are lost. Default: accept for v1.
+
+## Integration pass (2026-10-06)
+
+- D2/D5/D8, tasks 3.1, 3.3, 3.4: the "loader cleared function" is row 1's `ClearLoader(loader, reason)` + event
+  `LoaderCleared`; park calls `ClearLoader(Parked)`, unpark `RegisterSpawn`; the lift reset and the unparked-car
+  return subscribe to the event (row 1 deletes, this change puts the `ParkedCar` back). Row 4 needs no call (lazy purge).
+- D5/D8: the `-1` branch is used by row 6 only (customer cars cannot be parked while connected — user decision —
+  so row 3 aborts the take instead). Client `CarParkResult` handler raises `ParkingSync.ParkResultReceived` for row 6
+  (task 5.1). A5 and open question 1 marked as accepted.
+- D8 / task 4.4: live handlers go through row 6's `ClientScene.GarageBound` (parking `mirrorOnly` while away).
+- Task 7.1: `Wait-HarnessDump` is row 6's (no "unless row 3" fallback). Prerequisites name row 6 part 1 and the
+  contract as groups 1–2. D10 reference fixed (row 7 D4).

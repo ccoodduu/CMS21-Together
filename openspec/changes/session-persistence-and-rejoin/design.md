@@ -93,7 +93,7 @@ stops the server. A class may implement either interface or both. An *item* is w
 | 100 | `cars` | row 1 | yes (also holds row 4's `CarState.Details`) | car replay + parts |
 | 150 | `car-details` | row 4 | — | `CarDetailsUpdatePacket{IsFull}` per loaded car |
 | 200 | `car-placement` | row 2 | yes | `ParkingState`, `ParkingSlotUpdate`, `LifterState` |
-| 300 | `workshop-tools` | row 5 | yes | `ToolsState` |
+| 300 | `workshop-tools` | row 5a (`sync-workshop-machines`) | yes | `ToolsState` |
 | 400 | `jobs` | row 3 | yes | `JobsState` |
 | 450 | `self` | row 7 (Part B) | `players` | `PlayerRestore` |
 | 500 | `players` | row 6 | — | `PlayerRoster` |
@@ -101,6 +101,10 @@ stops the server. A class may implement either interface or both. An *item* is w
 Cars first because later sections reference car loaders; jobs after cars because row 3 marks customer cars
 "whichever arrives last"; own position after cars and lifts so the player is not placed inside a car that spawns
 afterwards; other players last because they are visual only.
+
+Section `cars` versions, in landing order: v1 = today's `CarState` (this contract), v2 = `sync-car-parts` (per-loader
+entries with baseline; `Migrate(1)` drops nothing, `Load` drops cars without baseline), v3 = `sync-car-details`
+(`Details`, no-op step). `sync-car-placement-and-lifts` adds `Place`/`CarData` to the loader entry without a bump.
 
 ### D3. State lock
 
@@ -134,6 +138,10 @@ SyncAck{snapshotId} (counts met)       →     SyncState = InSession, log "joine
   is met, and `ClientData.IsInitialSyncFinished` becomes true. Rows count items instead of adding their own
   "synced" flags. Packets of another `snapshotId` are ignored. A repeated `AskForSync` (garage return, row 6) gets a
   new snapshot.
+- Snapshot vs live: everything a provider sends arrives between `SyncBegin` and `SyncEnd` (`SyncTracker.InSnapshot`);
+  live changes come after `SyncEnd`. Snapshot handlers never wait for `IsInitialSyncFinished` (that would deadlock
+  the counts). Live garage-bound packets that arrive after `SyncEnd` but before `SyncAck` are queued by row 6's
+  `ClientScene` gate and applied in order once `IsInitialSyncFinished` is true.
 - Timeout: 30 s without a received snapshot packet or an applied item (replaces the absolute 10 s/15 s; row 1's
   "10 s without progress" becomes this). On failure the client logs expected vs applied per key, disconnects and
   loads the menu with `saveGame = false`.
@@ -227,6 +235,8 @@ heartbeats every 3 s) → on the main thread (`ThreadManager`) `Client.Disconnec
   does it (task 6.3 confirms the read order). If task 6.3 shows `StartGame` works without writing the pref, the pref
   write is dropped instead and recovery only cleans up `session.json`.
 - `profile4.cms21b` is never deleted (upstream 0.4 used slot 4+ for its saves); its presence is logged.
+- Other rows may adjust the in-memory session profile in `StartGame` (row 3 D13: `ProfileData.FinishedTutorial =
+  true`); it is never written to disk, so this change only keeps that line after its own profile-slot code.
 - Before the first `StartGame` of a game run, `GlobalStrings.SaveDirectory/profile*.cms21b` is copied to
   `UserData/CMS21Together/ProfileBackups/<ts>/` (keep 5); if the copy fails the join is aborted.
 

@@ -91,3 +91,18 @@ integration notes), the user's decisions in QUESTIONS.md and the other six draft
    scenario runs while players stay blocked.
 2. **Barn visibility:** remote avatars are hidden in the barn on the assumption that its layout varies per visit.
    *Recommended:* keep hidden; revisit if the barn turns out to be fixed.
+
+## Integration pass (2026-10-06)
+
+- D6 / tasks 2.3, 4.4 / scene-travel spec: `ClientScene.LocalScene = Garage` now at the start of `CustomLoad`
+  (before `AskForSync`), `IsGarageReady` = `LocalScene == Garage`; new helper `ClientScene.GarageBound(apply,
+  mirrorOnly)`: drop/mirror while away, apply snapshot packets (`SyncTracker.InSnapshot`), queue live packets between
+  `SyncEnd` and `SyncAck`. Fixes the deadlock `sync-orders-and-jobs` found (snapshot handlers gated on a flag that
+  became true only after `SyncEnd`). New spec scenario "Update arrives while the returning garage is synced".
+- D8, tasks 6.2–6.4, proposal: `CarPurchaseResult` removed; purchases use row 2's `CarParkRequest`/`CarParkResult`
+  (reasons `ParkingFull`, `NoMoney`, `Invalid`) and its client event `ParkingSync.ParkResultReceived`; no server
+  purchase code here.
+- D7 / task 5.4: `EnsureNotSeatedIn` subscribes to row 2's `CarPlacementSync.BeforeRemoteCarMove`.
+- D3: claim consumers are rows 1, 3, 13 and row 5a's balancer reservation (row 5 had no claims).
+- `LightsOn` is now synced by `sync-car-details` (user decision), not declined into the backlog.
+- Risks: stale "until row 7 lands" gap removed.

@@ -114,8 +114,8 @@ reply.
   to `InstantSet`.
 - **Reset**: whenever no car stands at a lift's place any more (delete, park, job end, move away), the server
   sets that lift to `OnFloor` without a broadcast; clients' own vanilla code lowers/detaches the lift as part of
-  the replicated delete/move. This runs in row 1's server "loader cleared" function (Decision 8), so every
-  removal path, including row 3's job end, resets the lift.
+  the replicated delete/move. This runs in a subscriber to row 1's server event `CarPartsStore.LoaderCleared`
+  (Decision 8), so every removal path, including row 3's job end, resets the lift.
 - *Fallback:* hooking `MoveUp`/`MoveMedFromFloor`/`MoveMiddleToFloor`/`MoveDown` gives the direction directly,
   if spike 1.1 shows `Action` is not hit.
 
@@ -172,34 +172,36 @@ new-profile `DefaultUnlockedLevels`, recorded by spike 1.3 from `GlobalData.GetM
   - Fallback if no save hook fires within 5 s: diff `carsOnParking` against the mirror (TogetherFixer's idea);
     if that also finds nothing, send `CarSpawnDelete` and log an error.
 
-  Server: refuse if the record `IsJob` (customer cars belong to row 3's job) or the lot is full. Otherwise take
-  the preferred slot if free, else the lowest free usable slot; run row 1's "loader cleared" function (drops
-  `LoadedCars`, part state, details, resets the lift); store the slot; send `CarSpawnDelete` to the others and
+  Server: refuse if the record `IsJob` (customer cars cannot be parked while connected, user decision 2026-10-05)
+  or the lot is full. Otherwise take the preferred slot if free, else the lowest free usable slot; call row 1's
+  `CarPartsStore.ClearLoader(loader, Parked)` (drops `LoadedCars` and part state; the lift resets through the
+  event; row 4 purges its stale details lazily); store the slot; send `CarSpawnDelete` to the others and
   `ParkingSlotUpdate` to everyone; if the preferred slot was taken, also send the requester `ParkingSlotUpdate`
   for that slot. On refusal (a rare race: the requester's mirror said there was room) send the requester
   `ParkingSlotUpdate` clearing its local slot and row 1's single-car snapshot of the unchanged record with
   `CarData` = the sent blob, so the car comes back with its server records.
 - **Car arriving from outside the garage** (`CarParkRequest { RequestId, CarLoaderID = -1, PreferredSlot = -1,
-  Car, Price }`, sent by rows 3 and 6 after the client bought/received the car locally with vanilla's money
-  deduction blocked): the server **rejects** if no usable slot is free or `Price > Money`; there is no give-back,
+  Car, Price }`, sent by row 6 after the client bought the car locally with vanilla's money deduction blocked): the server **rejects** if no usable slot is free or `Price > Money`; there is no give-back,
   because the client's purchase is simply undone. On success it takes the lowest free slot (or the preferred one),
   deducts `Price` once from the shared money, sends `ParkingSlotUpdate` to everyone and, when `Price > 0`,
   `WorldState`. Either way the requester gets `CarParkResult { RequestId, Accepted, Reason (ParkingFull, NoMoney,
-  Invalid), Slot }`. A `CarParkRequest` with a loader id must have `Price = 0` (else `Invalid`).
+  Invalid), Slot }`. A `CarParkRequest` with a loader id must have `Price = 0` (else `Invalid`). The client's
+  `CarParkResult` handler raises `ParkingSync.ParkResultReceived(result)`; row 6's purchase capture subscribes.
 - **Parking → garage**: prefix on `CarLoader.LoadCarFromFile(int index, bool fromParking)` with
   `fromParking = true` suppresses the `LoadCar` spawn hook for that loader, marks an own pending unpark and, once
   `IsCarLoaded()`, sends `CarUnparkRequest { Slot, ParkedCarId, CarLoaderID, Place, ConfigVersion }`.
   Server: accept if the slot still holds that `Id`, the loader has no record and no other record holds the
-  place. Accept = an accepted spawn in row 1's terms: clear the slot, create `LoadedCars[loader]` with
+  place. Accept = an accepted spawn in row 1's terms (`CarPartsStore.RegisterSpawn`): clear the slot, create `LoadedCars[loader]` with
   `CarData`/`CarDataVersion` from the slot, a new `SpawnSeq` and `SpawnedBy` = requester; keep the `ParkedCar`
   in the record until the baseline arrives; send `CarSpawnAck` to the requester, `CarSpawnResponse` to the others
   and `ParkingSlotUpdate` to everyone. On `CarSpawnAck` the requester calls row 1's
   `CarPartsSync.UploadBaseline(loaderId)` (its `LoadCarHook` was suppressed, so nothing else would), which also
   starts row 4's full details snapshot for the new `SpawnSeq`; without it other clients get neither parts nor details. Refuse → `CarSpawnRejected` (the client deletes its copy) plus `ParkingSlotUpdate` for that
   slot to the requester.
-- **Unparker disconnects before the baseline**: instead of row 1's delete, the server puts the kept `ParkedCar`
-  back into its slot (or the lowest free one), broadcasts `CarSpawnDelete` and `ParkingSlotUpdate`. Only if no
-  slot is free does row 1's delete apply (logged as an error).
+- **Unparker disconnects before the baseline**: row 1 deletes the car (`ClearLoader(loader, SpawnerLeft)`,
+  broadcast `CarSpawnDelete`); this change's `LoaderCleared` subscriber sees the kept `ParkedCar` in the removed
+  record and puts it back into its slot (or the lowest free one) and broadcasts `ParkingSlotUpdate`. Only if no
+  slot is free is the car lost (logged as an error).
 - **Remote load from blob**: `ProcessCarSpawnResponse` uses `LoadCarFromFile(NewCarData)` when `CarData` is
   set, else `LoadCar(name)` as today, then applies the place (Decision 3).
 - **Swap**: postfix on `ParkingCarPlaceManager.MoveCar(int from, int to)` (fallback
@@ -241,16 +243,20 @@ follow it (snapshot and resync only). A safety net compares `carsOnParking` with
 
 Server (all called with `StateLock` held, i.e. from a handler):
 - `CarParkRequest` with `CarLoaderID = -1`, `RequestId` and `Price`, answered by `CarParkResult` (Decision 5), is
-  the one path for cars arriving from outside the garage; rows 3 and 6 share it instead of their own purchase
+  the one path for cars arriving from outside the garage; row 6 uses it instead of its own purchase
   packets. Server-side it uses `ParkingService.TryAdd(ParkedCar car, int preferredSlot, out int slot)` +
   `BroadcastSlot(slot)`, which other server code may call directly.
 - `ParkingService.TryRemove(int slot, Guid id)`: for a later sell path (row 10); no client packet in this change.
-- Row 1's "loader cleared" function (delete, park, job end, spawner disconnect) calls
-  `PlacementState.OnLoaderCleared(loader)` (lift reset). Row 4 drops `CarState.Details[loader]` in the same
-  function.
+- Row 1's server events: `CarPartsStore.LoaderCleared(loader, removedRecord, reason)` (delete, park, job end,
+  spawner disconnect) → `PlacementState.OnLoaderCleared(loader)` (lift reset) and, for `SpawnerLeft` with a kept
+  `ParkedCar`, the return to parking. Park calls `ClearLoader(loader, Parked)`, unpark `RegisterSpawn`. Row 4 needs
+  no call: it purges details of cleared loaders lazily (its D8).
 Client:
 - `CarPlacementSync.BeforeRemoteCarMove(loaderId)` event for row 6's `EnsureNotSeatedIn`.
-- `NewCarDataCodec.ToParkedCar(NewCarData)` for row 6's purchase capture.
+- `NewCarDataCodec.ToParkedCar(NewCarData)` and the event `ParkingSync.ParkResultReceived` for row 6's purchase
+  capture.
+- Live handlers go through row 6's `ClientScene.GarageBound`: lifts and car places are dropped while away; parking
+  slot/level updates only update `ProfileData.carsOnParking` and the mirror (`mirrorOnly`).
 - The unparking client is the spawner for rows 1 and 4 (`CarSpawnAck`), so their "own spawn" uploads run.
 
 ### 9. Server stores vs. relays
@@ -274,7 +280,7 @@ needs a `cars` version step owned by row 1). Every handler, the unpark-disconnec
 ### 10. Late-join path
 
 1. Client loads the garage with an empty profile and sends `AskForSync`; the server builds the snapshot under
-   `StateLock` (row 7 D8).
+   `StateLock` (row 7 D4).
 2. `cars` (100, row 1): each car's spawn info carries its place and `CarData`, so it loads from the right base
    data and is moved to its place after load (Decision 3).
 3. `car-placement` (200, this change): `SendSnapshot` sends `ParkingState`, one `ParkingSlotUpdate` per occupied
@@ -327,11 +333,12 @@ Decided without the user (the user can override):
 - **A2** Moving a car is never blocked because someone works on it; only an occupied target or a raised lift
   refuses it.
 - **A3** `sync-car-parts` provides: spawn info in its snapshot (so place and `CarData` reach a late joiner), the
-  per-loader `Ready` state, `CarSpawnAck`/`SpawnedBy`, the single-car snapshot, a server "loader cleared"
-  function, and the spawner-disconnect rule that this change overrides for unparked cars.
+  per-loader `Ready` state, `CarSpawnAck`/`SpawnedBy`, the single-car snapshot, `ClearLoader(loader, reason)` with
+  the server events `SpawnRegistered`/`LoaderCleared`, and the spawner-disconnect delete that this change follows
+  with a return to parking for unparked cars.
 - **A4** The parking level price comes from the client; a server price table can come later.
-- **A5** Customer (job) cars cannot be parked while connected (the server refuses); vanilla probably does not
-  offer it anyway (spike 1.4 checks). Cars from outside the garage (rows 3 and 6) use `CarParkRequest` with
+- **A5** Customer (job) cars cannot be parked while connected (the server refuses; accepted by the user
+  2026-10-05); vanilla probably does not offer it anyway (spike 1.4 checks). Cars from outside the garage (row 6) use `CarParkRequest` with
   `CarLoaderID = -1`, `RequestId` and `Price`; a full lot or too little money rejects the request and the client
   undoes its purchase (no car comes back).
 

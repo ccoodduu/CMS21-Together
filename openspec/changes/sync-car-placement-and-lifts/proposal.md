@@ -33,11 +33,12 @@ parking, so placement has to be server-owned before them.
     money and stores the unlocked levels.
   - Remote parking changes are written straight into `ProfileData.carsOnParking`; an open
     `ParkingManagementWindow` is refreshed.
-- **Cars arriving from outside the garage** (rows 3 and 6): `CarParkRequest` with `CarLoaderID = -1`, `RequestId`
+- **Cars arriving from outside the garage** (row 6's purchases): `CarParkRequest` with `CarLoaderID = -1`, `RequestId`
   and `Price`; the server rejects when the lot is full or money is short, else deducts the price once; the client
   gets `CarParkResult`.
-- **Server API for other rows**: `ParkingService.TryAdd/TryRemove` (behind the -1 branch, later sell paths) and a
-  lift reset in `sync-car-parts`' "loader cleared" function (delete, park, job end).
+- **Server API for other rows**: `ParkingService.TryAdd/TryRemove` (behind the -1 branch, later sell paths); the
+  lift reset subscribes to `sync-car-parts`' `CarPartsStore.LoaderCleared` event (delete, park, job end).
+  Customer cars cannot be parked while connected (user decision).
 - **Save and late join** through `session-persistence-and-rejoin`'s contract: section `car-placement`
   (`ISaveSection` + `ISnapshotProvider`, `SyncOrder` 200) sends the parking lot and raised lifts after the cars;
   car places and parked-car base data travel inside the car records of `sync-car-parts`.
@@ -71,6 +72,7 @@ parking, so placement has to be server-owned before them.
 - Test harness: `tools/TestHarness/Features/CarPlacementCommands.cs` (incl. `net-hold` to make races
   deterministic), `lifters`/`placement`/`parking` dump sections, scenarios `car-placement.ps1`,
   `car-placement-latejoin.ps1`, `car-parking-full.ps1`.
-- Depends on `session-persistence-and-rejoin` task group 2 (contract, state lock) and `sync-car-parts` (car
-  replay with spawn info, per-loader `Ready` state, `SpawnSeq`/`CarSpawnAck`, "loader cleared" function). Server
+- Depends on `session-persistence-and-rejoin` task groups 1–2 (contract, state lock), `sync-players-and-scenes`
+  part 1 (`ClientScene.GarageBound`, `Wait-HarnessDump`) and `sync-car-parts` (car replay with spawn info,
+  per-loader `Ready` state, `SpawnSeq`/`CarSpawnAck`, `RegisterSpawn`/`ClearLoader` and their events). Server
   save grows by the parked cars' blobs.

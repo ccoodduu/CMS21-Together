@@ -4,13 +4,13 @@
 
 Keeps a car's details the same for every player in the session, and makes them survive a late join and
 a server restart. The details are fluids, wheels and alignment, tuning settings, paint/tint/dirt, license
-plates and car info.
+plates, car info (including headlights on/off) and visual tuning (bonus) parts.
 
 ## ADDED Requirements
 
 ### Requirement: Detail sections
-The system SHALL treat each car's details as eight sections and sync each section as a whole. The sections
-are Fluids, Wheels, Alignment, Tuning, Paint, BodyCosmetics, Plates and Info. Fluids, BodyCosmetics and Tuning are the
+The system SHALL treat each car's details as nine sections and sync each section as a whole. The sections
+are Fluids, Wheels, Alignment, Tuning, Paint, BodyCosmetics, Plates, Info and BonusParts. Fluids, BodyCosmetics and Tuning are the
 exceptions: their entries are synced one at a time (Fluids per reservoir, BodyCosmetics per body part,
 Tuning per module). Tire pressure and wheel balance are not part of car state.
 
@@ -23,7 +23,8 @@ Tuning per module). Tire pressure and wheel balance are not part of car state.
 - **AND** Paint holds the car colour, factory colour, factory paint type and custom paint data
 - **AND** BodyCosmetics holds, for each body part, colour, paint type, paint data, livery and strength, tint flag and tint colour, dust and wash factor
 - **AND** Plates holds front/rear plate numbers, the factory number and the front/rear textures
-- **AND** Info holds mileage, buy price and where the car came from
+- **AND** Info holds mileage, buy price, where the car came from and whether the headlights are on
+- **AND** BonusParts holds which visual tuning parts are fitted and their paint
 
 ### Requirement: Changes reach every player
 When a player changes a section of a car in the garage, the system SHALL show the same values to every
@@ -36,6 +37,14 @@ other connected player within 3 seconds.
 #### Scenario: Oil refill
 - **WHEN** player A tops up the engine oil of a car
 - **THEN** player B sees the same oil level and condition on that car within 3 seconds after A stops pouring
+
+#### Scenario: Headlights
+- **WHEN** player A switches on the headlights of a car in the garage
+- **THEN** that car's headlights are on for player B within 3 seconds
+
+#### Scenario: Bonus part fitted
+- **WHEN** player A fits a visual tuning part (for example a spoiler) to a car and paints it
+- **THEN** player B sees the same part with the same paint on that car
 
 #### Scenario: Window tint
 - **WHEN** player A tints a window and confirms

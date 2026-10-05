@@ -53,7 +53,7 @@ See proposal.md for the motivation. Today's code (observed, `main`):
 - Driving: a car driven on a track or into/out of parking is not synced; only the walking avatar is.
 - Selling cars, travel fees, auction bids and dealer trade-ins: owned by ROADMAP row 10 `economy-audit`.
 - Parking contents and slot allocation (`sync-car-placement-and-lifts`), garage car snapshot (`sync-car-parts`),
-  persistence of names/positions (`session-persistence-and-rejoin`), car lights (`LightsOn`, see Open Questions).
+  persistence of names/positions (`session-persistence-and-rejoin`), car lights (`LightsOn`: `sync-car-details`).
 - A seated animation for avatars; v1 hides the body.
 
 ## Decisions
@@ -93,8 +93,8 @@ Row 7 persists it per identity.
 - **Server stores:** presence record per connected client (name, scene, seat, engine, last movement).
   **Server relays:** movement (only to clients whose stored scene equals `packet.Scene` and
   `GameSceneInfo.ShowsAvatars(scene)`) and presence (to all synced clients).
-  **Server decides:** name uniqueness, clearing seat/engine when scene changes or the player leaves, the car
-  purchase check (D8).
+  **Server decides:** name uniqueness, clearing seat/engine when scene changes or the player leaves (the car
+  purchase check is row 2's `-1` branch, D8).
 - All record access happens under row 7's `GameDataManager.StateLock`: row 7 holds it around dispatch,
   `Client.Disconnect` and `Client.Update` (which also run from transport threads and the timeout check). Removal is
   idempotent: the `DisconnectPacket` broadcast and `PresenceEvents.Left` happen only when a record was removed.
@@ -104,7 +104,8 @@ Row 7 persists it per identity.
 - The `PlayerPresence` handler is `[AllowBeforeSync]` (row 7): a joining client publishes `Garage` right after
   `SyncEnd`, possibly before its `SyncAck`; presence is not shared game state.
 - Server-internal events `PresenceEvents.SceneChanged(clientId, from, to)` and `PresenceEvents.Left(clientId)` let
-  other modules release claims when the holder leaves the garage or disconnects (rows 1, 5, 13 consume them) and
+  other modules release claims when the holder leaves the garage or disconnects (rows 1, 3 and 13 consume them;
+  row 5a releases its balancer reservation on them too) and
   let `sync-orders-and-jobs` elect its order generator among clients whose scene is `Garage`
   (`PresenceRegistry.InScene(Garage)`). Raised under the state lock.
 - Client: `ClientData.Roster` (`Dictionary<int, RemotePlayer>`: record + avatar reference) is the single source;
@@ -130,7 +131,8 @@ local scene is `Loading`, movement is not sent.
 - Scene-ready: new `MainMod.OnSceneWasInitialized` override starts a coroutine for non-garage scenes that waits until
   `NotificationCenter.IsGameReady`, `!SceneLoader.blockProgress` and `GameScript.Get() != null`; then maps
   `GameScript.Get().CurrentSceneType` to `GameScene`, runs spawn placement, publishes presence (with transform)
-  and reconciles avatars. The garage runs the same steps at the end of `CustomLoad`, after `SyncEnd`.
+  and reconciles avatars. The garage sets `LocalScene = Garage` at the start of `CustomLoad` (D6) and runs the
+  remaining steps at the end of `CustomLoad`, after the initial sync.
 - `GameScene` in Core mirrors the game's scene types with explicit, stable values plus `Unknown` and `Loading`
   (server stays free of game types; row 7 persists the value). `GameSceneInfo.ShowsAvatars` lives in Core so the
   server's relay filter and the client use the same rule.
@@ -140,13 +142,23 @@ local scene is `Loading`, movement is not sent.
   a name table recorded by a task.
 
 ### D6. Away from the garage = not in the garage; return = late join
-Garage-bound client handlers (cars, parts, lifts, tools, `GarageState`) must not touch scene objects while
-`ClientData.LocalScene != Garage` or initial sync of the current garage load is unfinished. While the initial
-sync of a garage load is running, live packets are QUEUED and applied in order after the snapshot (row 7 sends
-live changes right after `SyncEnd`, so dropping them would lose updates). Only while the player is away from the
-garage do handlers drop the packet or only update a data mirror (row 2's parking slots in `ProfileData`, row 5's `ClientToolsState`); the
-return snapshot overwrites both. This change adds the check helper `ClientScene.IsGarageReady` and applies it to
-the handlers that exist today (`CarHandlers`, `WorldStatesPackets.HandleGarageState`); rows 1–5 use it for theirs.
+`ClientScene.LocalScene` becomes `Garage` at the start of every garage load (`CustomLoad`, after
+`ClientData.Reset()` and before `AskForSync`, when the garage's scene objects exist) and stops being `Garage` in
+the scene prefix (D5). `ClientScene.IsGarageReady` means exactly `LocalScene == Garage`, so it is already true
+while the snapshot is applied. Garage-bound client handlers (cars, parts, lifts, tools, `GarageState`) follow one
+rule, implemented once as `ClientScene.GarageBound(apply, mirrorOnly)`:
+- away from the garage (`!IsGarageReady`): drop the packet, or only update a data mirror (row 2's parking slots in
+  `ProfileData`, row 5a's `ClientToolsState`); the return snapshot overwrites both;
+- snapshot packets (row 7's `SyncTracker.InSnapshot`, between `SyncBegin` and `SyncEnd`) and live packets after
+  `IsInitialSyncFinished`: apply;
+- live packets after `SyncEnd` but before `SyncAck`: QUEUE and apply in arrival order once `IsInitialSyncFinished`
+  is true (row 7 sends live changes right after `SyncEnd`, so dropping them would lose updates). `ClientData.Reset()`
+  clears the queue.
+Snapshot handlers never wait for `IsInitialSyncFinished` or `NotificationCenter.IsGameReady` (both become true only
+after the counts are met, so waiting would deadlock row 7's `SyncTracker`). This change adds the helper and applies it
+to the handlers that exist today (`CarHandlers`, `WorldStatesPackets.HandleGarageState`); rows 1–5 use it for
+theirs (rows with their own per-loader queue or mirror, like row 1's `Ready` queue or row 3's job mirror, only need
+the away rule).
 Returning runs the existing `GarageLoader.Start` override → `AskForSync`, so the returning client gets the full
 snapshot — the same path as a late join (row 1 makes it load cars from the snapshot instead of the local save;
 row 7 gives it a new `snapshotId`).
@@ -178,12 +190,16 @@ row 7 gives it a new `snapshotId`).
 - Car removed under a seated player: the client handler that removes a car calls
   `PresenceManager.EnsureNotSeatedIn(carLoaderId)` first (starts `GameScript.Get().ExitFromInterior(false)` as a
   coroutine and waits for the game mode to leave `Interior` if the local player sits there); this change wires it
-  into today's `CarSpawnDelete` handler; row 2 calls it when moving cars.
+  into today's `CarSpawnDelete` handler and subscribes it to row 2's `CarPlacementSync.BeforeRemoteCarMove(loaderId)`
+  (row 2 lands first and raises the event before a remote car move).
 
 ### D8. Cars bought outside the garage (through the shared parking API)
 User decision: a car bought outside the garage always goes to the shared parking. Row 2 owns the parking lot and
-its `CarParkRequest { CarLoaderID, PreferredSlot, Car }` with `CarLoaderID = -1` for cars arriving from outside
-(ROADMAP integration note); `Car` is the opaque `NewCarData` blob made by row 2's `NewCarDataCodec`.
+its `CarParkRequest { RequestId, CarLoaderID, PreferredSlot, Car, Price }` with `CarLoaderID = -1` for cars
+arriving from outside, answered by `CarParkResult { RequestId, Accepted, Reason (ParkingFull, NoMoney, Invalid),
+Slot }` (ROADMAP integration note); `Car` is the opaque `NewCarData` blob made by row 2's
+`NewCarDataCodec.ToParkedCar`. Row 2 lands before this part, so this change adds no packet and no server code for
+purchases.
 1. Prefix `GameScript.BuyCar(carLoader, buyPrice)` when connected and scene ≠ Garage: open a capture
    `{RequestId, Price}` and suppress `GlobalData.AddPlayerMoney` while it is open (the server's `WorldState` sets
    the money).
@@ -191,14 +207,12 @@ its `CarParkRequest { CarLoaderID, PreferredSlot, Car }` with `CarLoaderID = -1`
    `NewCarDataCodec`, put the vanilla-chosen local slot back to empty (the server picks the slot), and send
    `CarParkRequest { CarLoaderID = -1, PreferredSlot = -1, Car, Price, RequestId }`. The capture closes there or
    after 5 s (logged as error; nothing is sent, no money moves). `toParking = false` is treated the same.
-3. Server (the `CarLoaderID = -1` branch of row 2's park handler, under `StateLock`): money < `Price` → `NoMoney`;
-   no free slot → `ParkingFull`; else `Money -= Price`, store the car in the slot row 2's allocation picks,
-   broadcast `WorldState` and `ParkingSlotUpdate`. The requester always gets `CarPurchaseResult{RequestId,
-   Accepted, Reason, Slot}`.
+3. Server (row 2's `CarLoaderID = -1` branch, under `StateLock`): no free slot → `ParkingFull`; money < `Price` →
+   `NoMoney`; else `Money -= Price` once, store the car in the slot row 2's `ParkingService.TryAdd` picks,
+   broadcast `ParkingSlotUpdate` and `WorldState`. The requester always gets `CarParkResult`; row 2's client
+   handler raises `ParkingSync.ParkResultReceived`, which the capture subscribes to by `RequestId`.
 4. On reject the client shows a message. The car is gone from the local scene and no local copy remains.
-- This change adds `Price` and `RequestId` (0 = not a purchase) to `CarParkRequest` and the new
-  `CarPurchaseResult`; whichever of rows 2/3 lands first implements the `-1` branch itself (row 3 uses it with
-  `Price = 0`).
+- Row 3 uses the same branch with `Price = 0` for a customer car that the game sends to parking.
 - *Why optimistic:* the vanilla buy flow is UI-driven and partly coroutine-based; blocking it and re-invoking
   after approval risks a second local money check failing against the already-debited money.
 - Auction: whether winning an auction ends in `GameScript.BuyCar` is not visible in the stubs; a task verifies it
@@ -230,8 +244,8 @@ scenes are known but produce no avatar until scenes match.
   capture or are refused while connected.
 - [Money moved by vanilla outside the capture (travel fees, selling cars)] → stays local until the next
   `WorldState`; owned by ROADMAP row 10 `economy-audit`.
-- [Garage-bound packets arriving during `Loading` or before `SyncEnd` being dropped] → row 7's per-load snapshot
-  (`snapshotId`) and row 1's revision queue cover the window; until row 7 lands it is a known gap.
+- [Garage-bound packets arriving during `Loading` or between `SyncEnd` and `SyncAck`] → dropped while away (the
+  return snapshot, with its new `snapshotId`, contains them), queued during the initial sync (D6).
 - [Two players sit in the same seat] → allowed, purely visual; both name tags show above the seat.
 - [Visibility in scenes with local worlds] → a remote avatar in the junkyard can stand on a pile the local player
   does not have; accepted for co-presence. Barn is hidden because its layout varies per visit (assumption).
@@ -249,10 +263,10 @@ Decisions taken without the user (recorded here; none changes the task list):
 - Barn hides remote avatars (layout assumed to vary per visit); every other non-menu scene type shows them.
 - Display name comes from a MelonPreferences entry, default Steam name; in-game UI is ROADMAP row 8.
 - Seated avatars are hidden (name tag above the seat) rather than posed.
-- `LightsOn` (offered by `sync-car-details` A5) is car state, not presence; this change does not take it.
+- `LightsOn` is car state, not presence: `sync-car-details` syncs it as an `Info` field (user decision 2026-10-05).
 - Results produced away from the garage reach the server before the return snapshot by row 13 sending them on
   `ClientScene.LeavingScene` (D6); dyno results are row 13's.
-- Assumptions on other changes: `sync-car-placement-and-lifts` provides the `CarParkRequest` slot allocation and
-  `NewCarDataCodec`; `sync-car-parts` makes the returning/late-joining garage load cars from the snapshot;
+- Assumptions on other changes: `sync-car-placement-and-lifts` provides `CarParkRequest`/`CarParkResult` with the
+  `-1` branch, the slot allocation, `NewCarDataCodec` and `CarPlacementSync.BeforeRemoteCarMove`; `sync-car-parts` makes the returning/late-joining garage load cars from the snapshot;
   `session-persistence-and-rejoin` provides `StateLock`, `ISnapshotProvider`, `SyncOrder`, `[AllowBeforeSync]`,
   `SyncTracker` and `PlayerRestore`, and persists name and last position from the presence record.

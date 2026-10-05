@@ -1,10 +1,17 @@
-# Review: sync-workshop-tools
+# Review: sync-workshop-machines
+
+This change was split out of `sync-workshop-tools` by the integration pass (user decision 2026-10-05). The review
+below was written for the combined change and is kept as history; findings about the car-effect tools (engine
+crane, engine swap, welder, car wash, interior detailing, oil bin, car paint, dyno) now belong to
+`sync-workshop-car-tools`.
+
+## Review of the combined `sync-workshop-tools` (history)
 
 Reviewed 2026-10-05 against ROADMAP integration notes, QUESTIONS.md answers, the decompiled stubs and the six other
 drafts. All hooks named in proposal/design were checked with `members.sh` (all exist; signatures corrected where noted).
 `openspec validate sync-workshop-tools --strict` passes.
 
-## Findings
+### Findings
 
 ### Blocker
 
@@ -66,7 +73,7 @@ drafts. All hooks named in proposal/design were checked with `members.sh` (all e
     detect inlining, so this spike stays manual.
 18. Server occupant check simplified to kind (Item/Group) + optional ID prefix table from `item_database.json`.
 
-## Updates after the other reviews (2026-10-05)
+### Updates after the other reviews (2026-10-05)
 
 - **Row 7 contract** (coordinator): `WorkshopToolsSection` is its own versioned `ISaveSection` and the
   `ISnapshotProvider` at slot 300 (`SendSnapshot` returns 1); no hand-made `OnAskForSync`/`SaveSession` calls; the
@@ -79,7 +86,7 @@ drafts. All hooks named in proposal/design were checked with `members.sh` (all e
   `CarBodyPartUpdate` after this review; it calls `CarPartsSync.MarkDirty`, which ends in row 1's `CarPartsChange`.
   Engine swap: stored by `sync-car-parts`, triggered by the engine crane (D9), as row 4 now says.
 
-## Scope: recommend splitting into two changes
+### Scope: recommend splitting into two changes
 
 The change is large (14 tool ids + positions + item processing, 22 task groups) and its two halves have different
 dependencies. Proposed split (not done here):
@@ -91,7 +98,7 @@ dependencies. Proposed split (not done here):
   (16–21). Thin glue over rows 1/4 APIs; blocked by the row-1 items below.
   Tasks are already grouped so the split is a move of groups 16–21 plus the `tools-car-effects` scenario.
 
-## Cross-change conflicts to fix elsewhere
+### Cross-change conflicts to fix elsewhere
 
 - `sync-car-parts` design D2/tasks 3.6–3.7: add `NotificationCenter.ActionUnMountGroup(InteractiveObject)` and
   `ActionInsertEngineToCar(GroupItem)` (and probably `MountGroup(long)`) to the transaction hooks; ignore `PartScript`s
@@ -105,10 +112,29 @@ dependencies. Proposed split (not done here):
   changes right after `SyncEnd`, before the client finishes applying — those would be lost for every row. Should be
   "queue during sync, drop only while away". Its D3 mentions "tool claims of sync-workshop-tools": there are none.
 
-## Open questions for the user
+### Open questions for the user
 
 1. **Taking a wheel off the balancer while someone plays the minigame** — allowed (their window closes, the wheel
    leaves unbalanced), or blocked while the minigame is open? *Default: allowed* (no extra lock state).
 2. **Split into two changes as above?** *Default: yes.*
 3. **Task 1.3 needs ~10 minutes of you using each machine with `tool-trace` on.** *Default: schedule it before
    group 6; groups 2–5 proceed without it.*
+
+## Integration pass (2026-10-06)
+
+- Split: groups 1–15 and the machine half of 22 of `sync-workshop-tools` became this change (spikes, framework,
+  slot machines, engine stands, tool positions, repair table, part painting, verification); groups 16–21 moved to
+  `sync-workshop-car-tools`. Capability renamed to `workshop-machines-sync`. Scenario `tools-car-effects` moved out.
+- Idempotent inventory ADD: owned by `sync-car-parts` (lands first); this change owns only `ItemActionType.Update`
+  (D3.1, task 3.2, 4.2, proposal). Answers the old open question in favour of row 1.
+- Wheel balancer (user decision 2026-10-05): locked while one player has the minigame open. New `ToolClaim`/
+  `ToolClaimUpdate` packets, server reservation released on finish/cancel/disconnect/leaving the garage/300 s,
+  `claimedBy` in the dump, D2 rule 4, D6, D12, spec requirement rewritten (old "window closes when someone takes
+  the wheel" removed), tasks 3.1, 7.2–7.3, harness `tool-balance-open`/`tool-balance-cancel`.
+- Scene handling: `ClientData.LocalScene` → `ClientScene.IsGarageReady`; handlers go through row 6's
+  `ClientScene.GarageBound` (mirror only while away, queue between `SyncEnd` and `SyncAck`) (D10, task 4.3).
+- `Wait-HarnessDumpsEqual` is built on row 6's `Wait-HarnessDump` (task 5.3).
+- Dependencies: row 1's non-car-root `PartTransaction` and "ignore `PartScript`s outside a registry" are now in
+  `sync-car-parts` D3/D11 (task 1.2 only checks them). This change no longer depends on `sync-car-details`.
+- Open question "split into two changes?": answered yes. "Taking a wheel off during the minigame": replaced by the
+  lock.

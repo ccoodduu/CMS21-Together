@@ -64,3 +64,17 @@ co-op and are already listed in QUESTIONS.md.
    **Default: yes**, because the generator must be in the garage. Open orders still expire while anyone is connected.
 2. If an active job's customer car is lost (a server save problem, or a crash during the take), should the job go back to the
    open list or be dropped? **Default: back to the open list**, with its original time.
+
+## Integration pass (2026-10-06)
+
+- Steam stats/achievements of a finished job go to all connected players (user decision): D8 `JobStatsAwarder`,
+  `JobRemoved.IsCompleted`, trace in task 1.1/1.3, tasks 4.3/7.1, new spec scenario "Steam progress for everyone".
+- Customer cars cannot be parked while connected (user decision): D12 rewritten (no `OnJobCarRemoved`, no unpark
+  `IsJob`/`JobID`), D4 full garage → take refused, non-goals, spec requirement + scenario, tasks 1.3/3.8/7.1.
+- Lost job car: reopens with the original time via row 1's `LoaderCleared(SpawnerLeft)` event and a first-tick check
+  after load (D12, task 3.8, spec).
+- D5/D8, tasks 3.6/3.10: car removal through `CarPartsStore.ClearLoader(loader, Deleted|JobEnded)`.
+- D9: the gate is `ClientScene.IsGarageReady`, which row 6 now sets before `AskForSync`, so the deadlock this review
+  found is fixed at the source; the job handlers still never wait for `IsInitialSyncFinished`.
+- D1: elected generator and client payout marked as interim until ROADMAP row 16.
+- D5 / task 5.5: no `CarDetailsSync.MarkDirty` after `PrepareJob`; row 4 already sends the full details on `BaselineUploaded` (avoids a double snapshot).

@@ -13,10 +13,11 @@ so a player who joined late got whatever their own game had randomized.
 ## What Changes
 
 - New car-detail state, owned by the server and stored per loaded car (`CarState.Details`, saved in the
-  `cars` save section and tied to `sync-car-parts`' `SpawnSeq`). It has eight sections: Fluids, Wheels (sizes/ET per wheel), Alignment
+  `cars` save section and tied to `sync-car-parts`' `SpawnSeq`). It has nine sections: Fluids, Wheels (sizes/ET per wheel), Alignment
   (wheels + headlamps), Tuning (gearbox ratios + ECU/carb `PartModule` data), Paint (car colour/factory
   colour/paint data), BodyCosmetics (per `CarPart`: colour, paint type, livery, tint, dust, wash factor),
-  Plates and Info (mileage, buy price, origin).
+  Plates, Info (mileage, buy price, origin, headlights on/off) and BonusParts (visual tuning parts
+  `CarLoader.bonusParts`: which are fitted and their paint; user decisions 2026-10-05).
 - New packets in `CarPackets.cs`. `CarDetailsUpdatePacket` sends whole sections (list sections only the
   changed entries), and the server merges them into its record. `CarDetailsRequestPacket` lets the server
   ask a client for a full snapshot when it has none. New `PacketTypes`: `CarDetailsUpdate`,
@@ -28,7 +29,8 @@ so a player who joined late got whatever their own game had randomized.
   - `TintingWindow.TintAction`, `TintingWindow.HideAction`
   - `CarLoader.SetNewLicensePlateNumber` and both `CarLoader.ChangeLicencePlateTexture` overloads
 
-  A 1 Hz value-diff poll covers Fluids, Wheels and Info, because those change along many paths (refill can,
+  Bonus parts are marked dirty by postfixes on `SwapBonusPart`/`TakeOffBonusPart` and by the paint shop.
+  A 1 Hz value-diff poll covers Fluids, Wheels and Info (incl. headlights), because those change along many paths (refill can,
   extractor, oil bin, tire mount, test drive) and have no preview state.
 - The client applies remote state with the game's own setters, for example
   `FluidsData.SetLevelAndCondition`, `SetWheelSize`/`SetET`, `SetCarColorAndPaintType`, `SetCarLivery`,
@@ -39,7 +41,7 @@ so a player who joined late got whatever their own game had randomized.
 - Late join: a `car-details` snapshot provider (`SyncOrder` 150, after all cars) from
   `session-persistence-and-rejoin`'s contract; items are counted by the contract's `SyncTracker`.
 - Client API `CarDetailsSync.MarkDirty(carLoader, sections, partIndices)` / `FlushNow`, called by
-  `sync-workshop-tools` when the paint shop or car wash finishes.
+  `sync-workshop-car-tools` when the paint shop or car wash finishes.
 - Test harness: `cardetails-*` commands, a `details` block per car in `StateDump`, and the scenarios
   `car-details` and `car-details-latejoin`.
 
@@ -64,6 +66,6 @@ so a player who joined late got whatever their own game had randomized.
   `Logic/Hook/CarDetailsHooks.cs`, `Network/Handlers/CarDetailsHandlers.cs`.
 - **Harness**: `tools/TestHarness/Features/CarDetailsCommands.cs`, `StateDump.cs`,
   `tools/test-env/scenarios/car-details*.ps1`.
-- **Depends on** `session-persistence-and-rejoin` group 2 (contract, `StateLock`, `SyncTracker`) and
+- **Depends on** `session-persistence-and-rejoin` groups 1–2 (contract, `StateLock`, `SyncTracker`) and
   `sync-car-parts` (part keys, `SpawnSeq`, loader `Ready`, baseline-uploaded and local-commit events).
-  **Used by** `sync-workshop-tools`.
+  **Used by** `sync-workshop-car-tools`.

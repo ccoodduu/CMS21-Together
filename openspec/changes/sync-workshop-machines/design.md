@@ -6,15 +6,14 @@ See proposal.md for the motivation. State today:
 
 - The inventory is server-authoritative but simple: `InventoryHook` sends every local `Inventory.Add(Item,bool)`,
   `Delete(Item)`, `AddGroup(GroupItem)` and `DeleteGroup(long)` as `InventoryItemAction`/`InventoryGroupItemAction`;
-  the server appends or removes by UID and relays to the others. ADDs are not checked for duplicate UIDs on the server
-  or the client. `Inventory.Add(List<BaseItem>)` is not hooked.
+  the server appends or removes by UID and relays to the others. `sync-car-parts` (lands before this change) makes
+  ADDs idempotent by UID on server and client. `Inventory.Add(List<BaseItem>)` is not hooked.
 - The pattern for "the sender already ran vanilla code" exists: `CarSpawnRequest` → server validates →
   `CarSpawnRejected` makes the sender undo locally.
 - The game has one instance of each machine, reachable through `ToolsManager.Get()` (`TireChangerLogic`,
   `WheelBalancerLogic`, `SpringClampLogic`, `EngineStandLogic`, `BrakeLatheLogic`, `BatteryChargerLogic`) and
-  `ToolsMoveManager.Get()` (`WelderLogic`, `CarWashLogic`, `InteriorDetailingToolkitLogic`, and the movable tool
-  transforms via `GetTool(IOSpecialType)`). The second engine stand is a separate `EngineStandLogic` on the GameObject
-  `Engine_stand_2`.
+  `ToolsMoveManager.Get()` (the movable tool transforms via `GetTool(IOSpecialType)`). The second engine stand is a
+  separate `EngineStandLogic` on the GameObject `Engine_stand_2`.
 - Car loaders are identified with `CarLoaderPlaces.Get().GetCarLoaderId(loader)`, not by parsing the GameObject name.
 - Only stubs of the game are available, so the order in which vanilla code changes the inventory and calls
   `SetGroupOn…` is unknown. The design must not depend on it.
@@ -25,11 +24,13 @@ See proposal.md for the motivation. State today:
     items instead of adding own "synced" flags), and `GameDataManager.StateLock` held around every server dispatch,
     `Client.Disconnect` and save build.
   - `sync-car-parts`: part keys (`PartKeys`, `CarSubPartIdentity.BuildKey`), the nested record
-    `CarSubPartUpdatePacket`, `PartTransaction` + `InventoryDelta`, `CarPartsChange`, and the client API
-    `CarPartsSync.MarkDirty(loaderId, part)` / `UploadBaseline(loaderId)`.
-  - `sync-car-details` D6: `CarDetailsSync.MarkDirty(CarLoader, CarDetailSection, IEnumerable<int> = null)` and
-    `CarDetailsSync.FlushNow(CarLoader)`; sections `Paint`, `BodyCosmetics` (fluids are polled by row 4).
-  - `sync-players-and-scenes` D6: `ClientScene.IsGarageReady`; returning to the garage is a full resync.
+    `CarSubPartUpdatePacket`, `PartTransaction` + `InventoryDelta` for a non-car root, hooks that ignore
+    `PartScript`s outside a car registry, UID-idempotent inventory ADD.
+  - `sync-players-and-scenes` D3/D6: `ClientScene.IsGarageReady` and `ClientScene.GarageBound(apply, mirrorOnly)`
+    (drop or mirror while away, queue between `SyncEnd` and `SyncAck`); `PresenceEvents.Left`/`SceneChanged`;
+    returning to the garage is a full resync.
+- `sync-workshop-car-tools` (lands after this change) adds the car-effect tools on top of this framework
+  (`ModToolId` values, `ToolSync` scope, harness `ToolsCommands.cs`).
 
 What went wrong in 0.4.x and FixForTogether (read, not copied):
 
@@ -42,38 +43,31 @@ What went wrong in 0.4.x and FixForTogether (read, not copied):
 - Engine stand take-off creates a **new GroupItem UID** on every client that runs it (FixForTogether
   `EngineStandSync`), so idempotent ADD alone does not prevent duplicates there.
 - Upstream #87: the tire changer showed the hood the player had just removed (no identity/type check).
-- For tools that act on a car, remote clients should apply only the final state and not run `DoWorkAnim`, which
-  locks interactive objects, closes the car and disables lifter buttons on the remote client (FixForTogether `desync_*`).
 
 ## Goals / Non-Goals
 
 **Goals:**
-- One mechanism per category (slot machine, car-effect tool, item processing, tool position), so a new machine is a
-  small client file plus an enum value.
+- One mechanism per category (slot machine, item processing, tool position), so a new machine is a small client
+  file plus an enum value.
 - No item is lost or duplicated by races or remote applies. The server is the single referee.
 - Late join, return to the garage and server restart rebuild the machines from server state alone.
 
 **Non-Goals:**
-- Car state itself (part mount state, condition, dirt, fluids, paint). It is owned by `sync-car-parts` and
-  `sync-car-details`; this change only triggers their senders at the tools' commit points.
-- Engine out/in with the crane as a part change: it is a group mount/unmount on a car, owned by `sync-car-parts`
-  (dependency, D7). Engine swap state is stored with the car by `sync-car-parts` (D7).
-- Headlamp alignment, wheel alignment and window tint results (row 4). Only the positions of the headlamp aligner and
-  the tinting kit are synced here.
-- Mirroring another player's minigame or camera (balance window, repair table bar, paint shop camera).
-- Storing and replaying dyno results (`EngineData.measured`, `MeasuredDragIndex`): roadmap row 13
-  `sync-test-drive-and-diagnostics`. This change only detects the end of a dyno run (D8, group 21).
-- Costs of tool use (paint, wash, welder, repair) beyond "the remote side never pays again": `economy-audit`.
+- Tools that act on a car (welder, car wash, interior detailing, oil bin, engine crane use, car paint, dyno):
+  `sync-workshop-car-tools`. Only the positions of the movable ones are synced here.
+- Headlamp alignment, wheel alignment and window tint results (`sync-car-details`). Only the positions of the
+  headlamp aligner and the tinting kit are synced here.
+- Mirroring another player's minigame or camera (balance window, repair table bar).
+- Costs of tool use beyond "the remote side never pays again": `economy-audit`.
 - Save versioning and rejoin identity (`session-persistence-and-rejoin`).
 
 ## Decisions
 
-### D1. Four tool categories, one transport each
+### D1. Three categories, one transport each
 
 | Category | Machines | Server stores | Server relays only |
 |---|---|---|---|
-| Slot machine | tire changer, wheel balancer, spring clamp, engine stand 1/2, brake lathe, battery charger | `ToolSlotState` per machine (held item or group, flags, angle, part overlay for the stands) | — |
-| Car-effect tool | welder, car wash, interior detailing (portable and stationary), oil bin, engine crane, paint shop (car), dyno | nothing new: results land in car state owned by rows 1/4/13 | `ToolAction` (visual effect) |
+| Slot machine | tire changer, wheel balancer, spring clamp, engine stand 1/2, brake lathe, battery charger | `ToolSlotState` per machine (held item or group, flags, angle, part overlay for the stands) and a runtime reservation (`ToolClaim`, balancer only) | — |
 | Item processing | repair table, paint shop (part) | the updated item in `InventoryState` | — |
 | Tool position | welder, interior detailing kit, oil bin, engine crane, headlamp aligner, tinting kit | `Positions[IOSpecialType]` (CarPlace or default) | — |
 
@@ -90,8 +84,9 @@ Dictionary<string, CarSubPartUpdatePacket> Parts }` (exactly one of `Item`/`Grou
 action (put, take, separate/connect, balance finished). The server accepts it only if:
 1. the UID currently held equals `ExpectedUid` (0 = empty),
 2. the new occupant has the right kind for the tool (Item for lathe/charger, Group for the others; an optional ID
-   prefix table per tool, filled from `Database/item_database.json` where the IDs are known), and
-3. the new occupant's UID is not held by another machine (two machines loaded with the same item at once).
+   prefix table per tool, filled from `Database/item_database.json` where the IDs are known),
+3. the new occupant's UID is not held by another machine (two machines loaded with the same item at once), and
+4. the machine is not reserved by another player (D6, balancer).
 
 On accept it stores the state and relays it to everyone else. On reject it sends
 `ToolSlotRejectedPacket { ToolSlotState Current; string Reason }` to the sender only. Handlers run under
@@ -103,7 +98,8 @@ On accept it stores the state and relays it to everyone else. On reject it sends
 
 Alternative considered: ask the server before the vanilla action (lock first, act on grant). Rejected because the
 vanilla UI flow (pie menu → window → coroutine) cannot be paused without reimplementing it, and the race window is
-one round trip. The vanilla UI already refuses to load a machine that shows as occupied.
+one round trip. The vanilla UI already refuses to load a machine that shows as occupied. The balancer minigame is the
+one exception (D6), because it is long and the user wants one player at a time.
 
 ### D3. Inventory moves keep using the shared inventory flow; tool sync never moves items itself
 
@@ -113,10 +109,9 @@ uses, and for take-offs that return several items (tire changer: one group, or r
 
 What makes that safe:
 
-1. **Idempotent ADD by UID**, owned by this change (`sync-car-parts` does not add it): server
-   `HandleInventoryItemAction`/`HandleInventoryGroupItemAction` ignore an ADD whose UID is already in `InventoryState`;
-   client `InventoryHandlers` skip an ADD whose UID is already local. A take race on a machine that returns the same
-   UID converges to one copy.
+1. **Idempotent ADD by UID**, from `sync-car-parts` (its D4): the server and client inventory handlers ignore an
+   ADD whose UID is already present. A take race on a machine that returns the same UID converges to one copy. This
+   change only checks it is merged (task 1.2).
 2. **Loser compensation on the client** (as with `CarSpawnRejected`). The server relays the winner's accepted
    update before it sends the loser's reject on the same stream, so the loser's mirror is current when the reject
    arrives.
@@ -145,11 +140,11 @@ packets.
 
 Each client tool file applies remote state inside `using (ToolSync.ApplyingRemote(tool))`. The hooks for that tool
 check `ToolSync.IsApplyingRemote(tool)` and do not send. The scope ends when the apply ends, even if the vanilla call
-threw. For coroutines (`Clear()`, `SetGroupOnEngineStand`, `SwapEngine`) the scope is released at the end of the
-wrapping `MelonCoroutines` coroutine that runs the game's IEnumerator.
+threw. For coroutines (`Clear()`, `SetGroupOnEngineStand`) the scope is released at the end of the wrapping
+`MelonCoroutines` coroutine that runs the game's IEnumerator.
 
 Hooks also do not send before initial sync is acknowledged (row 7: no state-changing packet before `SyncAck`;
-today `ClientData.IsInitialSyncFinished`) or while `!ClientScene.IsGarageReady`. This stops the local save's own
+`ClientData.IsInitialSyncFinished`) or while `!ClientScene.IsGarageReady`. This stops the local save's own
 `SetGroupOn…(…, instant: true)` calls during garage load from reaching the server.
 
 ### D5. Lightweight properties go separately
@@ -170,13 +165,23 @@ dropped: it is visual only, and the charge result still travels with the take-of
   `GroupOnTireChanger` and `GroupOnTireChangerIsMounting`; `Clear()` (IEnumerator) prefix → empty snapshot. Remote:
   `SetGroupOnTireChanger(group, true, connect)`; spike 1.4 checks that calling it on an occupied changer does not
   duplicate the rim/tire models, otherwise the remote clears first (neutral).
-- **Wheel balancer and its minigame (kept, user decision):** the actor plays the minigame locally; nothing of it is
-  mirrored. `SetGroupOnWheelBalancer(GroupItem, bool)` postfix → snapshot; `FinishBalance()` postfix → snapshot with
-  the balanced `WheelData` (falls back to `FinishBalanceInternal()` if spike 1.3 shows `FinishBalance` is not hit);
-  `Clear()` prefix → empty. Remote: apply the group; for a balance on the same UID, copy `IsBalanced` onto the held
-  items in place (`WheelData` is a struct: copy, set, assign back). If a remote clear arrives while the local player
-  has `WheelBalanceWindow` open, the window is closed with `CancelAction()` first; that player's later
-  `FinishBalance` is rejected by CAS. A minigame skip from another mod (QoLmod) still ends in `FinishBalance`.
+- **Wheel balancer and its minigame (kept, user decision; one player at a time, user decision 2026-10-05):** the
+  actor plays the minigame locally; nothing of it is mirrored. `SetGroupOnWheelBalancer(GroupItem, bool)` postfix →
+  snapshot; `FinishBalance()` postfix → snapshot with the balanced `WheelData` (falls back to
+  `FinishBalanceInternal()` if spike 1.3 shows `FinishBalance` is not hit); `Clear()` prefix → empty. Remote: apply
+  the group; for a balance on the same UID, copy `IsBalanced` onto the held items in place (`WheelData` is a struct:
+  copy, set, assign back).
+  **Reservation:** opening the minigame (the method spike 1.3 finds behind the balancer's pie-menu action) sends
+  `ToolClaimPacket { Tool = WheelBalancer, Release = false }`. The window opens at once (prediction). The server
+  grants if nobody holds the balancer, stores `{owner, time}` (runtime only, not saved) and broadcasts
+  `ToolClaimUpdatePacket { Tool, OwnerPlayerId }` (−1 = free) to everyone. If the update names someone else, the
+  requester closes its window with `WheelBalanceWindow.CancelAction()` and shows `UIManager.ShowInfoWindow("<player>
+  is balancing")`. While another player holds it, the client blocks opening the minigame and taking the wheel off
+  at their void entry points (pie-menu actions; never a `false` prefix on the `Clear()` IEnumerator) with the same
+  message, and the server rejects a `ToolSlotUpdate` for the balancer from anyone but the holder (D2 rule 4). The
+  reservation ends on `FinishBalance`, `CancelAction`/window close (`ToolClaim { Release = true }`), the holder's
+  disconnect, the holder leaving the garage (`PresenceEvents.Left`/`SceneChanged`) or after 300 s. A minigame skip
+  from another mod (QoLmod) still ends in `FinishBalance`.
 - **Spring clamp:** `SetGroupOnSpringClamp(GroupItem, bool instant, bool mount)` postfix; `ClearSpringClamp()` prefix.
 - **Brake lathe:** `SetItem(Item, bool)` postfix; `Clear()` (void) prefix.
 - **Battery charger:** `SetItemOnBatteryCharger(Item, bool)` postfix; `ClearBatteryCharger()` prefix; `Active` via D5.
@@ -196,48 +201,13 @@ neutral `ClearEngineStand()` only, never `TakeOffEngineFromStand()`.
 
 Parts mounted or unmounted on the engine on the stand are part changes with an inventory effect, so they reuse
 `sync-car-parts`' client `PartTransaction` and `InventoryDelta` with keys rooted at `EngineStandLogic.engineGameObject`
-instead of a car, sent as `ToolPartChangePacket { ModToolId Tool; long EngineUid; Preconditions; CarSubPartUpdatePacket[]
-SubParts; InventoryDelta Delta }`. The server checks preconditions against `Slots[tool].Parts` and the delta against
+instead of a car (row 1 D3 supports a non-car root, and its hooks ignore `PartScript`s outside a car registry), sent
+as `ToolPartChangePacket { ModToolId Tool; long EngineUid; Preconditions; CarSubPartUpdatePacket[] SubParts;
+InventoryDelta Delta }`. The server checks preconditions against `Slots[tool].Parts` and the delta against
 `InventoryState` exactly like `CarPartsChange` (row 1 D4), stores the records and relays; the reject path also matches
-row 1. This needs two things from `sync-car-parts` (dependency, task 1.2): its hooks ignore `PartScript`s that are not
-in a car registry, and `PartTransaction` can be opened for a non-car root. Late join applies the group and then the
-overlay; a clear wipes `Parts`.
+row 1. Late join applies the group and then the overlay; a clear wipes `Parts`.
 
-### D8. Car-effect tools: result through rows 1/4, effect through `ToolAction`
-
-`ToolActionPacket { ModToolId Tool; int CarLoaderId; ToolActionKind Kind; ModGroupItem Group }` is relayed to the
-others and not stored. Remote clients play only particles and SFX (`GarageTool.particles`, `GarageTool.sfx`, or
-`PaintshopManager.particleSystem`) at the car. They never call `DoWorkAnim`, `StartAnim`, `UseOilbin` or
-`UseEngineCrane`, so they never lock controls, pay or gain XP a second time.
-
-IEnumerator hooks (`DoWorkAnim`, `FinishAnim`, `MakeCarPaintEffects`) fire when the iterator is created, not when it
-finishes. Under Unhollower the returned Il2Cpp iterator cannot simply be wrapped by a managed one, so the end of an
-action is detected by a `MelonCoroutines` watcher started from the prefix: it waits for an observable end
-(`PaintshopManager.IsPainting` false, `GarageTool.effectTime` elapsed plus 0.5 s, or the `FinishAnim` prefix) and
-then calls the result sender.
-
-| Tool | Actor hook | Result sender (owner) |
-|---|---|---|
-| Welder | `WelderLogic.DoWorkAnim(CarLoader)` prefix → action + watcher | `CarPartsSync.MarkDirty(loaderId, part)` for the welded body `CarPart`s (row 1) |
-| Car wash | `CarWashLogic.DoWorkAnim(CarLoader)` prefix → action + watcher | `CarDetailsSync.MarkDirty(loader, CarDetailSection.BodyCosmetics)` + `FlushNow` (row 4 D6) |
-| Interior detailing | `InteriorDetailingToolkitLogic.DoWorkAnim(CarLoader)`, `ToolsMoveManager.UseInteriorDetailingToolkitStationary()` | split per row 4 D6, fields decided by row 4's probe (its task 1.2): `CarPart` dust → `CarDetailsSync.MarkDirty(loader, BodyCosmetics)`; part condition and `PartScript` dust → `CarPartsSync.MarkDirty(loaderId, part)` (row 1's attribute-only `CarPartsChange`) |
-| Oil bin | `CarLoader.UseOilbin()` prefix → action | nothing to send: row 4's 1 Hz Fluids poll sees the drain; optional `CarDetailsSync.FlushNow(loader)` after it |
-| Paint shop (car) | `PaintshopManager.MakeCarPaintEffects()` prefix → action + watcher | `CarDetailsSync.MarkDirty(PaintshopManager.carLoader, Paint \| BodyCosmetics)` + `FlushNow` (row 4 D6) |
-| Engine crane | `CarLoader.UseEngineCrane()` (out), `NotificationCenter.InsertEngineToCar(GroupItem)` (in) → action | engine out/in is a group unmount/mount: a `CarPartsChange` transaction of row 1 (needs row 1 to hook `NotificationCenter.ActionUnMountGroup(InteractiveObject)` and `ActionInsertEngineToCar(GroupItem)`, task 1.2) |
-| Dyno | `CarLoader.MeasurePower()` postfix, fallback `DynoManager.CloseDyno()` | row 13's dyno result sender (group 21 waits for row 13) |
-| Engine swap | `InsertEngineToCar(group)` where `group.ID` differs from `GetEngineName()` and `CanSwapEngineTo` | stored as `EngineSwap` in row 1's per-loader car entry; a swap is a re-baseline (D9) |
-
-### D9. Engine swap
-
-`CarLoader.SwapEngine(GroupItem)` replaces the engine model, so the part keys under the engine change. Every client's
-`sync-car-parts` registry was built from the original engine, so a swap must be handled like a new spawn of the same
-car: the actor sends `ToolAction(EngineSwap, loader, group)`; the server stores `EngineSwap = group.ID` in
-row 1's per-loader entry (`LoadedCars[loader]`) and bumps its `SpawnSeq`; remote clients run `SwapEngine` (as a
-coroutine under `ApplyingRemote`), rebuild the registry and wait for the actor's `CarPartsSync.UploadBaseline`. Late
-join applies `EngineSwap` right after `LoadCar` and before the registry is built. The field and the re-baseline belong
-to row 1 (task 1.2); this change only detects the swap and sends the trigger.
-
-### D10. Item processing: in-place item update
+### D8. Item processing: in-place item update
 
 `ItemActionType.Update` (owned by this change) replaces an inventory item by UID on the server and the clients (the
 client copies the fields onto the existing `Item` so the UI tile stays). An Update for a UID that is no longer in the
@@ -246,7 +216,7 @@ bool)` postfix (repair table) and a watcher after `PaintshopManager.MakePartPain
 `IsPainting` false and sends `PaintshopManager.item`. If the painted part leaves and re-enters the inventory
 (FixForTogether saw REMOVE→ADD), the ADD already carries the paint and the Update is a no-op.
 
-### D11. Tool positions
+### D9. Tool positions
 
 `ToolPositionPacket { int IoSpecialType; int CarPlace /* -1 = default */ }` from `ToolsMoveManager.MoveTo(IOSpecialType,
 CarPlace, bool)` and `SetOnDefaultPosition(IOSpecialType)` prefixes (only when `CanMove(tool, place)` is true). The
@@ -254,58 +224,62 @@ server stores it (last-write-wins) and relays it. Remote clients call `MoveTo(to
 `SetOnDefaultPosition(tool)`. If `CanMove` is false on the remote client (its car placement differs for a moment),
 the position stays in the mirror and is retried on the next car placement change.
 
-### D12. Client state, scenes and late join
+### D10. Client state, scenes and late join
 
-The client keeps `ClientToolsState`, a mirror of the server's `ToolsState`, used for `ExpectedUid`, compensation and
-re-applying.
+The client keeps `ClientToolsState`, a mirror of the server's `ToolsState` (slots, positions, reservations), used
+for `ExpectedUid`, compensation and re-applying. Tool handlers go through `ClientScene.GarageBound` (row 6 D6):
 
 - In the garage after sync: every tool packet updates the mirror and is applied.
-- During initial sync (until `SyncTracker` sends `SyncAck` and sets `IsInitialSyncFinished`): packets update the
-  mirror and are applied after the snapshot apply. They are not dropped, because the server sends live changes after
-  `SyncEnd`.
-- Away from the garage (`ClientData.LocalScene != Garage`): tool packets are dropped; returning to the garage is a
-  full resync (row 6 D6), which replaces the mirror.
+- During initial sync (between `SyncEnd` and `SyncAck`): packets update the mirror and are applied after the snapshot
+  apply. They are not dropped, because the server sends live changes after `SyncEnd`.
+- Away from the garage (`!ClientScene.IsGarageReady`): tool packets only update the mirror (`mirrorOnly`); returning
+  to the garage is a full resync (row 6 D6), which replaces the mirror.
 
 Late-join path: `AskForSync` → `SyncBegin` → … `cars` (100) … `car-placement` (200) → **`workshop-tools` (300):
-one `ToolsStatePacket { Slots, Positions }`** → … `SyncEnd`. It arrives after the `inventory` section (20) on the
-same stream, so no extra wait flag is needed. The client first clears every machine its own save loaded (inventory-neutral, D3.3), then applies all slots
-(`instant = true`) and stand overlays, then positions, then reports `SyncTracker.Applied("workshop-tools")` once (the
-provider's `SendSnapshot` returns 1). A return to the garage and a repeated `AskForSync` use the same path. Car-effect results arrive with car state (rows 1/4).
+one `ToolsStatePacket { Slots, Positions, Claims }`** → … `SyncEnd`. It arrives after the `inventory` section (20) on
+the same stream, so no extra wait flag is needed. The client first clears every machine its own save loaded
+(inventory-neutral, D3.3), then applies all slots (`instant = true`) and stand overlays, then positions and
+reservations, then reports `SyncTracker.Applied("workshop-tools")` once (the provider's `SendSnapshot` returns 1). A
+return to the garage and a repeated `AskForSync` use the same path.
 
-### D13. Server-side state and persistence
+### D11. Server-side state and persistence
 
 `ModGameState.ToolsState { Dictionary<ModToolId, ToolSlotState> Slots; Dictionary<int, int> Positions }` is the
-stored object. `WorkshopToolsSection` (`[SessionSection]`, `ISaveSection` + `ISnapshotProvider`, key
-`workshop-tools`, `Version = 1`, `SyncOrder = 300`) is a thin adapter (row 7 D1): `Save()` serializes it,
-`Load()` replaces it, `Reset()` empties it, `Migrate` has no steps yet, and `SendSnapshot` sends one `ToolsStatePacket`
-and returns 1. It is discovered by `SessionRegistry`; nothing is added to `OnAskForSync` or `SaveSession` by hand.
-Adding a field needs no version bump; renaming or reshaping `ToolSlotState` does, with a `JToken` migration. The server does not simulate machines (no charging or lathe timers); it stores what the acting client
-reports.
+stored object; reservations (`ToolClaims`) are runtime only. `WorkshopToolsSection` (`[SessionSection]`,
+`ISaveSection` + `ISnapshotProvider`, key `workshop-tools`, `Version = 1`, `SyncOrder = 300`) is a thin adapter (row 7
+D1): `Save()` serializes it, `Load()` replaces it, `Reset()` empties it, `Migrate` has no steps yet, and `SendSnapshot`
+sends one `ToolsStatePacket` and returns 1. It is discovered by `SessionRegistry`; nothing is added to `OnAskForSync`
+or `SaveSession` by hand. Adding a field needs no version bump; renaming or reshaping `ToolSlotState` does, with a
+`JToken` migration. `sync-workshop-car-tools` stores nothing in this section. The server does not simulate machines
+(no charging or lathe timers); it stores what the acting client reports.
 
-### D14. Failure cases
+### D12. Failure cases
 
 - Disconnect between the put REMOVE and the `ToolSlotUpdate` (same frame on one stream): the item is lost. Accepted.
-- Disconnect or scene change mid-minigame or with an item on a machine: no pending server state; the item stays on the
-  machine for everyone. There are no tool claims to release on `PresenceEvents.Left`.
-- Server restart: slots and positions load from the save; clients rejoin through the late-join path.
+- Disconnect or scene change with an item on a machine: no pending server state; the item stays on the machine for
+  everyone. Disconnect or scene change mid-minigame releases the balancer reservation (D6); the wheel stays on the
+  balancer, unbalanced.
+- Server restart: slots and positions load from the save, reservations start empty; clients rejoin through the
+  late-join path.
 
 ## Risks / Trade-offs
 
 - [Vanilla take paths touch the inventory in ways the stubs don't show (`Inventory.Add(List<BaseItem>)` is not
   hooked; new UIDs)] → Spike 1.3 records the order; D3.3's before/after snapshot covers unexpected additions on
   remote applies; every scenario step asserts equal inventories.
-- [IL2CPP inlining: a hook on a small method (`IncreaseEngineStandAngle`, `BatteryChargerActivate`, `FinishBalance`,
-  `UseOilbin`) may never run when called from native UI code] → spike 1.3 runs the real UI with `tool-trace`; each
-  missing hook gets the poll or caller-side fallback named in D5/D6/D8. Harness commands call the logic methods
-  directly and cannot detect inlining, so this spike is the only check.
+- [IL2CPP inlining: a hook on a small method (`IncreaseEngineStandAngle`, `BatteryChargerActivate`, `FinishBalance`)
+  may never run when called from native UI code] → spike 1.3 runs the real UI with `tool-trace`; each missing hook
+  gets the poll or caller-side fallback named in D5/D6. Harness commands call the logic methods directly and cannot
+  detect inlining, so this spike is the only check.
 - [`Clear()` coroutines on the tire changer and wheel balancer may play animations or need the player at the
   machine] → spike 1.4; fallback `ClearForTutorial()` or setting the fields directly, decided per tool.
+- [The minigame opens before the reservation answer arrives] → two players opening it in the same round trip:
+  the loser's window closes at once (D6), and the server's rule 4 rejects any balance result it still sends.
 - [A remote apply hits a machine whose window is open on that client] → close it first (`WheelBalanceWindow.CancelAction()`,
-  pie menu). The local player loses that UI step.
+  pie menu). With the reservation this only happens for a stale window.
 - [Engine stand 2 may be absent on some clients] → keep it in the mirror and show nothing; if the harness shows it
   cannot work, disable its interactive object while connected (QUESTIONS.md default).
-- [Paint shop: two players paint the same car] → last-write-wins on the car paint (row 4).
-- [Rows 1/4 rename their APIs] → this change only calls the senders named in the Context; task 1.1 re-checks them.
+- [Row 1 renames its APIs] → this change only calls the entry points named in the Context; task 1.1 re-checks them.
 
 ## Migration Plan
 
@@ -315,20 +289,15 @@ change; an unknown `workshop-tools` section is kept as raw JSON by row 7.
 
 ## Open questions / assumptions
 
-Decisions taken without the user (recorded here instead of asking):
+Decisions taken without the user (recorded here instead of asking), plus the user's answers:
 
-1. **Engine stand 2** is synced like stand 1 (QUESTIONS.md default). If the harness shows it is not workable,
-   disable it while connected.
-2. **`ItemActionType.Update` and idempotent ADD by UID** are owned by this change: `sync-car-parts` does not add them.
-3. **Engine crane out/in, the stand part overlay and engine swap storage** depend on `sync-car-parts` (D7, D8, D9).
-   If row 1 is merged without them, task 1.2 parks those tasks and records the gap in ROADMAP/QUESTIONS instead of
-   building a parallel mechanism here.
-4. **Interior detailing** results are split between row 4 (`CarPart` dust) and row 1 (part condition, `PartScript`
-   dust, sent as an attribute-only `CarPartsChange`); row 4's probe (its task 1.2) decides the exact fields.
-5. **Dyno results:** this change owns the trigger; the values are stored by ROADMAP row 13
-   `sync-test-drive-and-diagnostics` (decision 2026-10-05).
-   No dyno run is mirrored.
-6. **Minigames are not skipped or mirrored.** The balance result is taken from `FinishBalance()`.
-7. No FixForTogether code is adapted. Its findings (final-state-only for car-effect tools, ADD duplication, new UID on
-   stand take-off, engine stand 2, `MeasurePower` as the dyno commit point) inform this design. If code is adapted
-   later, credit TogetherFixer and link the repository, as its license requires.
+1. **Engine stand 2** is synced like stand 1 (QUESTIONS.md default, accepted). If the harness shows it is not
+   workable, disable it while connected.
+2. **`ItemActionType.Update`** is owned by this change; the idempotent ADD is `sync-car-parts`'.
+3. **The stand part overlay** depends on `sync-car-parts` (D7). If row 1 is merged without a non-car root for
+   `PartTransaction`, task 1.2 parks task 11.3 and records the gap in ROADMAP/QUESTIONS instead of building a
+   parallel mechanism here.
+4. **Minigames are not skipped or mirrored.** The balance result is taken from `FinishBalance()`; the balancer is
+   locked for others while one player has the minigame open (user decision 2026-10-05).
+5. No FixForTogether code is adapted. Its findings (ADD duplication, new UID on stand take-off, engine stand 2)
+   inform this design. If code is adapted later, credit TogetherFixer and link the repository, as its license requires.

@@ -1,6 +1,6 @@
 # Tasks
 
-Prerequisites: `session-persistence-and-rejoin` group 2 (contract, `StateLock`, `SyncTracker`) and
+Prerequisites: `session-persistence-and-rejoin` groups 1–2 (contract, `StateLock`, `SyncTracker`) and
 `sync-car-parts` are merged. Check design A1 against the merged `sync-car-parts` code first; add any missing
 hook there as a small separate commit.
 
@@ -11,7 +11,7 @@ hook there as a small separate commit.
   `Oil`, `Brake`, `EngineCoolant`, `PowerSteering`, `WindscreenWash`), `wheels` (per `WheelType`:
   `{width, size, profile, et, tire, rim}`), `alignment` (wheels + both headlamps), `gearbox`, `tuning`
   (`{partKey, isTuned, values[], tuningValue, ecuStage}`), `paint`, `bodyCosmetics` (per `carParts[i]`),
-  `plates`, `info`. Verify: `car-spawn` (from `sync-car-parts`) in a one-client `-KeepRunning` session, then
+  `plates`, `info` (incl. `lightsOn`), `bonusParts` (`ids`, `isPainted`, `color`). Verify: `car-spawn` (from `sync-car-parts`) in a one-client `-KeepRunning` session, then
   `dump`; the `details` block is filled.
 - [ ] 1.2 `tools/TestHarness/Features/CarDetailsCommands.cs`: `cardetails-probe <loader>` reports
   - transform paths of every `GearboxHandle` and `PartModule` (type, `EcuModule.Stage`), and whether
@@ -21,6 +21,8 @@ hook there as a small separate commit.
   - tint round trip: `SetColorAndOpacity(c, GetOpacityFromColor(c), true)` then read `TintColor`
   - which `CarPart`/`PartScript` fields `TweenInteriorConditionAndDust(1, 0, 0)` changes
   - whether `ModCarFrom`/`ModCarFluidType`/`ModPaintType` match the game enums by ordinal
+  - which `CarLoader` field or getter holds the headlights state that `SwitchCarLights` changes
+  - `bonusParts` before/after `SwapBonusPart` and `TakeOffBonusPart(io, true)` (models, inventory events)
 
   Verify: run it once; write the answers into design.md Risks and D6 (interior detailing), and adjust D2/D4
   if a mapping differs.
@@ -32,7 +34,7 @@ hook there as a small separate commit.
   existing `ModItem.GearboxData`/`LPData` uses still compile.
 - [ ] 2.2 Append `CarDetailsUpdate`, `CarDetailsRequest` to `PacketTypes`; add both packets (D3) to
   `Network/Packets/CarPackets.cs`; add `Dictionary<int, ModCarDetails> Details` to `CarState` and bump the `cars` save section
-  version with a no-op `Migrate` step. Verify: server and client start, `PacketRouter` logs both types, and the
+  from v2 to v3 with a no-op `Migrate(data, 2)` step. Verify: server and client start, `PacketRouter` logs both types, and the
   test server's existing save loads with empty `Details`.
 
 ## 3. Server
@@ -61,6 +63,7 @@ hook there as a small separate commit.
   `-gearbox <loader> <final> <r1,r2,…>`, `-tune <loader> <partKey> <tuningValue> <v1,v2,…>`,
   `-paint <loader> <partIndex> <r,g,b,a> <paintType>`, `-tint <loader> <partIndex> <r,g,b,a>`,
   `-wash <loader> <dust> <wash>`, `-plate <loader> <front|rear> <text>`, `-mileage <loader> <km>`,
+  `-lights <loader> <on|off>` (`SwitchCarLights`), `-bonus <loader> <bonusPartId|none> [r,g,b,a]`,
   `-randomize <loader>` (the game's random rolls without `MarkDirty`, then `CarPartsSync.UploadBaseline`, as
   `sync-orders-and-jobs` does after `PrepareJob`), `-hold <on|off>` (stop sending spawn snapshots, for 4.7).
   Verify: each changes the local `details` dump; `cardetails-fluid` on one connected client logs exactly one
@@ -71,7 +74,7 @@ hook there as a small separate commit.
   `CarDetailsRequest`. Verify: two-client run; B's log shows the apply and B sends no `CarDetailsUpdate` back.
 - [ ] 4.5 Spawn snapshot (D7): on `CarPartsSync.BaselineUploaded`, send `IsFull` and clear "awaiting
   snapshot". Verify: after `car-spawn` + `cardetails-randomize` on A, B's `details` equals A's.
-- [ ] 4.6 `Logic/Hook/CarDetailsHooks.cs`: the D4 postfixes (they only call `MarkDirty`, resolving the car
+- [ ] 4.6 `Logic/Hook/CarDetailsHooks.cs`: the D4 postfixes, including `SwitchCarLights`, `SwapBonusPart` and `TakeOffBonusPart` (they only call `MarkDirty`, resolving the car
   through the window's `carLoader` / `tintManager.carLoader` field), and the `LocalPartsCommitted`
   subscription (Tuning for mechanical keys, BodyCosmetics for body keys). Verify: harness
   `cardetails-ui <gearbox|ecu|carb|wheelalign|lampalign|tint|plate> <loader>` sets the window's car field and

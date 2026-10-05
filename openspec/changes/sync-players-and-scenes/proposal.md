@@ -50,8 +50,8 @@ Hooks and packets:
   (prefix, only while a car purchase is captured); polled: `GameMode.GetCurrentMode()`,
   `GameManager.EngineAudioController` (`GetEngineStartingOrWorking`, `carLoader`, `CurrentRpm`),
   `GameScript.CurrentSceneType`; scene-ready via `MelonMod.OnSceneWasInitialized` + `NotificationCenter.IsGameReady`.
-- Packets: **new** `PlayerPresence`, `PlayerRoster`, `CarPurchaseResult`; **changed** `MovementPacket`
-  (+`Scene`), `CarParkRequest` of `sync-car-placement-and-lifts` (+`Price`, `RequestId`), `GameScene` enum (all
+- Packets: **new** `PlayerPresence`, `PlayerRoster`; **used** `CarParkRequest`/`CarParkResult` of
+  `sync-car-placement-and-lifts` (`RequestId`, `Price`); **changed** `MovementPacket` (+`Scene`), `GameScene` enum (all
   game scene types, explicit stable values), `PlayerState` (one record per player instead of parallel
   dictionaries).
 
@@ -71,8 +71,8 @@ Hooks and packets:
 - Core: `Data/Enum/GameScene.cs` (+ `GameSceneInfo`), `Data/PlayerState.cs`, `Network/Packets/PlayerPackets.cs`,
   `PacketTypes.cs` (entries appended).
 - Server: `Network/Handlers/PlayerHandlers.cs`, `Network/Handlers/AuthHandlers.cs` (name), new `Data/Presence/`
-  (`PlayersSnapshotProvider`, `PresenceEvents`, `PresenceRegistry`), the `CarLoaderID = -1` branch of row 2's
-  `Network/Handlers/ParkingHandlers.cs`, `Network/Client.cs` / `Server.cs` (presence cleanup, scene-filtered relay),
+  (`PlayersSnapshotProvider`, `PresenceEvents`, `PresenceRegistry`), `Network/Client.cs` / `Server.cs` (presence
+  cleanup, scene-filtered relay; purchases use row 2's existing `CarLoaderID = -1` branch),
   `Network/Transport/SteamTransport.OnDisconnected`.
 - Client: `Data/ClientData.cs`, `Data/GameData.cs` (garage-scoped), `Logic/PlayerInstance.cs`,
   `Logic/Player/Movement.cs`, new `Logic/Player/` presence manager, spawn placement, name tag, seat/engine
@@ -81,6 +81,6 @@ Hooks and packets:
   `MainMod.OnSceneWasInitialized` (new override).
 - Depends on the `session-persistence-and-rejoin` contract (groups 1–2: state lock, `ISnapshotProvider`, `SyncOrder`,
   pipeline, `SyncTracker`) for part 1;
-  on `sync-car-parts` for cars in the return snapshot; on `sync-car-placement-and-lifts` (parking API,
-  `NewCarDataCodec`) for car purchases. Row 7 persists names and last positions; row 13 uses `LeavingScene`.
+  on `sync-car-parts` for cars in the return snapshot; on `sync-car-placement-and-lifts` (`CarParkRequest`/
+  `CarParkResult`, `NewCarDataCodec`, `BeforeRemoteCarMove`) for car purchases and seated players. Row 7 persists names and last positions; row 13 uses `LeavingScene`.
   Test harness: `Features/PresenceCommands.cs`, `StateDump`, three scenarios.

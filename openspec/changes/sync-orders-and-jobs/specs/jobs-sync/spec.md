@@ -50,7 +50,7 @@ Accepting an order SHALL require the server's approval, and the server SHALL app
 - **THEN** the order disappears from every player's orders window
 
 ### Requirement: Customer car spawn for an accepted job
-Taking a job SHALL spawn the customer car for every player on the same car loader, marked as that job's customer car, and the job SHALL then be listed as active on every client with that car loader. The job SHALL stay linked to its car when the car is parked and brought back, and SHALL return to the open list if its car is lost.
+Taking a job SHALL spawn the customer car for every player on the same car loader, marked as that job's customer car, and the job SHALL then be listed as active on every client with that car loader. While connected, a job's customer car SHALL NOT be movable to the parking lot, and the job SHALL return to the open list with its original remaining time if its car is lost.
 
 #### Scenario: Other player sees the customer car
 - **WHEN** player A takes a job
@@ -60,13 +60,13 @@ Taking a job SHALL spawn the customer car for every player on the same car loade
 - **WHEN** an approved take does not result in a customer car within the take timeout, the garage has no free place, or the taker disconnects first
 - **THEN** the order returns to the open list for everyone and any car spawned for it is removed
 
-#### Scenario: Customer car parked and brought back
-- **WHEN** a player moves an active job's customer car to the parking lot and later back into the garage
-- **THEN** the job stays active for every player and is linked to the car loader the car came back to
+#### Scenario: Customer car cannot be parked
+- **WHEN** a player tries to move an active job's customer car to the parking lot while connected
+- **THEN** the move is refused, and the job stays active for every player on the same car loader
 
 #### Scenario: Job car lost
-- **WHEN** an active job's customer car is removed by anything other than parking or ending the job, for example a car dropped when the server loads its save
-- **THEN** the job returns to the open list for everyone so it can be taken again
+- **WHEN** an active job's customer car is removed by anything other than ending the job, for example a car dropped when the server loads its save
+- **THEN** the job returns to the open list for everyone with its original remaining time, so it can be taken again
 
 ### Requirement: Decline
 Declining an open order SHALL remove it for every player. Orders that the game marks as not deletable (story missions) SHALL NOT be declinable.
@@ -94,11 +94,15 @@ Every player SHALL see the same progress for an active job: which tasks and part
 - **THEN** player B's order details for that job show the same part as found
 
 ### Requirement: Job completion
-Ending a job SHALL be applied once by the server: the job's payout SHALL be added to the shared money, its experience to the shared experience and level (never also through the generic experience update), and the job and its customer car SHALL be removed for every player. A second attempt to end the same job SHALL be refused without paying again.
+Ending a job SHALL be applied once by the server: the job's payout SHALL be added to the shared money, its experience to the shared experience and level (never also through the generic experience update), and the job and its customer car SHALL be removed for every player. Every player connected at that moment SHALL receive the game's Steam statistics and achievement progress for the finished job. A second attempt to end the same job SHALL be refused without paying again.
 
 #### Scenario: Job ends with shared payout
 - **WHEN** a player ends an active job and the game's completion checks pass
 - **THEN** every player's money increases by the same payout, every player's experience matches the server's, and the job and its car are gone for everyone
+
+#### Scenario: Steam progress for everyone
+- **WHEN** player A ends a job while player B is connected
+- **THEN** both A and B receive the game's Steam statistics and achievement progress for that job once
 
 #### Scenario: Two players end the same job
 - **WHEN** two players end the same job at nearly the same time

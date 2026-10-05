@@ -87,3 +87,16 @@ from `OnAskForSync` "before `SyncEnd`" or adding its own "synced" flag.
    refused (a crashed client waits up to 10 s). *Recommended default: first wins.*
 2. **Rejoin position**: a returning player spawns where they left the garage (not at the default spawn). *Recommended
    default: yes.*
+
+## Integration pass (2026-10-06)
+
+- D2: added the `cars` section version history (v1 contract, v2 `sync-car-parts`, v3 `sync-car-details`; row 2's
+  fields additive) — answers `sync-car-details`' request for one bump each. Slot 300 owner renamed to row 5a
+  (`sync-workshop-machines`, split from `sync-workshop-tools`).
+- D4: snapshot vs live rule — snapshot packets arrive between `SyncBegin` and `SyncEnd`, snapshot handlers never wait
+  for `IsInitialSyncFinished`; live garage-bound packets before `SyncAck` are queued by row 6's `ClientScene` gate.
+  Task 2.7: `SyncTracker.InSnapshot`.
+- D11: row 3 may set `ProfileData.FinishedTutorial = true` on the in-memory session profile in `StartGame`
+  (coordination asked by `sync-orders-and-jobs`).
+- Already applied before this pass (by the user): `PlayerPresence` in the `[AllowBeforeSync]` list, task 4.4 reuses
+  row 6's `teleport`.

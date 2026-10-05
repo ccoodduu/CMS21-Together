@@ -5,7 +5,7 @@
 - The server can spawn and delete cars (`CarHandlers`, `CarState.LoadedCars`). `sync-car-parts` adds part
   records, a per-spawn `SpawnSeq`, a part baseline uploaded by the spawner, a client loader state machine
   (`Empty → Loading → AwaitingBaseline → Ready`) and the late-join car snapshot (`SyncOrder` 100).
-  `session-persistence-and-rejoin` group 2 adds the server contract every row plugs into: `ISaveSection`,
+  `session-persistence-and-rejoin` groups 1–2 add the server contract every row plugs into: `ISaveSection`,
   `ISnapshotProvider`, `SyncOrder`, `SyncBegin/SyncEnd/SyncAck` with the client `SyncTracker`, and
   `GameDataManager.StateLock`, which is held around every packet handler and console command.
 - The game keeps the detail state on the live `CarLoader`. All names below were checked against the
@@ -24,6 +24,8 @@
     `IsTinted`, `TintColor`, `Dust`, `WashFactor`
   - `LicensePlatesData{LicensePlateNumberFront, LicensePlateNumberRear, FactoryLicensePlateNumber,
     LicensePlateFrontTex, LicensePlateRearTex}`
+  - `bonusParts` (`BonusPartsData{IDs, IsPainted, Color, PaintType, PaintData}`), set with `SwapBonusPart` /
+    `TakeOffBonusPart`; headlights via `SwitchCarLights` (the readable lights field is found by probe 1.2)
 
   Tuning lives on part components: `GearboxHandle{float[] gearRatio; float finalDriveRatio}` and
   `CMS.PartModules.PartModule{PartScript partScript; TuningData data}` with `EcuModule{byte Stage}` and
@@ -43,24 +45,23 @@
 ## Goals / Non-Goals
 
 **Goals:**
-- One server-owned record per loaded car holding the eight sections in `specs/car-details-sync/spec.md`,
+- One server-owned record per loaded car holding the nine sections in `specs/car-details-sync/spec.md`,
   saved with the session.
 - Change detection that never sends preview values and never echoes or floods.
 - Spawn values become shared, and a late join is complete.
-- A small client API and a stable packet that `sync-workshop-tools` reuses.
+- A small client API and a stable packet that `sync-workshop-car-tools` reuses.
 
 **Non-Goals:**
 - Mounting and unmounting parts, part condition, dent, quality, and dust/condition on mechanical
   `PartScript`s (`sync-car-parts`).
 - Engine swap (`EngineParams.EngineSwap`, `NewCarData.engineSwap`): it changes the part hierarchy, so the
-  stored state belongs to `sync-car-parts` and the trigger to `sync-workshop-tools` (engine crane), as
-  `sync-workshop-tools` assumption 3 already says.
+  stored state belongs to `sync-car-parts` and the trigger to `sync-workshop-car-tools` (engine crane), as
+  `sync-workshop-car-tools` D2 already says.
 - Dyno results (`EngineData`, `MeasuredDragIndex`): owned by ROADMAP row 13 `sync-test-drive-and-diagnostics`
-  (decision 2026-10-05). `LightsOn`: backlog (see A5).
-- Bonus (visual tuning) parts `CarLoader.bonusParts`: pending decision A8.
-- Tool interaction, animations, costs and occupancy (`sync-workshop-tools`).
+  (decision 2026-10-05).
+- Tool interaction, animations, costs and occupancy (`sync-workshop-machines`, `sync-workshop-car-tools`).
 - Wheel balance (`WheelData.IsBalanced` exists only on items and the balancer, so it is
-  `sync-workshop-tools` + inventory) and tire pressure (not modelled by the game).
+  `sync-workshop-machines` + inventory) and tire pressure (not modelled by the game).
 - Moving cars between places, lifts and parking (`sync-car-placement-and-lifts`).
 - The save envelope and its version (`session-persistence-and-rejoin`).
 
@@ -82,7 +83,7 @@ entries and merge per entry: Fluids by `(Type, Id)`, BodyCosmetics by `PartIndex
 
 ### D2: Data model (Core)
 `Data/GameType/ModCarDetails.cs`:
-- `[Flags] enum CarDetailSection {Fluids, Wheels, Alignment, Tuning, Paint, BodyCosmetics, Plates, Info}`
+- `[Flags] enum CarDetailSection {Fluids, Wheels, Alignment, Tuning, Paint, BodyCosmetics, Plates, Info, BonusParts}`
 - `ModCarDetails{int SpawnSeq; bool HasSnapshot; …one nullable field per section}`:
   - `List<ModFluidLevel>`, `ModFluidLevel{ModCarFluidType Type; int Id; float Level; float Condition}`
   - `ModCarWheel[4]` indexed by `WheelType`: `{int Width, RimSize, TireSize, ET; string Tire, Rim}`. The
@@ -95,7 +96,9 @@ entries and merge per entry: Fluids by `(Type, Id)`, BodyCosmetics by `PartIndex
     ModPaintData PaintData; string Livery; float LiveryStrength; bool IsTinted; ModColor TintColor; float
     Dust; float WashFactor}`
   - `ModLPData`, filled in with the five `LicensePlatesData` strings
-  - `ModCarInfo{int Mileage, BuyPrice; ModCarFrom CarFrom}`
+  - `ModCarInfo{int Mileage, BuyPrice; ModCarFrom CarFrom; bool LightsOn}`
+  - `ModBonusParts{string[] IDs; bool IsPainted; ModColor Color; ModPaintType PaintType; ModPaintData PaintData}`
+    (one whole section, mirrors `BonusPartsData`)
 - `ModGearboxData` gets `float[] GearRatio; float FinalDriveRatio` (matches the game's `GearboxData`, so
   `ModItem.GearboxData` can carry it too).
 - `ModCarFluidType` mirrors `CarFluidType` (`None, All, Brake, EngineOil, EngineCoolant, WindscreenWash,
@@ -126,10 +129,11 @@ last mark, only the entries that differ from `lastKnown` (floats differ by more 
 | Wheels | 1 Hz poll (sizes change along mount paths such as `PartScript.ResizeWheel`, not only `SetWheelSize`) | `SetWheelSize(width, rim, tire, WheelType)`, `SetET(WheelType, et)`, then `UpdateWheels(front)` per axle |
 | Alignment | postfix `WheelsAlignmentWindow.HideAction`, `LampAlignmentWindow.HideAction` (field `carLoader`) | assign `WheelsAlignment`, `HeadlampLeftAlignment`, `HeadlampRightAlignment` (struct copies) |
 | Tuning | postfix `GearboxTab.ApplyAction`, `EcuTuning.ApplyAction`, `CarbTuning.ApplyAction` (field `carLoader`); `sync-car-parts` local commit event (a tuned part was mounted) | `GearboxHandle.gearRatio/finalDriveRatio`; `PartModule.CopyDataFrom(ref TuningData)`; `EcuModule.SetStage(byte)` |
-| Paint | `MarkDirty` from the paint shop (`sync-workshop-tools`) | `SetFactoryColor`, `SetFactoryPaintType`, `color`, `paintData`, `SetCustomCarPaintType(PaintData)` when custom |
+| Paint | `MarkDirty` from the paint shop (`sync-workshop-car-tools`) | `SetFactoryColor`, `SetFactoryPaintType`, `color`, `paintData`, `SetCustomCarPaintType(PaintData)` when custom |
 | BodyCosmetics | postfix `TintingWindow.TintAction` (selected window, `tintManager.GetSelectedWindow()`) and `TintingWindow.HideAction` (all `tintManager.windows`); `sync-car-parts` local commit event for a body part; `MarkDirty` from paint shop / car wash | per `CarPart`: `SetCarColorAndPaintType`, `SetCustomCarPaintType(part, data)` when Custom, `SetCarLivery`, `SetColorAndOpacity(tint, opacity, isTinted)`, `SetWashFactor`, `EnableDust`, then `UpdateCarBodyPart(part)` |
 | Plates | postfix `SetNewLicensePlateNumber(string, bool)`, both `ChangeLicencePlateTexture` overloads | `SetNewLicensePlateNumber(n, isFront)`, `ChangeLicencePlateTexture(part, tex)`, `SetLicensePlateNumber()` |
-| Info | 1 Hz poll (mileage changes after a test drive) | assign `CarInfoData` |
+| Info | 1 Hz poll (mileage changes after a test drive; headlights, also postfix `CarLoader.SwitchCarLights`) | assign `CarInfoData`; `SwitchCarLights` when `LightsOn` differs |
+| BonusParts | postfix `SwapBonusPart`, `TakeOffBonusPart`; `MarkDirty` from the paint shop | `SwapBonusPart` / `TakeOffBonusPart(io, true)` for the difference, then paint fields; the inventory side of a fitted or removed part goes through the normal inventory flow (a rare double-take race is accepted) |
 
 - *Why:* the poll catches every path for fluids, wheel sizes and mileage (refill can, `FluidExtractor`, oil
   bin, tire mount, test drive) without per-frame hooks and without depending on small setters that IL2CPP may
@@ -154,8 +158,9 @@ last mark, only the entries that differ from `lastKnown` (floats differ by more 
 ### D6: Tool handoff API (client)
 `CarDetailsSync.MarkDirty(CarLoader loader, CarDetailSection sections, IEnumerable<int> bodyPartIndices = null)`
 and `CarDetailsSync.FlushNow(CarLoader loader)`. A null index list means all body parts (car wash).
-`sync-workshop-tools` calls them on the acting client only:
-- paint shop: when `PaintshopManager.IsPainting` turns false after `MakeCarPaintEffects`, `Paint | BodyCosmetics`
+`sync-workshop-car-tools` calls them on the acting client only:
+- paint shop: when `PaintshopManager.IsPainting` turns false after `MakeCarPaintEffects`, `Paint | BodyCosmetics |
+  BonusParts`
 - car wash: after `CarWashLogic.DoWorkAnim` / `TweenExteriorDustWash` ends, `BodyCosmetics`
 - oil bin (`CarLoader.UseOilbin`): nothing needed, the Fluids poll sees it; `FlushNow` is optional
 - interior detailing (`TweenInteriorConditionAndDust`): split by what the probe shows it changes. `CarPart`
@@ -186,8 +191,9 @@ and `CarDetailsSync.FlushNow(CarLoader loader)`. A null index list means all bod
     1 s server tick (D7) and skipped by the snapshot (D10). No hook into spawn, delete, park or unpark is
     needed.
 - **Persists** as part of the `cars` save section, as `session-persistence-and-rejoin` D2 lays out
-  (`cars` "also holds row 4's `CarState.Details`"). Adding the field bumps the `cars` section version by one
-  with a no-op `Migrate` step (older data has no `Details` and loads as empty). There is no separate
+  (`cars` "also holds row 4's `CarState.Details`"). Adding the field bumps the `cars` section from v2
+  (`sync-car-parts`, which lands first) to **v3** with a no-op `Migrate(data, 2)` step (older data has no
+  `Details` and loads as empty). There is no separate
   `car-details` save section; `car-details` is a snapshot provider only (D10).
 - **Validates** before storing (the handler already runs under `StateLock`):
   - the loader is in `LoadedCars` and `SpawnSeq` matches; otherwise drop and log
@@ -215,7 +221,7 @@ and `CarDetailsSync.FlushNow(CarLoader loader)`. A null index list means all bod
 3. The client queues detail packets per loader, merging the latest of each section/entry. A coroutine waits
    until `sync-car-parts` reports the loader `Ready`, then applies in this order, each in its own try/catch:
    Wheels (resizing may reset geometry), Tuning, Fluids, Alignment, Paint, BodyCosmetics (after Paint, whose
-   car-level setters touch every part), Plates, Info. It then re-reads `lastKnown`, clears "awaiting
+   car-level setters touch every part), BonusParts, Plates, Info. It then re-reads `lastKnown`, clears "awaiting
    snapshot" and, for a `SourceClientId=-1` packet, calls `SyncTracker.Applied("car-details")`.
 4. `SyncAck` goes out when every count is met (row 7), so the details are on screen before the joiner may
    send anything.
@@ -249,7 +255,7 @@ Returning to the garage from another scene uses the same path through `sync-play
 - [The license plate window may preview textures through `ChangeLicencePlateTexture`] → checked by hand once
   in task 4.6 (log the calls while browsing); if it previews, move the Plates hook to the window's confirm or
   hide method.
-- [Tool tweens on a receiver writing their own end values after our apply] → `sync-workshop-tools` plays only
+- [Tool tweens on a receiver writing their own end values after our apply] → `sync-workshop-car-tools` plays only
   effects on receivers (its D7) and calls `MarkDirty` on the actor only.
 - [Random rolls after the last baseline upload] → the scenario compares a freshly spawned car; if values
   still differ, the late roll's owner (`sync-orders-and-jobs`) calls `UploadBaseline` after it.
@@ -276,17 +282,17 @@ Returning to the garage from another scene uses the same path through `sync-play
 - **A2 –** Changing a car's place or lift does not change its loader (`sync-car-placement-and-lifts` §3), so
   details stay keyed by loader. Parking removes the car (its blob carries the details); unparking is a new
   spawn with a new `SpawnSeq` and baseline, which triggers D7.
-- **A3 –** `sync-workshop-tools` calls `MarkDirty` at its commit points (D6) and sends no detail values of its own.
+- **A3 –** `sync-workshop-car-tools` calls `MarkDirty` at its commit points (D6) and sends no detail values of its own.
 - **A4 –** Wheel balance and tire pressure are excluded (Non-Goals).
-- **A5 – settled:** engine swap → `sync-car-parts` stores, `sync-workshop-tools` triggers; dyno results →
-  ROADMAP row 13 stores them, `sync-workshop-tools` triggers; `LightsOn` → not synced (backlog).
+- **A5 – settled:** engine swap → `sync-car-parts` stores, `sync-workshop-car-tools` triggers; dyno results →
+  ROADMAP row 13 stores them, `sync-workshop-car-tools` triggers; `LightsOn` → this change, as an `Info` field
+  (user decision 2026-10-05).
 - **A6 –** Simultaneous same-section edits: last writer wins (in `QUESTIONS.md`).
 - **A7 –** The spawner's random rolls become shared (in `QUESTIONS.md`); the server cannot roll them without
   game data.
-- **A8 – (ask)** Bonus parts (`CarLoader.bonusParts`, `BonusPartsData{IDs, IsPainted, Color, PaintType,
-  PaintData}`) are visual tuning parts that the paint shop also paints. No draft covers them. Proposed
-  default: a ninth section `BonusParts` here, applied with `SwapBonusPart`/`TakeOffBonusPart(io, true)`, with
-  the inventory side going through the normal inventory flow.
+- **A8 – decided (user, 2026-10-05):** bonus (visual tuning) parts are the ninth section `BonusParts` here
+  (D2, D4), applied with `SwapBonusPart`/`TakeOffBonusPart(io, true)`; the inventory side goes through the normal
+  inventory flow.
 - **References:** hook points confirmed by reading FixForTogether by TogetherFixer; no code adopted. If code
   is adapted later (for example the `IsPainting` watcher), its license requires credit to TogetherFixer, a
   link to its repository and marking the code as modified.

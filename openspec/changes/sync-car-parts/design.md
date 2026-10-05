@@ -43,7 +43,9 @@ See proposal.md for why. Current state that shapes the approach:
 
 **Non-Goals:**
 - Bolt-by-bolt animation on remote clients; others see the committed state and a "part in use" reservation.
-- Parts while they are off the car on a tool (engine stand/crane, repair table, tire changer): row 5.
+- Parts while they are off the car on a tool (engine stand, repair table, tire changer): `sync-workshop-machines`, which reuses this
+  change's `PartTransaction` for the engine stand (D3). Engine out/in with the crane is a group unmount/mount on the
+  car and is handled here (D2); `sync-workshop-car-tools` only plays the effect.
 - Fluids, wheels/tires/alignment, live paint/dirt/wash, license plates, tuning menu: row 4. They will call the
   `CarPartsSync.MarkDirty` entry point described below if their change lands on a part record.
 - Lifts, moving cars between loaders, parking: row 2. Job random damage: row 3 (it calls `UploadBaseline`).
@@ -63,9 +65,9 @@ See proposal.md for why. Current state that shapes the approach:
   reparenting or inserted children (wheel resize, tuning swaps, engine on crane) cannot shift a key. Unhollower
   wrappers are not stable dictionary keys (a new wrapper per native fetch), hence the instance id. Every client
   builds its registry from a fresh `LoadCar` of the same model, so the structure is the same.
-- `PartRegistry.Build(Transform root)` takes any root, so `sync-workshop-tools` can reuse it for an engine on a
+- `PartRegistry.Build(Transform root)` takes any root, so `sync-workshop-machines` can reuse it for an engine on a
   stand. `CarPartsSync.RebuildRegistry(loaderId)` exists for hierarchy-replacing actions owned by other rows
-  (engine swap, row 5); the caller then calls `UploadBaseline` (D6).
+  (engine swap, `sync-workshop-car-tools`); the caller then calls `UploadBaseline` (D6).
 - On a key that does not resolve or whose id/name does not match: drop the change, log it, send
   `CarPartsResyncRequest`; the server answers with a `CarPartsSnapshot` of that car.
 - Alternatives: name paths (`GetGameObjectPathWithoutRoot`, as the game's own `PartData`) - ambiguous between
@@ -93,6 +95,7 @@ Hook points (all exist in the decompiled stubs):
 | `CarLoader.CanTakeOffCarPart(string, out TakePartOffLockReason)` | postfix: return false while reserved by another player or the car is not `Ready` |
 | `CarLoader.SwitchCarPart(string)`, `SwitchCarPart(string,bool)` | postfix: mark dirty (`Switched`) |
 | `CarLoader.ExamineAllParts()` | postfix: mark whole car dirty |
+| `NotificationCenter.ActionUnMountGroup(InteractiveObject)`, `ActionInsertEngineToCar(GroupItem)` (engine crane out/in; `MountGroup(long)` if spike 0.1 shows it on that path) | prefix: block if reserved / car not ready; open one transaction for the engine group's parts + claim; postfix: mark them dirty |
 | `CarLoader.DeleteCar()` (existing hook) and garage scene load | drop registry, tracker, queue |
 
 A prefix on an `IEnumerator` method must not return `false` (the caller would start a null coroutine); blocking is
@@ -117,8 +120,12 @@ the idea is credited to TogetherFixer, no code is adapted). On commit the buffer
 
 `CarPartsChange` = `{CarLoaderID, SpawnSeq, TxId, Preconditions[(key, wasUnmounted)], BodyParts[], SubParts[],
 InventoryDelta{AddedItems, AddedGroups, RemovedItemUids, RemovedGroupUids}}`. Every part whose `Unmounted` differs
-from its last synced record gets a precondition, also when the change has no transaction (e.g. a row-5 tool calling
+from its last synced record gets a precondition, also when the change has no transaction (e.g. a `sync-workshop-car-tools` tool calling
 `MarkDirty`); attribute-only changes (examined, switched, condition, dust) have no preconditions and an empty delta.
+
+Hooks ignore a `PartScript` that is in no car registry (an engine on a stand). `PartTransaction` and `InventoryDelta`
+also work for a non-car root (`PartRegistry.Build(engineGameObject)`), so `sync-workshop-machines` can send its own `ToolPartChange`
+for parts on the engine stand with the same precondition/delta rules.
 
 Alternative: keep part and inventory packets separate and correlate on the server. Rejected: the server cannot
 undo an inventory add it already relayed when the part change later loses a race; that is the old duplication bug.
@@ -132,7 +139,7 @@ dispatch, `Client.Disconnect` and main-loop ticks, so claim cleanup on disconnec
    not in `InventoryState`.
 3. Otherwise: apply the delta to `InventoryState` (an added UID that is already present is skipped: UID-idempotent
    ADD, which this change also adds to `InventoryHandlers` on server and client per the ROADMAP integration note;
-   `ItemActionType.Update` is not needed here and stays with `sync-workshop-tools`), merge the records (examined is
+   `ItemActionType.Update` is not needed here and stays with `sync-workshop-machines`), merge the records (examined is
    OR-merged), bump the car's `Revision`, stamp the records, send `CarPartsChangeResult{Accepted, Revision}` to the
    sender and the change (with `Revision`) to all other clients.
 4. On reject: `CarPartsChangeResult{Accepted=false, Reason, current records of the touched parts, RestoreUids}`;
@@ -158,7 +165,7 @@ those keys (D2 table) and show `UIManager.ShowInfoWindow("<player> is working on
 gets an update naming someone else it cancels its local action (`CancelUnmountAnim`/`UndoUnMounting`/
 `UndoMounting`); if it was too late, D4's precondition still rejects the commit. Claims end on commit, cancel,
 the holder's disconnect (`Client.Disconnect`), the holder leaving the garage (`PresenceEvents.Left`/`SceneChanged`
-from `sync-players-and-scenes`, once that exists) or after 120 s. Active claims are part of the late-join snapshot
+from `sync-players-and-scenes`, merged in M1 before this change) or after 120 s. Active claims are part of the late-join snapshot
 (D9), so a joiner also sees parts that are in use.
 
 ### D6. Baseline and `SpawnSeq`
@@ -173,15 +180,25 @@ from `sync-players-and-scenes`, once that exists) or after 120 s. Active claims 
   (re-baseline, e.g. after `PrepareJob` rolled job damage or after an engine swap) is accepted from any client whose
   loader is `Ready` for that `SpawnSeq`, replaces all records and bumps `Revision`. Each is relayed to the others as
   a full snapshot.
+- Current plan: the spawner's own random roll (damage, condition, colour) becomes the shared state through its first
+  baseline; the server only decides which client's roll counts. Interim: replaced by server-side generation in
+  ROADMAP row 16 `server-game-logic` once its decompile spike confirms it.
 - Every baseline carries `EngineSwap` (`CarLoader.EngineParams.EngineSwap`, empty = original engine), which this
-  change stores as car state: the swap replaces the engine's part hierarchy, so part keys depend on it. Row 5
+  change stores as car state: the swap replaces the engine's part hierarchy, so part keys depend on it. `sync-workshop-car-tools`
   triggers live swaps (engine crane) and then calls `RebuildRegistry` + `UploadBaseline`. On replay (D9) this
   change applies a stored swap before it builds the registry; spike 0.1 finds the game call for that.
 - Every server path that creates a loader record goes through `CarPartsStore.RegisterSpawn(record, clientId)`
-  (assigns `SpawnSeq`, sets `SpawnedBy`, sends `CarSpawnAck`), and every path that removes one through
-  `CarPartsStore.ClearLoader(loader)`: today `CarHandlers`, later row 2 (park/unpark) and row 3 (job end).
-- If the spawner disconnects (or leaves the garage) before uploading, the server deletes the car (broadcast
-  `CarSpawnDelete`); a car without baseline cannot be replayed. `SpawnedBy` is cleared when that client leaves.
+  (assigns `SpawnSeq`, sets `SpawnedBy`, sends `CarSpawnAck`, raises `SpawnRegistered(loader, record)`), and every
+  path that removes one through `CarPartsStore.ClearLoader(loader, reason)` (drops records and claims, raises
+  `LoaderCleared(loader, removedRecord, reason)` with `reason` = `Deleted`, `Parked`, `JobEnded`, `SpawnerLeft`):
+  today `CarHandlers` (spawn, `Deleted`), later row 2 (unpark = spawn, park = `Parked`) and row 3 (job spawn, job
+  end = `JobEnded`, claim release = `Deleted`). The events are server-side, raised under `StateLock`; rows that land
+  later subscribe instead of being called (row 2: lift reset and returning an unparked car to parking; row 3: the
+  job's car loader).
+- If the spawner disconnects (or leaves the garage) before uploading, the server deletes the car with
+  `ClearLoader(loader, SpawnerLeft)` and broadcasts `CarSpawnDelete`; a car without baseline cannot be replayed.
+  `SpawnedBy` is cleared when that client leaves. Cars dropped by `Load` (no baseline) raise no event; rows that
+  reference loaders check them after load.
 
 ### D7. Applying remote records (client)
 Per loader, inside an `ApplyingRemote(loaderId)` scope that also sets `InventoryHandlers.IgnoreInventoryHooks`:
@@ -214,7 +231,8 @@ on return (`sync-players-and-scenes` D6) rebuilds everything.
 2. Server: `CarsSnapshotProvider : ISnapshotProvider` (`[SessionSection]`, key `cars`, `SyncOrder.Cars` = 100),
    called by the contract's pipeline under `StateLock`; nothing is sent from `OnAskForSync` directly.
    `SendSnapshot(clientId)` sends, per car with a baseline, a `CarPartsSnapshot` split into batches of ~100 records
-   (`SnapshotId`, `BatchIndex`, `IsLastBatch`, car spawn info, `SpawnSeq`, `Revision`, `EngineSwap`), then one
+   (`SnapshotId`, `BatchIndex`, `IsLastBatch`, car spawn info = the stored `CarSpawnResponsePacket` including
+   row 2's `CarData`/place and row 3's `IsJob`/`JobID`, `SpawnSeq`, `Revision`, `EngineSwap`), then one
    `CarPartClaimUpdate` per active claim, and returns the number of cars sent (1 item = 1 car). Batching keeps
    BinaryFormatter packets small for Steam's send limits.
 3. The client assembles each car's batches; once inventory + garage state are applied it loads the car with the
@@ -223,7 +241,9 @@ on return (`sync-players-and-scenes` D6) rebuilds everything.
    changes after the snapshot have a higher `Revision`). There is no `IsCarsSynced` flag and no own timeout: the
    contract's `SyncEnd{Items}` count, `SyncAck` and 30 s no-progress timeout cover cars.
 The same snapshot path (with `SnapshotId = 0`) serves `CarPartsResyncRequest` (single car, no reload unless
-`carToLoad` differs) and live baselines; those do not count toward `SyncTracker`.
+`carToLoad` differs) and live baselines; those do not count toward `SyncTracker`. A live re-baseline whose
+`EngineSwap` differs from the local car's (an engine swap by another player, `sync-workshop-car-tools`) applies the swap first, then
+`RebuildRegistry`, then the records.
 
 ### D10. Packets
 New: `CarPartsChange`, `CarPartsChangeResult`, `CarPartClaim`, `CarPartClaimUpdate`, `CarPartsSnapshot`,
@@ -236,11 +256,12 @@ and the other five are appended at the end. `CarSpawnResponsePacket` gains `Spaw
 ### D11. API for other rows
 | Side | Entry point | Used by |
 |---|---|---|
-| client | `CarPartsSync.MarkDirty(loaderId, PartScript)` / `MarkDirty(loaderId, CarPart)` | row 5 (welder body state, interior detailing dust/condition, engine crane) |
-| client | `CarPartsSync.UploadBaseline(loaderId)`, `RebuildRegistry(loaderId)` | row 2 (unpark), row 3 (`PrepareJob`), row 5 (engine swap) |
+| client | `CarPartsSync.MarkDirty(loaderId, PartScript)` / `MarkDirty(loaderId, CarPart)` | `sync-workshop-car-tools` (welder body state, interior detailing dust/condition) |
+| client | `CarPartsSync.UploadBaseline(loaderId)`, `RebuildRegistry(loaderId)` | row 2 (unpark), row 3 (`PrepareJob`), `sync-workshop-car-tools` (engine swap) |
 | client | `CarPartsSync.IsReady(loaderId)`, `SpawnSeq(loaderId)`; events `BaselineUploaded(loaderId)` (after every baseline this client sent), `LocalPartsCommitted(loaderId, keys)` (after an accepted local `CarPartsChange`) | row 4 (spawn snapshot, `SpawnSeq` on its packets, remount cosmetics, tuning) |
-| client | `PartRegistry.Build(Transform root)`, lookup by key, sub-part record | rows 4, 5 (engine on a stand) |
-| server | `CarPartsStore.RegisterSpawn(record, clientId)`, `ClearLoader(loader)`; `LoadedCars[loader].SpawnSeq`/`HasBaseline` | rows 2, 3, 4 |
+| client | `PartRegistry.Build(Transform root)`, lookup by key, sub-part record; `PartTransaction`/`InventoryDelta` for a non-car root | row 4, `sync-workshop-machines` (engine on a stand) |
+| server | `CarPartsStore.RegisterSpawn(record, clientId)`, `ClearLoader(loader, reason)`; `LoadedCars[loader].SpawnSeq`/`HasBaseline` | rows 2, 3, 4 |
+| server | events `CarPartsStore.SpawnRegistered(loader, record)`, `LoaderCleared(loader, removedRecord, reason)` | row 2 (lift reset, unparked car back to parking on `SpawnerLeft`), row 3 (job car loader, D12) |
 
 ## Risks / Trade-offs
 
@@ -284,10 +305,12 @@ Decisions made without asking the user (recorded here as instructed):
   importing a single-player save is backlog (user decision 2026-10-05).
 - Remote players see the committed state only, not bolt animations; "in progress" is shown as a reservation
   (QUESTIONS.md default).
-- Parts on tools (engine crane/stand) are out of the car registry's reach while detached and are row 5's.
+- Parts on the engine stand are out of the car registry's reach while detached and are `sync-workshop-machines`' (with this change's
+  `PartTransaction`); engine out/in with the crane is a group transaction here.
 - Engine swap: this change stores and replays it (D6, settled with `sync-car-details` A5 and
-  `sync-workshop-tools` assumption 3); row 5 only triggers live swaps. If spike 0.1 finds no way to swap a freshly
-  loaded car without an inventory engine group, engine swap is disabled while connected (review.md question 1).
+  `sync-workshop-car-tools` D2); that change only triggers live swaps. If spike 0.1 finds no way to swap a freshly
+  loaded car without an inventory engine group, engine swap is disabled while connected (review.md question 1;
+  fallback accepted by the user 2026-10-05).
 Deferrable unknowns:
 - Exact item IDs produced for body parts on unmount (spike 0.1 settles them before D3 is coded).
 - Whether `PartScript.OnHidePartFinished`/`OnMountFinished` fire reliably; if so they can replace polling in D2

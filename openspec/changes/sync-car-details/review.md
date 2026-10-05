@@ -39,3 +39,13 @@ All exist. The findings below are about wrong types, the integration contract an
 
 1. **Bonus (visual tuning) parts** (`CarLoader.bonusParts`: spoilers/bumpers, painted by the paint shop) are not covered by any draft. The roadmap gives row 4 "tuning parts". Recommended default: add a ninth `BonusParts` section here (state and paint, applied with `SwapBonusPart`/`TakeOffBonusPart`). The inventory side would use the normal inventory flow, and a rare double-take race is accepted.
 2. **Dyno results and headlights on/off** are not synced, and are moved to the backlog. Recommended: accept, because they affect neither jobs nor money.
+
+## Integration pass (2026-10-06)
+
+- `LightsOn` is a feature here (user decision): `ModCarInfo.LightsOn`, Info poll + `SwitchCarLights` postfix/apply,
+  probe and harness `cardetails-lights`, spec scenario; "backlog" wording removed.
+- Bonus (visual tuning) parts accepted (user decision): ninth section `BonusParts` (D2, D4, D10 order, paint shop
+  `MarkDirty`), probe, harness `cardetails-bonus`, spec scenario; A8 closed.
+- `cars` section bump is explicit: v2 (`sync-car-parts`) → v3 with `Migrate(data, 2)` (D8, task 2.2).
+- Prerequisites/Context name row 7 groups 1–2; tool references point to `sync-workshop-car-tools` /
+  `sync-workshop-machines`.
