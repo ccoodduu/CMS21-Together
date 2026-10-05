@@ -2,6 +2,17 @@
 
 Newest first. One entry per work session.
 
+## 2026-10-06 (night, with the user) — planning done
+
+- Seven changes drafted, each reviewed, then one integration pass; workshop split into `sync-workshop-machines`
+  and `sync-workshop-car-tools` → 8 changes, all `openspec validate --all --strict`. Cross-change matrix in
+  `openspec/INTEGRATION.md`; each change has a `review.md`.
+- Roadmap reviewed: milestones M0–M6, sizes, spikes, working rules; new rows 13–16.
+- User decisions in `QUESTIONS.md` (four rounds). Key: shared progression, game logic moves server-side
+  (row 16, game gets no more updates), outdoor scenes via adapted LvxBetterCarSpawns (row 15).
+- Next: M0 — `session-persistence-and-rejoin` groups 1–2 (contract), then groups 6 and 3; spikes in the
+  background (part identity, native decompile).
+
 ## 2026-10-05 (evening, with the user)
 
 - Forked upstream `Dev` into our `main`; OpenSpec 1.14 set up with project context and `openspec/ROADMAP.md`.
