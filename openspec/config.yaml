@@ -1,0 +1,31 @@
+schema: spec-driven
+
+context: |
+  CMS21-Together: multiplayer mod for Car Mechanic Simulator 2021 (Unity 2020.3, IL2CPP).
+  Fork of Fozkais/CMS21-Together, continued from upstream's Dev branch; we do not merge back.
+
+  Projects:
+  - CMS21-Together-Client: MelonLoader 0.5.7 mod (net472, Harmony hooks on Unhollower-generated
+    game types from Assembly-CSharp / Assembly-CSharp-firstpass).
+  - CMS21-Together-Core: shared packets (INetworkData), DTOs, logging. Referenced by client and server.
+  - CMS21-Together-Server: standalone dedicated server exe (net472, Terminal.Gui). Server-authoritative:
+    it owns world/garage/inventory/car state and has no access to game types, so game data it needs
+    comes from Database/*.json exports.
+  Transports: DirectIP (TCP + UDP) and Steam (Facepunch.Steamworks).
+
+  Testing: tools/test-env sets up two hard-linked test installs (A, B) and a local server; the
+  TogetherTestHarness mod takes commands from a file and dumps game state as JSON, so features are
+  verified by running a scenario and diffing both clients' state. A feature is done when its
+  scenario passes.
+
+  Conventions: conventional commits; no comments unless a specific token needs a "why";
+  decompiled game sources for reference live outside the repo in %USERPROFILE%\CMS21-TestInstalls\decomp.
+
+rules:
+  proposal:
+    - Name which game classes/methods get hooked and which packets are added or changed
+  design:
+    - Say what the server stores and what it only relays
+    - Describe the late-join path (client connecting mid-session)
+  tasks:
+    - End every change with a harness scenario task that verifies the feature in two instances
