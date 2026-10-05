@@ -10,7 +10,7 @@ the shared inventory and parking.
 
 ### Requirement: Scene tracking
 Every client SHALL report its scene to the server: `Loading` as soon as travel to another scene starts, and the
-scene type (garage, parking, junkyard, barn, auction, dealer, showroom, each track type, photo location) once
+scene type (garage, parking, junkyard, barn, auction, dealer (`Salon`), showroom, each track type, photo location) once
 that scene is playable. The server SHALL store the latest scene per player and every client SHALL know the
 scene of every connected player.
 
@@ -24,8 +24,8 @@ scene of every connected player.
 
 ### Requirement: Visibility per scene
 A client SHALL show a remote player's avatar only while both players are in the same scene and that scene is
-one where avatars are shown: garage, parking, junkyard, auction, dealer, showroom and every track type. In barn,
-`Loading`, menu and unknown scenes no remote avatars SHALL be shown.
+one where avatars are shown: garage, parking, junkyard, auction, dealer, showroom, photo location and every track
+type. In barn, tutorial, `Loading`, menu and unknown scenes no remote avatars SHALL be shown.
 
 #### Scenario: Different scenes
 - **WHEN** player A is in the junkyard and player B is in the garage
@@ -60,6 +60,15 @@ state, exactly as a client joining mid-session, instead of the garage from its l
 #### Scenario: Update arrives during travel
 - **WHEN** a garage-bound update for player A arrives while A's scene is `Loading`
 - **THEN** A does not apply it and A's game raises no error, and the state after A's return includes the change
+
+### Requirement: Results sent when leaving a scene precede the return snapshot
+When travel away from a scene starts, the client SHALL give other modules a chance to send state produced in that
+scene (for example test-drive results) while the scene is still loaded, before it reports `Loading`. Everything
+sent then SHALL be applied by the server before it builds that client's next garage snapshot.
+
+#### Scenario: Update sent on leaving survives the return
+- **WHEN** a module sends a garage-bound update from the leaving-scene event while player A travels from the test track back to the garage
+- **THEN** the garage snapshot A receives on arrival already contains that update, and A's garage shows it
 
 ### Requirement: Garage-bound activity ends when leaving
 When a player starts travelling away from the garage, the server SHALL end that player's seat and engine state
@@ -98,10 +107,6 @@ tells all players; otherwise it rejects the purchase and the buyer gets an on-sc
 #### Scenario: Parking full
 - **WHEN** a player buys a car while the shared parking has no free space
 - **THEN** the purchase is rejected and no money is taken
-
-#### Scenario: Shared parking not available
-- **WHEN** the server has no shared parking state to store cars in
-- **THEN** every car purchase outside the garage is rejected with a message and no money is taken
 
 ### Requirement: Travel to the menu leaves the session
 Travelling to the main menu SHALL disconnect the player from the session; it SHALL NOT be reported as a scene.

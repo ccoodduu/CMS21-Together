@@ -10,7 +10,8 @@ when a player leaves.
 
 ### Requirement: Distinct spawn positions
 When a scene becomes playable for a connected player whose position is not being restored from a saved
-player record, the client SHALL place that player at a spawn slot next to the scene's default spawn point. Slots
+player record, the client SHALL place that player at a spawn slot next to the point where the game spawned
+the player (the default spawn point). Slots
 are chosen by player id; a slot blocked by level geometry or within 0.8 m of another player's avatar SHALL be
 skipped. If no slot is free the default spawn point SHALL be used.
 
@@ -54,7 +55,8 @@ camera. The local player SHALL NOT see a tag for themselves.
 ### Requirement: Presence roster
 The server SHALL keep a presence record for every connected player (display name, scene, seat, engine state,
 last position and rotation) and every client SHALL know the records of all other connected players. A client
-SHALL create an avatar from the roster as soon as the other player is visible, without waiting for movement.
+SHALL create an avatar from the roster as soon as the other player is visible, without waiting for movement,
+and the position a player publishes when its scene becomes ready SHALL be delivered reliably.
 
 #### Scenario: Idle player seen by a late joiner
 - **WHEN** player A is in the garage and does not move at all, and player B connects afterwards
@@ -88,6 +90,10 @@ the player leaves the seat, travels or disconnects, the seated state SHALL end f
 #### Scenario: Car removed under a seated player
 - **WHEN** the car a player is sitting in is removed from the garage by another player
 - **THEN** the seated player is taken out of the car first and everyone sees the player standing next to where the car was
+
+#### Scenario: Late joiner sees a seated player
+- **WHEN** player A sits in the car on car loader 0 and player B connects afterwards
+- **THEN** once B's garage is ready, B sees A as seated in that car without A getting out and in again
 
 #### Scenario: Seat outside the garage
 - **WHEN** a player sits in a car in any scene other than the garage

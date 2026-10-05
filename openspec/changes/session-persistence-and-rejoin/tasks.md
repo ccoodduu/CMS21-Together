@@ -34,7 +34,7 @@ two-instance scenario. **Rest (last): groups 3–7**, after rows 1–6.
 - [ ] 4.1 Client: create/read `UserData/CMS21Together/player.json`, send `ConnectPacket.playerKey` from `AuthHandler.HandleConnect`; harness `player-key <key>` (in-memory override); `Setup-TestInstalls.ps1` never copies `UserData/CMS21Together`; verify the file is created once and the server logs the same key on two connects.
 - [ ] 4.2 Server: set `Client.SteamID` in `SteamTransport.OnConnectionChanged`; in `AuthHandler.OnConnected` resolve `steam:`/`guid:`, reject `MissingIdentity` and `DuplicateIdentity`, bind `Client.Identity`, create/update the `PlayerRecord` (name, last seen) in section `players` v1; `/players`; verify B with `player-key` = A's key is rejected while A stays connected.
 - [ ] 4.3 Copy position/rotation/scene into the record on leave and before every save; clear the slot's live state in `Client.Disconnect`; verify the record after A leaves matches A's dumped position.
-- [ ] 4.4 Provider `self` (450) + `PlayerRestore` packet; client applies it after the garage load (D8), counts it, and row 6's spawn placement skips; harness `teleport <x> <y> <z>`; verify A's position after leave + rejoin is within 0.5 m.
+- [ ] 4.4 Provider `self` (450) + `PlayerRestore` packet; client applies it after the garage load (D8), counts it, and row 6's spawn placement skips; reuse row 6's harness `teleport` verb (task 2.4 there; verbs must be unique); verify A's position after leave + rejoin is within 0.5 m.
 
 ## 5. Join hardening and server loss
 

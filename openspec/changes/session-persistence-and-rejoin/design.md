@@ -202,7 +202,7 @@ section and exits 0/1.
 ### D9. Join hardening
 
 Server handlers without `[AllowBeforeSync]` drop packets from clients that are not `InSession` and log a warning
-(allowed: Heartbeat, Connect, AskForSync, SyncAck, Movement, Disconnect). Client: every send path that checks
+(allowed: Heartbeat, Connect, AskForSync, SyncAck, Movement, PlayerPresence (row 6), Disconnect). Client: every send path that checks
 `ClientData.IsServerUpdating` today also checks `IsInitialSyncFinished`.
 
 ### D10. Server loss on the client
