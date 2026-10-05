@@ -26,6 +26,25 @@ stats/inventory/cars, and see each other.
 | 6 | `sync-players-and-scenes` | Spawn positions, name tags, player in car seat, engine running/sound, scene tracking (who is where), visibility per scene, travel to junkyard/barn/auction/dealer and how purchases there flow into shared inventory/parking | — |
 | 7 | `session-persistence-and-rejoin` | Server save format + versioning for all state above, autosave, identifying a returning player (per-player data), rejoin/late join end-to-end, client-side save safety (the client must never overwrite the player's own profiles) | all |
 
+### Implementation order (revised after the drafts)
+
+1. `session-persistence-and-rejoin` task group 2 (the contract: `ISaveSection`, `ISnapshotProvider`,
+   `SyncOrder`, `SyncBegin/SyncEnd/SyncAck`, state lock) — every other change plugs into it.
+2. `sync-players-and-scenes` spawn-position fix + presence roster (quick win, fixes the idle late-join bug).
+3. `sync-car-parts` → `sync-car-placement-and-lifts` → `sync-orders-and-jobs` → `sync-car-details`
+   → `sync-workshop-tools` → rest of `sync-players-and-scenes` → rest of `session-persistence-and-rejoin`.
+
+### Integration notes (cross-change decisions to keep consistent)
+
+- Late-join sends go through `ISnapshotProvider` in `SyncOrder` order, not straight into `OnAskForSync`
+  (row 1 draft says otherwise; row 7's contract wins).
+- Shared server state is guarded by one lock (`GameDataManager.StateLock` in row 1 = row 7's state lock).
+- `ItemActionType.Update` and UID-idempotent inventory ADD: implemented by whichever of rows 1/5 lands first.
+- Parking API (`CarParkRequest`, `CarLoaderID = -1` for cars arriving from outside) comes from row 2 and is
+  used by rows 3 and 6.
+- Car detail updates from tools use row 4's `CarDetailsUpdatePacket` / `CarDetailsSync.MarkDirty`.
+- Exp ownership: see QUESTIONS.md #1 (row 3 assumed shared, row 7 per player).
+
 Boundaries: a change only syncs what its row owns. When it needs something owned by another change,
 it says so in its design as an assumption/dependency instead of implementing it.
 
