@@ -18,24 +18,28 @@ tools) builds on parts being in the same state on every client, so this is roadm
   transaction only if the part is still in the expected state and the consumed item still exists, then stores
   it and relays it; otherwise the sender is told to roll back.
 - Part attributes that change on the car are synced too: condition, quality, dent, examined, door/hood open
-  (`Switched`), tuned id. Bolt condition is carried with the part; bolt-by-bolt animation is not.
+  (`Switched`), tuned id, and dust/paint of mechanical parts. Body-part cosmetics after mounting belong to
+  `sync-car-details`. Bolt condition is carried with the part; bolt-by-bolt animation is not.
 - "In progress" is shared: when a player starts mounting or unmounting a part, the server records a claim and
   the other clients refuse to start an action on that part until the claim ends.
-- After a car spawns, the spawning client uploads a full baseline of the car's part states, so the server has a
-  complete picture of every loaded car.
-- Initial sync sends every loaded car with all its part states; a joining client loads those cars instead of
-  the cars from its local save.
+- After a car spawns, the spawning client uploads a full baseline of the car's part states (including which
+  engine is fitted, `EngineParams.EngineSwap`), so the server has a complete picture of every loaded car; other
+  rows re-upload it after their own post-load steps (job damage, unpark, engine swap).
+- Initial sync sends every loaded car with all its part states (and active reservations) through the `cars`
+  snapshot provider of `session-persistence-and-rejoin`; a joining client loads those cars instead of the cars
+  from its own profile.
 - Hooks (all verified in the decompiled game): `PartScript.ActionUnMount`, `ActionMount(bool)`, `FastUnmount`,
   `FastMount`, `Hide`, `DoMount`, `Examine(bool)`, `UndoMounting`, `UndoUnMounting`, `CancelUnmountAnim`;
   `CarLoader.TakeOffCarPart(string, bool)`, `TakeOffCarPart(string)`, `CanTakeOffCarPart`, `SwitchCarPart(string)`,
   `SwitchCarPart(string, bool)`, `ExamineAllParts`; `ChoosePartUpWindow.BackAllItems`; plus the existing
   `Inventory.Add/Delete/AddGroup/DeleteGroup` hooks, which learn to hand their event to an open part transaction.
 - Packets: **new** `CarPartsChange`, `CarPartsChangeResult`, `CarPartClaim`, `CarPartClaimUpdate`,
-  `CarPartsSnapshot`, `CarPartsResyncRequest`; **changed** `CarBodyPartUpdatePacket` and `CarSubPartUpdatePacket`
-  become the per-part state records carried inside those packets (fields added: `PartId`, `TunedID`,
-  `MountObjectData`, `Revision`; no longer sent on their own), `CarSpawnResponsePacket` gains `SpawnSeq`, and a new `CarSpawnAck`
-  tells the spawning client its `SpawnSeq`. All clients and the server must run the same build (enforced by the
-  existing version check).
+  `CarPartsSnapshot`, `CarPartsResyncRequest`, `CarSpawnAck` (tells the spawning client its `SpawnSeq`);
+  **changed** `CarBodyPartUpdatePacket` and `CarSubPartUpdatePacket` become the per-part state records carried
+  inside those packets (fields added: `PartId`, `TunedID`, `MountObjectData`, `Revision`; no longer sent on their
+  own; their two `PacketTypes` values are renamed in place, the rest appended), `CarSpawnResponsePacket` gains
+  `SpawnSeq`. Inventory ADD becomes idempotent by UID. All clients and the server must run the same build
+  (enforced by the existing version check).
 
 ## Capabilities
 
@@ -49,12 +53,14 @@ tools) builds on parts being in the same state on every client, so this is roadm
 ## Impact
 
 - Core: `Network/Packets/CarPackets.cs`, `PacketTypes.cs`, `Data/ModGameState.cs` (`CarState`).
-- Server: `Network/Handlers/CarHandlers.cs`, new `CarPartHandlers.cs`, `AuthHandlers.OnAskForSync`, inventory
-  state mutation shared with `InventoryHandlers`, claim cleanup on disconnect.
+- Server: `Network/Handlers/CarHandlers.cs`, new `CarPartHandlers.cs` and `CarPartsStore`, a `cars`
+  `ISnapshotProvider` and the `cars` `ISaveSection` bumped to v2 with a migration (contract from
+  `session-persistence-and-rejoin` task groups 1–2, which must land first), UID-idempotent ADD in
+  `InventoryHandlers`, claim cleanup on disconnect.
 - Client: new `Logic/Car/` part registry, change tracker and applier; new hook classes; `InventoryHook`;
-  `Network/Handlers/CarHandlers.cs`; `LoaderAddition.VanillaLoad` stops loading cars from the local save when
-  connected; `WorldStatesPackets.WaitForSyncCompletion` waits for cars.
+  `Network/Handlers/CarHandlers.cs`, `InventoryHandlers`; `LoaderAddition.VanillaLoad` stops loading cars from the
+  session profile when connected; each replayed car reports `SyncTracker.Applied("cars")`.
 - Test harness: `tools/TestHarness/Features/CarPartsCommands.cs`, car part fields in `StateDump`, scenarios
   `car-parts.ps1` and `car-parts-latejoin.ps1`.
-- Server save grows by the part state of loaded cars (save format/versioning stays with
+- Server save grows by the part state of loaded cars (`cars` section v1 → v2; the envelope stays with
   `session-persistence-and-rejoin`).

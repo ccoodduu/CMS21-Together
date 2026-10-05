@@ -68,9 +68,18 @@ disconnects, or after a timeout.
 - **WHEN** player A disconnects while unmounting a part
 - **THEN** the reservation is released and player B can unmount the part
 
+#### Scenario: Reservation times out
+- **WHEN** a reservation has not been released for 120 seconds
+- **THEN** the server releases it and other players can act on the part again
+
+#### Scenario: Joining player sees reservations
+- **WHEN** player B joins while player A holds a reservation on a part
+- **THEN** player B cannot start mounting or unmounting that part until the reservation ends
+
 ### Requirement: Part attributes on the car are shared
 Changes to a part's condition, quality, dent, examined flag, opened/closed state and tuned variant while it is on
-a car SHALL be shown on every client. Once a part is examined it SHALL stay examined for everyone.
+a car, and to the dust and paint of a mechanical part, SHALL be shown on every client. Once a part is examined it
+SHALL stay examined for everyone.
 
 #### Scenario: Examine a part
 - **WHEN** player A examines a part
@@ -88,6 +97,10 @@ loaded. Deleting a car SHALL remove its stored part state.
 #### Scenario: Spawned car has the same damage everywhere
 - **WHEN** player A spawns a car whose parts have random conditions
 - **THEN** after loading, player B's copy has the same condition and mounted state for every part
+
+#### Scenario: Part state survives a server restart
+- **WHEN** the server saves, is restarted and a player joins
+- **THEN** that player receives every car with a stored baseline with the same part states as before the restart
 
 #### Scenario: Car deleted
 - **WHEN** a car is deleted from a car loader
@@ -118,6 +131,10 @@ finish only after those cars are loaded and their parts applied.
 #### Scenario: Local save has other cars
 - **WHEN** a player joins whose local save has cars in the garage that the server does not hold
 - **THEN** those cars do not appear in that player's garage
+
+#### Scenario: Car with a swapped engine
+- **WHEN** a player joins after the engine of a loaded car was swapped
+- **THEN** the joining player's copy has the swapped engine and the same engine part states
 
 #### Scenario: Spawner has left
 - **WHEN** the player who spawned and modified a car disconnects and another player joins later
