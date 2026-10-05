@@ -47,6 +47,8 @@ public class HarnessMod : MelonMod
         Log.Msg($"[Harness] instance {InstanceName}, dir {Dir}");
     }
 
+    public override void OnSceneWasLoaded(int buildIndex, string sceneName) => StartupSkipper.OnSceneLoaded(sceneName);
+
     public override void OnSceneWasInitialized(int buildIndex, string sceneName)
     {
         Log.Msg($"[Harness] scene initialized: {sceneName}");
