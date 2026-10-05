@@ -7,6 +7,14 @@ See proposal.md for the why. Current state on `main`:
 - Nothing touches orders. Each client's `OrderGenerator` (`Singleton<GameManager>.Instance.OrderGenerator`)
   loads `jobs`/`selectedJobs` from its own profile in `OrderGenerator.Load()` (called from
   `LoaderAddition.VanillaLoad` before `AskForSync`) and generates new ones in `Update()`.
+- Every garage load while connected (first join and every return from another scene) runs
+  `LoaderAddition.CustomLoad`: `VanillaLoad` (sets `NotificationCenter.IsGameReady = false`, calls
+  `OrderGenerator.Load()`), then `ClientData.Reset()`, `AskForSync`, wait for `IsInitialSyncFinished`, and only
+  then `IsGameReady = true`. Anything initial sync waits for must therefore not wait for `IsGameReady`.
+- `ModGameManager.StartGame` creates a fresh `ProfileData` and loads the garage directly; the tutorial scene is
+  never loaded by that path, but it can be started from the pause menu (`PauseQuitWindow.CreateTutorialsButton`
+  -> `TutorialsWindow.RunTutorialAction()`), and `ProfileData.FinishedTutorial` of the fresh profile may lock
+  order slots (`GlobalData.IsOrderSlotUnlocked(..., out OrderSlotLockReason)` has a `Tutorial` reason).
 - `CarSpawnHooks.LoadCarHook` already forwards `CarLoader.LoadCar` to the server, and the native
   `TakeJob` coroutine keeps running on the sender. `CarSpawnManager` sends `IsJob = carLoader.customerCar`
   and always `JobID = -1`. The server stores the spawn in `CarState.LoadedCars` without checking if the
@@ -14,8 +22,11 @@ See proposal.md for the why. Current state on `main`:
 - Money is server-authoritative but there is no generic `AddPlayerMoney` hook: a job payout added
   locally is overwritten by the next `WorldState`. Exp goes through `StatsHooks.AddPlayerExpPrefix` ->
   `StatsActionPacket` -> `StatsHandlers` (shared level/exp in `WorldState`).
-- The server has no game code. It ticks from `ServerWindow` -> `Server.Update()`; `ServerTime.Time` is a
-  stopwatch; `GameDataManager` saves `ModGameState` as JSON.
+- The server has no game code. It ticks from `ServerWindow` -> `Server.Update()` on the UI thread while packet
+  handlers run on transport threads; `ServerTime.Time` is a stopwatch; `GameDataManager` saves `ModGameState` as
+  JSON. `session-persistence-and-rejoin` task group 2 (implemented first) adds `GameDataManager.StateLock`,
+  `ISaveSection`/`ISnapshotProvider` with `[SessionSection]` discovery, `SyncOrder` (`jobs` = 400) and
+  `SyncBegin`/`SyncEnd`/`SyncAck`; this change plugs into that contract.
 
 Game API used (all verified in the decompiled stubs, `Assembly-CSharp-firstpass`):
 `OrderGenerator.{jobs, selectedJobs, LastUId, orderTimer, nextOrderTime, Update(), GenerateNewJob(),
@@ -24,13 +35,21 @@ GetJobForCarLoader(int), Load(), Save()}`, `Job.{id, carLoaderID, carFile, confi
 IsMission, MissionID, CanDelete, TotalPayout, XP, MoneySpent, IsCompleted, StartTimer(), StopTimer()}`,
 `JobTask.{type, subtype, Parts, Done, moneySpent}`, `JobPart.{ID, Done, Found}`,
 `OrdersWindow.{currentJob, AcceptOrderAction(), DeclineOrderAction(), UpdateJobs(List<Job>)}`,
-`UIManager.{OrdersWindow, UpdateJobs(List<Job>, Job)}`, `GameScript.{EndJob(Job,CarLoader), EndJobCoroutine}`,
-`JobHelper.CheckJob(CarLoader, ref Job)`, `GlobalData.{Jobs, AddJob(int), GetMaxOrdersAmount(), AddPlayerMoney(int),
+`UIManager.{OrdersWindow, UpdateJobs(List<Job>, Job), ShowInfoWindow(string), ShowFullGarageInfo()}`,
+`GameScript.{EndJob(Job,CarLoader), EndJobCoroutine(Job,CarLoader), CurrentSceneType}` (iterator class
+`GameScript._EndJobCoroutine_d__139`), `JobHelper.CheckJob(CarLoader, ref Job)`, `GlobalData.{Jobs, AddJob(int),
+GetMaxOrdersAmount(), IsOrderSlotUnlocked(int, out OrderSlotLockReason, out int), AddPlayerMoney(int),
 AddPlayerExp(int,bool), MissionsFinished, CurrentMissionDone, IsStoryMissionInProgress}`,
-`CarLoader.{customerCar, orderConnection, SetCustomerCar(bool,int), IsCarLoaded(), DeleteCar()}`,
-`NotificationCenter.IsGameReady`. The stubs have no method bodies, so the call order inside `TakeJob`,
-`AcceptOrderAction`, `EndJob`/`EndJobCoroutine` and the job timer is unknown; task 1 traces it before
-any hook is written.
+`CarLoader.{customerCar, orderConnection, SetCustomerCar(bool,int), IsCarLoaded(), DeleteCar(), DeleteCar(bool)}`,
+`NotificationCenter.IsGameReady`, `ProfileData.FinishedTutorial`, `CMS.MainMenu.Windows.TutorialsWindow.RunTutorialAction()`.
+`OrderGenerator` and `GameScript` are `MonoBehaviour`s, so game coroutines (`TakeJob`, `TakeMission` return
+`Il2CppSystem.Collections.IEnumerator`) are started with their `StartCoroutine`, not `MelonCoroutines.Start`.
+`GlobalData.Jobs` is not in the profile save (`NewGlobalDataWrapper`) and follows the `Prev*/Add*` UI-counter
+pattern; it is assumed to be the open-order count shown in the HUD (task 1 confirms).
+The stubs have no method bodies, so the call order inside `TakeJob`, `AcceptOrderAction`,
+`EndJob`/`EndJobCoroutine` and the job timer is unknown, and small methods (`AddPlayerMoney`, `SetCustomerCar`,
+`CancelJob`) may be inlined by IL2CPP so a Harmony patch never fires on the real path; task 1 traces both before
+any behaviour hook is written.
 
 Lessons from the old 0.4.17 implementation (`upstream-MainMod/ClientSide/Data/Garage/Campaign/JobHooks.cs`,
 `JobManager.cs`): the host generated orders and relayed whole `ModJob`s; clients blocked `GenerateNewJob` and
@@ -55,27 +74,36 @@ server instead.
   (`sync-players-and-scenes`), save format versioning and stopping the client from saving shared jobs into
   its own profile (`session-persistence-and-rejoin`).
 - Generating orders on the server.
-- Tutorial missions (`GenerateMission(id, forTutorial: true)`); the tutorial is single-player.
+- A multiplayer tutorial (backlog). This change only keeps the tutorial out of multiplayer games (D13).
 - Steam stats (`stat_finish_order` and friends) stay local to the player who ends the job.
+- Moving customer cars to/from parking (row 2); this change only keeps the job's car loader up to date (D12).
 
 ## Decisions
 
 ### D1. Orders are generated by one elected client, not by the server
 
-The server elects one "order generator": the connected client with the lowest id that has finished
-initial sync (it sent `AskForSync`). It sends `OrderGeneratorRole { IsGenerator }` to the old and new
-generator on every change (join, leave, timeout). On the generator, `OrderGenerator.Update` runs natively;
-on everyone else a prefix returns `false` while connected.
+The server elects one "order generator" among eligible clients: `InSession` (`Client.SyncState`,
+`session-persistence-and-rejoin` D4) and in the garage according to `sync-players-and-scenes`' presence
+registry (`PresenceRegistry` scene `Garage`; that change lands in M1, before this one). The role is sticky: it
+moves only when the generator leaves, times out or raises `PresenceEvents.SceneChanged` away from the garage;
+then the lowest eligible client id takes it. If no client is eligible, nobody generates (orders pause, expiry
+keeps running while anyone is connected), and the next client that becomes eligible (`SceneChanged` to
+`Garage`) gets the role. The server sends `OrderGeneratorRole { IsGenerator }` to the old and new generator on
+every change, and refuses `OrderGenerated` from any other client (a packet sent just before a re-election is
+dropped and logged). On the generator, `OrderGenerator.Update` runs natively; on everyone else a prefix returns
+`false` while connected (task 1 checks that `Update` does nothing non-generators need). The new generator keeps
+its own frozen `orderTimer`/`nextOrderTime`, so the next order arrives at most one order interval later.
 
 On the generator, a prefix on `GenerateNewJob`/`GenerateMission` records `jobs.Count`; the postfix takes
 the jobs added since, sends each as `OrderGenerated { Job }`, and removes them locally again (under the
 apply guard, D9). The order shows up on the generator only when the server's `OrderAdded` echo arrives.
 That keeps one code path (server echo) for every client and lets the server rewrite the id.
 
-The generator's cap check `GlobalData.Jobs < GlobalData.GetMaxOrdersAmount()` stays native and correct
-because every apply sets `GlobalData.Jobs` to the server's open-order count. The server also refuses
-`OrderGenerated` when its open-order count is already at the `MaxOpenOrders` the generator reports in
-the packet, which stops a burst from a stale count.
+The generator's native cap check (against `GetMaxOrdersAmount()`, on `jobs.Count` or `GlobalData.Jobs`) stays
+correct because every apply rebuilds `jobs` from the server and sets `GlobalData.Jobs` to the open-order count.
+The server also refuses `OrderGenerated` when its open-order count is already at the `MaxOpenOrders` the
+generator reports in the packet, which stops a burst from a stale count (for example during the generator's own
+garage reload, before its new snapshot is applied).
 
 Alternatives:
 - Server generates from exported data: needs the orders INI (`OrderGenerator.ordersData`), the car and
@@ -92,15 +120,20 @@ id that slips through cannot collide with a live one.
 
 ### D3. What the server stores and what it only relays
 
-Stored in `ModGameState.JobsState` (saved with the session):
+Stored in `ModGameState.JobsState`, saved through `JobsSection` (`[SessionSection]`, `ISaveSection` key `jobs`,
+`Version = 1`, `Reset()` = empty state) from `session-persistence-and-rejoin`'s contract:
 
 | Field | Content |
 |---|---|
-| `Orders` | `List<OrderEntry>`: `ModJob Job`, `float RemainingSeconds`, `OrderStatus Status` (`Open`, `Claimed`), `long ClaimedBy`, `float ClaimedAt` (the last two are `[JsonIgnore]`/reset on load) |
-| `ActiveJobs` | `List<ActiveJobEntry>`: `ModJob Job` (with `carLoaderID`, task/part flags, `MoneySpent`), `int CarLoaderId` |
+| `Orders` | `List<OrderEntry>`: `ModJob Job`, `float RemainingSeconds`, `OrderStatus Status` (`Open`, `Claimed`), `long ClaimedBy`, `float ClaimedAt` (the claim fields are `[JsonIgnore]`; a loaded `Claimed` order becomes `Open`) |
+| `ActiveJobs` | `List<ActiveJobEntry>`: `ModJob Job` (task/part flags, `MoneySpent`), `int CarLoaderId` (`-1` while the car is parked, D12), `float OriginalSeconds` (for D12's return to open) |
 | `NextJobId` | next id |
-| `MissionsFinished`, `CurrentMissionDone`, `IsStoryMissionInProgress` | story mission counters, applied to `GlobalData` |
+| `Missions` | `ModMissionState { MissionsFinished, CurrentMissionDone, IsStoryMissionInProgress }`, applied to `GlobalData` (D14) |
 | `GeneratorClientId` | not saved, recomputed |
+
+Every read and write of `JobsState` holds `GameDataManager.StateLock` (`session-persistence-and-rejoin` D3):
+handlers and `Client.Disconnect` already run under it; `JobsService.Tick` (expiry, claim timeout) runs on the
+server UI thread and takes it itself. Broadcasts are sent inside the lock so their order matches the state order.
 
 `ModJob` is an opaque DTO for the server; it reads only `id`, `timeToEnd`, `IsMission`, `CanDelete`,
 `carFile`. The server never computes payout or progress.
@@ -120,8 +153,12 @@ client shows with `UIManager.Get().ShowInfoWindow`.
 
 On approval the client re-runs the native accept with a bypass flag set: `OrdersWindow.currentJob` is set
 to the local job and `AcceptOrderAction()` is called again. If the trace (task 1) shows that
-`AcceptOrderAction` needs the window visible, the fallback is starting `OrderGenerator.TakeJob(id, true)`
-(or `TakeMission` for missions) directly with `MelonCoroutines.Start`.
+`AcceptOrderAction` needs the window visible, the fallback is
+`orderGenerator.StartCoroutine(orderGenerator.TakeJob(id, true))` (or `TakeMission` for missions).
+If the native take refuses because the garage is full (`UIManager.ShowFullGarageInfo()` fires while a take is
+pending), the client sends `OrderAction { AbortTake }` at once. If task 1 shows that a full garage sends the
+customer car to parking instead, the take uses row 2's `CarParkRequest { CarLoaderID = -1 }` and the job
+starts parked (D12).
 
 Only one take is in flight on the server at a time (`Busy`). Native `TakeJob` picks the first free car
 loader locally; two takes of different orders at once could pick the same loader on two clients. The
@@ -136,7 +173,8 @@ While a take is in flight, the client keeps `PendingTake { JobId }`. `CarSpawnMa
 sends `IsJob = true, JobID = PendingTake.JobId` when a take is pending (instead of `customerCar`/`-1`,
 because `SetCustomerCar` may run after `LoadCar`). `CarHandlers.HandleCarSpawnRequest` on the server
 rejects (`CarSpawnRejected`) a job spawn whose `JobID` is not claimed by that client or whose loader is
-already in `CarState.LoadedCars`.
+already in `CarState.LoadedCars` (a parallel spawn from parking or a purchase won the loader). A client that
+gets `CarSpawnRejected` for its pending take deletes the car (existing behaviour) and sends `AbortTake`.
 
 `OrderGenerator.PrepareJob(carLoader, job)` postfix is the "job started" point: the job now has its
 `carLoaderID`, its damage is applied and fields like `oilLevel`/`otherPartsCondition` are set. The client
@@ -146,16 +184,21 @@ sends `JobStarted { JobId, CarLoaderId, Job }` and clears `PendingTake`. The ser
 does the same when `IsJob` is set and the job is already known, so the arrival order of
 `CarSpawnResponse` and `JobStarted` does not matter.
 
-The damage `PrepareJob` applies is part state. **Dependency on `sync-car-parts`:** the taker must push the
-full part state of that loader after `PrepareJob` (or the change must already treat a newly loaded car's
-parts as a snapshot to replicate); this change calls whatever entry point it offers from the `PrepareJob`
-postfix.
+The damage and random values `PrepareJob` applies are part and detail state. The `PrepareJob` postfix calls
+`CarPartsSync.UploadBaseline(loaderId)` (`sync-car-parts` D6; its 1 s settle default is only a fallback) and,
+once `sync-car-details` exists, `CarDetailsSync.MarkDirty(loader, <all sections>)`, so the other players get the
+damaged car, not a pristine one. If the trace shows `PrepareJob` does not fire (inlined), the fallback is a
+per-frame check of `selectedJobs` for the pending job's `carLoaderID` while a take is pending.
 
-Claim timeout: if `JobStarted` does not arrive within 30 s of `ClaimedAt`, or the claimer disconnects, the
+Claim timeout: if `JobStarted` does not arrive within 60 s of `ClaimedAt`, or the claimer disconnects, the
 server sets the order back to `Open`, broadcasts `OrderAdded` again (same id, remaining time) and, if
-`LoadedCars` holds a car spawned for that `JobID`, removes it and broadcasts `CarSpawnDelete`. The client
-also sends `OrderAction { AbortTake }` itself if `PrepareJob` has not happened 20 s after approval (no free
-loader, native refusal).
+`LoadedCars` holds a car spawned for that `JobID`, removes it through the same server path as
+`CarSpawnDelete` (which also drops its part records) and broadcasts `CarSpawnDelete`. The client sends
+`OrderAction { AbortTake }` itself if `PrepareJob` has not happened 45 s after approval (native refusal).
+A `JobStarted` for an order that is no longer claimed by the sender (it timed out) is answered with
+`JobRemoved { TakeAborted, CarLoaderId }` to the sender only, which removes the job from `selectedJobs` and
+deletes the car locally. The timeouts are generous because both harness instances load cars on one PC;
+task 1 measures the real take duration.
 
 ### D6. Decline and expiry are server decisions
 
@@ -164,7 +207,8 @@ The server removes an `Open` order whose `CanDelete` is true and broadcasts `Job
 all, including the decliner. No local removal before the echo.
 
 Expiry: the server decrements `RemainingSeconds` of `Open` orders by the tick delta while at least one
-client is connected, and broadcasts `JobRemoved { Expired }` at zero. Missions (`IsMission`) do not
+client is connected (user decision: expiry pauses while the server is empty; `Claimed` orders do not count
+down), and broadcasts `JobRemoved { Expired }` at zero. Missions (`IsMission`) do not
 expire. Clients set `job.timeToEnd` from the server's remaining time when they apply an order and start
 the native timer (`Job.StartTimer()`) for the UI. Any local removal of an order that does not come from
 the apply path is blocked by a prefix on `OrderGenerator.CancelJob` (returns `false` unless the apply
@@ -186,30 +230,37 @@ changes that did not come from an apply. The server merges (`Found` is OR, money
 stored active job and forwards the merged flags. Receivers OR the flags into their local job and set
 `moneySpent` to the server's value. Task 1 confirms where `Found` and `moneySpent` are written; if both
 turn out to be derived from synced car state, `JobProgress` is dropped and the requirement is met by
-`sync-car-parts` alone.
+`sync-car-parts` alone. Progress a player makes away from the garage (test drive / test path results) reaches
+the server through `sync-test-drive-and-diagnostics` (ROADMAP row 13) before the returning garage snapshot.
 
 ### D8. Ending a job: native flow, captured once, deduplicated by the server
 
 The finisher runs the native `GameScript.EndJob` unchanged (its checks, messages, car deletion, fader).
 A `JobEndContext` captures what the game pays:
 
-1. `GameScript.EndJob` prefix: `JobEndContext.Begin(job.id, carLoaderId)`.
+1. `GameScript.EndJob` prefix: `JobEndContext.Begin(job.id, carLoaderId)`, remember `PlayerMoney`.
 2. `GlobalData.AddPlayerMoney` prefix while the context is active: record the amount (the payout), let it
    run (local prediction).
 3. `StatsHooks.AddPlayerExpPrefix` while the context is active: record the XP, do **not** send
-   `StatsActionPacket`, let it run.
-4. Commit point: the native removal of the job (`OrderGenerator.CancelJob(job.id)` prefix, allowed in
-   this context) sends `JobEndRequest { JobId, CarLoaderId, Payout, Xp, IsCompleted, IsMission }` and ends
-   the context. If the trace shows a different last step (for example `DeleteCar(true)` or the end of
-   `EndJobCoroutine`), that step is the commit point. If none is reached within 10 s, the checks failed
-   and the context is dropped without sending.
+   `StatsActionPacket`, let it run. Every money/XP call until the context ends is captured this way, so job
+   XP can never also travel as `StatsAction` (shared XP pool, user decision).
+4. Commit point: the last native step of a successful end, found by task 1 (candidates: the job's removal
+   via `OrderGenerator.CancelJob(job.id)`, allowed in this context; `DeleteCar`; the last `MoveNext` of
+   `GameScript._EndJobCoroutine_d__139`). It sends `JobEndRequest { JobId, CarLoaderId, Payout, Xp,
+   IsCompleted, IsMission, Missions }` and ends the context. If no payout call fired (inlined), `Payout` falls
+   back to the `PlayerMoney` difference and `Xp` to `job.XP`; task 1 compares both with `job.TotalPayout`/`job.XP`.
+   If the commit point is not reached within 10 s, the checks failed and the context is dropped without sending.
 
-Server: if the job is in `ActiveJobs`, remove it, add `Payout` to `WorldState.Money`, apply `Xp` with the
-same level-up loop `StatsHandlers` uses (refactored into a shared `ApplyExp`), update mission counters
-when `IsMission`, remove the loader from `CarState` (and its part state, via `sync-car-parts`' clear
-function), broadcast `JobRemoved { Ended, CarLoaderId }` and `WorldState`. Otherwise reply nothing but
-`WorldState` to the sender, which overwrites its predicted money and exp. Receivers of `JobRemoved { Ended }`
-remove the job and delete the car on that loader under `CarSpawnHooks.Suppress`.
+The finisher's native `DeleteCar()` still fires the existing `CarSpawnHooks.DeleteCarHook`; the resulting
+`CarSpawnDelete` and the job-end delete below are both idempotent on the server and on receivers.
+
+Server: if the job is in `ActiveJobs`, remove it, add `Payout` to `WorldState.Money`, apply `Xp` to the shared
+level/exp with the level-up loop `StatsHandlers` uses (refactored into a shared `StatsHandlers.ApplyExp`), store
+`Missions` when `IsMission` (D14), delete the job's car only if `LoadedCars[CarLoaderId].JobID == JobId` (the
+same server path as `CarSpawnDelete`, which drops part records), broadcast `JobRemoved { Ended, CarLoaderId,
+Missions }` and `WorldState`. Otherwise reply nothing but `WorldState` to the sender, which overwrites its
+predicted money and exp. Receivers of `JobRemoved { Ended }` remove the job and delete the car on that loader
+under `CarSpawnHooks.Suppress` if it is still there.
 
 Payout and XP are trusted from the client (no game code on the server), with sanity bounds
 (`0 <= Payout <= 1_000_000`, `0 <= Xp < 10_000`). The server's job is to apply them exactly once.
@@ -229,8 +280,15 @@ in one place, `JobApplier`, under a `JobApplyGuard` that every hook checks (same
   set `GlobalData.Jobs` to the open count and `OrderGenerator.LastUId`, set the mission counters, call
   `UIManager.Get().UpdateJobs(jobs, null)`, and mark customer cars on loaded loaders.
 - Deltas add/remove one job and call `UpdateJobs`.
-- Everything waits until `NotificationCenter.IsGameReady` and the `OrderGenerator` exists; packets
-  arriving earlier only update the mirror.
+- Applying to the game requires the garage scene and that `OrderGenerator.Load()` has run in this garage load
+  (flag set by the `Load` postfix, cleared when `sync-players-and-scenes`' scene prefix reports leaving the
+  garage). The scene check is `GameScript.Get().CurrentSceneType == SceneType.Garage`. It must **not** wait for
+  `NotificationCenter.IsGameReady` or `ClientScene.IsGarageReady`/`LocalScene == Garage`: `CustomLoad` sets those
+  only after initial sync, which waits for `jobs`. Live job handlers (deltas) use the same gate.
+  Packets arriving earlier or in other scenes only update the mirror; returning to the garage reloads it and
+  gets a fresh snapshot anyway.
+- The mirror is replaced, not merged, by every `JobsState`. `ClientData.Reset()` (every garage load) clears it;
+  the `JobsState` of the following snapshot refills it.
 - `OrderGenerator.Load` postfix (garage load, return from test track/junkyard): when connected and the
   mirror has been filled once, call `ApplyFull()`. This replaces the profile's jobs with the server's and
   covers the desync TogetherFixer's `SceneReturnCarSync` works around.
@@ -239,19 +297,58 @@ in one place, `JobApplier`, under a `JobApplyGuard` that every hook checks (same
 
 ### D10. Late join
 
-`AuthHandlers.OnAskForSync` sends `JobsState` (full snapshot: orders with remaining time, active jobs,
-counters, `IsGenerator` for that client) after `GarageState`, before the inventory batches and `SyncEnd`.
-The client stores it in the mirror and runs `ApplyFull()` when the game is ready (it is, since
-`OrderGenerator.Load` ran in `VanillaLoad` before `AskForSync`). Customer cars of active jobs come from
-`sync-car-parts`' late-join car replay; `ApplyFull()` and the `CarSpawnResponse` handler both mark
-`SetCustomerCar(true, jobId)` once the car is loaded, whichever happens last. Electing the generator also
-happens on `AskForSync`, so the first client becomes generator before it reaches the garage.
+`JobsSection` is also the `ISnapshotProvider` for key `jobs` at `SyncOrder` 400 (after `cars` 100,
+`car-details` 150 and `car-placement` 200, so every loader it names already has its car). `SendSnapshot` runs
+with `StateLock` held, sends one `JobsState` (orders with remaining time, active jobs, mission state,
+`IsGenerator` for that client) and returns 1. The client stores `JobsState` in the mirror, runs `ApplyFull()` (the
+gate in D9 is open: `OrderGenerator.Load` ran in `VanillaLoad` before `AskForSync`) and then reports
+`SyncTracker.Applied("jobs")`. Customer cars of active jobs come from `sync-car-parts`' snapshot replay;
+`ApplyFull()` and the `CarSpawnResponse` handler both mark `SetCustomerCar(true, jobId)` once the car is loaded,
+whichever happens last. The generator role of a first client is assigned on its `SyncAck` and sent as
+`OrderGeneratorRole`; a returning generator (garage reload) gets `IsGenerator = true` in its new snapshot. Live
+job broadcasts skip clients still in `Connected` (`Server.SendToClients`), so a joiner sees only the snapshot and
+the deltas queued after it.
 
-### D11. Players leaving
+### D11. Players leaving, server restart
 
-`Client.Disconnect` on the server calls `JobsService.OnClientLeft(id)`: release a claim by that client
-(D5 timeout path), re-elect the generator if needed. Active jobs are untouched; anyone can finish them.
-A `JobEndRequest` that arrived before the disconnect is processed normally.
+`Client.Disconnect` on the server (and `PresenceEvents.Left`) calls `JobsService.OnClientLeft(id)` under
+`StateLock`: release a claim by that client (D5 timeout path), re-elect the generator if it was the generator.
+`PresenceEvents.SceneChanged` away from the garage does the same (integration note: claims are released when the
+holder leaves the garage). Active jobs are untouched; anyone can
+finish them. A `JobEndRequest` that arrived before the disconnect is processed normally. On a server restart
+claims are dropped (claimed orders load as `Open`), the generator is elected anew, and expiry resumes when the
+first client connects.
+
+### D12. The job's car leaves its loader
+
+The job stays active while its customer car is parked (row 2) and follows it back. `JobsService` keeps
+`ActiveJobEntry.CarLoaderId` equal to the loader whose `LoadedCars` entry has that `JobID`: row 2's park handler
+calls `JobsService.OnJobCarRemoved(loader)` (sets `-1`), and an accepted spawn or unpark whose `JobID` is an
+active job sets the new loader; both broadcast `JobStarted { JobId, CarLoaderId, Job }` again (receivers update
+`job.carLoaderID` and `SetCustomerCar`). This needs row 2's unpark request to carry the loaded car's
+`customerCar`/`orderConnection` as `IsJob`/`JobID`. If a job's car disappears any other way (row 1 drops a car
+without baseline on load, or deletes it because the spawner left before its baseline), the job returns to the
+open list with `OriginalSeconds`, so it can be taken again instead of being stuck without a car.
+
+### D13. Tutorial disabled in multiplayer (user decision)
+
+While connected: a prefix on `OrderGenerator.GenerateMission` returns `false` when `forTutorial` is true; the
+server refuses an `OrderGenerated` whose job is a tutorial mission (task 1 finds the marker, e.g. `MissionID` or
+`LocalizationID`); a prefix on `TutorialsWindow.RunTutorialAction()` blocks starting a tutorial from the pause
+menu and shows `UIManager.Get().ShowInfoWindow("Tutorials are not available in multiplayer")`. If task 1 shows
+that the fresh session profile locks order slots with `OrderSlotLockReason.Tutorial`, `ModGameManager.StartGame`
+sets `ProfileData.FinishedTutorial = true` on the session profile (one line; the session profile is never
+written to disk, `session-persistence-and-rejoin`).
+
+### D14. Story missions
+
+Story missions are orders with `IsMission` and are synced like orders (user decision): generated only by the
+generator (`GenerateMission` capture, D1), not declinable (`CanDelete` false), no expiry, taken with
+`TakeMission`. The mission state the game keeps in `GlobalData` (`MissionsFinished`, `CurrentMissionDone`,
+`IsStoryMissionInProgress`) is read by the client after the native take (`JobStarted`) and end
+(`JobEndRequest`) of a mission and sent as `Missions`; the server stores it and puts it into the forwarded
+`JobStarted`, `JobRemoved { Ended }` and `JobsState`; receivers set the three `GlobalData` fields. The game's own
+rules (`GlobalData.CanRegenerateMission`, `GetMissionID`) then pick the next mission on the generator.
 
 ### Packets
 
@@ -259,20 +356,22 @@ Appended to `PacketTypes` (end of the enum, so existing values keep their number
 
 | Packet | Direction | Content |
 |---|---|---|
-| `JobsState` | S -> C | `Orders` (job + remaining), `ActiveJobs`, `NextJobId`, mission counters, `IsGenerator` |
+| `JobsState` | S -> C | `Orders` (job + remaining), `ActiveJobs`, `NextJobId`, `Missions`, `IsGenerator` |
 | `OrderGeneratorRole` | S -> C | `IsGenerator` |
 | `OrderGenerated` | C -> S | `ModJob Job`, `int MaxOpenOrders` |
 | `OrderAdded` | S -> all | `ModJob Job` (server id), `float RemainingSeconds` |
 | `OrderAction` | C -> S | `int JobId`, `OrderActionType` (`Accept`, `Decline`, `AbortTake`) |
 | `OrderActionResult` | S -> requester | `int JobId`, `OrderActionType`, `bool Approved`, `string Reason` |
-| `JobStarted` | C -> S -> others | `int JobId`, `int CarLoaderId`, `ModJob Job` |
+| `JobStarted` | C -> S -> others (S -> all for D12 moves) | `int JobId`, `int CarLoaderId`, `ModJob Job`, `ModMissionState Missions` (missions only) |
 | `JobProgress` | C -> S -> all | `int JobId`, found flags, per-task money spent (absolute from server, delta from client) |
-| `JobEndRequest` | C -> S | `int JobId`, `int CarLoaderId`, `int Payout`, `int Xp`, `bool IsCompleted`, `bool IsMission` |
-| `JobRemoved` | S -> all | `int JobId`, `JobRemovedReason` (`Taken`, `Declined`, `Expired`, `Ended`, `TakeAborted`), `int CarLoaderId` |
+| `JobEndRequest` | C -> S | `int JobId`, `int CarLoaderId`, `int Payout`, `int Xp`, `bool IsCompleted`, `bool IsMission`, `ModMissionState Missions` |
+| `JobRemoved` | S -> all (S -> sender for a late `TakeAborted`) | `int JobId`, `JobRemovedReason` (`Taken`, `Declined`, `Expired`, `Ended`, `TakeAborted`), `int CarLoaderId`, `ModMissionState Missions` |
 
-DTOs `ModJob`, `ModJobTask`, `ModJobPart` go in `Core/Data/GameType/` (fields as in `Job`, `JobTask`,
-`JobPart`; `ModColor`/`ModPaintType` already exist). Conversion to and from game types lives in the
-client (`ModJobConverter`), because Core has no game references.
+DTOs `ModJob`, `ModJobTask`, `ModJobPart`, `ModMissionState` go in `Core/Data/GameType/` (fields as in `Job`,
+`JobTask`, `JobPart`; Unity `Color` fields as `ModColor`, `PaintType` as `ModPaintType`, both already exist).
+Conversion to and from game types lives in the client (`ModJobConverter`), because Core has no game references.
+Packets are BinaryFormatter-serialized like the existing ones; a `JobsState` with 10 orders stays well below
+Steam's reliable message limit.
 
 ## Risks / Trade-offs
 
@@ -282,12 +381,20 @@ client (`ModJobConverter`), because Core has no game references.
   `TakeJob`/`TakeMission` directly.
 - [Payout and XP are client-reported] -> bounds check and once-only application; acceptable for co-op
   among friends, noted for later hardening.
-- [The generator is in another scene and `Update` does not generate there] -> orders pause until it
-  returns; `sync-players-and-scenes` can later prefer a client in the garage.
+- [IL2CPP inlining: a patched method never fires on the real path] -> task 1 records fired/not fired per hook
+  on the real UI path; each behaviour hook names its fallback (D5 `PrepareJob` poll, D6 re-apply, D8 money
+  diff / `job.XP`, D7 poll instead of the `CheckJob` postfix with its `ref Job` argument).
+- [Everyone is away from the garage] -> nobody is eligible, so no orders are generated until someone returns;
+  open orders still expire while anyone is connected. Accepted (ROADMAP integration note: the generator
+  must be in the garage).
+- [Scene report lags the real scene by a frame or a packet] -> an order generated in that window still carries
+  the generator's id and is accepted; the generator's own capture code runs in any scene.
+- [Generator leaves mid-generation] -> an `OrderGenerated` still in flight from it is dropped (D1); at worst
+  one order is lost and the new generator produces the next one.
 - [Take lock serializes accepts] -> a second accept in the same ~second gets `Busy` and must retry; rare
   with 2-4 players.
-- [Damage from `PrepareJob` not replicated until `sync-car-parts` provides a snapshot push] -> other
-  players see a pristine customer car; the scenario checks body parts of the job car to catch it.
+- [Job damage not replicated if `UploadBaseline` runs before `PrepareJob` finished its random rolls] -> the
+  scenario compares the job car's parts and details on both clients right after the take.
 - [`EndJob` fluid check (`job.oilLevel`) on a non-taker depends on `sync-car-details`] -> until then a
   non-taker may get "no oil"; scenario lets the taker finish in the first run and the other player in a
   second step once fluids sync.
@@ -298,26 +405,31 @@ client (`ModJobConverter`), because Core has no game references.
 
 ## Migration Plan
 
-Old saves without `JobsState` deserialize with an empty one (`new JobsState()` default), which is the new
-session state. Rollback is reverting the change; saves with `JobsState` load on older servers because
-Newtonsoft ignores unknown members.
+A save without a `jobs` section loads through `JobsSection.Reset()` (empty state), which is the new session
+state; the section starts at `Version = 1`. Rollback is reverting the change; row 7 keeps an unknown `jobs`
+section as raw JSON, so an older server does not lose it.
 
 ## Open questions / assumptions
 
+User decisions applied (2026-10-05): money, XP and level are shared (job XP goes to the shared pool through
+`JobEndRequest`, never `StatsActionPacket`); expiry pauses while the server is empty; story missions sync like
+orders; the tutorial is disabled in multiplayer games (D13).
+
 Decided without asking (please object if wrong):
 
-- **Generation by an elected client (D1)** rather than server-side generation. Orders pause while no
-  client is connected or the generator cannot generate.
-- **Expiry pauses while the server is empty**, like time does in single-player.
-- **Exp is shared** through `WorldState` (existing stats design); job XP is applied by the server from
-  `JobEndRequest`, not through `StatsActionPacket`, so a refused second finish cannot add exp.
-- **Story missions** are synced like orders (generated by the generator, counters stored on the server);
-  tutorial missions are out of scope.
+- **Generation by an elected garage client (D1)** rather than server-side generation. Orders pause while
+  no client is in the garage.
+- **Payout/XP reported by the finishing client is trusted** (bounds-checked, applied once).
 - **Steam stats/achievements** for a finished job go only to the finisher.
-- Claim timeout 30 s, client-side abort 20 s, end-context timeout 10 s; tune after the trace.
+- Claim timeout 60 s, client-side abort 45 s, end-context timeout 10 s; tune after the trace.
 
 Deferrable unknowns (answered by task 1, do not change the approach):
 
 - Whether `JobPart.Found`/`moneySpent` are derived from car state (D7 may shrink).
 - The exact commit point inside `EndJob`/`EndJobCoroutine` (D8 step 4).
-- Whether the job timer removes expired jobs through `CancelJob` (D6).
+- Whether the job timer removes expired jobs through `CancelJob` (D6), and the `timeToEnd` unit.
+- Whether `GlobalData.Jobs` is the open-order count, and whether the fresh session profile locks order slots
+  for the tutorial (D13).
+- Whether a full garage refuses the take or sends the car to parking (D4), and what `job.carLoaderID` does
+  while a customer car is parked (D12).
+- Which native step sets each mission field (D14).

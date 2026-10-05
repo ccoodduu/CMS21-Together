@@ -34,9 +34,9 @@ refused, SHALL end with the lift at the position the server holds.
 - **WHEN** a lift is at the middle position and player A presses "up" while player B presses "down" at nearly the same time
 - **THEN** both clients end with the lift at the position of whichever operation the server accepted first
 
-### Requirement: A lift without a car rests on the floor
-The server SHALL treat a lift whose car was parked, deleted or moved away as being on the floor, and a client
-SHALL never raise a lift on another player's behalf when no car is on it.
+### Requirement: A lift whose car leaves rests on the floor
+The server SHALL treat a lift whose car was parked, deleted, removed by a finished job or moved away as being on
+the floor.
 
 #### Scenario: Car on a raised lift is deleted
 - **WHEN** a car on a lift at the middle position is removed from the garage
@@ -52,8 +52,9 @@ server SHALL record that place for the car.
 - **THEN** player B sees that car on the first lift, and the first entrance place is free for both players
 
 ### Requirement: Conflicting car moves are refused and reverted
-The server SHALL refuse a car move when the target place is already taken by another car or the car's lift is
-not on the floor. The player whose move was refused SHALL see the car return to the place the server holds.
+The server SHALL refuse a car move, or taking a car out of parking, when the target place is already taken by
+another car, and SHALL refuse a car move when the car's lift is not on the floor. The player whose action was
+refused SHALL see the car return to where the server holds it.
 
 #### Scenario: Two players move different cars to the same place
 - **WHEN** players A and B move two different cars to the same free lift at nearly the same time
@@ -62,6 +63,10 @@ not on the floor. The player whose move was refused SHALL see the car return to 
 #### Scenario: Moving a car whose lift was just raised
 - **WHEN** player A raises the lift under a car and player B, who has not yet seen that, moves the same car to the paint shop
 - **THEN** the move is refused, and the car stays on the raised lift for both players
+
+#### Scenario: Taking two cars out of parking into the same place
+- **WHEN** players A and B each take a different car out of parking and both games put it at the same free garage place
+- **THEN** only the first car is in the garage on every client, and the other car is back in its parking slot on every client
 
 ### Requirement: A car can be moved while another player works on it
 Moving a car SHALL NOT be blocked because another player is working on it. Parts changed on the car before or
@@ -97,6 +102,20 @@ the parking lot is full on the server, the car SHALL stay in the garage.
 - **WHEN** a player parks a car while the server's parking lot has no free slot
 - **THEN** the car is put back in the garage for that player, and no other player sees it change
 
+### Requirement: Cars arriving from outside the garage go to the shared parking lot
+When a car arrives from outside the garage (bought or received by a player), the server SHALL put it into a free
+slot of the shared parking lot and take its price from the shared money exactly once. When no slot is free or the
+shared money is below the price, the server SHALL reject the arrival, take no money, and tell the requesting player,
+whose game undoes the purchase.
+
+#### Scenario: Car arrives with a price
+- **WHEN** player A's car purchase of 5000 arrives at the server while the parking lot has a free slot and enough shared money
+- **THEN** the shared money drops by exactly 5000 for both players and the car is in the same parking slot for both players
+
+#### Scenario: Arrival while the parking lot is full
+- **WHEN** a car arrives from outside the garage while the server's parking lot has no free slot
+- **THEN** the arrival is rejected, the shared money is unchanged, A is told why, and no player's parking lot changes
+
 ### Requirement: Taking a car out of parking is shared
 When a player moves a car from the parking lot into the garage, the car SHALL leave the parking slot and appear
 in the same garage place for every player, with all the data it had when it was parked.
@@ -113,6 +132,14 @@ succeed. The other player's game SHALL remove the car it loaded and show the par
 - **WHEN** players A and B both move the car in parking slot 3 into the garage before either sees the other's action
 - **THEN** exactly one copy of the car is in the garage on every client, and slot 3 is empty for both players
 
+### Requirement: A car being taken out is not lost when its player disconnects
+When the player who takes a car out of parking disconnects before the car's state reached the server, the server
+SHALL put the car back into the parking lot instead of removing it.
+
+#### Scenario: Disconnect right after taking a car out
+- **WHEN** player A moves a car from parking into the garage and disconnects before the server has the car's part state
+- **THEN** player B sees the car disappear from the garage and appear in the parking lot again, unchanged
+
 ### Requirement: Rearranging the parking lot is shared
 When a player moves or swaps cars between parking slots, every player SHALL see the same cars in the same slots.
 A rearrangement based on an outdated view of the parking lot SHALL be refused, and that player SHALL be shown
@@ -121,6 +148,10 @@ the server's parking lot.
 #### Scenario: Swap two slots
 - **WHEN** player A swaps the cars in parking slots 1 and 4
 - **THEN** player B sees the car from slot 1 in slot 4 and the car from slot 4 in slot 1
+
+#### Scenario: Swap based on an outdated view
+- **WHEN** player B swaps parking slots 1 and 2 before B has seen that player A just took the car in slot 1 out
+- **THEN** the swap is refused, and B's parking lot shows slot 1 empty and slot 2 unchanged, as on the server
 
 ### Requirement: Parking levels are shared and paid once
 Unlocking a parking level SHALL cost money from the shared balance once and SHALL unlock that level for every
@@ -133,6 +164,10 @@ player. If two players unlock the same level at nearly the same time, the level 
 #### Scenario: Both players unlock the same level
 - **WHEN** players A and B both unlock the second parking level at nearly the same time
 - **THEN** the second level is unlocked and the price is charged only once
+
+#### Scenario: Not enough shared money
+- **WHEN** player A unlocks the next parking level while the server's shared money is below the price
+- **THEN** no level is unlocked, no money is taken, and A's parking window shows the levels the server holds
 
 ### Requirement: A joining player receives lifts, places and the parking lot
 A player who joins while the session is running SHALL see every car at the place the server holds, every lift at

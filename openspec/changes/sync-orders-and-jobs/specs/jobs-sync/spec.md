@@ -20,7 +20,7 @@ The server SHALL hold the authoritative list of open orders and active jobs and 
 - **THEN** no two orders or jobs in the session share a job id
 
 ### Requirement: Single order generator
-Exactly one connected, fully synced player SHALL generate new orders at a time, using the game's own generation rules, and no other player SHALL add orders locally. When that player leaves, the server SHALL hand generation to another connected player.
+At most one connected, fully synced player who is in the garage SHALL generate new orders at a time, using the game's own generation rules, and no other player SHALL add orders locally. The role SHALL stay with that player until they leave the session or the garage; then the server SHALL hand generation to another player in the garage, if any, and SHALL ignore orders still arriving from the previous generator.
 
 #### Scenario: Only the generator produces orders
 - **WHEN** two players are connected and the order timer elapses
@@ -29,6 +29,10 @@ Exactly one connected, fully synced player SHALL generate new orders at a time, 
 #### Scenario: Generator leaves
 - **WHEN** the player generating orders disconnects while another player stays connected
 - **THEN** the remaining player becomes the generator and new orders keep appearing
+
+#### Scenario: Generator leaves the garage
+- **WHEN** the generating player travels away from the garage while another player stays in the garage
+- **THEN** the player in the garage becomes the generator; if nobody is in the garage, no new orders appear until someone returns
 
 #### Scenario: Open-order limit respected
 - **WHEN** the shared list already holds the maximum number of open orders for the shared level and upgrades
@@ -46,15 +50,23 @@ Accepting an order SHALL require the server's approval, and the server SHALL app
 - **THEN** the order disappears from every player's orders window
 
 ### Requirement: Customer car spawn for an accepted job
-Taking a job SHALL spawn the customer car for every player on the same car loader, marked as that job's customer car, and the job SHALL then be listed as active on every client with that car loader.
+Taking a job SHALL spawn the customer car for every player on the same car loader, marked as that job's customer car, and the job SHALL then be listed as active on every client with that car loader. The job SHALL stay linked to its car when the car is parked and brought back, and SHALL return to the open list if its car is lost.
 
 #### Scenario: Other player sees the customer car
 - **WHEN** player A takes a job
 - **THEN** player B sees the same car on the same car loader, marked as a customer car for that job, and can open its order details
 
 #### Scenario: Take cannot complete
-- **WHEN** an approved take does not result in a customer car within the take timeout, or the taker disconnects first
+- **WHEN** an approved take does not result in a customer car within the take timeout, the garage has no free place, or the taker disconnects first
 - **THEN** the order returns to the open list for everyone and any car spawned for it is removed
+
+#### Scenario: Customer car parked and brought back
+- **WHEN** a player moves an active job's customer car to the parking lot and later back into the garage
+- **THEN** the job stays active for every player and is linked to the car loader the car came back to
+
+#### Scenario: Job car lost
+- **WHEN** an active job's customer car is removed by anything other than parking or ending the job, for example a car dropped when the server loads its save
+- **THEN** the job returns to the open list for everyone so it can be taken again
 
 ### Requirement: Decline
 Declining an open order SHALL remove it for every player. Orders that the game marks as not deletable (story missions) SHALL NOT be declinable.
@@ -82,7 +94,7 @@ Every player SHALL see the same progress for an active job: which tasks and part
 - **THEN** player B's order details for that job show the same part as found
 
 ### Requirement: Job completion
-Ending a job SHALL be applied once by the server: the job's payout SHALL be added to the shared money, its experience to the shared experience and level, and the job and its customer car SHALL be removed for every player. A second attempt to end the same job SHALL be refused without paying again.
+Ending a job SHALL be applied once by the server: the job's payout SHALL be added to the shared money, its experience to the shared experience and level (never also through the generic experience update), and the job and its customer car SHALL be removed for every player. A second attempt to end the same job SHALL be refused without paying again.
 
 #### Scenario: Job ends with shared payout
 - **WHEN** a player ends an active job and the game's completion checks pass
@@ -95,6 +107,24 @@ Ending a job SHALL be applied once by the server: the job's payout SHALL be adde
 #### Scenario: Completion checks fail
 - **WHEN** a player tries to end a job whose car fails the game's completion checks
 - **THEN** the game shows its usual message and no payout, experience or removal happens for anyone
+
+### Requirement: Story missions
+Story missions SHALL be shared like orders: generated only by the order generator, shown to every player, not declinable, not expiring, and taken by at most one player. The story mission progress (missions finished, current mission done, mission in progress) SHALL be stored by the server and be the same for every player.
+
+#### Scenario: Story mission finished
+- **WHEN** a player ends an active story mission
+- **THEN** every player's story mission progress matches the server's and the next story mission, when the game offers one, appears once for everyone
+
+### Requirement: Tutorial disabled in multiplayer
+While connected to a server, no player SHALL be able to start a tutorial, no tutorial mission SHALL be generated or accepted into the shared order list, and the tutorial SHALL NOT lock order slots of the multiplayer session.
+
+#### Scenario: Tutorial cannot be started
+- **WHEN** a connected player tries to run a tutorial from the pause menu's tutorials window
+- **THEN** the tutorial does not start and the player sees a message that tutorials are not available in multiplayer
+
+#### Scenario: No tutorial orders
+- **WHEN** orders are generated during a session
+- **THEN** none of them is a tutorial mission, and order slots are not locked for the tutorial
 
 ### Requirement: Jobs survive a player leaving
 Active jobs SHALL belong to the session, not to the player who took them. Any player SHALL be able to continue and end a job after the player who took it has left.
@@ -120,3 +150,7 @@ Open orders with their remaining time, active jobs with their car loader and pro
 #### Scenario: Server restart
 - **WHEN** the server saves, restarts and a player reconnects
 - **THEN** the player sees the same open orders, remaining times and active jobs as before the restart
+
+#### Scenario: Take in progress during a restart
+- **WHEN** the server restarts while an order is claimed but its job has not started
+- **THEN** after the restart the order is open again and can be accepted
