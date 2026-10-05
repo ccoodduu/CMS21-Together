@@ -69,7 +69,7 @@ definition of done (Working rules) holds. Rows listed as "part N" are split by t
 | M4 | **The full workshop** — every tool, junkyard/barn/auction trips with car purchases landing in the shared parking, consistent money; host and join from the in-game menu | 5a, 5b, 6 part 2 (seat/engine, purchases outside), 10, 8 part 2 |
 | M5 | **Robust sessions** — 3–4 players, multi-hour session, crashes and rejoins without loss | 7 rest (identity, rejoin end-to-end, server loss), 11, 14 (d) |
 | M6 | **Release 1.0** — a friend installs from the zip and the guide alone, with visual mods only | 9 part 2 (gameplay-mod heuristic tuned on real mod lists), 12 part 2 |
-| M7 | **Scavenge together + feels shared** — shared junkyard/barn/auction, see each other's work, driving | 15, 17 |
+| M7 | **Release 1.1: scavenge together + feels shared** — shared junkyard/barn/auction, see each other's work, driving | 15, 17 |
 
 Row 16 is split over milestones: prices/fees and job payout/XP land with M3 (rows 3 and 10 use them); order
 generation and spawn damage land in M3 if the decompile spike shows they are reasonable, otherwise in M4 and row 3
