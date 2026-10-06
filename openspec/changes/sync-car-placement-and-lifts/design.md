@@ -298,6 +298,36 @@ New `PacketTypes` values are appended at the end of the enum (other rows append 
 never renumber existing values). Direction: `*Request` client→server; `LifterState`, `CarPlaceChanged`, `CarParkResult`,
 `ParkingSlotUpdate`, `ParkingState` server→client.
 
+### 12. Corrections from the static spike (2026-10-06, `docs/spikes/car-placement.md`)
+
+These override the decisions above where they differ; the runtime spike confirms them before group 4.
+- **Places (Decision 3):** the pie menu never calls `NotificationCenter.ChangeCarPos`; `ButtonAccept("MoveCar")`
+  builds `<ChangeCarPos>d__20` inline. Detect with a prefix on `_ChangeCarPos_d__20.MoveNext` at state 0.
+  `ChangeCarPos(…, false)` still fades and locks input for ~2 s, so remote applies use `ResetCarLifter()` +
+  `ChangePosition(place)`. `placeNo` equals the `CarPlace` value whenever it is not -1, so the place is stored in the
+  spawn record's `PlaceNo`.
+- **Occupied place (Decision 3):** vanilla swaps the two cars. Until the user answers QUESTIONS.md row 2 question 1,
+  the default is a swap: `CarPlaceChangeRequest` onto an occupied place is accepted when the other car is also
+  `Ready` and not on a raised lift, and the server answers with one `CarPlaceChanged` per car.
+- **Lifts (Decision 2):** `Action` (0 up, 1 down) is hookable and sets `isMoving` before it returns; `currentState`
+  changes only when the movement ends. An empty lift cannot move (the server requires a car at the lift's place), and
+  `InstantSet` on an empty lift desyncs state and visuals. The `carLifter[]` ↔ `CarLifter1/2` map comes from the scene
+  and is computed at runtime.
+- **Park (Decision 5):** postfix on `CarLoader.SaveCarToFile(int index, bool toParking)` with `toParking == true`
+  (gives loader and slot, avoids patching a by-value struct parameter). Vanilla never parks customer cars and takes
+  the lowest free slot. Read and write slots only through `GameDataManager.LoadCarInParking(i)` /
+  `SaveCarInParking(data, i)`: `carsOnParking` is an array of inline structs that Unhollower indexes as pointers.
+- **Unpark (Decision 5):** the existing `LoadCar(string)` spawn hook fires during unpark, then the game clears the slot
+  with `SaveCarInParking(empty, slot)`.
+- **Swap in parking:** every path goes through `ParkingCarPlaceManager.MoveCar`.
+- **Levels (Decision 7):** `Method_Private_Void_Boolean_PDM_0` is `<MoveCarFromParking>g__RemoveCar|57_0`, the "remove
+  this unloadable car from parking?" answer, which deletes a parked car (blocked while connected by default,
+  QUESTIONS.md row 2 question 2). The unlock is `UnlockParkingLevelAction()` on the UIEnter key, without a dialog;
+  price = `UnlockedLevels × Cost_BaseParkingLevel` (50,000), halved by the `cheaper_parking` upgrade; the money check
+  is only in the UI, so the server checks it.
+- **Layout (1.3, static):** 10 slots per level, 80 levels, 1 level unlocked on a new profile. The codec serializes and
+  deserializes with the current `saveVersion`; `IsDefault()` means `carToLoad` is empty.
+
 ## Risks / Trade-offs
 
 - [IL2CPP inlining: a hooked method called from native code may never hit the detour] → every hook gets a spike

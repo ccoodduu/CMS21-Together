@@ -3,6 +3,16 @@
 Open questions that block a decision. Each has the default we work with until answered.
 Answered ones move to the bottom with the answer.
 
+## Open — new (2026-10-06, row 2)
+
+1. **Moving a car onto an occupied place.** In the game, moving a car onto a place where another car stands swaps the
+   two cars. The design said the server refuses a move onto an occupied place, which would make that swap fail
+   whenever you are connected. Options: (a) a swap request, so the server swaps both cars in one change; (b) refuse it
+   and show "the place is taken" (simpler, but a vanilla feature stops working). **Default: (a).**
+2. **Removing an unloadable car from parking.** When a parked car cannot load (its config or DLC is missing), the game
+   asks "remove it from parking?" and deletes it. Default: blocked while connected, with a message, because it only
+   happens when players have different DLC or mods.
+
 ## Open — smaller, defaults probably fine
 
 - Remote players see only the finished part state, not the bolt animation, while a part is reserved.
