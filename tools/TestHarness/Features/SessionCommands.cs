@@ -18,6 +18,24 @@ public static class SessionCommands
         return new Dictionary<string, object> { ["id"] = item.ID, ["uid"] = item.UID, ["expected"] = expected };
     }
 
+    [HarnessCommand("inv-add-local")]
+    private static object InvAddLocal(string args)
+    {
+        var item = new Item((args ?? "").Trim());
+        item.Condition = 0.5f;
+        Singleton<GameManager>.Instance.Inventory.Add(item, false);
+        return new Dictionary<string, object> { ["id"] = item.ID, ["uid"] = item.UID };
+    }
+
+    [HarnessCommand("junkyard-buy")]
+    private static object JunkyardBuy(string args)
+    {
+        var packet = new ItemsExchangePacket { IsJunkyard = true, ItemsToBuy = new List<CMS21_Together_Core.Data.GameType.ModItem>() };
+        packet.ItemsToBuy.Add(new CMS21_Together_Core.Data.GameType.ModItem { ID = (args ?? "").Trim(), Condition = 0.5f, ConditionToShow = 0.5f, Quality = 1 });
+        Client.Instance.Send(packet);
+        return "sent";
+    }
+
     [HarnessCommand("stats-add")]
     private static object StatsAdd(string args)
     {

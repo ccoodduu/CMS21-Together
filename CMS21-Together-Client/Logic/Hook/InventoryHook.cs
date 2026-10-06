@@ -15,6 +15,7 @@ namespace CMS21Together.Logic.Hook
         [HarmonyPrefix]
         public static bool AddItemPrefix(Item item, bool showPopup)
         {
+            if (!ClientScene.IsGarageReady) return true;
             if (Client.Instance.IsConnected && !InventoryHandlers.IgnoreInventoryHooks && PartTransactions.SuppressAdd(item.ID)) return false;
             if (Client.Instance.IsConnected && !InventoryHandlers.IgnoreInventoryHooks && !PartTransactions.CaptureAdd(item.ToModItem()))
             {
@@ -32,6 +33,7 @@ namespace CMS21Together.Logic.Hook
         [HarmonyPrefix]
         public static bool DeleteItemPrefix(Item item)
         {
+            if (!ClientScene.IsGarageReady) return true;
             if (Client.Instance.IsConnected && !InventoryHandlers.IgnoreInventoryHooks && !PartTransactions.CaptureDelete(item.ToModItem()))
             {
                 var packet = new InventoryItemActionPacket
@@ -48,6 +50,7 @@ namespace CMS21Together.Logic.Hook
         [HarmonyPrefix]
         public static bool AddGroupItemPrefix(GroupItem group)
         {
+            if (!ClientScene.IsGarageReady) return true;
             if (Client.Instance.IsConnected && !InventoryHandlers.IgnoreInventoryHooks && !PartTransactions.CaptureAddGroup(group.ToModGroupItem()))
             {
                 var packet = new InventoryGroupItemActionPacket
@@ -64,6 +67,7 @@ namespace CMS21Together.Logic.Hook
         [HarmonyPrefix]
         public static bool DeleteGroupItemPrefix(long UId)
         {
+            if (!ClientScene.IsGarageReady) return true;
             bool tracked = Client.Instance.IsConnected && !InventoryHandlers.IgnoreInventoryHooks;
             var existing = tracked ? EngineCraneHooks.TakeInsertedGroup(UId) ?? Singleton<GameManager>.Instance.Inventory.GetGroup(UId).ToModGroupItem() : null;
             if (tracked && (existing == null || !PartTransactions.CaptureDeleteGroup(existing)))

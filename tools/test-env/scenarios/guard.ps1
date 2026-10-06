@@ -53,16 +53,16 @@ Send-HarnessCommand -Instance $a -Verb guard-try -Arguments "Window:PieMenu" | O
 Start-Sleep -Seconds 2
 
 Try-Guard $a "Action:SellCar" "blocked" | Out-Null
-Try-Guard $a "Scene:Junkyard" "blocked" | Out-Null
+Try-Guard $a "Scene:Barn" "blocked" | Out-Null
 Start-Sleep -Seconds 2
-Try-Guard $a "Scene:Junkyard" "blocked" "void" | Out-Null
+Try-Guard $a "Scene:Barn" "blocked" "void" | Out-Null
 Start-Sleep -Seconds 4
 $dumpA = Send-HarnessCommand -Instance $a -Verb dump
 if ($dumpA.local.scene -ne "Garage") { $failures += "A left the garage after blocked travel: $($dumpA.local.scene)" }
 
 $log = Send-HarnessCommand -Instance $a -Verb guard-log
 $log | ConvertTo-Json -Depth 5 | Set-Content -LiteralPath (Join-Path $Ctx.RunDir "guard_log_A.json") -Encoding utf8
-foreach ($key in @("Window:Orders", "Mode:BonusDisassemble", "Scene:Junkyard", "Pie:wheel_take")) {
+foreach ($key in @("Window:Orders", "Mode:BonusDisassemble", "Scene:Barn", "Pie:wheel_take")) {
     if ($log.keys -notcontains $key) { $failures += "guard-log on A lacks $key" }
 }
 
