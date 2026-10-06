@@ -2,6 +2,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using CMS21Together.Data;
+using CMS21Together.Logic.Player;
 using CMS21Together.Network;
 using UnityEngine;
 
@@ -24,7 +25,7 @@ public static class StateDump
             ["initialSyncFinished"] = ClientData.IsInitialSyncFinished,
             ["snapshotId"] = SyncTracker.CurrentSnapshotId,
             ["syncAcked"] = SyncTracker.Acked,
-            ["remotePlayers"] = ClientData.Players.Count,
+            ["remotePlayers"] = PresenceManager.VisibleAvatarCount,
         };
     }
 
@@ -51,10 +52,33 @@ public static class StateDump
         };
         dump["inventory"] = Inventory();
         dump["cars"] = Cars();
-        dump["players"] = ClientData.Players.ToDictionary(
+        dump["players"] = PresenceManager.Roster.Where(p => p.Value.HasAvatar).ToDictionary(
             p => p.Key.ToString(),
-            p => p.Value == null ? null : (object)Vec(p.Value.transform.position));
+            p => (object)Vec(p.Value.Avatar.transform.position));
+        dump["local"] = Local();
+        dump["roster"] = PresenceManager.Roster.ToDictionary(p => p.Key.ToString(), p => (object)new
+        {
+            name = p.Value.Record.Username,
+            scene = p.Value.Record.Scene.ToString(),
+            seat = p.Value.Record.SeatCarLoaderId,
+            engineRunning = p.Value.Record.EngineRunning,
+            avatarActive = p.Value.HasAvatar && p.Value.Avatar.gameObject.activeSelf,
+            avatarPosition = p.Value.HasAvatar ? Vec(p.Value.Avatar.transform.position) : null,
+        });
         return dump;
+    }
+
+    private static object Local()
+    {
+        if (!PresenceManager.HasLocalMotor || Client.Instance == null || !Client.Instance.IsConnected)
+            return new { scene = ClientScene.LocalScene.ToString(), name = PlayerSettings.PlayerName };
+        var movement = Movement.CaptureLocal();
+        return new
+        {
+            position = new { x = Round(movement.Position.X), y = Round(movement.Position.Y), z = Round(movement.Position.Z) },
+            scene = ClientScene.LocalScene.ToString(),
+            name = PlayerSettings.PlayerName,
+        };
     }
 
     private static object Inventory()

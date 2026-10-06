@@ -49,6 +49,18 @@ function Save-HarnessDump {
     return $dump
 }
 
+function Wait-HarnessDump {
+    param([string]$Instance, [scriptblock]$Condition, [int]$TimeoutSec = 30, [string]$What = "condition")
+    $deadline = (Get-Date).AddSeconds($TimeoutSec)
+    $dump = $null
+    while ((Get-Date) -lt $deadline) {
+        $dump = Send-HarnessCommand -Instance $Instance -Verb dump
+        if (& $Condition $dump) { return $dump }
+        Start-Sleep -Milliseconds 500
+    }
+    throw "Timeout after $TimeoutSec s waiting for $Instance dump: $What (last: roster $($dump.roster | ConvertTo-Json -Compress -Depth 5), local $($dump.local | ConvertTo-Json -Compress))"
+}
+
 function Save-HarnessScreenshot {
     param([string]$Instance, [string]$RunDir, [string]$Label)
     Send-HarnessCommand -Instance $Instance -Verb screenshot -Arguments (Join-Path $RunDir "shot_${Label}_$Instance.png") | Out-Null
@@ -151,6 +163,6 @@ function Send-ServerCommand {
 }
 
 Export-ModuleMember -Function Get-HarnessDir, Get-HarnessStatus, Wait-HarnessStatus, Send-HarnessCommand,
-    Save-HarnessDump, Save-HarnessScreenshot, Compare-HarnessDumps,
+    Save-HarnessDump, Wait-HarnessDump, Save-HarnessScreenshot, Compare-HarnessDumps,
     Initialize-TestServer, Connect-HarnessInstance, Get-ServerLogMark, Wait-ServerLog, Start-TestServer, Stop-TestServer,
     Send-ServerCommand

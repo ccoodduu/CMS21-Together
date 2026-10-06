@@ -1,17 +1,29 @@
+using System;
 using System.Collections.Generic;
 using CMS21_Together_Core.Data.Enum;
-using CMS21_Together_Core.Data.GameType;
+using CMS21_Together_Core.Network.Packets;
 
 namespace CMS21_Together_Core.Data;
 
 public class PlayerState
 {
-	public Dictionary<int, Vector3Serializable> Positions = new Dictionary<int, Vector3Serializable>();
-	public Dictionary<int, Vector3Serializable> Velocities = new Dictionary<int, Vector3Serializable>();
-	public Dictionary<int, QuaternionSerializable> Rotations = new Dictionary<int, QuaternionSerializable>();
-	public Dictionary<int, float> Pitches = new Dictionary<int, float>();
-	public Dictionary<int, bool> GroundedStates = new Dictionary<int, bool>();
-	public Dictionary<int, bool> CrouchingStates = new Dictionary<int, bool>();
-	public Dictionary<int, bool> RunningStates = new Dictionary<int, bool>();
-	public Dictionary<int, GameScene> Scenes = new Dictionary<int, GameScene>();
+	public Dictionary<int, PlayerPresenceRecord> Records = new Dictionary<int, PlayerPresenceRecord>();
+}
+
+[Serializable]
+public class PlayerPresenceRecord
+{
+	public const int NoCar = -1;
+
+	public int PlayerId;
+	public string Username;
+	public GameScene Scene;
+	public int SeatCarLoaderId = NoCar;
+	public bool SeatLeft;
+	public int EngineCarLoaderId = NoCar;
+	public bool EngineRunning;
+	public float EngineRpm;
+	public MovementPacket LastMovement;
+
+	public PlayerPresenceRecord Copy() => (PlayerPresenceRecord)MemberwiseClone();
 }

@@ -154,6 +154,8 @@ namespace CMS21_Together_Server.Network.Transport
         public override void OnDisconnected(Connection connection, ConnectionInfo info)
         {
             base.OnDisconnected(connection, info);
+            var client = Server.Clients.Values.FirstOrDefault(c => c.IsConnected && c.SteamConnection == connection);
+            client?.Disconnect();
         }
 
         public override void OnMessage(Connection connection, NetIdentity identity, IntPtr data, int size, long messageNum, long recvTime, int channel)

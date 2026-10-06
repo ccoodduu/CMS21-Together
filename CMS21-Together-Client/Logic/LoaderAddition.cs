@@ -5,9 +5,11 @@ using CMS.Garage.Customization;
 using CMS.Managers;
 using CMS.UI;
 using CMS.UI.Windows;
+using CMS21_Together_Core.Data.Enum;
 using CMS21_Together_Core.Logging;
 using CMS21_Together_Core.Network.Packets;
 using CMS21Together.Data;
+using CMS21Together.Logic.Player;
 using CMS21Together.Network;
 using HarmonyLib;
 using Il2CppSystem.Collections.Generic;
@@ -229,6 +231,8 @@ public static class LoaderAddition
 		yield return new WaitForEndOfFrame();
 		
 		ClientData.Reset();
+		ClientScene.LocalScene = GameScene.Garage;
+		PresenceManager.FindLocalMotor();
 		Client.Instance.Send(new AskForSync());
 
 		bool timedOut = false;
@@ -263,6 +267,10 @@ public static class LoaderAddition
 			yield break;
 		}
 		Log.Success("Game synced successfully.");
+		SpawnPlacement.PlaceLocalPlayer();
+		PresenceManager.PublishLocal();
+		Movement.ForceSend();
+		PresenceManager.ReconcileAll();
 		
 		SceneLoader.BlockProgress = false; // needed to end loading
 		NotificationCenter.IsGameReady = true; // needed to end loading

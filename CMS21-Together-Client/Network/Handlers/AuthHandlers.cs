@@ -5,7 +5,7 @@ using CMS21_Together_Core.Logging;
 using CMS21_Together_Core.Network;
 using CMS21_Together_Core.Network.Packets;
 using CMS21Together.Data;
-using CMS21Together.Logic;
+using CMS21Together.Logic.Player;
 using UnityEngine;
 
 namespace CMS21Together.Network.Handlers;
@@ -35,7 +35,7 @@ public static class AuthHandler
 				message = "",
 				modVersion = MainMod.ASSEMBLY_MOD_VERSION,
 				playerID = Client.Instance.ID,
-				username = $"TestUser{packet.playerID}"
+				username = PlayerSettings.PlayerName
 			});
 		}
 	}
@@ -51,12 +51,7 @@ public static class AuthHandler
 		}
 		else
 		{
-			if (ClientData.Players.TryGetValue(packet.playerID, out PlayerInstance instance))
-			{
-				Log.Info($"Player {packet.playerID} disconnected.");
-				Object.Destroy(instance.gameObject);
-				ClientData.Players.Remove(packet.playerID);
-			}
+			PresenceManager.Remove(packet.playerID);
 		}
 	}
 }

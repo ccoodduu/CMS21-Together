@@ -4,6 +4,7 @@ using CMS21_Together_Core;
 using CMS21_Together_Core.Logging;
 using CMS21_Together_Core.Network;
 using CMS21_Together_Core.Network.Packets;
+using CMS21Together.Data;
 using CMS21Together.Managers;
 using Steamworks;
 using Steamworks.Data;
@@ -61,7 +62,7 @@ public class ClientSteam : ConnectionManager
 			message = "",
 			modVersion = MainMod.ASSEMBLY_MOD_VERSION,
 			playerID = Client.Instance.ID,
-			username = $"TestUser{Client.Instance.ID}"
+			username = PlayerSettings.PlayerName
 		});
 	}
 

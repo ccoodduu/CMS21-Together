@@ -37,5 +37,8 @@ public enum PacketTypes
 	CarSubPartUpdate,
 
 	SyncBegin,
-	SyncAck
+	SyncAck,
+
+	PlayerPresence,
+	PlayerRoster
 }

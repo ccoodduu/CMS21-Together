@@ -1,8 +1,10 @@
 ﻿using System;
 using System.IO;
+using CMS21_Together_Core.Data.Enum;
 using CMS21_Together_Core.Logging;
 using CMS21_Together_Core.Network;
 using CMS21Together.Data;
+using CMS21Together.Logic.Player;
 using CMS21Together.Logging;
 using CMS21Together.Managers;
 using CMS21Together.Network;
@@ -78,6 +80,20 @@ namespace CMS21Together
 			if (sceneName == "Menu") SessionGuard.End();
 		}
 
+		public override void OnSceneWasInitialized(int buildindex, string sceneName)
+		{
+			if (!Client.Instance.IsConnectionValid || !ClientData.IsInitialSyncFinished) return;
+			if (ClientScene.IsTransitionScene(sceneName)) return;
+
+			var scene = ClientScene.FromSceneName(sceneName);
+			if (scene == GameScene.Garage || scene == GameScene.Menu) return;
+
+			ClientScene.LocalScene = scene;
+			PresenceManager.FindLocalMotor();
+			PresenceManager.PublishLocal();
+			PresenceManager.ReconcileAll();
+		}
+
 		public override void OnUpdate()
 		{
 			if (!isModInitialized )
@@ -110,6 +126,7 @@ namespace CMS21Together
 		public override void OnInitializeMelon()
 		{
 			ModConsole.Initialize();
+			PlayerSettings.Initialize();
 		}
 
 		public override void OnApplicationQuit()

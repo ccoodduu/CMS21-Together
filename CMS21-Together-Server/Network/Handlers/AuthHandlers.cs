@@ -5,6 +5,7 @@ using CMS21_Together_Core.Network;
 using CMS21_Together_Core.Network.Packets;
 using CMS21_Together_Server.Data;
 using CMS21_Together_Server.Data.Persistence;
+using CMS21_Together_Server.Data.Presence;
 using CMS21_Together_Server.Log;
 
 namespace CMS21_Together_Server.Network.Handlers
@@ -35,6 +36,10 @@ namespace CMS21_Together_Server.Network.Handlers
 				return;
 			}
 			Server.Clients[(int)clientId].OnConnectedSuccessfully.Invoke();
+
+			var record = PresenceRegistry.Add((int)clientId, packet.username);
+			Logger.Info($"Player {record.PlayerId} '{record.Username}' joined");
+			Server.SendToClients(new PlayerPresencePacket { Record = record.Copy() }, record.PlayerId);
 		}
 
 		[PacketHandler(PacketTypes.AskForSync)]

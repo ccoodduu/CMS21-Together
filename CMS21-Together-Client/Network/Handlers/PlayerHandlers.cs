@@ -11,7 +11,18 @@ public static class PlayerHandlers
 	[PacketHandler(PacketTypes.Movement)]
 	public static void OnMovementUpdate(long senderId, MovementPacket packet)
 	{
-		if (!ClientData.IsInitialSyncFinished) return;
-		Movement.UpdateRemotePlayer(packet);
+		PresenceManager.ApplyMovement(packet);
+	}
+
+	[PacketHandler(PacketTypes.PlayerPresence)]
+	public static void OnPlayerPresence(long senderId, PlayerPresencePacket packet)
+	{
+		PresenceManager.ApplyRecord(packet.Record);
+	}
+
+	[PacketHandler(PacketTypes.PlayerRoster)]
+	public static void OnPlayerRoster(long senderId, PlayerRosterPacket packet)
+	{
+		PresenceManager.ApplyRoster(packet, SyncTracker.ReceivingSnapshotId);
 	}
 }

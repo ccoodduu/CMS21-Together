@@ -2,6 +2,7 @@ using System;
 using CMS21_Together_Core.Data.Enum;
 using CMS21_Together_Core.Network.Packets;
 using CMS21_Together_Server.Data;
+using CMS21_Together_Server.Data.Presence;
 using CMS21_Together_Server.Log;
 using CMS21_Together_Server.Network.Transport;
 using Steamworks.Data;
@@ -82,11 +83,16 @@ namespace CMS21_Together_Server.Network
 				lastHeartbeatTime = 0;
 				LastHeartbeatTime = 0;
 
-				Server.SendToClients(new DisconnectPacket()
+				if (PresenceRegistry.Remove(ID))
 				{
-					playerID = ID,
-					message = "Disconnected"
-				}, ID);
+					Logger.Info($"Player {ID} left");
+					Server.SendToClients(new DisconnectPacket()
+					{
+						playerID = ID,
+						message = "Disconnected"
+					}, ID);
+					PresenceEvents.RaiseLeft(ID);
+				}
 				GameDataManager.RequestSave();
 			}
 		}
