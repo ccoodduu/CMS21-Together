@@ -42,7 +42,7 @@ public static class ToolSync
 	private static readonly Dictionary<ModToolId, int> claims = new Dictionary<ModToolId, int>();
 	private static readonly HashSet<ModToolId> ownClaims = new HashSet<ModToolId>();
 	private static readonly Dictionary<int, PendingUpdate> pending = new Dictionary<int, PendingUpdate>();
-	private static readonly Dictionary<ModToolId, HashSet<long>> takeStart = new Dictionary<ModToolId, HashSet<long>>();
+	private static readonly Dictionary<ModToolId, Dictionary<long, int>> takeStart = new Dictionary<ModToolId, Dictionary<long, int>>();
 	private static readonly Dictionary<ModToolId, int> applying = new Dictionary<ModToolId, int>();
 	private static readonly Dictionary<long, int> neutral = new Dictionary<long, int>();
 	private static readonly HashSet<long> seenByHooks = new HashSet<long>();
@@ -90,7 +90,7 @@ public static class ToolSync
 	public static void MarkTakeStart(ModToolId tool)
 	{
 		if (!CanSend || IsApplyingRemote(tool)) return;
-		takeStart[tool] = InventoryUids();
+		takeStart[tool] = InventoryCopies();
 		TraceEvent($"{tool} take started");
 	}
 
@@ -110,7 +110,8 @@ public static class ToolSync
 		var added = new List<long>();
 		if (takeStart.TryGetValue(state.Tool, out var before))
 		{
-			added.AddRange(InventoryUids().Where(uid => !before.Contains(uid)));
+			foreach (var copies in InventoryCopies())
+				for (int n = before.TryGetValue(copies.Key, out int had) ? had : 0; n < copies.Value; n++) added.Add(copies.Key);
 			takeStart.Remove(state.Tool);
 		}
 		if (extraAdded != null) added.AddRange(extraAdded);
@@ -346,8 +347,14 @@ public static class ToolSync
 		else if (update.Attempted.IsEmpty && !update.Previous.IsEmpty)
 		{
 			var keep = new HashSet<long>(update.Previous.Uids());
-			foreach (long uid in update.Added.Where(uid => !keep.Contains(uid)))
+			foreach (long uid in update.Added)
 			{
+				if (keep.Contains(uid) && RemoveSecondCopy(inventory, uid))
+				{
+					Log.Info($"[Tools] {tool}: removing the second copy of {uid}, another player took the item first.");
+					continue;
+				}
+				if (keep.Contains(uid) && !HeldInOtherForm(inventory, uid)) continue;
 				Log.Info($"[Tools] {tool}: dropping {uid}, another player took the item first.");
 				var item = inventory.GetItem(uid);
 				if (item != null) inventory.Delete(item);
@@ -355,6 +362,47 @@ public static class ToolSync
 			}
 		}
 		InventoryHandlers.RefreshInventoryWindow();
+	}
+
+	private static bool RemoveSecondCopy(Inventory inventory, long uid)
+	{
+		Item lastItem = null;
+		int items = 0;
+		foreach (var item in inventory.items)
+		{
+			if (item.UID != uid) continue;
+			lastItem = item;
+			items++;
+		}
+		if (items > 1) return inventory.items.Remove(lastItem);
+		GroupItem lastGroup = null;
+		int groups = 0;
+		foreach (var group in inventory.groups)
+		{
+			if (group.UID != uid) continue;
+			lastGroup = group;
+			groups++;
+		}
+		return groups > 1 && inventory.groups.Remove(lastGroup);
+	}
+
+	private static bool HeldInOtherForm(Inventory inventory, long uid)
+	{
+		if (inventory.GetItem(uid) != null)
+		{
+			foreach (var group in inventory.groups)
+			{
+				if (group.ItemList == null) continue;
+				foreach (var item in group.ItemList)
+					if (item.UID == uid) return true;
+			}
+			return false;
+		}
+		var taken = inventory.GetGroup(uid);
+		if (taken?.ItemList == null || taken.ItemList.Count == 0) return false;
+		foreach (var item in taken.ItemList)
+			if (inventory.GetItem(item.UID) == null) return false;
+		return true;
 	}
 
 	// Inventory neutrality (D3.3)
@@ -442,6 +490,16 @@ public static class ToolSync
 		foreach (var item in inventory.items) uids.Add(item.UID);
 		foreach (var group in inventory.groups) uids.Add(group.UID);
 		return uids;
+	}
+
+	private static Dictionary<long, int> InventoryCopies()
+	{
+		var copies = new Dictionary<long, int>();
+		var inventory = Singleton<GameManager>.Instance?.Inventory;
+		if (inventory == null) return copies;
+		foreach (var item in inventory.items) copies[item.UID] = copies.TryGetValue(item.UID, out int n) ? n + 1 : 1;
+		foreach (var group in inventory.groups) copies[group.UID] = copies.TryGetValue(group.UID, out int n) ? n + 1 : 1;
+		return copies;
 	}
 
 	public static IEnumerator Run(IEnumerator routine)
