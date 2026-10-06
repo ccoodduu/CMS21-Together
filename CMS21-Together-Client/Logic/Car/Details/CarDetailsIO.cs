@@ -203,6 +203,12 @@ public static class CarDetailsIO
 			carLoader.SetNewLicensePlateNumber(plates.LicensePlateNumberFront, true);
 		if (plates.LicensePlateNumberRear != null && plates.LicensePlateNumberRear != local.LicensePlateNumberRear)
 			carLoader.SetNewLicensePlateNumber(plates.LicensePlateNumberRear, false);
+		if (plates.FactoryLicensePlateNumber != null && plates.FactoryLicensePlateNumber != carLoader.LicensePlatesData.FactoryLicensePlateNumber)
+		{
+			var data = carLoader.LicensePlatesData;
+			data.FactoryLicensePlateNumber = plates.FactoryLicensePlateNumber;
+			carLoader.LicensePlatesData = data;
+		}
 	}
 
 	private static void ApplyInfo(CarLoader carLoader, ModCarInfo info)

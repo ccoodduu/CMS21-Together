@@ -23,7 +23,7 @@ public static class CarDetailsCommands
         foreach (var section in Sections)
         {
             string signature = CarDetailsSync.Signature(details, section);
-            result[section.ToString()] = signature.Length > 160 ? $"{signature.Length}:{signature.GetHashCode():X8}" : signature;
+            result[section.ToString()] = signature.Length > 400 ? $"{signature.Length}:{signature.GetHashCode():X8}" : signature;
         }
         return result;
     }
