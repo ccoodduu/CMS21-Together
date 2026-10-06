@@ -108,6 +108,7 @@ namespace CMS21_Together_Server.Data.Cars
 		{
 			if (!State.LoadedCars.TryGetValue(loader, out var entry)) return false;
 			State.LoadedCars.Remove(loader);
+			CarClaims.DropLoader(loader);
 			Logger.Info($"[Cars] Loader {loader}: {entry.Spawn?.CarToLoad} cleared ({reason}).");
 			LoaderCleared?.Invoke(loader, entry, reason);
 			return true;

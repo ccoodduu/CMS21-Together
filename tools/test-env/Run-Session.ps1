@@ -151,6 +151,14 @@ finally {
 
     if (-not $KeepRunning) { Restore-ServerState } else { Write-Host "KeepRunning: server saves backup in $backupDir" }
 
+    foreach ($name in $Instances) {
+        $clientLog = Join-Path $runDir "client_$name.log"
+        if ((Test-Path -LiteralPath $clientLog) -and (Select-String -LiteralPath $clientLog -Pattern "HarmonyException" -Quiet)) {
+            $result.passed = $false
+            $result.notes += "HARMONY PATCH ERROR in client $name (a failed patch can disable every later patch)"
+        }
+    }
+
     if ((Get-RealProfileFingerprint) -ne $realFingerprint) {
         $result.passed = $false
         $result.notes += "REAL SAVE FOLDER OR REGISTRY CHANGED DURING THE RUN"

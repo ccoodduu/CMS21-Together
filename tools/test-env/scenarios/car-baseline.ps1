@@ -1,11 +1,11 @@
-# sync-car-parts baseline and late join: A spawns a car and changes one part before the baseline settles, the
+﻿# sync-car-parts baseline and late join: A spawns a car and changes one part before the baseline settles, the
 # server stores A's baseline, B joins late and loads the car from the snapshot with the same part state, the car
 # (with its baseline) survives a server restart, and a car on the client's own profile never appears.
 param($Ctx)
 
 $a, $b = $Ctx.Instances
 $loader = 0
-$car = "car_astonmartindb5"
+$car = "car_boltatlanta"
 $failures = @()
 function Check([bool]$Condition, [string]$Message) { if (-not $Condition) { $script:failures += $Message; Write-Host "FAIL: $Message" -ForegroundColor Red } else { Write-Host "ok: $Message" } }
 

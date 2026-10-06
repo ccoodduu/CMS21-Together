@@ -2,6 +2,23 @@
 
 Newest first. One entry per work session.
 
+## 2026-10-06 (09:45–10:15) — M1 rows done except row 9; M2 started (cars)
+
+- Row 8 part 1 complete: Steam rich presence join strings, join requests with a leave-and-join dialog, cold start
+  from `+connect`; `join-coldstart` and `join-presence` pass. Open: the real Steam test with a friend (user).
+- Row 12 part 1 merged and verified: `release-smoke` passes from the zips (`0.6.0-dev.548`); regression
+  `20261006-094659` green afterwards; `main` at that point.
+- Row 14a: single-player audit outcomes in its design (pause menu keeps running, save buttons hidden, no
+  `Time.timeScale` writers, `GarageLoader.Save` blocked by row 7).
+- Row 9 part 1 is being built by an agent on lane 2 (DLC decision applied: no refusal, only tracking).
+- **Part identity spike: all 163 car models build identical part hierarchies on two clients** (`part-identity`,
+  `20261006-100013`). Row 1's planned hooks all have direct native callers (design D2).
+- Row 1 (`sync-car-parts`, branch `change/sync-car-parts`): records/packets, per-loader car state, cars section v2,
+  `CarPartsStore`, baselines (spawner uploads, server stores and relays), late join for cars from the snapshot,
+  no cars from the client's own profile. `car-baseline` passes: a late joiner gets the same hierarchy and part
+  state, and the car survives a server restart. Live changes (tracker + hooks, server arbitration) are written and
+  being tested (`car-live`); transactions with inventory deltas and claims are next.
+
 ## 2026-10-06 (09:00–09:45) — scenes, join UI, guard; two real bugs
 
 - **Bug: sessions ran on the player's own profile 0.** The game reads the selected profile from PlayerPrefs on

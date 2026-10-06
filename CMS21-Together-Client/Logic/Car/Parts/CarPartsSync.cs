@@ -212,6 +212,7 @@ public static class CarPartsSync
 		var parts = carLoader.carParts;
 		for (int i = 0; parts != null && i < parts.Count; i++)
 			body.Add(PartRecords.Capture(i, parts[i]));
+		if (sub == null) return;
 		foreach (string key in registry.SubKeys)
 			sub.Add(PartRecords.Capture(registry.SubPath(key), registry.Sub(key)));
 	}

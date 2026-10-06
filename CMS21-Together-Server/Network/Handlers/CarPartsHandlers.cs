@@ -13,6 +13,87 @@ namespace CMS21_Together_Server.Network.Handlers
 	{
 		private static readonly Dictionary<string, List<CarPartsSnapshotPacket>> incoming = new Dictionary<string, List<CarPartsSnapshotPacket>>();
 
+		[PacketHandler(PacketTypes.CarPartsChange)]
+		public static void OnChange(long clientId, CarPartsChangePacket change)
+		{
+			var entry = CarPartsStore.Get(change.CarLoaderID);
+			if (entry == null || entry.SpawnSeq != change.SpawnSeq || !entry.HasBaseline)
+			{
+				Logger.Debug($"[Cars] Change {change.TxId} from client {clientId} for loader {change.CarLoaderID} dropped (no car or baseline for SpawnSeq {change.SpawnSeq}).");
+				return;
+			}
+
+			string conflict = FindConflict(entry, change);
+			if (conflict != null)
+			{
+				var reject = new CarPartsChangeResultPacket
+				{
+					CarLoaderID = change.CarLoaderID, SpawnSeq = change.SpawnSeq, TxId = change.TxId,
+					Accepted = false, Reason = conflict, Revision = entry.Revision
+				};
+				foreach (var record in change.BodyParts)
+					if (entry.BodyParts.TryGetValue(record.PartIndex, out var stored)) reject.BodyParts.Add(stored);
+				foreach (var record in change.SubParts)
+					if (entry.SubParts.TryGetValue(CarSubPartIdentity.BuildKey(record.PartIndexPath), out var stored)) reject.SubParts.Add(stored);
+				reject.RestoreUids.AddRange(change.InventoryDelta.RemovedItemUids.Concat(change.InventoryDelta.RemovedGroupUids));
+				Server.SendToClient(reject, (int)clientId);
+				Logger.Info($"[Cars] Change {change.TxId} from client {clientId} on loader {change.CarLoaderID} rejected: {conflict}");
+				return;
+			}
+
+			entry.Revision++;
+			foreach (var record in change.BodyParts)
+			{
+				record.Revision = entry.Revision;
+				entry.BodyParts[record.PartIndex] = record;
+			}
+			foreach (var record in change.SubParts)
+			{
+				string key = CarSubPartIdentity.BuildKey(record.PartIndexPath);
+				if (entry.SubParts.TryGetValue(key, out var stored) && stored.IsExamined) record.IsExamined = true;
+				record.Revision = entry.Revision;
+				entry.SubParts[key] = record;
+			}
+			InventoryChanges.Apply(change.InventoryDelta);
+
+			CarClaims.ReleaseCommitted((int)clientId, change.CarLoaderID,
+				change.BodyParts.Select(b => PartKeys.Body(b.PartIndex)).Concat(change.SubParts.Select(s => PartKeys.Sub(s.PartIndexPath))));
+			change.Revision = entry.Revision;
+			Server.SendToClient(new CarPartsChangeResultPacket
+			{
+				CarLoaderID = change.CarLoaderID, SpawnSeq = change.SpawnSeq, TxId = change.TxId, Accepted = true, Revision = entry.Revision
+			}, (int)clientId);
+			Server.SendToClients(change, (int)clientId);
+			Logger.Debug($"[Cars] Change {change.TxId} from client {clientId} on loader {change.CarLoaderID}: revision {entry.Revision} ({change.BodyParts.Count} body, {change.SubParts.Count} mechanical).");
+		}
+
+		private static string FindConflict(CMS21_Together_Core.Data.CarLoaderEntry entry, CarPartsChangePacket change)
+		{
+			foreach (var precondition in change.Preconditions)
+			{
+				bool? stored = null;
+				if (precondition.Key.StartsWith("b:") && int.TryParse(precondition.Key.Substring(2), out int index) && entry.BodyParts.TryGetValue(index, out var body))
+					stored = body.Unmounted;
+				else if (precondition.Key.StartsWith("s:") && entry.SubParts.TryGetValue(precondition.Key.Substring(2), out var sub))
+					stored = sub.Unmounted;
+				if (stored == null) return $"unknown part {precondition.Key}";
+				if (stored.Value != precondition.WasUnmounted) return $"{precondition.Key} changed already";
+			}
+
+			var inventory = GameDataManager.CurrentState.InventoryState;
+			foreach (long uid in change.InventoryDelta.RemovedItemUids)
+				if (inventory.InventoryItems.All(i => i.UID != uid)) return $"item {uid} is gone";
+			foreach (long uid in change.InventoryDelta.RemovedGroupUids)
+				if (inventory.InventoryGroupItems.All(g => g.UID != uid)) return $"group {uid} is gone";
+			return null;
+		}
+
+		[PacketHandler(PacketTypes.CarPartClaim)]
+		public static void OnClaim(long clientId, CarPartClaimPacket packet)
+		{
+			CarClaims.Handle((int)clientId, packet, ServerTime.Time);
+		}
+
 		[PacketHandler(PacketTypes.CarPartsSnapshot)]
 		public static void OnBaseline(long clientId, CarPartsSnapshotPacket packet)
 		{

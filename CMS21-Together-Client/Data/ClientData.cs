@@ -25,6 +25,8 @@ public static class ClientData
 		PresenceManager.Clear();
 		ClientScene.ClearPending();
 		CarPartsSync.Reset();
+		PartChangeTracker.Reset();
+		PartClaims.Reset();
 	}
 
 	public static void Update()

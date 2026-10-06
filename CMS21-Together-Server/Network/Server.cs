@@ -262,6 +262,7 @@ namespace CMS21_Together_Server.Network
             lock (Data.GameDataManager.StateLock)
             {
                 ProcessRefusals();
+                Data.Cars.CarClaims.Expire(Data.ServerTime.Time);
                 foreach (var client in Clients.Values)
                 {
                     if (client.IsConnected)

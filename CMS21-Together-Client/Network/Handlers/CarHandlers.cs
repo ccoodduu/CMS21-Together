@@ -101,6 +101,24 @@ namespace CMS21Together.Network.Handlers
             }
         }
 
+        [PacketHandler(PacketTypes.CarPartsChange)]
+        public static void HandleCarPartsChange(long clientId, CarPartsChangePacket packet)
+        {
+            ClientScene.GarageBound(() => PartChanges.OnRemoteChange(packet));
+        }
+
+        [PacketHandler(PacketTypes.CarPartsChangeResult)]
+        public static void HandleCarPartsChangeResult(long clientId, CarPartsChangeResultPacket packet)
+        {
+            ClientScene.GarageBound(() => PartChanges.OnResult(packet));
+        }
+
+        [PacketHandler(PacketTypes.CarPartClaimUpdate)]
+        public static void HandleCarPartClaimUpdate(long clientId, CarPartClaimUpdatePacket packet)
+        {
+            ClientScene.GarageBound(() => PartClaims.OnUpdate(packet));
+        }
+
         [PacketHandler(PacketTypes.CarSpawnAck)]
         public static void HandleCarSpawnAck(long clientId, CarSpawnAckPacket packet)
         {

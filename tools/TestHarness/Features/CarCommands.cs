@@ -119,6 +119,54 @@ public static class CarCommands
         return new Dictionary<string, object> { ["key"] = key, ["id"] = script.id };
     }
 
+    [HarnessCommand("part-fast-unmount")]
+    private static object PartFastUnmount(string args)
+    {
+        var parts = (args ?? "").Split(new[] { ' ' }, StringSplitOptions.RemoveEmptyEntries);
+        var carLoader = Loader(parts[0]);
+        var registry = PartRegistry.Build(carLoader);
+        string key = parts.Length > 1 ? parts[1] : registry.SubKeys.First(k => !registry.Sub(k).IsUnmounted && registry.Sub(k).GetUnmountWith().Count == 0 && !registry.Sub(k).IsBlocked());
+        var script = registry.Sub(key) ?? throw new ArgumentException($"no part {key}");
+        script.FastUnmount();
+        return new Dictionary<string, object> { ["key"] = key, ["id"] = script.id };
+    }
+
+    [HarnessCommand("part-fast-mount")]
+    private static object PartFastMount(string args)
+    {
+        var parts = (args ?? "").Split(new[] { ' ' }, StringSplitOptions.RemoveEmptyEntries);
+        if (parts.Length != 2) throw new ArgumentException("usage: part-fast-mount <loader> <key>");
+        var registry = PartRegistry.Build(Loader(parts[0]));
+        var script = registry.Sub(parts[1]) ?? throw new ArgumentException($"no part {parts[1]}");
+        script.FastMount();
+        return new Dictionary<string, object> { ["key"] = parts[1], ["id"] = script.id };
+    }
+
+    [HarnessCommand("part-claim")]
+    private static object PartClaim(string args)
+    {
+        var parts = (args ?? "").Split(new[] { ' ' }, StringSplitOptions.RemoveEmptyEntries);
+        if (parts.Length < 2) throw new ArgumentException("usage: part-claim <loader> <key> [release]");
+        PartClaims.Claim(int.Parse(parts[0]), new[] { parts[1] }, release: parts.Length > 2 && parts[2] == "release");
+        return "sent";
+    }
+
+    [HarnessCommand("part-action-unmount")]
+    private static object PartActionUnmount(string args)
+    {
+        var parts = (args ?? "").Split(new[] { ' ' }, StringSplitOptions.RemoveEmptyEntries);
+        if (parts.Length != 2) throw new ArgumentException("usage: part-action-unmount <loader> <key>");
+        int loader = int.Parse(parts[0]);
+        var script = PartRegistry.Build(Loader(parts[0])).Sub(parts[1]) ?? throw new ArgumentException($"no part {parts[1]}");
+        bool held = PartClaims.HeldByOther(loader, new[] { parts[1] }, out int owner);
+        if (held)
+        {
+            script.ActionUnMount();
+            return new Dictionary<string, object> { ["blocked"] = PartClaims.LastBlocked == parts[1], ["owner"] = owner };
+        }
+        return new Dictionary<string, object> { ["blocked"] = false, ["owner"] = owner };
+    }
+
     [HarnessCommand("car-baseline")]
     private static object CarBaseline(string args)
     {

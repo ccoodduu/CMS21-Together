@@ -14,6 +14,8 @@ namespace CMS21_Together_Server.Data.Cars
 		public CarsSnapshotProvider()
 		{
 			PresenceEvents.Left += CarPartsStore.OnPlayerLeft;
+			PresenceEvents.Left += CarClaims.ReleaseOwner;
+			PresenceEvents.SceneChanged += CarClaims.OnSceneChanged;
 		}
 
 		public int SendSnapshot(int clientId)
@@ -24,6 +26,7 @@ namespace CMS21_Together_Server.Data.Cars
 			{
 				if (!pair.Value.HasBaseline) continue;
 				CarPartsStore.SendSnapshot(pair.Key, pair.Value, snapshotId, only: clientId);
+				CarClaims.SendActive(pair.Key, clientId);
 				cars++;
 			}
 			return cars;
