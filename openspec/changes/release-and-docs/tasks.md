@@ -20,7 +20,7 @@ always the user's decision.
 
 ## 3. How to try (part 1)
 
-- [ ] 3.1 `docs/try-it.md` (D5, ≤ 1 page; join section from row 8 task 4.6, hosting = run `TogetherServer\CMS21_Together_Server.exe`), packed as `CMS21-Together-TRY-IT.txt` / `TRY-IT.txt`; README: replace upstream's install section with a link to it and a "fork of Fozkais/CMS21-Together" note; verify every path and file name in the text exists in the built zips
+- [x] 3.1 `docs/try-it.md` (D5, ≤ 1 page; join section from row 8 task 4.6, hosting = run `TogetherServer\CMS21_Together_Server.exe`), packed as `CMS21-Together-TRY-IT.txt` / `TRY-IT.txt`; README: replace upstream's install section with a link to it and a "fork of Fozkais/CMS21-Together" note; verify every path and file name in the text exists in the built zips
 - [ ] 3.2 Run `release-smoke` and the full regression run (with the dev build redeployed by `Deploy-Mod.ps1` afterwards); all pass; record results and the zip names in STATUS.md; **[user]** hand the zip to friends (sharing is the user's step)
 
 ## 4. Guides (part 2)

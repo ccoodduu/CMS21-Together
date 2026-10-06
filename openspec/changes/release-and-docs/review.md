@@ -116,3 +116,8 @@ ROADMAP now names `Build-Release.ps1`, `release-smoke` and `docs/try-it.md`.
    `BugReports\` before extracting, so files of the dev deploy do not mix with the release. The lane config helper and
    the list of release-only files moved into `TestLanes.psm1` (`Set-LaneServerConfig`, `Remove-ReleaseOnlyFiles`),
    shared by `Deploy-Mod.ps1`; the dev deploy also removes the release's `.pdb`s and root `CMS21-Together-*` files.
+7. **`docs/try-it.md` was written before rows 8, 9 and 14a landed** (this branch is based on
+   `change/sync-players-and-scenes`). Its Join section describes today's build (F5 = server on the same PC) and its
+   "Not yet" section says nothing is blocked. When the M1 zip is built from `main`: row 8 task 4.6 replaces the Join
+   section, and the "What works"/"Not yet" lists follow the STATUS.md checklist (with row 14a's guard: "blocked with a
+   message" instead of "not blocked yet").
