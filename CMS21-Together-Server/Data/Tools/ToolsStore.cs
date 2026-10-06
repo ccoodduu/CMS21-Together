@@ -47,7 +47,7 @@ namespace CMS21_Together_Server.Data.Tools
 		public static void OnSlotUpdate(int clientId, ToolSlotUpdatePacket packet)
 		{
 			var incoming = packet.State;
-			if (incoming == null || !Enum.IsDefined(typeof(ModToolId), incoming.Tool)) return;
+			if (incoming == null || !ModTools.IsMachine(incoming.Tool)) return;
 			var current = Slot(incoming.Tool);
 			string reason = Check(clientId, current, incoming, packet.ExpectedUid);
 			if (reason != null)
@@ -97,7 +97,7 @@ namespace CMS21_Together_Server.Data.Tools
 
 		public static void OnProperty(int clientId, ToolSlotPropertyPacket packet)
 		{
-			if (!Enum.IsDefined(typeof(ModToolId), packet.Tool) || float.IsNaN(packet.Value) || float.IsInfinity(packet.Value)) return;
+			if (!ModTools.IsMachine(packet.Tool) || float.IsNaN(packet.Value) || float.IsInfinity(packet.Value)) return;
 			var slot = Slot(packet.Tool);
 			if (packet.Property == ToolProperty.Angle) slot.Angle = packet.Value;
 			else if (packet.Property == ToolProperty.Active) slot.Active = packet.Value != 0f;
@@ -147,7 +147,7 @@ namespace CMS21_Together_Server.Data.Tools
 
 		public static void OnClaim(int clientId, ToolClaimPacket packet)
 		{
-			if (!Enum.IsDefined(typeof(ModToolId), packet.Tool)) return;
+			if (!ModTools.IsMachine(packet.Tool)) return;
 			claims.TryGetValue(packet.Tool, out var claim);
 			if (packet.Release)
 			{
@@ -200,7 +200,7 @@ namespace CMS21_Together_Server.Data.Tools
 
 		public static IEnumerable<string> Describe()
 		{
-			foreach (ModToolId tool in Enum.GetValues(typeof(ModToolId)))
+			foreach (var tool in Enum.GetValues(typeof(ModToolId)).Cast<ModToolId>().Where(ModTools.IsMachine))
 			{
 				var slot = Slot(tool);
 				string claim = claims.TryGetValue(tool, out var c) ? $", claimed by {c.Owner}" : "";
