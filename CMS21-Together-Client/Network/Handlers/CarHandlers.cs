@@ -6,6 +6,7 @@ using CMS21_Together_Core.Network.Packets;
 using CMS21Together.Logic.Hook;
 using CMS21Together.Data;
 using CMS21Together.Logic.Car.Parts;
+using CMS21Together.UI;
 using MelonLoader;
 using UnityEngine;
 
@@ -141,6 +142,7 @@ namespace CMS21Together.Network.Handlers
         private static IEnumerator ProcessCarSpawnRejected(CarSpawnRejectedPacket packet)
         {
             Log.Warn($"[CarHandlers] CarSpawnRequest for Loader {packet.CarLoaderID} was rejected by server: {packet.Reason}. Reverting local spawn.");
+            ModNotify.ShowToast(packet.Reason);
 
             CarLoader carLoader = CarLoaderPlaces.Get().GetCarLoaderByIndex(packet.CarLoaderID);
             if (carLoader == null || string.IsNullOrEmpty(carLoader.carToLoad)) yield break;

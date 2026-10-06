@@ -8,6 +8,7 @@ namespace CMS21Together.Compatibility;
 
 public class DlcInfo
 {
+	public int Index;
 	public string ProductId;
 	public string Name;
 	public bool Owned;
@@ -19,7 +20,7 @@ public static class LocalEnvironment
 
 	public static List<string> OwnedDlc => CompatOverrides.Dlc != null
 		? CompatOverrides.Dlc.OrderBy(d => d, StringComparer.Ordinal).ToList()
-		: (ReadDlc() ?? new List<DlcInfo>()).Where(d => d.Owned).Select(d => d.ProductId).OrderBy(d => d, StringComparer.Ordinal).ToList();
+		: (ReadDlc() ?? new List<DlcInfo>()).Where(d => d.Owned).Select(d => d.Index.ToString()).OrderBy(d => d, StringComparer.Ordinal).ToList();
 
 	public static string ProtocolHashValue => CompatOverrides.Protocol ?? ProtocolHash.Value;
 
@@ -54,7 +55,7 @@ public static class LocalEnvironment
 			{
 				var dlc = dlcs[i];
 				if (dlc == null) continue;
-				result.Add(new DlcInfo { ProductId = dlc.ProductId, Name = dlc.Name, Owned = dlc.Owned });
+				result.Add(new DlcInfo { Index = i, ProductId = dlc.ProductId, Name = dlc.Name, Owned = dlc.Owned });
 			}
 			return result;
 		}

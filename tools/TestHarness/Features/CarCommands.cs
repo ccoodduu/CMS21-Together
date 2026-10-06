@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using CMS21Together.Logic.Car;
 using CMS21Together.Logic.Car.Parts;
 using UnityEngine;
 
@@ -60,6 +61,37 @@ public static class CarCommands
         if ((args ?? "").Trim() == "on") PartChanges.TestHoldRemote = true;
         else PartChanges.TestReleaseRemote();
         return PartChanges.TestHoldRemote;
+    }
+
+    [HarnessCommand("car-dlc-cars")]
+    private static object CarDlcCars(string args)
+    {
+        var bundles = UnityEngine.Object.FindObjectOfType<CarBundleLoader>();
+        var cars = new List<object>();
+        for (int i = 0; bundles?.CarNamesData != null && i < bundles.CarNamesData.Count; i++)
+        {
+            var car = bundles.CarNamesData[i];
+            if (car != null && CarDlc.For(car.CarID) != CarDlc.BaseGame) cars.Add(new { car = car.CarID, dlc = CarDlc.For(car.CarID) });
+        }
+        return cars;
+    }
+
+    [HarnessCommand("car-request")]
+    private static object CarRequest(string args)
+    {
+        var parts = (args ?? "").Split(new[] { ' ' }, StringSplitOptions.RemoveEmptyEntries);
+        if (parts.Length != 2) throw new ArgumentException("usage: car-request <loader> <car>|delete");
+        if (parts[1] == "delete")
+        {
+            CMS21Together.Network.Client.Instance.Send(new CMS21_Together_Core.Network.Packets.CarSpawnDeletePacket { CarLoaderID = int.Parse(parts[0]) });
+            return "delete sent";
+        }
+        var request = new CMS21_Together_Core.Network.Packets.CarSpawnRequestPacket
+        {
+            CarLoaderID = int.Parse(parts[0]), CarToLoad = parts[1], JobID = -1, Dlc = CarDlc.For(parts[1])
+        };
+        CMS21Together.Network.Client.Instance.Send(request);
+        return new { car = parts[1], dlc = request.Dlc };
     }
 
     [HarnessCommand("car-loaded")]

@@ -18,7 +18,8 @@ namespace CMS21Together.Logic.Car
                 ConfigVersion = carLoader.ConfigVersion,
                 PlaceNo = carLoader.placeNo,
                 IsJob = carLoader.customerCar,
-                JobID = -1 
+                JobID = -1,
+                Dlc = CarDlc.For(carToLoad)
             };
            
             Client.Instance.Send(request);

@@ -95,7 +95,7 @@ Hook points (all exist in the decompiled stubs):
 | `CarLoader.CanTakeOffCarPart(string, out TakePartOffLockReason)` | postfix: return false while reserved by another player or the car is not `Ready` |
 | `CarLoader.SwitchCarPart(string)`, `SwitchCarPart(string,bool)` | postfix: mark dirty (`Switched`) |
 | `CarLoader.ExamineAllParts()` | postfix: mark whole car dirty |
-| `NotificationCenter.ActionUnMountGroup(InteractiveObject)`, `ActionInsertEngineToCar(GroupItem)` (engine crane out/in; `MountGroup(long)` if spike 0.1 shows it on that path) | prefix: block if reserved / car not ready; open one transaction for the engine group's parts + claim; postfix: mark them dirty |
+| `NotificationCenter.ActionUnMountGroup(InteractiveObject)`, `InsertEngineToCar(GroupItem)` (engine crane out/in; see `docs/spikes/engine-crane.md`) | prefix: block if reserved / car not ready; open one transaction for the engine group's parts + claim; postfix: mark them dirty |
 | `CarLoader.DeleteCar()` (existing hook) and garage scene load | drop registry, tracker, queue |
 
 A prefix on an `IEnumerator` method must not return `false` (the caller would start a null coroutine); blocking is
@@ -113,6 +113,22 @@ pointers reach the detour too): `ActionUnMount` ← `Raycast.PartSelect`; `Actio
 `ToolsManager.UseEngineCrane` → `NotificationCenter.ActionUnMountGroup`. `FastUnmount`, `FastMount` and
 `ActionInsertEngineToCar` have no direct caller (debug/UI-callback entry points). Event order, item IDs and the
 `ShowMounted` mode question still need a runtime trace.
+
+**Spike 0.1 outcome (2026-10-06):** answered from the native decompile plus the harness scenarios instead of a
+separate `part-trace` command:
+- Script-driven mount/unmount: `PartScript.FastUnmount`/`FastMount` run the game's own path (`Hide`/`DoMount`,
+  inventory item, XP) and are what `car-live`/`car-race` use; `ActionUnMount` is the UI entry the claims block.
+- Mount finisher: the applier uses a copy of `ShowMounted` without the game-mode switch (D7), so the mode question
+  no longer matters.
+- Engine crane: `NotificationCenter.ActionUnMountGroup` (prefix/postfix) and `InsertEngineToCar` (prefix) are the
+  hooks; `ActionInsertEngineToCar` and `ToolsManager.UseEngineCrane` are inlined builders that never fire. The
+  out-group is added with an inlined `groups.Add` (no `AddGroup` call), and the in-path empties the group before
+  `DeleteGroup`. Details: `docs/spikes/engine-crane.md`; scenario `car-crane`.
+- Engine swap: refused while connected. A swap destroys the engine and re-creates it as the last child of `root`,
+  which shifts sibling-index keys; a stored swap would be applied in a `CreateEngine` prefix (see the spike doc).
+- Body-part name repeats: the registry logs duplicates; none were logged in the car runs so far.
+- Still only checkable by a person in the game (M2 playtest): event order and item IDs of a body-part unmount through
+  the pie menu, and whether a second action can start before the first finishes.
 
 **Part identity spike (2026-10-06, scenario `part-identity`):** client A spawns each car model on loader 0, client B
 loads it from the server's `CarSpawnResponse`, both dump body indices/names and mechanical sibling paths/ids from

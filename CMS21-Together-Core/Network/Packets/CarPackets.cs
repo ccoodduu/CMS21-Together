@@ -29,6 +29,7 @@ namespace CMS21_Together_Core.Network.Packets
         // Used to determine if this is a job car, showroom car, etc.
         public bool IsJob;
         public int JobID;
+        public int Dlc = -1;
     }
 
     [Serializable]

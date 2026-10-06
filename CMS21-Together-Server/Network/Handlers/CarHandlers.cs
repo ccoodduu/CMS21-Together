@@ -1,6 +1,8 @@
+using System.Linq;
 using CMS21_Together_Core;
 using CMS21_Together_Core.Network;
 using CMS21_Together_Core.Network.Packets;
+using CMS21_Together_Server.Data;
 using CMS21_Together_Server.Data.Cars;
 using CMS21_Together_Server.Log;
 
@@ -20,6 +22,17 @@ namespace CMS21_Together_Server.Network.Handlers
                 {
                     CarLoaderID = packet.CarLoaderID,
                     Reason = "CarToLoad was empty."
+                }, (int)clientId);
+                return;
+            }
+
+            if (packet.Dlc >= 0 && !SharedDlc.Shared.Contains(packet.Dlc.ToString()))
+            {
+                Logger.Info($"[Cars] Spawn of {packet.CarToLoad} on loader {packet.CarLoaderID} from client {clientId} refused: DLC {packet.Dlc} is not shared ({SharedDlc.Format(SharedDlc.Shared)}).");
+                Server.SendToClient(new CarSpawnRejectedPacket
+                {
+                    CarLoaderID = packet.CarLoaderID,
+                    Reason = "This car needs a DLC that not every player owns, so it cannot be used in this session."
                 }, (int)clientId);
                 return;
             }

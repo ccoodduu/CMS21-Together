@@ -22,6 +22,7 @@ public static class CompatCommands
             ["applicationVersion"] = Application.version,
             ["dlc"] = LocalEnvironment.ReadDlc()?.Select(d => new Dictionary<string, object>
             {
+                ["index"] = d.Index,
                 ["productId"] = d.ProductId,
                 ["name"] = d.Name,
                 ["owned"] = d.Owned,
