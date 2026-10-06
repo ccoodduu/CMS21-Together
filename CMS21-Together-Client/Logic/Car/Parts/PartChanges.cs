@@ -35,6 +35,7 @@ public static class PartChanges
 		if (result.Accepted)
 		{
 			if (result.Revision > sync.Revision) sync.Revision = result.Revision;
+			if (result.BodyParts.Count > 0 || result.SubParts.Count > 0) Apply(sync, result.BodyParts, result.SubParts, abortLocal: false);
 			CarPartsSync.RaiseLocalPartsCommitted(result.CarLoaderID, PartChangeTracker.TakeSentKeys(result.TxId));
 			return;
 		}
@@ -70,11 +71,11 @@ public static class PartChanges
 		InventoryHandlers.RefreshInventoryWindow();
 	}
 
-	private static void Apply(LoaderSync sync, List<CarBodyPartUpdatePacket> body, List<CarSubPartUpdatePacket> sub)
+	private static void Apply(LoaderSync sync, List<CarBodyPartUpdatePacket> body, List<CarSubPartUpdatePacket> sub, bool abortLocal = true)
 	{
 		var carLoader = CarLoaderPlaces.Get()?.GetCarLoaderByIndex(sync.Loader);
 		if (carLoader == null || sync.Registry == null) return;
-		PartTransactions.AbortFor(sync.Loader, body.Select(r => r.Key).Concat(sub.Select(r => r.Key)));
+		if (abortLocal) PartTransactions.AbortFor(sync.Loader, body.Select(r => r.Key).Concat(sub.Select(r => r.Key)));
 
 		int failed = 0;
 		using (ApplyingRemote.Scope(sync.Loader))

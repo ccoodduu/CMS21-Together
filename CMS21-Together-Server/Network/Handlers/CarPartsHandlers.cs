@@ -41,6 +41,7 @@ namespace CMS21_Together_Server.Network.Handlers
 				return;
 			}
 
+			var merged = new List<CarSubPartUpdatePacket>();
 			entry.Revision++;
 			foreach (var record in change.BodyParts)
 			{
@@ -50,7 +51,11 @@ namespace CMS21_Together_Server.Network.Handlers
 			foreach (var record in change.SubParts)
 			{
 				string key = CarSubPartIdentity.BuildKey(record.PartIndexPath);
-				if (entry.SubParts.TryGetValue(key, out var stored) && stored.IsExamined) record.IsExamined = true;
+				if (entry.SubParts.TryGetValue(key, out var stored) && stored.IsExamined && !record.IsExamined)
+				{
+					record.IsExamined = true;
+					merged.Add(record);
+				}
 				record.Revision = entry.Revision;
 				entry.SubParts[key] = record;
 			}
@@ -61,7 +66,7 @@ namespace CMS21_Together_Server.Network.Handlers
 			change.Revision = entry.Revision;
 			Server.SendToClient(new CarPartsChangeResultPacket
 			{
-				CarLoaderID = change.CarLoaderID, SpawnSeq = change.SpawnSeq, TxId = change.TxId, Accepted = true, Revision = entry.Revision
+				CarLoaderID = change.CarLoaderID, SpawnSeq = change.SpawnSeq, TxId = change.TxId, Accepted = true, Revision = entry.Revision, SubParts = merged
 			}, (int)clientId);
 			Server.SendToClients(change, (int)clientId);
 			Logger.Info($"[Cars] Change {change.TxId} from client {clientId} on loader {change.CarLoaderID}: revision {entry.Revision} ({change.BodyParts.Count} body, {change.SubParts.Count} mechanical, inventory +{change.InventoryDelta.AddedItems.Count + change.InventoryDelta.AddedGroups.Count} -{change.InventoryDelta.RemovedItemUids.Count + change.InventoryDelta.RemovedGroupUids.Count})."); 

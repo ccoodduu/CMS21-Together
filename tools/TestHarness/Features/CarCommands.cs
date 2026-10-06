@@ -210,6 +210,36 @@ public static class CarCommands
         return string.Join(".", indices);
     }
 
+    [HarnessCommand("crane-out")]
+    private static object CraneOut(string args)
+    {
+        var carLoader = Loader(args);
+        var engine = carLoader.e_engine_h ?? throw new ArgumentException("the car has no engine");
+        NotificationCenter.Get().ActionUnMountGroup(engine.GetComponent<InteractiveObject>());
+        return new Dictionary<string, object> { ["engine"] = engine.name, ["group"] = EngineGroup(engine.name)?.UID ?? 0 };
+    }
+
+    [HarnessCommand("crane-in")]
+    private static object CraneIn(string args)
+    {
+        var carLoader = Loader(args);
+        var engine = carLoader.e_engine_h ?? throw new ArgumentException("the car has no engine");
+        var group = EngineGroup(engine.name) ?? throw new ArgumentException($"no {engine.name} group in the inventory");
+        var tools = carLoader.ToolsData;
+        tools.EngineCraneIsConnected = true;
+        carLoader.ToolsData = tools;
+        NotificationCenter.Get().InsertEngineToCar(group);
+        return new Dictionary<string, object> { ["engine"] = engine.name, ["group"] = group.UID };
+    }
+
+    private static GroupItem EngineGroup(string engineName)
+    {
+        var groups = Singleton<GameManager>.Instance.Inventory.GetGroups();
+        for (int i = groups.Count - 1; i >= 0; i--)
+            if (groups[i].ID == engineName) return groups[i];
+        return null;
+    }
+
     private static CarLoader Loader(string index)
     {
         var carLoader = CarLoaderPlaces.Get().GetCarLoaderByIndex(int.Parse((index ?? "").Trim()));

@@ -64,8 +64,9 @@ namespace CMS21Together.Logic.Hook
         [HarmonyPrefix]
         public static bool DeleteGroupItemPrefix(long UId)
         {
-            var existing = Client.Instance.IsConnected ? Singleton<GameManager>.Instance.Inventory.GetGroup(UId) : null;
-            if (Client.Instance.IsConnected && !InventoryHandlers.IgnoreInventoryHooks && (existing == null || !PartTransactions.CaptureDeleteGroup(existing.ToModGroupItem())))
+            bool tracked = Client.Instance.IsConnected && !InventoryHandlers.IgnoreInventoryHooks;
+            var existing = tracked ? EngineCraneHooks.TakeInsertedGroup(UId) ?? Singleton<GameManager>.Instance.Inventory.GetGroup(UId).ToModGroupItem() : null;
+            if (tracked && (existing == null || !PartTransactions.CaptureDeleteGroup(existing)))
             {
                 // We only need the UID to delete it
                 var packet = new InventoryGroupItemActionPacket
