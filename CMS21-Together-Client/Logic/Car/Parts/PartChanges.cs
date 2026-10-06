@@ -1,6 +1,8 @@
 using System.Collections.Generic;
 using CMS21_Together_Core.Logging;
 using CMS21_Together_Core.Network.Packets;
+using CMS21Together.Data;
+using CMS21Together.Network.Handlers;
 
 namespace CMS21Together.Logic.Car.Parts;
 
@@ -8,6 +10,8 @@ public static class PartChanges
 {
 	public static void OnRemoteChange(CarPartsChangePacket change)
 	{
+		ApplyInventory(change.InventoryDelta);
+		change.InventoryDelta = null;
 		var sync = CarPartsSync.Get(change.CarLoaderID);
 		if (sync.SpawnSeq != 0 && change.SpawnSeq != sync.SpawnSeq) return;
 		if (sync.State != LoaderSyncState.Ready)
@@ -23,6 +27,7 @@ public static class PartChanges
 
 	public static void OnResult(CarPartsChangeResultPacket result)
 	{
+		PartTransactions.OnResult(result);
 		var sync = CarPartsSync.Get(result.CarLoaderID);
 		if (result.SpawnSeq != sync.SpawnSeq) return;
 		if (result.Accepted)
@@ -36,17 +41,47 @@ public static class PartChanges
 		if (result.Revision > sync.Revision) sync.Revision = result.Revision;
 	}
 
+	private static void ApplyInventory(InventoryDelta delta)
+	{
+		if (delta == null || delta.IsEmpty) return;
+		var inventory = Singleton<GameManager>.Instance.Inventory;
+		bool previous = InventoryHandlers.IgnoreInventoryHooks;
+		InventoryHandlers.IgnoreInventoryHooks = true;
+		try
+		{
+			foreach (long uid in delta.RemovedItemUids)
+			{
+				var item = inventory.GetItem(uid);
+				if (item != null) inventory.Delete(item);
+			}
+			foreach (long uid in delta.RemovedGroupUids) inventory.DeleteGroup(uid);
+			foreach (var item in delta.AddedItems)
+				if (inventory.GetItem(item.UID) == null) inventory.Add(item.ToGameItem());
+			foreach (var group in delta.AddedGroups)
+				if (inventory.GetGroup(group.UID) == null) inventory.AddGroup(group.ToGameGroupItem());
+		}
+		finally
+		{
+			InventoryHandlers.IgnoreInventoryHooks = previous;
+		}
+		InventoryHandlers.RefreshInventoryWindow();
+	}
+
 	private static void Apply(LoaderSync sync, List<CarBodyPartUpdatePacket> body, List<CarSubPartUpdatePacket> sub)
 	{
 		var carLoader = CarLoaderPlaces.Get()?.GetCarLoaderByIndex(sync.Loader);
 		if (carLoader == null || sync.Registry == null) return;
 
+		int failed = 0;
 		using (ApplyingRemote.Scope(sync.Loader))
 		{
 			foreach (var record in body)
 				if (PartApplier.Apply(carLoader, sync.Registry, record)) sync.Body[record.Key] = record;
+				else failed++;
 			foreach (var record in sub)
 				if (PartApplier.Apply(carLoader, sync.Registry, record)) sync.Sub[record.Key] = record;
+				else failed++;
 		}
+		if (failed > 0) CarPartsSync.RequestResync(sync.Loader, $"{failed} records did not resolve");
 	}
 }

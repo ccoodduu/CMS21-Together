@@ -58,6 +58,7 @@ public static class PartChangeTracker
 			}
 
 			foreach (int loader in dirty.ToList()) Poll(loader);
+			PartTransactions.FlushIdle();
 		}
 	}
 
@@ -127,6 +128,7 @@ public static class PartChangeTracker
 			if (sync.Sub.TryGetValue(record.Key, out var last) && last.Unmounted != record.Unmounted)
 				change.Preconditions.Add(new PartPrecondition { Key = record.Key, WasUnmounted = last.Unmounted });
 
+		change.InventoryDelta = PartTransactions.TakeFor(sync.Loader, body.Select(r => r.Key).Concat(sub.Select(r => r.Key)), change.TxId);
 		foreach (var record in body) sync.Body[record.Key] = record;
 		foreach (var record in sub) sync.Sub[record.Key] = record;
 		Client.Instance.Send(change);

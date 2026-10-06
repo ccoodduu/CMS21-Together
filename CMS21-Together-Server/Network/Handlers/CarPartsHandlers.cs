@@ -64,7 +64,7 @@ namespace CMS21_Together_Server.Network.Handlers
 				CarLoaderID = change.CarLoaderID, SpawnSeq = change.SpawnSeq, TxId = change.TxId, Accepted = true, Revision = entry.Revision
 			}, (int)clientId);
 			Server.SendToClients(change, (int)clientId);
-			Logger.Debug($"[Cars] Change {change.TxId} from client {clientId} on loader {change.CarLoaderID}: revision {entry.Revision} ({change.BodyParts.Count} body, {change.SubParts.Count} mechanical).");
+			Logger.Info($"[Cars] Change {change.TxId} from client {clientId} on loader {change.CarLoaderID}: revision {entry.Revision} ({change.BodyParts.Count} body, {change.SubParts.Count} mechanical, inventory +{change.InventoryDelta.AddedItems.Count + change.InventoryDelta.AddedGroups.Count} -{change.InventoryDelta.RemovedItemUids.Count + change.InventoryDelta.RemovedGroupUids.Count})."); 
 		}
 
 		private static string FindConflict(CMS21_Together_Core.Data.CarLoaderEntry entry, CarPartsChangePacket change)
@@ -94,7 +94,16 @@ namespace CMS21_Together_Server.Network.Handlers
 			CarClaims.Handle((int)clientId, packet, ServerTime.Time);
 		}
 
-		[PacketHandler(PacketTypes.CarPartsSnapshot)]
+			[PacketHandler(PacketTypes.CarPartsResyncRequest)]
+		public static void OnResyncRequest(long clientId, CarPartsResyncRequestPacket packet)
+		{
+			var entry = CarPartsStore.Get(packet.CarLoaderID);
+			if (entry == null || !entry.HasBaseline) return;
+			Logger.Info($"[Cars] Client {clientId} asked to resync loader {packet.CarLoaderID}: {packet.Reason}");
+			CarPartsStore.SendSnapshot(packet.CarLoaderID, entry, CarPartsSnapshotPacket.LiveSnapshot, only: (int)clientId);
+		}
+
+	[PacketHandler(PacketTypes.CarPartsSnapshot)]
 		public static void OnBaseline(long clientId, CarPartsSnapshotPacket packet)
 		{
 			string key = $"{clientId}/{packet.CarLoaderID}/{packet.SpawnSeq}";

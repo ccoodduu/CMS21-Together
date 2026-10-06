@@ -207,6 +207,17 @@ public static class CarPartsSync
 		Drain(sync);
 	}
 
+	private const float ResyncCooldownSeconds = 10f;
+	private static readonly Dictionary<int, float> lastResync = new Dictionary<int, float>();
+
+	public static void RequestResync(int loader, string reason)
+	{
+		if (lastResync.TryGetValue(loader, out float at) && Time.realtimeSinceStartup - at < ResyncCooldownSeconds) return;
+		lastResync[loader] = Time.realtimeSinceStartup;
+		Log.Warn($"[Parts] Loader {loader}: asking the server for a resync ({reason}).");
+		Client.Instance.Send(new CarPartsResyncRequestPacket { CarLoaderID = loader, SpawnSeq = SpawnSeq(loader), Reason = reason });
+	}
+
 	public static void CaptureAll(CarLoader carLoader, PartRegistry registry, List<CarBodyPartUpdatePacket> body, List<CarSubPartUpdatePacket> sub)
 	{
 		var parts = carLoader.carParts;

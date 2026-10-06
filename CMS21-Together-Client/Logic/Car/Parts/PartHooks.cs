@@ -43,6 +43,7 @@ public static class PartHooks
 		{
 			if (sync.Registry != null && sync.Registry.TryGetSubPath(script, out _))
 			{
+				PartTransactions.OpenForPart(sync.Loader, sync.Registry, script);
 				PartChangeTracker.MarkDirty(sync.Loader);
 				return;
 			}

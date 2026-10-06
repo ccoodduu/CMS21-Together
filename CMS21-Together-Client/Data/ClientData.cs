@@ -27,6 +27,7 @@ public static class ClientData
 		CarPartsSync.Reset();
 		PartChangeTracker.Reset();
 		PartClaims.Reset();
+		PartTransactions.Reset();
 	}
 
 	public static void Update()

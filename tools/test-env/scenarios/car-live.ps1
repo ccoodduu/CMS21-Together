@@ -71,6 +71,8 @@ $dumpA = Send-HarnessCommand -Instance $a -Verb dump
 $dumpB = Send-HarnessCommand -Instance $b -Verb dump
 $diff = Compare-HarnessDumps $dumpA $dumpB -Sections @("inventory", "stats")
 Check ($diff.Count -eq 0) "inventory and stats equal after the unmount (differ: $($diff -join ', '))"
+$changeLine = Get-Content -LiteralPath (Join-Path $Ctx.ServerDir "Log\Latest.txt") | Select-String "\[Cars\] Change .* inventory \+1" | Select-Object -First 1
+Check ([bool]$changeLine) "the unmount's inventory item travelled inside the part change ($($changeLine.Line))"
 
 Send-HarnessCommand -Instance $a -Verb part-fast-mount -Arguments "$loader $($unmount.key)" | Out-Null
 $same = Wait-Same "mount"

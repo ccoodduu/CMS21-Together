@@ -126,8 +126,15 @@ public static class PartClaims
 
 	[HarmonyPatch(typeof(CarLoader), nameof(CarLoader.TakeOffCarPart), typeof(string))]
 	[HarmonyPrefix]
-	private static bool BeforeTakeOffCarPart(CarLoader __instance, string partName) =>
-		!Active || !TryResolve(__instance, partName, out int loader, out var keys) || AllowAction(loader, keys);
+	private static bool BeforeTakeOffCarPart(CarLoader __instance, string partName)
+	{
+		if (!Active || !TryResolve(__instance, partName, out int loader, out var keys)) return true;
+		if (!AllowAction(loader, keys)) return false;
+		var part = __instance.GetCarPart(partName);
+		var sync = CarPartsSync.Get(loader);
+		if (part != null && sync.Registry != null && sync.Registry.TryGetBodyIndex(part, out int index)) PartTransactions.OpenForBody(loader, index, part);
+		return true;
+	}
 
 	[HarmonyPatch(typeof(CarLoader), nameof(CarLoader.CanTakeOffCarPart))]
 	[HarmonyPostfix]

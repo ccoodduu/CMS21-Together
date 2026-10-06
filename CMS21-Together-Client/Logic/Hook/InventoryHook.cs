@@ -1,6 +1,7 @@
 using System;
 using CMS21_Together_Core.Network.Packets;
 using CMS21Together.Data;
+using CMS21Together.Logic.Car.Parts;
 using CMS21Together.Network;
 using CMS21Together.Network.Handlers;
 using HarmonyLib;
@@ -14,7 +15,7 @@ namespace CMS21Together.Logic.Hook
         [HarmonyPrefix]
         public static bool AddItemPrefix(Item item, bool showPopup)
         {
-            if (Client.Instance.IsConnected && !InventoryHandlers.IgnoreInventoryHooks)
+            if (Client.Instance.IsConnected && !InventoryHandlers.IgnoreInventoryHooks && !PartTransactions.CaptureAdd(item.ToModItem()))
             {
                 var packet = new InventoryItemActionPacket
                 {
@@ -30,7 +31,7 @@ namespace CMS21Together.Logic.Hook
         [HarmonyPrefix]
         public static bool DeleteItemPrefix(Item item)
         {
-            if (Client.Instance.IsConnected && !InventoryHandlers.IgnoreInventoryHooks)
+            if (Client.Instance.IsConnected && !InventoryHandlers.IgnoreInventoryHooks && !PartTransactions.CaptureDelete(item.ToModItem()))
             {
                 var packet = new InventoryItemActionPacket
                 {
@@ -46,7 +47,7 @@ namespace CMS21Together.Logic.Hook
         [HarmonyPrefix]
         public static bool AddGroupItemPrefix(GroupItem group)
         {
-            if (Client.Instance.IsConnected && !InventoryHandlers.IgnoreInventoryHooks)
+            if (Client.Instance.IsConnected && !InventoryHandlers.IgnoreInventoryHooks && !PartTransactions.CaptureAddGroup(group.ToModGroupItem()))
             {
                 var packet = new InventoryGroupItemActionPacket
                 {
@@ -62,7 +63,8 @@ namespace CMS21Together.Logic.Hook
         [HarmonyPrefix]
         public static bool DeleteGroupItemPrefix(long UId)
         {
-            if (Client.Instance.IsConnected && !InventoryHandlers.IgnoreInventoryHooks)
+            var existing = Client.Instance.IsConnected ? Singleton<GameManager>.Instance.Inventory.GetGroup(UId) : null;
+            if (Client.Instance.IsConnected && !InventoryHandlers.IgnoreInventoryHooks && (existing == null || !PartTransactions.CaptureDeleteGroup(existing.ToModGroupItem())))
             {
                 // We only need the UID to delete it
                 var packet = new InventoryGroupItemActionPacket
