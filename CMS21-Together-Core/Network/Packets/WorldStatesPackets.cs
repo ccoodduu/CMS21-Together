@@ -30,5 +30,23 @@ public class GarageState : INetworkData
 }
 
 [Serializable]
+[NetworkPacket(PacketTypes.SyncBegin)]
+public class SyncBegin : INetworkData
+{
+	public int snapshotId;
+}
+
+[Serializable]
 [NetworkPacket(PacketTypes.SyncEnd)]
-public class SyncEnd : INetworkData { }
+public class SyncEnd : INetworkData
+{
+	public int snapshotId;
+	public Dictionary<string, int> Items = new Dictionary<string, int>();
+}
+
+[Serializable]
+[NetworkPacket(PacketTypes.SyncAck)]
+public class SyncAck : INetworkData
+{
+	public int snapshotId;
+}

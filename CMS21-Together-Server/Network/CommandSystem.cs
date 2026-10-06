@@ -9,6 +9,14 @@ namespace CMS21_Together_Server.Network
 	{
 		public static void Execute(string commandLine)
 		{
+			lock (GameDataManager.StateLock)
+			{
+				ExecuteLocked(commandLine);
+			}
+		}
+
+		private static void ExecuteLocked(string commandLine)
+		{
 			if (string.IsNullOrWhiteSpace(commandLine)) return;
 			
 			if (!commandLine.StartsWith("/"))
@@ -29,6 +37,7 @@ namespace CMS21_Together_Server.Network
 					Logger.Info("Available commands:");
 					Logger.Info("  help              - Show this help message");
 					Logger.Info("  exit / stop       - Stop the server");
+					Logger.Info("  save              - Save the session now");
 					Logger.Info("  kick <id>         - Kick a player by ID");
 					Logger.Info("  money add <val>   - Add money");
 					Logger.Info("  money set <val>   - Set money");
@@ -39,6 +48,10 @@ namespace CMS21_Together_Server.Network
 				case "exit":
 				case "stop":
 					Environment.Exit(0);
+					break;
+
+				case "save":
+					GameDataManager.RequestSave();
 					break;
 
 				case "kick":

@@ -26,7 +26,8 @@ public static class ClientData
 		IsInventorySynced = false;
 		IsInitialSyncFinished = false;
 		IsServerUpdating = false;
-		
+		SyncTracker.Reset();
+
 		Players.Clear();
 	}
 

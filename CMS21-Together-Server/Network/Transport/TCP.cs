@@ -2,6 +2,7 @@
 using System.Net.Sockets;
 using CMS21_Together_Core;
 using CMS21_Together_Core.Network;
+using CMS21_Together_Server.Data;
 using CMS21_Together_Server.Log;
 
 namespace CMS21_Together_Server.Network.Transport
@@ -81,8 +82,11 @@ namespace CMS21_Together_Server.Network.Transport
                     try 
                     {
                         
-                        object packetData = packet.Read<object>(); 
-                        PacketRouter.Dispatch((PacketTypes)packetId, packetData, id);
+                        object packetData = packet.Read<object>();
+                        lock (GameDataManager.StateLock)
+                        {
+                            PacketRouter.Dispatch((PacketTypes)packetId, packetData, id);
+                        }
                     }
                     catch (Exception ex)
                     {

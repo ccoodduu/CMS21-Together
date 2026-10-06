@@ -140,7 +140,7 @@ namespace CMS21_Together_Server.Network
         {
             foreach (Client client in Clients.Values)
             {
-                if (client.IsConnected && client.ID != exceptClient)
+                if (client.IsConnected && client.SyncState != SyncState.Connected && client.ID != exceptClient)
                 {
                     SendToClient(packetData, client.ID, reliable);
                 }
@@ -188,11 +188,15 @@ namespace CMS21_Together_Server.Network
             if (!isRunning) return;
             isRunning = false;
             
-            SendToClients(new DisconnectPacket()
+            foreach (Client client in Clients.Values)
             {
-                playerID = -1,
-                message = "Server is closing."
-            }, -1);
+                if (!client.IsConnected) continue;
+                SendToClient(new DisconnectPacket()
+                {
+                    playerID = -1,
+                    message = "Server is closing."
+                }, client.ID);
+            }
             
             tcpListener.Stop();
             udpListener?.Close();
@@ -206,11 +210,14 @@ namespace CMS21_Together_Server.Network
             if (Program.Config.UseSteam && steamTransport != null)
                 steamTransport.Update();
             
-            foreach (var client in Clients.Values)
+            lock (Data.GameDataManager.StateLock)
             {
-                if (client.IsConnected)
+                foreach (var client in Clients.Values)
                 {
-                    client.Update();
+                    if (client.IsConnected)
+                    {
+                        client.Update();
+                    }
                 }
             }
         }

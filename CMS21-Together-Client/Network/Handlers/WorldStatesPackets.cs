@@ -2,6 +2,7 @@ using System.Collections;
 using CMS.Difficulty;
 using CMS.UI.Logic.Upgrades;
 using CMS21_Together_Core;
+using CMS21_Together_Core.Data;
 using CMS21_Together_Core.Logging;
 using CMS21_Together_Core.Network;
 using CMS21_Together_Core.Network.Packets;
@@ -47,6 +48,7 @@ public static class WorldStatesPackets
 		UIManager.Get().RefreshAllStats();
 		UIManager.Get().RefreshStatsUICoroutine(StatType.Scraps, false);
 		ClientData.IsWorldStateSynced = true;
+		SyncTracker.Applied(SyncOrder.WorldKey, SyncTracker.ReceivingSnapshotId);
 	}
 	
 	[PacketHandler(PacketTypes.GarageState)]
@@ -71,34 +73,18 @@ public static class WorldStatesPackets
 	    }
 	    
 	    tools.PrepareItems();
-	    MelonCoroutines.Start( GarageUpgrades.SyncUpgrades(packet, tools));
+	    MelonCoroutines.Start( GarageUpgrades.SyncUpgrades(packet, tools, SyncTracker.ReceivingSnapshotId));
 	}
 	
+	[PacketHandler(PacketTypes.SyncBegin)]
+	public static void HandleSyncBegin(long senderId, SyncBegin packet)
+	{
+		SyncTracker.OnSyncBegin(packet);
+	}
+
 	[PacketHandler(PacketTypes.SyncEnd)]
 	public static void HandleSyncEnd(long senderId, SyncEnd packet)
 	{
-		MelonCoroutines.Start(WaitForSyncCompletion());
-	}
-
-	private static IEnumerator WaitForSyncCompletion()
-	{
-		float timeout = 15f;
-		float timer = 0f;
-
-		Log.Info("Waiting for World, Garage and Inventory states to sync...");
-
-		while (timer < timeout)
-		{
-			if (ClientData.IsWorldStateSynced && ClientData.IsGarageStateSynced && ClientData.IsInventorySynced)
-			{
-				ClientData.IsInitialSyncFinished = true;
-				Log.Success("Initial synchronization finished successfully!");
-				yield break;
-			}
-
-			timer += Time.deltaTime;
-			yield return null; 
-		}
-		Log.Error("Sync timed out! Some data might be missing.");
+		SyncTracker.OnSyncEnd(packet);
 	}
 }

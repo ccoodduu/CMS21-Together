@@ -10,7 +10,7 @@ namespace CMS21Together.Network.Handlers
 {
     public static class InventoryHandlers
     {
-        private static System.Collections.Generic.Queue<InventorySyncPacket> syncQueue = new System.Collections.Generic.Queue<InventorySyncPacket>();
+        private static System.Collections.Generic.Queue<(InventorySyncPacket Packet, int SnapshotId)> syncQueue = new System.Collections.Generic.Queue<(InventorySyncPacket, int)>();
         private static bool isProcessingSync = false;
         
         public static bool IgnoreInventoryHooks = false;
@@ -18,7 +18,8 @@ namespace CMS21Together.Network.Handlers
         [PacketHandler(PacketTypes.InventoryData)]
         public static void HandleInventorySync(long clientId, InventorySyncPacket packet)
         {
-            syncQueue.Enqueue(packet);
+            syncQueue.Enqueue((packet, SyncTracker.ReceivingSnapshotId));
+            SyncTracker.MarkProgress();
             if (!isProcessingSync)
             {
                 isProcessingSync = true;
@@ -36,7 +37,7 @@ namespace CMS21Together.Network.Handlers
 
             while (syncQueue.Count > 0)
             {
-                var packet = syncQueue.Dequeue();
+                var (packet, snapshotId) = syncQueue.Dequeue();
 
                 IgnoreInventoryHooks = true;
 
@@ -112,6 +113,8 @@ namespace CMS21Together.Network.Handlers
                     RefreshInventoryWindow();
                     RefreshWarehouseWindow();
                 }
+
+                SyncTracker.Applied(CMS21_Together_Core.Data.SyncOrder.InventoryKey, snapshotId);
 
                 yield return null; // wait a frame between batches
             }

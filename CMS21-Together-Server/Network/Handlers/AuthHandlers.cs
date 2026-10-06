@@ -1,13 +1,18 @@
+using System.Collections.Generic;
+using System.Linq;
 using CMS21_Together_Core;
 using CMS21_Together_Core.Network;
 using CMS21_Together_Core.Network.Packets;
 using CMS21_Together_Server.Data;
+using CMS21_Together_Server.Data.Persistence;
 using CMS21_Together_Server.Log;
 
 namespace CMS21_Together_Server.Network.Handlers
 {
 	public static class AuthHandler
 	{
+		private static int lastSnapshotId;
+
 		[PacketHandler(PacketTypes.Heartbeat)]
 		public static void OnHeartbeat(long clientId, HeartbeatPacket packet)
 		{
@@ -34,90 +39,37 @@ namespace CMS21_Together_Server.Network.Handlers
 		[PacketHandler(PacketTypes.AskForSync)]
 		public static void OnAskForSync(long clientId, AskForSync packet)
 		{
-			GameDataManager.CurrentState.WorldState.updateGamemode = true;
-			Server.SendToClient(GameDataManager.CurrentState.WorldState, (int)clientId);
-			GameDataManager.CurrentState.WorldState.updateGamemode = false;
-			GameDataManager.CurrentState.GarageState.AvailablePoints = GarageUpgradeHandler.ComputeAvailablePoints(GameDataManager.CurrentState.WorldState, GameDataManager.CurrentState.GarageState);
-			Server.SendToClient(GameDataManager.CurrentState.GarageState, (int)clientId);
-	
-			SendFullInventoryState(clientId);
+			lock (GameDataManager.StateLock)
+			{
+				var client = Server.Clients[(int)clientId];
+				int snapshotId = ++lastSnapshotId;
+				client.SnapshotId = snapshotId;
+
+				Server.SendToClient(new SyncBegin { snapshotId = snapshotId }, client.ID);
+
+				var items = new Dictionary<string, int>();
+				foreach (var provider in SessionRegistry.SnapshotProviders)
+					items[provider.Key] = provider.SendSnapshot(client.ID);
+
+				Server.SendToClient(new SyncEnd { snapshotId = snapshotId, Items = items }, client.ID);
+				client.SyncState = SyncState.Syncing;
+
+				Logger.Info($"Client[{client.ID}] snapshot {snapshotId}: {string.Join(", ", items.Select(i => $"{i.Key}={i.Value}"))}");
+			}
 		}
 
-		private static void SendFullInventoryState(long clientId)
+		[PacketHandler(PacketTypes.SyncAck)]
+		public static void OnSyncAck(long clientId, SyncAck packet)
 		{
-			var invState = GameDataManager.CurrentState.InventoryState;
-			int batchSize = 50;
-			
-			var allInvItems = invState.InventoryItems ?? new System.Collections.Generic.List<CMS21_Together_Core.Data.GameType.ModItem>();
-			var allInvGroups = invState.InventoryGroupItems ?? new System.Collections.Generic.List<CMS21_Together_Core.Data.GameType.ModGroupItem>();
-			var allWhItems = invState.WarehouseItems ?? new System.Collections.Generic.List<CMS21_Together_Core.Data.GameType.ModItem>();
-			var allWhGroups = invState.WarehouseGroupItems ?? new System.Collections.Generic.List<CMS21_Together_Core.Data.GameType.ModGroupItem>();
+			var client = Server.Clients[(int)clientId];
+			if (packet.snapshotId != client.SnapshotId || client.SyncState != SyncState.Syncing)
+			{
+				Logger.Warn($"Client[{client.ID}] acked snapshot {packet.snapshotId}, expected {client.SnapshotId} ({client.SyncState}). Ignored.");
+				return;
+			}
 
-			int totalItems = allInvItems.Count + allInvGroups.Count + allWhItems.Count + allWhGroups.Count;
-			
-			if (totalItems == 0)
-			{
-				Server.SendToClient(new InventorySyncPacket
-				{
-					IsFirstBatch = true,
-					IsLastBatch = true,
-					InventoryItems = new System.Collections.Generic.List<CMS21_Together_Core.Data.GameType.ModItem>(),
-					InventoryGroupItems = new System.Collections.Generic.List<CMS21_Together_Core.Data.GameType.ModGroupItem>(),
-					WarehouseItems = new System.Collections.Generic.List<CMS21_Together_Core.Data.GameType.ModItem>(),
-					WarehouseGroupItems = new System.Collections.Generic.List<CMS21_Together_Core.Data.GameType.ModGroupItem>()
-				}, (int)clientId);
-			}
-			else
-			{
-				bool isFirst = true;
-				int invItemIdx = 0, invGroupIdx = 0, whItemIdx = 0, whGroupIdx = 0;
-				
-				while (invItemIdx < allInvItems.Count || invGroupIdx < allInvGroups.Count || whItemIdx < allWhItems.Count || whGroupIdx < allWhGroups.Count)
-				{
-					var batch = new InventorySyncPacket
-					{
-						IsFirstBatch = isFirst,
-						IsLastBatch = false,
-						InventoryItems = new System.Collections.Generic.List<CMS21_Together_Core.Data.GameType.ModItem>(),
-						InventoryGroupItems = new System.Collections.Generic.List<CMS21_Together_Core.Data.GameType.ModGroupItem>(),
-						WarehouseItems = new System.Collections.Generic.List<CMS21_Together_Core.Data.GameType.ModItem>(),
-						WarehouseGroupItems = new System.Collections.Generic.List<CMS21_Together_Core.Data.GameType.ModGroupItem>()
-					};
-					
-					int currentBatchCount = 0;
-					
-					while (currentBatchCount < batchSize && invItemIdx < allInvItems.Count)
-					{
-						batch.InventoryItems.Add(allInvItems[invItemIdx++]);
-						currentBatchCount++;
-					}
-					while (currentBatchCount < batchSize && invGroupIdx < allInvGroups.Count)
-					{
-						batch.InventoryGroupItems.Add(allInvGroups[invGroupIdx++]);
-						currentBatchCount++;
-					}
-					while (currentBatchCount < batchSize && whItemIdx < allWhItems.Count)
-					{
-						batch.WarehouseItems.Add(allWhItems[whItemIdx++]);
-						currentBatchCount++;
-					}
-					while (currentBatchCount < batchSize && whGroupIdx < allWhGroups.Count)
-					{
-						batch.WarehouseGroupItems.Add(allWhGroups[whGroupIdx++]);
-						currentBatchCount++;
-					}
-					
-					if (invItemIdx >= allInvItems.Count && invGroupIdx >= allInvGroups.Count && whItemIdx >= allWhItems.Count && whGroupIdx >= allWhGroups.Count)
-					{
-						batch.IsLastBatch = true;
-					}
-					
-					Server.SendToClient(batch, (int)clientId);
-					isFirst = false;
-				}
-			}
-			
-			Server.SendToClient(new SyncEnd(), (int)clientId);
+			client.SyncState = SyncState.InSession;
+			Logger.Info($"Client[{client.ID}] joined (snapshot {packet.snapshotId}).");
 		}
 	}
 }

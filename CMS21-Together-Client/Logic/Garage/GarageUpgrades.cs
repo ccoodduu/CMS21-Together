@@ -1,5 +1,6 @@
 using System.Collections;
 using CMS.UI.Logic.Upgrades;
+using CMS21_Together_Core.Data;
 using CMS21_Together_Core.Logging;
 using CMS21_Together_Core.Network.Packets;
 using CMS21Together.Data;
@@ -66,7 +67,7 @@ public static class GarageUpgrades
 	}
 	
 	
-	public static IEnumerator SyncUpgrades(GarageState packet, GarageAndToolsTab tools)
+	public static IEnumerator SyncUpgrades(GarageState packet, GarageAndToolsTab tools, int snapshotId)
 	{
 		yield return new WaitForEndOfFrame();
 		float timeout = 10f;
@@ -138,5 +139,6 @@ public static class GarageUpgrades
 		IsSyncing = false;
 		Log.Success("Garage and Skills synchronized successfully!");
 		ClientData.IsGarageStateSynced = true;
+		SyncTracker.Applied(SyncOrder.GarageKey, snapshotId);
 	}
 }

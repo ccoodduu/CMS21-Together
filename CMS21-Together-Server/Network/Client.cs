@@ -21,6 +21,8 @@ namespace CMS21_Together_Server.Network
 		public Connection SteamConnection;
 
 		public bool IsConnected;
+		public SyncState SyncState = SyncState.Connected;
+		public int SnapshotId;
 		public Action OnConnectedSuccessfully;
 
 		public float LastHeartbeatTime { get; set; }
@@ -68,19 +70,31 @@ namespace CMS21_Together_Server.Network
 
 		public void Disconnect()
 		{
-			Logger.Debug($"Client {ID} disconnected.");
-			Tcp.Disconnect();
-			Udp?.Disconnect();
-			IsConnected = false;
-			ConnectionValid = false;
-			lastHeartbeatTime = 0;
-			LastHeartbeatTime = 0;
-			
-			Server.SendToClients(new DisconnectPacket()
+			lock (GameDataManager.StateLock)
 			{
-				playerID = ID,
-				message = "Disconnected"
-			}, ID);
+				Logger.Debug($"Client {ID} disconnected.");
+				Tcp.Disconnect();
+				Udp?.Disconnect();
+				IsConnected = false;
+				ConnectionValid = false;
+				SyncState = SyncState.Connected;
+				SnapshotId = 0;
+				lastHeartbeatTime = 0;
+				LastHeartbeatTime = 0;
+
+				Server.SendToClients(new DisconnectPacket()
+				{
+					playerID = ID,
+					message = "Disconnected"
+				}, ID);
+			}
 		}
+	}
+
+	public enum SyncState
+	{
+		Connected,
+		Syncing,
+		InSession
 	}
 }

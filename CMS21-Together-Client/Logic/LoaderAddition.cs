@@ -230,16 +230,14 @@ public static class LoaderAddition
 		
 		ClientData.Reset();
 		Client.Instance.Send(new AskForSync());
-		
-		float timeoutDuration = 10.0f;
-		float waitStartTime = Time.realtimeSinceStartup;
+
 		bool timedOut = false;
-		
+
 		while (!ClientData.IsInitialSyncFinished)
 		{
-			if (Time.realtimeSinceStartup - waitStartTime > timeoutDuration)
+			if (SyncTracker.HasTimedOut)
 			{
-				Log.Error("Connection timed out during initial sync!");
+				Log.Error($"Initial sync made no progress for {SyncTracker.NoProgressTimeout}s ({SyncTracker.DescribeProgress()}).");
 				timedOut = true;
 				break;
 			}
@@ -261,7 +259,7 @@ public static class LoaderAddition
 			
 			//TODO: Show timeout message
 			var manager = NotificationCenter.m_instance;
-			manager.StartCoroutine(manager.SelectSceneToLoad("Menu", SceneType.Menu, true, true));
+			manager.StartCoroutine(manager.SelectSceneToLoad("Menu", SceneType.Menu, true, false));
 			yield break;
 		}
 		Log.Success("Game synced successfully.");

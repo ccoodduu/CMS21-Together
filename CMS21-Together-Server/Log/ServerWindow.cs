@@ -99,9 +99,11 @@ namespace CMS21_Together_Server.Log
             if (ServerTime.Time - GameDataManager.lastAutoSaveTime >= GameDataManager.AutoSaveInterval)
             {
                 GameDataManager.lastAutoSaveTime = ServerTime.Time;
-                GameDataManager.SaveSession();
+                GameDataManager.RequestSave();
             }
+            CommandFile.Poll(ServerTime.Time);
             Network.Server.Update();
+            GameDataManager.ProcessPendingSave();
         }
 
         private void UpdateDashboard()

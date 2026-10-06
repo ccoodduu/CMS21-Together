@@ -3,6 +3,7 @@ using System.IO;
 using System.Reflection;
 using CMS21_Together_Core.Network;
 using CMS21_Together_Server.Data;
+using CMS21_Together_Server.Data.Persistence;
 using CMS21_Together_Server.Log;
 using CMS21_Together_Server.Network;
 
@@ -12,7 +13,6 @@ namespace CMS21_Together_Server
 	{
 		public const string SERVER_VERSION = "1.0";
 		public const string MOD_VERSION = "0.5.0";
-		public const int PORT = NetworkConstants.DEFAULT_PORT;
 
 		public const int CONNECTION_TIMEOUT = 10;
 
@@ -64,13 +64,35 @@ namespace CMS21_Together_Server
 				return;
 			}
 			
-			Server.Start(Config.MaxPlayers, PORT);
-			GameDataManager.TryLoadSession(null);
-			Logger.Info($"Server started. Listening port {PORT}");
+			try
+			{
+				SessionRegistry.Initialize(Assembly.GetExecutingAssembly());
+				GameDataManager.TryLoadSession(null);
+			}
+			catch (Exception ex)
+			{
+				Logger.Error($"Cannot start the session: {ex.Message}");
+				Terminal.Gui.Application.Shutdown();
+				Exit();
+				return;
+			}
+
+			string commandFile = GetArgument(args, "--command-file");
+			if (commandFile != null)
+				CommandFile.Configure(commandFile);
+
+			Server.Start(Config.MaxPlayers, Config.Port);
+			Logger.Info($"Server started. Listening port {Config.Port}");
 			
 			Terminal.Gui.Application.Run(window);
 			Terminal.Gui.Application.Shutdown();
 			Exit();
+		}
+
+		private static string GetArgument(string[] args, string name)
+		{
+			int index = Array.IndexOf(args, name);
+			return index >= 0 && index + 1 < args.Length ? args[index + 1] : null;
 		}
 
 		private static void Exit()

@@ -1,5 +1,6 @@
 ﻿using System;
 using System.IO;
+using CMS21_Together_Core.Network;
 using CMS21_Together_Server.Log;
 
 namespace CMS21_Together_Server.Data
@@ -12,13 +13,15 @@ namespace CMS21_Together_Server.Data
         public bool UseSteam { get; }
         public string GsltToken { get; }
         public int LogLevel { get; }
-        
-        private ServerConfig(int maxPlayers, bool useSteam, string gsltToken, int logLevel)
+        public int Port { get; }
+
+        private ServerConfig(int maxPlayers, bool useSteam, string gsltToken, int logLevel, int port)
         {
             MaxPlayers = maxPlayers;
             UseSteam = useSteam;
             GsltToken = gsltToken;
             LogLevel = logLevel;
+            Port = port;
         }
 
         public static ServerConfig LoadOrCreate()
@@ -31,7 +34,7 @@ namespace CMS21_Together_Server.Data
                 CreateDefaultConfig(filePath);
                 
                 // Return default values
-                return new ServerConfig(4,true, string.Empty, 0);
+                return new ServerConfig(4,true, string.Empty, 0, NetworkConstants.DEFAULT_PORT);
             }
 
             Logger.Info($"Loading configuration from '{ConfigFileName}'...");
@@ -46,6 +49,9 @@ namespace CMS21_Together_Server.Data
                 {
                     sw.WriteLine("# Maximum number of players allowed (mod is designed with 4 players in mind, higher might cause issue)");
                     sw.WriteLine("max_players = 4");
+                    sw.WriteLine("");
+                    sw.WriteLine("# TCP/UDP port for DirectIP connections");
+                    sw.WriteLine($"port = {NetworkConstants.DEFAULT_PORT}");
                     sw.WriteLine("");
                     sw.WriteLine("# Enable Steam Transport (True/False)");
                     sw.WriteLine("use_steam = True");
@@ -76,6 +82,7 @@ namespace CMS21_Together_Server.Data
             bool useSteam = true;
             string gsltToken = string.Empty;
             int logLevel = 0;
+            int port = NetworkConstants.DEFAULT_PORT;
 
             try
             {
@@ -117,6 +124,10 @@ namespace CMS21_Together_Server.Data
                     {
                         int.TryParse(value, out logLevel);
                     }
+                    else if (key.Equals("port", StringComparison.OrdinalIgnoreCase) && int.TryParse(value, out int parsedPort))
+                    {
+                        port = parsedPort;
+                    }
                 }
 
                 Logger.Success("Configuration loaded successfully.");
@@ -126,7 +137,7 @@ namespace CMS21_Together_Server.Data
                 Logger.Error($"Error reading configuration file: {ex.Message}. Using defaults.");
             }
 
-            return new ServerConfig(maxPlayers, useSteam, gsltToken, logLevel);
+            return new ServerConfig(maxPlayers, useSteam, gsltToken, logLevel, port);
         }
 	}
 }

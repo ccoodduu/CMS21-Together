@@ -34,5 +34,8 @@ public enum PacketTypes
 	CarSpawnDelete,
 	CarSpawnRejected,
 	CarBodyPartUpdate,
-	CarSubPartUpdate
+	CarSubPartUpdate,
+
+	SyncBegin,
+	SyncAck
 }
