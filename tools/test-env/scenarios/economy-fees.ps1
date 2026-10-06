@@ -118,11 +118,11 @@ Fee-Step $b "econ-map-travel" "Auction" "TravelFee" -200 -GuardKey "Scene:Auctio
 Fee-Step $a "econ-fee" "spill 0" "FluidSpill" $null -What "A spills fluid"
 Fee-Step $b "econ-fee" "refill 1" "FluidRefill" $null -GuardKey "Mode:DrainTool" -What "B refills fluid" -MayChargeNothing
 Fee-Step $a "econ-fee" "wash-paint 0" "WashBeforePaint" -100 -GuardKey "Window:Paintshop" -What "A washes before painting"
-Fee-Step $a "tool-paint-car" "0" "PaintCar" -1000 -GuardKey "Window:Paintshop" -What "A paints the car"
+Fee-Step $a "tool-paint-car" "0 0.8,0.1,0.1" "PaintCar" -1000 -GuardKey "Window:Paintshop" -What "A paints the car"
 Fee-Step $b "econ-fee" "wash-tint 1" "WashBeforeTint" -100 -GuardKey "Window:Tinting" -What "B washes before tinting"
 Fee-Step $b "econ-fee" "tint 1 4" "Tint" -200 -GuardKey "Window:Tinting" -What "B tints 4 windows"
-Fee-Step $a "tool-use" "welder 0" "Welder" $null -GuardKey "Pie:equipment_use" -What "A welds"
-Fee-Step $a "tool-use" "interior 0" "InteriorDetailing" $null -GuardKey "Pie:equipment_use" -What "A details the interior"
+Fee-Step $a "tool-use" "Welder 0 paid" "Welder" $null -GuardKey "Pie:equipment_use" -What "A welds"
+Fee-Step $a "tool-use" "InteriorDetailing 0 paid" "InteriorDetailing" $null -GuardKey "Pie:equipment_use" -What "A details the interior"
 Fee-Step $b "tool-repair" "" "PartRepair" $null -GuardKey "Window:RepairPart" -What "B repairs a part"
 
 # A wrong amount is refused and the requester's prediction is corrected.

@@ -92,5 +92,16 @@ public enum PacketTypes
 	KickRequest,
 	EconomyRequest,
 	EconomyResult,
+	ToolSlotUpdate,
+	ToolSlotRejected,
+	ToolSlotProperty,
+	ToolPartChange,
+	ToolPosition,
+	ToolsState,
+	ToolClaim,
+	ToolClaimUpdate,
+	ToolPartChangeResult,
+
+	ToolAction,
 	PlayerRestore
 }

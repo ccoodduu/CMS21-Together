@@ -14,6 +14,8 @@ public class ModGameState
 	public CarState CarState = new CarState();
 	public PlacementState PlacementState = new PlacementState();
 	public JobsState JobsState = new JobsState();
+	public ToolsState ToolsState = new ToolsState();
+	
 	public Dictionary<string, PlayerRecord> PlayerRecords = new Dictionary<string, PlayerRecord>();
 
 	[NonSerialized] public PlayerState PlayerState = new PlayerState();
@@ -29,6 +31,14 @@ public class ParkingLot
 {
 	public int UnlockedLevels;
 	public Dictionary<int, ParkedCar> Slots = new Dictionary<int, ParkedCar>();
+}
+
+public class ToolsState
+{
+	public Dictionary<ModToolId, ToolSlotState> Slots = new Dictionary<ModToolId, ToolSlotState>();
+
+	// Key: IOSpecialType; value: CarPlace or ToolPositionPacket.DefaultPosition.
+	public Dictionary<int, int> Positions = new Dictionary<int, int>();
 }
 
 public class CarState
