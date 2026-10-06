@@ -43,11 +43,16 @@ public static class CarToolActions
 		Send(tool, carLoader, kind);
 	}
 
-	public static void Finished(ToolActionKind kind) => localBusy.Remove(kind);
+	public static void Finished(ToolActionKind kind)
+	{
+		localBusy.Remove(kind);
+		ToolSync.TraceEvent($"{kind} finished");
+	}
 
 	public static void Send(ModToolId tool, CarLoader carLoader, ToolActionKind kind)
 	{
 		int loader = LoaderOf(carLoader);
+		ToolSync.TraceEvent($"{tool} {kind} on loader {loader}");
 		if (!ToolSync.CanSend || loader < 0 || !CarPartsSync.IsReady(loader)) return;
 		Log.Info($"[Tools] {tool}: {kind} on loader {loader}.");
 		Client.Instance.Send(new ToolActionPacket { Tool = tool, CarLoaderID = loader, Kind = kind });

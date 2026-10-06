@@ -23,15 +23,16 @@ public static class CarWashHooks
 	// The paint shop and tint windows offer to wash a dirty car first; that wash sets every part at once (part == null).
 	[HarmonyPatch(typeof(CarLoader), nameof(CarLoader.EnableDust))]
 	[HarmonyPostfix]
-	private static void AfterEnableDust(CarLoader __instance, CarPart part)
-	{
-		if (part == null) CarDetailsSync.MarkDirty(__instance, CarDetailSection.BodyCosmetics);
-	}
+	private static void AfterEnableDust(CarLoader __instance, CarPart part) => AfterWholeCar(__instance, part, "EnableDust");
 
 	[HarmonyPatch(typeof(CarLoader), nameof(CarLoader.SetWashFactor))]
 	[HarmonyPostfix]
-	private static void AfterSetWashFactor(CarLoader __instance, CarPart part)
+	private static void AfterSetWashFactor(CarLoader __instance, CarPart part) => AfterWholeCar(__instance, part, "SetWashFactor");
+
+	private static void AfterWholeCar(CarLoader carLoader, CarPart part, string call)
 	{
-		if (part == null) CarDetailsSync.MarkDirty(__instance, CarDetailSection.BodyCosmetics);
+		if (part != null) return;
+		ToolSync.TraceEvent($"{call}(null) on loader {CarToolActions.LoaderOf(carLoader)}");
+		CarDetailsSync.MarkDirty(carLoader, CarDetailSection.BodyCosmetics);
 	}
 }
