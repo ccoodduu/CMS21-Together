@@ -63,15 +63,7 @@ public class ClientSteam : ConnectionManager
 
 	public override void OnConnected(ConnectionInfo info)
 	{
-		Log.Success("Successfully connected to server.");
-		Client.Instance.Send(new ConnectPacket()
-		{
-			gameVersion = "",
-			message = "",
-			modVersion = ClientVersion.Current,
-			playerID = Client.Instance.ID,
-			username = PlayerSettings.PlayerName
-		});
+		Log.Success("Successfully connected to server; waiting for its welcome before sending ours.");
 	}
 
 	public override void OnDisconnected(ConnectionInfo info)

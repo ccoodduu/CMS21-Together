@@ -29,6 +29,8 @@ public static class ConnectionMessages
 			case DisconnectReason.SyncFailed: return "Loading the shared garage failed.";
 			case DisconnectReason.ServerFull: return "The server is full.";
 			case DisconnectReason.WrongPassword: return "Wrong server password.";
+			case DisconnectReason.GameVersionMismatch: return "Your game version differs from the server's.";
+			case DisconnectReason.ModMismatch: return "Can't join: gameplay mods differ.";
 			default: return "Disconnected from the server.";
 		}
 	}
