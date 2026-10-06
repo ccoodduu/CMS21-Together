@@ -57,6 +57,10 @@ Write-Host "9 of 10 slots used"
 Send-HarnessCommand -Instance $a -Verb car-spawn -Arguments "0 $car 0" | Out-Null
 Send-HarnessCommand -Instance $b -Verb car-spawn -Arguments "1 $car 0" | Out-Null
 foreach ($name in $Ctx.Instances) { Wait-Ready $name 0 | Out-Null; Wait-Ready $name 1 | Out-Null }
+Send-HarnessCommand -Instance $a -Verb car-move -Arguments "0 Entrance1" | Out-Null
+Start-Sleep -Seconds 4
+Send-HarnessCommand -Instance $b -Verb car-move -Arguments "1 Entrance2" | Out-Null
+Start-Sleep -Seconds 4
 
 $mark = Get-ServerLogMark
 Hold "on"
@@ -73,7 +77,7 @@ do {
     $pb = Placement $b | ConvertTo-Json -Depth 6 -Compress
     $placement = Placement $a
 } while (-not ($pa -eq $pb -and @($placement.parking.slots).Count -eq 10 -and @($placement.cars).Count -eq 1) -and (Get-Date) -lt $deadline)
-Check ($pa -eq $pb) "A and B agree after the race ($pa)"
+Check ($pa -eq $pb) "A and B agree after the race (A: $pa, B: $pb)"
 Check (@($placement.parking.slots).Count -eq 10) "the parking is full ($(@($placement.parking.slots).Count) slots)"
 Check (@($placement.cars).Count -eq 1) "the refused car is back in the garage ($(@($placement.cars).Count) cars)"
 
