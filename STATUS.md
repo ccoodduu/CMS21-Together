@@ -2,6 +2,18 @@
 
 Newest first. One entry per work session.
 
+## 2026-10-06 (15:40–) — row 4 continued; row 13 spike tooling
+
+- Row 4 (car details), new and built but not yet run in the game: window tint, per-part paint (colour, paint type,
+  custom paint, livery), the car's custom paint, and ECU/carburettor tuning per part (`PartModule.Tune`). The paint
+  shop commit (`SubmitColor`) and every `Tune` call mark the car as changed. `cardetails-randomize` now also tints,
+  paints a part and tunes the modules, so `car-details` covers them.
+- Row 4 task 4.7: new scenario `car-details-request`. A holds back its spawn snapshot (`cardetails-hold on`); the
+  server must ask for it after 10 s and store the answer.
+- Row 13 (test drive and diagnostics): the trace and verbs for the spike (`testdrive-trace`, `testdrive-go`,
+  `testdrive-drive`, `testdrive-finish`) and the spike scenario `test-drive-trace` are committed, not yet run.
+- Running: full lane-1 regression of the row 4 branch (started before these changes).
+
 ## 2026-10-06 (15:10–15:40) — row 3 merged; row 4 car details (branch `change/sync-car-details`)
 
 - Lane-1 regression `20261006-144952` of the row 3 branch: all 25 scenarios PASSED. `main` = `635b22b` (row 3).
