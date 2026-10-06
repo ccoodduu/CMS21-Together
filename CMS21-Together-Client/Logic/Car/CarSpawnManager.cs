@@ -10,6 +10,10 @@ namespace CMS21Together.Logic.Car
         public static IEnumerator RequestCarSpawn(string carToLoad, CarLoader carLoader)
         {
             int carLoaderID = CarLoaderPlaces.Get().GetCarLoaderId(carLoader);
+            float deadline = UnityEngine.Time.realtimeSinceStartup + 90f;
+            while (!carLoader.IsCarLoaded() && carLoader.carToLoad == carToLoad && UnityEngine.Time.realtimeSinceStartup < deadline) yield return null;
+            yield return null;
+            if (carLoader.carToLoad != carToLoad) yield break;
 
             var request = new CarSpawnRequestPacket
             {

@@ -21,6 +21,7 @@ public static class CarLoading
 			else carLoader.StartCoroutine(carLoader.LoadCar(spawn.CarToLoad));
 			while (!carLoader.IsCarLoaded()) yield return new WaitForEndOfFrame();
 			carLoader.PlaceAtPosition(true, true);
+			if (spawn.PlaceNo < 0) carLoader.placeNo = spawn.PlaceNo;
 			CarPlacementSync.ApplyPlace(carLoader, loader, spawn.PlaceNo);
 		}
 		finally
