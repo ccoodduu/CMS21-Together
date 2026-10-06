@@ -142,3 +142,9 @@ open for the user.
 DLC: do not refuse a client for a different DLC set. The server tracks the DLC set owned by every connected
 player; DLC content not owned by all (cars, parts, tools) is blocked from shared use (spawn, shared inventory,
 parking). Update the DLC requirement, design and tasks accordingly before implementing. Gameplay mods stay refused.
+
+Applied when the change started (2026-10-06): spec requirement "Same DLC set" replaced by "Shared DLC set" (no
+refusal; the server keeps the intersection of the connected players' DLC sets, logs it, shows it in `compat` and
+sends it in `ServerInfo.SharedDlc`); `DlcMismatch` and the `dlc` config key dropped; design D3 rewritten; task 4.6
+added and 5.1 changed (two clients with different DLC sets both join and see the intersection). Blocking DLC
+content outside the shared set is recorded for rows 1, 2, 5a in INTEGRATION.md ("DLC content").

@@ -63,7 +63,7 @@ client                                        server
 check welcome (version, protocolHash)
   mismatch → disconnect locally, menu, show reason (VersionMismatch)
 ConnectPacket {modVersion, protocolHash,  →    CompatibilityPolicy.Evaluate(packet):
-  gameVersion, dlc, mods, (row 7 key)}           1 mod build  2 game version  3 DLC  4 mods
+  gameVersion, dlc, mods, (row 7 key)}           1 mod build  2 game version  3 mods  (DLC: recorded only)
                                                 fail → DisconnectPacket{playerID = slot, reason, message},
                                                        close the slot after the send is flushed
                                                 ok   → (row 7 identity, M5) → OnConnectedSuccessfully
@@ -107,18 +107,23 @@ even without packet changes, which would refuse harmless rebuilds between friend
 - Client: `GameSettings.BuildVersion`; DLC = `GameManager.PlatformManager.GetDLCs()` where `Owned`, as sorted
   `ProductId` strings (product ids are stable across languages; `Name` is used in messages). Read at connect time,
   not at start (Steam refreshes DLC ownership after start, `RefreshDLCs`).
-- Server reference per value, in priority order:
-
-| Value | 1 configured | 2 database | 3 pinned |
-|---|---|---|---|
-| game version | `game_version = 1.0.40` | `Database/meta.json` `GameVersion` (from Part 2's exporter) | first accepted client of this run |
-| DLC set | `dlc = none` or `dlc = <id>,<id>` | — (the exporter's ownership says nothing about the group) | first accepted client of this run |
-
-  `auto` (the default for both) skips step 1. A pinned value lives in memory only and is logged; it resets when the
-  server restarts. Rejected: storing the pinned value in the save (a host who updates the game would lock themselves
-  out of their own save) and a hardcoded empty DLC set (true for this group today, wrong for anyone else).
-- The group owns no DLC (QUESTIONS.md), so in practice the first client pins `{}` and a friend who owns a DLC is
-  refused. DLC-dependent content (DLC cars/parts) therefore never reaches a client that cannot load it.
+- Server reference for the game version, in priority order: 1 configured (`game_version = 1.0.40`), 2 database
+  (`Database/meta.json` `GameVersion`, from Part 2's exporter), 3 pinned (first accepted client of this run).
+  `auto` (the default) skips step 1. A pinned value lives in memory only and is logged; it resets when the server
+  restarts. Rejected: storing the pinned value in the save (a host who updates the game would lock themselves out
+  of their own save).
+- **DLC is never a refusal reason** (user decision 2026-10-06, QUESTIONS.md fifth round). DLC content loads only on
+  a client that owns it, so the server keeps the **shared DLC set**: `SharedDlc` (server `Data/SharedDlc.cs`) holds
+  each accepted client's reported set and their intersection (empty while nobody is connected). It is updated when
+  a client is accepted and when it leaves (`PresenceEvents.Left`), logged when the intersection changes, printed by
+  `compat` (intersection and each player's set) and sent to clients in `ServerInfoPacket.SharedDlc`
+  (`[OptionalField]`): to the joining client with its `ServerInfo`, and to every connected client when the set
+  changes. The client keeps it in `ClientData.ServerInfo.SharedDlc`.
+- Blocking DLC content outside the shared set from shared use (DLC cars, parts, tools: spawn, shared inventory,
+  parking) belongs to the rows that share them (1, 2, 5a; INTEGRATION.md notes it). Content already in shared use
+  when a player without that DLC joins is their problem too (e.g. keep it parked or hidden for that player); this
+  change only provides the set. Rejected: refusing a different DLC set (the user's group may buy DLC at different
+  times) and a configured DLC reference (`dlc =` key, dropped with the refusal).
 
 ### D4. Collecting mods and patch targets (client)
 
@@ -171,7 +176,6 @@ tail of game classes and is the wrong default for a mod check that must be safe.
 
 ```
 game_version = auto          # auto | <BuildVersion>
-dlc = auto                   # auto | none | <productId>,<productId>
 mods_required =              # <name>[@<version>], comma separated
 mods_ignored =               # names treated as visual
 mods_gameplay =              # names treated as gameplay (e.g. a mod that changes saves without patches)
@@ -180,14 +184,14 @@ mods_gameplay =              # names treated as gameplay (e.g. a mod that change
 Mod names compare case-insensitively on `MelonInfo.Name`. Policy: let `G` = the client's gameplay + unknown mods
 after the lists are applied. Refuse (`ModMismatch`) if `G` contains a name not in `mods_required`, or a required name
 is absent, or a required `@version` differs. Ignored mods are logged as "ignored by configuration". Every connect logs
-the full classified list at info level; `compat` prints the reference values (with their source: configured /
-database / pinned), the lists and the last ten refusals.
+the full classified list at info level; `compat` prints the reference game version (with its source: configured /
+database / pinned), the shared DLC set with each connected player's set, the lists and the last ten refusals.
 
 ### D7. What the player sees
 
 The reason and message travel in row 7's `DisconnectPacket.reason`/`message`. Row 8 part 1 lands before this change
 in M1 and owns the display (`ConnectionMessages.For(reason, detail)`, shown once in the menu); this change adds its
-texts there — `GameVersionMismatch`, `DlcMismatch`, `ModMismatch` and the `VersionMismatch` wording for the protocol
+texts there — `GameVersionMismatch`, `ModMismatch` and the `VersionMismatch` wording for the protocol
 hash (row 8's `VersionMismatch` text already names both mod versions from `message`). If row 8 group 2 has not landed,
 the texts go into row 7's menu display and row 8 moves them. Example:
 
@@ -216,8 +220,9 @@ Can't join: gameplay mods differ.
 
 ### What the server stores vs relays
 
-Stores nothing new in the save. Keeps in memory: the pinned game version and DLC set for the run and the last ten
-refusals. Reads config and `Database/meta.json`/`mod_rules.json`. Relays nothing.
+Stores nothing new in the save. Keeps in memory: the pinned game version for the run, the DLC set of each connected
+player and the last ten refusals. Reads config and `Database/meta.json`/`mod_rules.json`. Relays the shared DLC set
+(`ServerInfo.SharedDlc`) to every client.
 
 ### Late join
 
@@ -238,7 +243,9 @@ player leaves.
 - [BinaryFormatter cannot read a newer/older `ConnectPacket`] → `[OptionalField]` + the client-side welcome check.
 - [`GameSettings.BuildVersion` empty or not the Steam build id] → task 2.1 logs it on both installs; fallback
   `Application.version`.
-- [DLC list not ready at connect (Steam refresh)] → read at connect; task 2.1 confirms `Owned` is set in the menu.
+- [DLC list not ready at connect (Steam refresh)] → read at connect; task 1.1 confirms `Owned` is set in the menu.
+- [Shared DLC content already in use when a player without that DLC joins] → the owning rows (1, 2, 5a) decide what
+  that player sees; until they land, the M1 guard blocks working on cars, so no DLC car is shared in M1.
 
 ## Migration Plan
 
@@ -249,4 +256,4 @@ with defaults on first start (append if missing). Rollback: remove the keys; an 
 ## Open Questions
 
 1. Exact source tables for the garage and player upgrade exports (task 6.1 finds them; the schema is fixed).
-2. Whether `meta.json` should also pin the DLC set when the exporter runs on a machine with DLC — default no.
+2. (Closed by the DLC decision: DLC is tracked, not pinned, so `meta.json` holds no DLC set.)

@@ -29,6 +29,7 @@ part 2. "Owner" defines it; "Users" only call or subscribe.
 | `ConnectPacket` + `password`, `adminKey` (`[OptionalField]`, never logged) | C→S | 8 (part 2) | — |
 | `HeartbeatPacket` + `sentTicks`; `PlayerPings`, `KickRequest` | both | 8 (part 2) | — |
 | `ServerInfo` | S→C | 8 (part 1) | rich presence (8) |
+| `ServerInfo` + `SharedDlc` (`[OptionalField]`; resent to every client when the set changes) | S→C | 9 | 1, 2, 5a (block DLC content outside the set) |
 | `StateDigestRequest`, `StateDigest`, `StateDetailRequest`, `StateDetail`, `DesyncNotice` | both | 14 (b, c) | — |
 | `BugReportRequest`, `BugReportCollect`, `BugReportResult` | both | 14 (d) | — |
 
@@ -40,7 +41,7 @@ Rows 12 and 14a add no packets.
 |---|---|---|
 | `None`, `ServerShutdown`, `Kicked`, `VersionMismatch`, `DuplicateIdentity`, `MissingIdentity`, `SyncFailed` | 7 (on `main`) | 8 (display, `Kicked` from `/kick`/`KickRequest`), 9 (`VersionMismatch` for the build/protocol check) |
 | `ServerFull`, `WrongPassword` | 8 (task 2.4, M1; `WrongPassword` used from part 2) | — |
-| `GameVersionMismatch`, `DlcMismatch`, `ModMismatch` | 9 (task 2.2, M1, after 8) | 8 (`ConnectionMessages`) |
+| `GameVersionMismatch`, `ModMismatch` | 9 (task 2.2, M1, after 8; no `DlcMismatch`: DLC never refuses) | 8 (`ConnectionMessages`) |
 
 Rows 12, 14 and 14a add none. Client-only failures (`Unreachable`, `Timeout`, `SteamUnavailable`, `SteamFailed`) are
 row 8's client enum `JoinFailure` and never travel.
@@ -72,6 +73,7 @@ row 8's client enum `JoinFailure` and never travel.
 | client | `PresenceManager.PlayerAdded(record, fromSnapshot)`, `PlayerRemoved(record)` (added to row 6's code) | 8 (part 2) | 8 (toasts, session panel) |
 | client | `ConnectPacketFactory.Build()` (the only `ConnectPacket` builder, sent from `AuthHandler.HandleConnect` after the welcome check, both transports) | 9 | 6 (name), 7 (`playerKey`), 8 (password, admin key) |
 | Core / client / server | `ProtocolHash`, `ModClassifier` (+ `ModClassifierRules`), client `ModInventory`, server `CompatibilityPolicy.Evaluate` (first line of `AuthHandler.OnConnected`) | 9 | 7 (identity step runs after it), 14 (`mods.json` in bug reports) |
+| server / client | server `SharedDlc.Shared` (DLC product ids owned by every connected player) and `SharedDlc.Changed`; client `ClientData.ServerInfo.SharedDlc` | 9 | 1, 2, 5a (see "DLC content" below) |
 | Core | `BuildInfo` (`ModVersion`, `FullVersion`, `Commit`, `LoadedFullVersion`) | 12 | 7 (save envelope `ModVersion`), 8 (mismatch message), 9 (version check), harness `build-info` |
 | client | `FeatureGuard` (`Decide`, `Bypass` scope, block ring buffer), `GuardRules` | 14a | every row adds its guard entries in its merge commit; 14 (`Bypass` for the resync reload, `guard.log`) |
 | client / server / Core | `IClientDigest`, `IServerDigest`, `[DigestSection]`, `CanonicalHasher`, `Projection` | 14 | 3, 4, 5a register a digest when they land (see "Not resolved") |
@@ -118,7 +120,7 @@ Server `server_config.ini` (missing keys take their defaults and are appended; e
 | `autosave_interval_seconds`, `backup_count`; `--command-file <path>` (supported for production too: row 8 stops a hosted server through it) | 7 |
 | `server_name` (""), `public_address` (""); command line `--port`, `--max-players`, `--use-steam`, `--server-name`, `--public-address` | 8 part 1 |
 | `password` (""), `password_steam` (False), `admin_key` (""), `new_session_difficulty` (Normal); `--password`, `--admin-key`, `--new-difficulty` | 8 part 2 |
-| `game_version` (auto), `dlc` (auto), `mods_required`, `mods_ignored`, `mods_gameplay` (empty); `Database/meta.json`, `Database/mod_rules.json` | 9 |
+| `game_version` (auto), `mods_required`, `mods_ignored`, `mods_gameplay` (empty); `Database/meta.json`, `Database/mod_rules.json` | 9 |
 | `desync_check_interval_seconds` (5, 0 = off), `desync_autofix` (true) | 14 |
 
 Client MelonPreferences — one scheme: category `CMS21Together` for everything, plus `CMS21Together_Guard` for the
@@ -232,6 +234,21 @@ Scenarios (unique): 7 `server-restart`, `profile-safety`, `rejoin`, `latejoin`, 
   `CMS21Together.AdminKey` and `players[].Key`; the server log folder is `Log\`.
 - `release-smoke` is excluded from `Run-All` by a marker line.
 - Row 5a's `tool-resync` (in-place `AskForSync`) is replaced by row 14's `resync force` (garage reload).
+
+## DLC content (user decision 2026-10-06, row 9)
+
+Players may join with different DLC sets; row 9 never refuses for DLC and only tracks the shared DLC set (DLC owned
+by every connected player, `SharedDlc` on the server, `ServerInfo.SharedDlc` on clients). DLC content not in that set
+must be blocked from shared use by the rows that own it — each adds this as a requirement and a guard entry when it
+lands:
+
+- Row 1 (`sync-car-parts`): spawning or mounting a DLC car or part (`PartProperty.DLC`) outside the set.
+- Row 2 (`sync-car-placement-and-lifts`): parking, unparking or moving a DLC car outside the set.
+- Row 5a (`sync-workshop-machines`): putting DLC tools or DLC parts on shared machines outside the set.
+- Shared inventory (rows 1 and 5a, whoever touches it first): DLC items outside the set stay out of shared inventory.
+
+When a player without a DLC joins while DLC content is already in shared use, the owning row decides what that player
+sees (hidden, kept parked, or a guard message); rows that land before this is decided keep DLC content blocked.
 
 ## Not resolved here (recommendations)
 
