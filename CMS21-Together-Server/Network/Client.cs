@@ -11,20 +11,25 @@ namespace CMS21_Together_Server.Network
 {
 	public class Client
 	{
+		private const float RttSmoothing = 0.3f;
+
 		public int ID;
 		public long SteamID { get; set; }
 
 		public NetworkType ConnectionType;
-		
+
 		public Tcp Tcp;
 		public Udp Udp;
-		
+
 		public Connection SteamConnection;
 
 		public bool IsConnected;
 		public SyncState SyncState = SyncState.Connected;
 		public int SnapshotId;
 		public Action OnConnectedSuccessfully;
+
+		public bool IsAdmin { get; set; }
+		public float RttMs { get; private set; }
 
 		public float LastHeartbeatTime { get; set; }
 		private float lastHeartbeatTime;
@@ -41,28 +46,38 @@ namespace CMS21_Together_Server.Network
 			Udp = new Udp(ID);
 			OnConnectedSuccessfully += OnConnected;
 		}
-		
+
 		private void OnConnected()
 		{
 			float currentTime = ServerTime.Time;
-    
-			lastHeartbeatTime = currentTime; 
+
+			lastHeartbeatTime = currentTime;
 			LastHeartbeatTime = currentTime;
 			ConnectionValid = true;
 			Logger.Debug($"Client[{ID}] connected successfully!");
-			Server.SendToClient(new HeartbeatPacket(), ID);
+			Server.SendToClient(new HeartbeatPacket { sentTicks = ServerTime.Ticks }, ID);
+		}
+
+		public void OnHeartbeatEcho(long sentTicks)
+		{
+			LastHeartbeatTime = ServerTime.Time;
+			if (sentTicks <= 0) return;
+
+			float sample = (float)ServerTime.TicksToMs(ServerTime.Ticks - sentTicks);
+			if (sample < 0) return;
+			RttMs = RttMs <= 0 ? sample : RttSmoothing * sample + (1 - RttSmoothing) * RttMs;
 		}
 
 		public void Update()
 		{
 			if (!ConnectionValid) return;
-			
+
 			if (ServerTime.Time - lastHeartbeatTime >= 3)
 			{
 				lastHeartbeatTime = ServerTime.Time;
-				Server.SendToClient(new HeartbeatPacket(), ID, false);
+				Server.SendToClient(new HeartbeatPacket { sentTicks = ServerTime.Ticks }, ID, false);
 			}
-			
+
 			if (ServerTime.Time - LastHeartbeatTime > Program.CONNECTION_TIMEOUT)
 			{
 				// Log in English
@@ -71,7 +86,7 @@ namespace CMS21_Together_Server.Network
 			}
 		}
 
-		public void Disconnect()
+		public void Disconnect(DisconnectReason reason = DisconnectReason.None)
 		{
 			lock (GameDataManager.StateLock)
 			{
@@ -84,14 +99,17 @@ namespace CMS21_Together_Server.Network
 				SnapshotId = 0;
 				lastHeartbeatTime = 0;
 				LastHeartbeatTime = 0;
+				IsAdmin = false;
+				RttMs = 0;
 
 				if (PresenceRegistry.Remove(ID))
 				{
-					Logger.Info($"Player {ID} left");
+					Logger.Info(reason == DisconnectReason.None ? $"Player {ID} left" : $"Player {ID} left ({reason})");
 					Server.SendToClients(new DisconnectPacket()
 					{
 						playerID = ID,
-						message = "Disconnected"
+						message = "Disconnected",
+						reason = reason
 					}, ID);
 					PresenceEvents.RaiseLeft(ID);
 				}

@@ -8,7 +8,10 @@ namespace CMS21_Together_Core.Network.Packets;
 
 [Serializable]
 [NetworkPacket(PacketTypes.Heartbeat)]
-public class HeartbeatPacket : INetworkData { }
+public class HeartbeatPacket : INetworkData
+{
+	[OptionalField] public long sentTicks;
+}
 
 
 [Serializable]
@@ -25,6 +28,8 @@ public class ConnectPacket : INetworkData
 	[OptionalField] public string protocolHash;
 	[OptionalField] public List<string> dlc;
 	[OptionalField] public List<ModReport> mods;
+	[OptionalField] public string password;
+	[OptionalField] public string adminKey;
 }
 
 [Serializable]
@@ -63,4 +68,6 @@ public class ServerInfoPacket : INetworkData
 	public string PublicAddress;
 	public Data.Enum.Gamemode Difficulty;
 	[OptionalField] public List<string> SharedDlc;
+	[OptionalField] public bool PasswordRequired;
+	[OptionalField] public bool IsAdmin;
 }

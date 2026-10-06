@@ -81,5 +81,8 @@ public enum PacketTypes
 	JobRemoved,
 
 	CarDetailsUpdate,
-	CarDetailsRequest
+	CarDetailsRequest,
+
+	PlayerPings,
+	KickRequest
 }

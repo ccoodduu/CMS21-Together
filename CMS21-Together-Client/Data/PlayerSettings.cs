@@ -11,6 +11,7 @@ public static class PlayerSettings
 	private static MelonPreferences_Entry<bool> devHotkeys;
 	private static MelonPreferences_Entry<bool> advertisePresence;
 	private static MelonPreferences_Entry<string> resyncHotkey;
+	private static MelonPreferences_Entry<string> adminKey;
 
 	public static string NameOverride { get; set; }
 
@@ -22,7 +23,10 @@ public static class PlayerSettings
 		devHotkeys = category.CreateEntry("DevHotkeys", false, description: "F5 joins the last server, F6 spawns a random base-game car in a connected garage (developer shortcuts).");
 		advertisePresence = category.CreateEntry("AdvertisePresence", true, description: "Show the server in Steam rich presence so friends can join.");
 		resyncHotkey = category.CreateEntry("ResyncHotkey", "F7", description: "Key that reloads the garage from the server when something looks out of sync.");
+		adminKey = category.CreateEntry("AdminKey", "", description: "Admin key of a dedicated server you run (its admin_key); lets you kick players there. Keep it secret.");
 	}
+
+	public static string AdminKey => adminKey?.Value ?? "";
 
 	public static string PlayerName
 	{

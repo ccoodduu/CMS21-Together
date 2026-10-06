@@ -35,6 +35,10 @@ public static class PresenceManager
 
 	public static bool HasLocalMotor => LocalMotor != null && LocalMotor;
 
+	public static event System.Action<PlayerPresenceRecord, bool> PlayerAdded;
+	public static event System.Action<PlayerPresenceRecord, DisconnectReason> PlayerRemoved;
+	public static event System.Action RosterApplied;
+
 	public static void ApplyRoster(PlayerRosterPacket packet, int snapshotId)
 	{
 		Clear();
@@ -46,20 +50,25 @@ public static class PresenceManager
 		ReconcileAll();
 		Log.Info($"[Presence] Roster: {string.Join(", ", Roster.Values.Select(p => $"{p.Record.PlayerId} '{p.Record.Username}' in {p.Record.Scene}"))}");
 		SyncTracker.Applied(SyncOrder.PlayersKey, snapshotId);
+		foreach (var player in Roster.Values.ToList()) PlayerAdded?.Invoke(player.Record, true);
+		RosterApplied?.Invoke();
 	}
 
 	public static void ApplyRecord(PlayerPresenceRecord record)
 	{
 		if (record == null || record.PlayerId == Client.Instance.ID) return;
 
+		bool added = false;
 		if (!Roster.TryGetValue(record.PlayerId, out var player))
 		{
 			player = new RemotePlayer();
 			Roster[record.PlayerId] = player;
 			Log.Info($"[Presence] Player {record.PlayerId} '{record.Username}' joined ({record.Scene}).");
 			RichPresence.Publish();
+			added = true;
 		}
 		player.Record = record;
+		if (added) PlayerAdded?.Invoke(record, false);
 		if (player.HasAvatar && record.LastMovement != null) ApplyMovement(player.Avatar, record.LastMovement);
 		Reconcile(record.PlayerId);
 	}
@@ -74,13 +83,14 @@ public static class PresenceManager
 		else Reconcile(packet.SenderId);
 	}
 
-	public static void Remove(int playerId)
+	public static void Remove(int playerId, DisconnectReason reason = DisconnectReason.None)
 	{
 		if (!Roster.TryGetValue(playerId, out var player)) return;
 		DestroyAvatar(player);
 		Roster.Remove(playerId);
-		Log.Info($"[Presence] Player {playerId} left.");
+		Log.Info(reason == DisconnectReason.None ? $"[Presence] Player {playerId} left." : $"[Presence] Player {playerId} left ({reason}).");
 		RichPresence.Publish();
+		PlayerRemoved?.Invoke(player.Record, reason);
 	}
 
 	public static void Clear()

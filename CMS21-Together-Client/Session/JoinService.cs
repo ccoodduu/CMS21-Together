@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using CMS21_Together_Core.Logging;
 using CMS21_Together_Core.Network.Packets;
 using CMS21Together.Data;
@@ -12,15 +13,22 @@ public static class JoinService
 	private const float DirectHandshakeTimeout = 10f;
 	private const float SteamHandshakeTimeout = 20f;
 
-	public static JoinTarget CurrentTarget { get; private set; }
+	private static readonly Dictionary<string, string> passwords = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
 
-	public static bool Join(string text, out string error)
+	public static JoinTarget CurrentTarget { get; private set; }
+	public static string CurrentPassword { get; private set; } = "";
+	public static string CurrentAdminKey { get; private set; } = "";
+
+	public static string RememberedPassword(JoinTarget target) =>
+		target != null && passwords.TryGetValue(target.ToString(), out string password) ? password : "";
+
+	public static bool Join(string text, out string error, string password = null, string adminKey = null)
 	{
 		if (!JoinTarget.TryParse(text, MainMod.PORT, out var target, out error)) return false;
-		return Join(target, out error);
+		return Join(target, out error, password, adminKey);
 	}
 
-	public static bool Join(JoinTarget target, out string error)
+	public static bool Join(JoinTarget target, out string error, string password = null, string adminKey = null)
 	{
 		error = null;
 		if (ConnectionStatus.IsBusy || ConnectionStatus.State == JoinStatus.InSession || Client.Instance.IsConnected)
@@ -30,6 +38,9 @@ public static class JoinService
 		}
 
 		CurrentTarget = target;
+		if (password != null) passwords[target.ToString()] = password;
+		CurrentPassword = RememberedPassword(target);
+		CurrentAdminKey = adminKey ?? PlayerSettings.AdminKey;
 		bool steam = target.Kind == JoinTargetKind.Steam;
 		ConnectionStatus.Begin(steam ? SteamHandshakeTimeout : DirectHandshakeTimeout);
 		Log.Info($"[Join] Joining {target}");

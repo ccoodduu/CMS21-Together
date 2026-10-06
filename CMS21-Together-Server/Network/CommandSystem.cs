@@ -17,6 +17,12 @@ namespace CMS21_Together_Server.Network
 			}
 		}
 
+		public static string Redact(string commandLine)
+		{
+			var match = System.Text.RegularExpressions.Regex.Match(commandLine, @"^(/?\s*password\s+set)\s+\S", System.Text.RegularExpressions.RegexOptions.IgnoreCase);
+			return match.Success ? $"{match.Groups[1].Value} <redacted>" : commandLine;
+		}
+
 		private static void ExecuteLocked(string commandLine)
 		{
 			if (string.IsNullOrWhiteSpace(commandLine)) return;
@@ -47,6 +53,8 @@ namespace CMS21_Together_Server.Network
 					Logger.Info("  cardetails <id>   - Show the stored details of a loader");
 					Logger.Info("  desync [check]    - Show recent desync repairs; check compares every player now");
 					Logger.Info("  kick <id>         - Kick a player by ID");
+					Logger.Info("  password set <pw> - Set the DirectIP password until the server stops; password clear removes it");
+					Logger.Info("  serverinfo        - Show the settings and each player's ping and admin flag");
 					Logger.Info("  money add <val>   - Add money");
 					Logger.Info("  money set <val>   - Set money");
 					Logger.Info("  level set <val>   - Set player level");
@@ -106,20 +114,37 @@ namespace CMS21_Together_Server.Network
 
 				case "kick":
 					if (args.Length > 1 && int.TryParse(args[1], out int playerId))
+						Server.Kick(playerId, "server command");
+					else
+						Logger.Warn("Usage: kick <id>");
+					break;
+
+				case "password":
+					if (args.Length > 2 && args[1].ToLower() == "set")
 					{
-						if (Server.Clients.ContainsKey(playerId) && Server.Clients[playerId].IsConnected)
-						{
-							Logger.Info($"Kicking player {playerId}...");
-							Server.Refuse(playerId, DisconnectReason.Kicked, "You have been kicked by the server.");
-						}
-						else
-						{
-							Logger.Warn($"Player ID {playerId} not found or not connected.");
-						}
+						Program.Config.SetPassword(string.Join(" ", args, 2, args.Length - 2));
+						Logger.Success("Password set for new DirectIP joins.");
+						Handlers.AuthHandler.BroadcastServerInfo();
+					}
+					else if (args.Length > 1 && args[1].ToLower() == "clear")
+					{
+						Program.Config.SetPassword("");
+						Logger.Success("Password removed.");
+						Handlers.AuthHandler.BroadcastServerInfo();
 					}
 					else
 					{
-						Logger.Warn("Usage: kick <id>");
+						Logger.Warn("Usage: password set <pw> OR password clear");
+					}
+					break;
+
+				case "serverinfo":
+					Logger.Info($"Settings: {Program.Config.Describe()}");
+					foreach (var client in Server.Clients.Values)
+					{
+						if (!client.IsConnected) continue;
+						var record = Data.Presence.PresenceRegistry.Get(client.ID);
+						Logger.Info($"  Client[{client.ID}] '{record?.Username ?? "?"}' {client.ConnectionType}, {client.SyncState}, RTT {client.RttMs:F0} ms, admin {client.IsAdmin}");
 					}
 					break;
 
