@@ -308,3 +308,32 @@ Hooks (1.4):
 10. The unpark sequence order with logs: `LoadCarFromFile(int,true)` → `LoadCar(string)` hook →
     `SaveCarToFile(idx,false)` → `SaveCarInParking(empty, slot)`.
 11. That the `PDM_0` delete path can be triggered (a car whose config is missing) or can be ignored.
+
+## Runtime results (2026-10-06, scenario `placement-spike`, run `20261006-121707`)
+
+Checks from the list above, in its numbering:
+
+1. Lift map: `lifters` reports each lift's nearest `CarPlace`; the lift a car on `CarLifter1` connects to is found
+   by `GetConnectedCarLoader` (spike.json in the run folder has the indices).
+2. `CarLifter.Action`: `isMoving` is `true` in the postfix while `GetState()` still shows the old state; an empty lift
+   stays `OnFloor` with `isMoving false` (no movement). Up from `OnFloor` goes to `Middle`, the next up to `Up`.
+3. A prefix on `NotificationCenter._ChangeCarPos_d__20.MoveNext` fires and reads `__1__state`, `carLoader`, `pos`,
+   `movePlayerToCar`. States 0 → 1 (fade, ~0.5 s) → 2 → 5 (`ChangePosition(place)` and, for a car on a raised lift,
+   `CarLifter.InstantSet(0)`) → 6 → 7 → 8. Started here through the `ChangeCarPos` builder; the pie-menu path is
+   still to be confirmed by hand.
+4. Quiet apply: `ResetCarLifter()` + `ChangePosition(place)` sets `placeNo` to the `CarPlace` value and puts the car
+   in the place (`IsInPlace` true), without a fade. A car loaded with plain `LoadCar` has `placeNo -1` and is in no
+   place until then.
+6. `carsOnParking[slot]` reads correctly through Unhollower (empty slot: null; occupied: the car), contrary to the
+   static concern; `LoadCarInParking` gives the same car. Array length 800; `GetMaxParkingPlacesAmount()` = 10 with one
+   unlocked level (it is the usable slot count).
+8. Codec: a parked `car_boltatlanta` is 15,555 bytes; serialize → deserialize → serialize gives identical bytes;
+   `new NewCarData().IsDefault()` is true. Deserializing needs a prepared target: `BodyPartsData`, `PartData`,
+   `FluidsData.Oil` (a class) and the four fluid lists must exist (`NewCarDataCodec.Deserialize`).
+10. Park order: `NotificationCenter.MoveCarToParking` → `SaveCarToFile(0, toParking: true)` (slot 0, the lowest free)
+    → `DeleteCar()` → `SaveCarToFile(i, false)` for every loader. Unpark through `LoadCarFromFile(slot, true)` →
+    `LoadCar(name)` → `ChangePosition(-1)`; it does **not** clear the slot (the parking window does that), and the car
+    ends on `Entrance1` (`placeNo 0`).
+
+Not run: 5 (pie menu offering a move of a car on a raised lift), 7 (patching the by-value struct parameter, avoided by
+design), 9 (unlock key), 11 (unloadable-car delete).
