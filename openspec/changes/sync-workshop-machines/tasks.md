@@ -2,6 +2,23 @@
 
 > **Read first (2026-10-06):** `docs/spikes/workshop-machines.md` (static decompile). It corrects hooks in design.md that never fire (inlined builders, shared native bodies) and lists the runtime checks still needed.
 
+> **Status (2026-10-06, branch `change/sync-workshop-machines`, work interrupted by a reboot):**
+> - In code (2026-10-06), needs a game run: 2.1–2.4. Core has `ModToolId`, `ToolProperty` and `ToolSlotState` (plus a
+>   `Balanced` flag: the spike shows "balanced" is the machine flag `!balanceCanceled` until take-off), `ToolPackets.cs`,
+>   `ItemActionType.Update` and `ModGameState.ToolsState`. `PacketTypes` gains nine values at the end: the eight in the
+>   design plus `ToolPartChangeResult` (the reply for 11.3, like `CarPartsChangeResult`).
+> - Started: 3.1. `Server/Data/Tools/ToolsStore.cs` has CAS, kind and battery-ID checks, "UID on another machine",
+>   reservation check, properties, positions, claims (release on leave, scene change and 300 s), part changes and the
+>   snapshot. Still missing: `Network/Handlers/ToolHandlers.cs` (thin `[PacketHandler]` wrappers),
+>   `ToolsStore.Initialize()` in `Program.cs`, `ToolsStore.Expire` in `Server.Update`, a `tools` server command.
+> - Next: 3.2 (`Update` in the server `InventoryHandlers`; ADD is not idempotent on `main` on either side, so make the
+>   item and group ADD idempotent by UID there and in the client handlers, see 1.2), 3.3 (`WorkshopToolsSection`
+>   calling `ToolsStore.SendSnapshot`/`ResetRuntime`), then groups 4–15.
+> - Decisions so far: no `Active` sends for the battery charger (the spike shows it equals "item present"); the balancer
+>   claim/release/result hooks follow the spike (`Balance(bool)` prefix, `FinishBalanceInternal` postfix,
+>   `_GetOnClick_b__72_64/65` blocks); Unhollower exposes no `__4__this` on the coroutine types, so the machine comes
+>   from `ToolsManager.Get()`; engine stand 2 does not exist per the spike, so it stays in the enum but is not hooked.
+
 Order: spikes and dependency checks, shared foundation, then the slot machines, item processing and tool positions
 (groups 6–15, need only the inventory and `sync-car-parts`), then the two-instance verification. Each machine group is
 a small client file on the shared `ToolSync` base plus its harness steps and can be merged on its own once its
