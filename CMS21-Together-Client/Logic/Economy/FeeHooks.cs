@@ -167,6 +167,8 @@ public static class FeeHooks
 	{
 		PatchLambda(typeof(WelderLogic.__c__DisplayClass5_0), "Method_Internal_Void_Boolean_PDM_0", nameof(BeforeWelderAccept));
 		PatchLambda(typeof(InteriorDetailingToolkitLogic.__c__DisplayClass6_0), "Method_Internal_Void_Boolean_PDM_0", nameof(BeforeDetailingAccept));
+		PatchLambda(typeof(NotificationCenter.__c__DisplayClass17_0), "Method_Internal_Void_Boolean_PDM_0", nameof(TradeHooks.BeforeAskWindowAnswer), typeof(TradeHooks));
+		PatchLambda(typeof(NotificationCenter.__c__DisplayClass17_0), "Method_Internal_Void_Boolean_PDM_1", nameof(TradeHooks.BeforeAskWindowAnswer), typeof(TradeHooks));
 	}
 
 	private static void PatchLambda(Type type, string method, string prefix, Type owner = null)

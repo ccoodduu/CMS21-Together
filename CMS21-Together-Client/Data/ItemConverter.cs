@@ -71,6 +71,10 @@ namespace CMS21Together.Data
                 IsBalanced = item.WheelData.IsBalanced
             };
 
+            var plate = item.LPData;
+            if (!object.ReferenceEquals(plate, null) && (!string.IsNullOrEmpty(plate.Name) || !string.IsNullOrEmpty(plate.Custom)))
+                modItem.LPData = new ModLPData { Name = plate.Name, Custom = plate.Custom };
+
             if (!object.ReferenceEquals(item.MountObjectData, null))
             {
                 modItem.MountObjectData = new ModMountObjectData
@@ -166,6 +170,9 @@ namespace CMS21Together.Data
                 wheelData.IsBalanced = modItem.WheelData.IsBalanced;
             }
             item.WheelData = wheelData;
+
+            if (modItem.LPData != null && (modItem.LPData.Name != null || modItem.LPData.Custom != null))
+                item.LPData = new LPData { Name = modItem.LPData.Name, Custom = modItem.LPData.Custom };
 
             if (modItem.MountObjectData != null)
             {
