@@ -19,6 +19,13 @@ Answered ones move to the bottom with the answer.
 - While connected, taking a car out from the separate Parking scene is blocked (garage parking works).
 - No automatic reconnect after a server restart; a server that cannot load its save refuses to start.
 
+## Decide later
+
+- **Server-hosted generator client** (your idea, 2026-10-06): the server runs a hidden game instance that generates
+  orders, car damage, junkyard layouts and prices with the game's own code. A spike measures it at the start of M3
+  (headless or not, RAM, generation without a player, Steam). Then we decide together whether it replaces parts of
+  row 16. Until then the plan stays: elected player generator (row 3), server logic later (row 16).
+
 ## Answered
 
 Answered by the user on 2026-10-05:

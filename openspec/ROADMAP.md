@@ -102,6 +102,7 @@ latest; only row 9's classifier tuning (group 7) is M6.
 | In-game UI technology on IL2CPP (IMGUI vs. cloning the game's UI like 0.4.17's `NewUI`) | Row 8 and the guard messages need it | M1 |
 | Hook trace per change (logging-only Harmony patches, verify each hook fires once per action) | IL2CPP-inlined methods never hit their patch; coroutine methods only fire on start | First task of every change |
 | Test drive round trip: what the game saves before leaving and loads on return | Row 13 and row 6's "return = late join" | Start of M3 |
+| Server-hosted generator client (user's idea, 2026-10-06): the server starts one hidden game instance of its own (a harness-style client with a fixed generator role, no avatar) and uses it as the local source of truth for everything the game generates: orders, spawned-car damage/colour, junkyard/barn layouts, prices. Measure: does the game run headless (`-batchmode -nographics`) or in a small low-quality window with HDRP; RAM per instance (each game commits 8–9 GB while loading); can it generate orders in the garage and a junkyard layout without a player driving it; startup time; Steam behaviour (same account on the same PC works like the test lanes, another PC triggers `KickingOtherSession`). Decide with the user: generator instance as the highest-priority candidate of row 3's elected generator, and how much of row 16 it replaces | Could replace most of row 16 and the "nobody is in the garage" gap of row 3 without rewriting game logic; only works where the server runs on a PC with the game and Steam | Before row 3 starts (start of M3), decision before row 16 is planned |
 | Native decompile: set up Cpp2IL/Il2CppDumper + Ghidra, read `EndJob` payout (and which Steam stats it increments), map the size of `OrderGenerator`, and find side-effect-free state setters for applying remote changes (part condition/mount, fluids, wheels, inventory) | Decides how big row 16 is, whether row 3's elected generator can be skipped, and lets rows 1/4/5 apply remote changes without the game's player-facing side effects (inventory, sounds, saves, achievements) | M0, background |
 
 ### Integration notes (cross-change decisions to keep consistent)
@@ -145,6 +146,8 @@ Final contracts after the integration pass (2026-10-06); the full matrix is in `
 - Row 6's "return to the garage = late join": results produced away (test drive/path) are sent on
   `ClientScene.LeavingScene` before the return snapshot — row 13 owns that and the dyno values.
 - The order generator (row 3) is elected among `InSession` clients whose `PresenceRegistry` scene is `Garage`.
+  Keep the election open for a server-hosted generator client as a candidate with the highest priority (see the
+  generator-client spike).
 - Claims/reservations (row 1 parts, row 3 order claims, row 5a balancer, row 13) are released on
   `PresenceEvents.Left`/`SceneChanged` away from the garage (row 6 publishes them).
 - Harness: verbs are globally unique (`Commands.Discover` throws on duplicates); each helper has one owner — row 7:
