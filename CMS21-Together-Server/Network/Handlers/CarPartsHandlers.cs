@@ -23,7 +23,9 @@ namespace CMS21_Together_Server.Network.Handlers
 				return;
 			}
 
-			string conflict = FindConflict(entry, change);
+			string conflict = !OnlyExamines(entry, change) && CarAwayRegistry.Blocks(change.CarLoaderID, (int)clientId, $"change {change.TxId}")
+				? "the car is away"
+				: FindConflict(entry, change);
 			if (conflict != null)
 			{
 				var reject = new CarPartsChangeResultPacket
@@ -70,6 +72,25 @@ namespace CMS21_Together_Server.Network.Handlers
 			}, (int)clientId);
 			Server.SendToClients(change, (int)clientId);
 			Logger.Info($"[Cars] Change {change.TxId} from client {clientId} on loader {change.CarLoaderID}: revision {entry.Revision} ({change.BodyParts.Count} body, {change.SubParts.Count} mechanical, inventory +{change.InventoryDelta.AddedItems.Count + change.InventoryDelta.AddedGroups.Count} -{change.InventoryDelta.RemovedItemUids.Count + change.InventoryDelta.RemovedGroupUids.Count})."); 
+		}
+
+		private static bool OnlyExamines(CMS21_Together_Core.Data.CarLoaderEntry entry, CarPartsChangePacket change)
+		{
+			if (change.BodyParts.Count > 0 || change.Preconditions.Count > 0 || change.InventoryDelta.RemovedItemUids.Count > 0 || change.InventoryDelta.RemovedGroupUids.Count > 0)
+				return false;
+			foreach (var record in change.SubParts)
+			{
+				if (!entry.SubParts.TryGetValue(CarSubPartIdentity.BuildKey(record.PartIndexPath), out var stored)) return false;
+				bool examined = record.IsExamined;
+				int revision = record.Revision;
+				record.IsExamined = stored.IsExamined;
+				record.Revision = stored.Revision;
+				bool same = Newtonsoft.Json.JsonConvert.SerializeObject(record) == Newtonsoft.Json.JsonConvert.SerializeObject(stored);
+				record.IsExamined = examined;
+				record.Revision = revision;
+				if (!same) return false;
+			}
+			return true;
 		}
 
 		private static string FindConflict(CMS21_Together_Core.Data.CarLoaderEntry entry, CarPartsChangePacket change)

@@ -68,25 +68,25 @@ Prerequisites (merged): `session-persistence-and-rejoin` groups 1–2 (contract,
 
 ## 3. Server
 
-- [ ] 3.1 `Data/Cars/CarAwayRegistry.cs` + `Network/Handlers/TestDriveHandlers.cs`: grant/refuse per D1 (record with
+- [ ] 3.1 **In code (2026-10-06):** verify with groups 4–8. `Data/Cars/CarAwayRegistry.cs` + `Network/Handlers/TestDriveHandlers.cs`: grant/refuse per D1 (record with
       baseline and `SpawnSeq`, no other away claim, no other player's part claims; release the owner's own part claims on
       grant), `CarAwayUpdate` to everyone on grant/release and to the requester on refusal, `CarAwayRelease` (owner only;
       stores `SpecialState` in the spawn record when ≥ 0), release rules of D10 (`PresenceEvents.Left`, `SceneChanged`,
       `LoaderCleared`, tick watchdog from `Server.Update` under `StateLock`). Verify: grant, refusal (`Busy`, `InUse`)
       and each release reason appear in the server log during groups 4–6 and section 8.
-- [ ] 3.2 Away enforcement per D3 in `CarClaims.Handle`, `CarHandlers` (`CarPartsChange`, `CarSpawnDelete` → `SendCar`
+- [ ] 3.2 **In code (2026-10-06):** verify with groups 4–8. Away enforcement per D3 in `CarClaims.Handle`, `CarHandlers` (`CarPartsChange`, `CarSpawnDelete` → `SendCar`
       to the sender), `CarDetailsStore.OnUpdate` (non-owner → resend the stored record to the sender), `PlacementHandlers`
       (place change, lift of the car's place), `ParkingHandlers` (park), `JobsService.OnJobEnd` (job of a claimed car).
       Row 2's accepted place change resets the record's `SpecialState` to 0. Verify: in 8.1, B's harness changes to A's
       away car are refused in the server log and B's `cars`/`cardetails` dumps return to the server's state.
-- [ ] 3.3 `TestDriveResult` fold per D4: owner's `TestTrack` claim + same `SpawnSeq` + valid details → `Info.Mileage +=
+- [ ] 3.3 **In code (2026-10-06):** verify with groups 4–8. `TestDriveResult` fold per D4: owner's `TestTrack` claim + same `SpawnSeq` + valid details → `Info.Mileage +=
       clamp(delta, 0, 2000)`, merge only `Dust`/`WashFactor` per part index, relay one `CarDetailsUpdate` through
       `CarDetailsStore`, `TestDriveResultAck { Applied = true }`; else `Applied = false` + log. Verify: the `cardetails`
       server command shows the new mileage right after the result and before A's `AskForSync` in the log order.
-- [ ] 3.4 `CarDetailsStore`: merge `Dyno` as a whole section, clamp it (finite floats, `MeasuredDragIndex ≥ 0`), keep it
+- [ ] 3.4 **In code (2026-10-06):** verify with groups 4–8. `CarDetailsStore`: merge `Dyno` as a whole section, clamp it (finite floats, `MeasuredDragIndex ≥ 0`), keep it
       in the snapshot and the save. Verify: `Send-ServerCommand save` writes `Dyno` for a measured car and a restart
       (`Stop-TestServer`, `Start-TestServer`) loads it unchanged (`cardetails` command).
-- [ ] 3.5 `cars` snapshot: after each car (next to `CarClaims.SendActive`) send its `CarAwayUpdate` when claimed,
+- [ ] 3.5 **In code (2026-10-06):** verify with groups 4–8. `cars` snapshot: after each car (next to `CarClaims.SendActive`) send its `CarAwayUpdate` when claimed,
       uncounted; server command `away` (loader, kind, owner, age). Verify: a late join while a car is claimed shows the
       update in the server log after that car's `CarPartsSnapshot` and the `SyncEnd` count for `cars` is unchanged.
 

@@ -43,6 +43,12 @@ namespace CMS21_Together_Server.Data.Cars
 				Logger.Debug($"[CarDetails] Update for loader {packet.CarLoaderID} (SpawnSeq {packet.SpawnSeq}) from client {clientId} dropped.");
 				return;
 			}
+			if (CarAwayRegistry.Blocks(packet.CarLoaderID, clientId, "details update"))
+			{
+				if (IsValid(packet.CarLoaderID, out var current))
+					Server.SendToClient(new CarDetailsUpdatePacket { CarLoaderID = packet.CarLoaderID, SpawnSeq = current.SpawnSeq, IsFull = true, SourceClientId = -1, Details = current }, clientId);
+				return;
+			}
 			var incoming = Clamp(packet.Details);
 			incoming.SpawnSeq = packet.SpawnSeq;
 			if (packet.IsFull || !State.Details.TryGetValue(packet.CarLoaderID, out var stored) || stored.SpawnSeq != packet.SpawnSeq)

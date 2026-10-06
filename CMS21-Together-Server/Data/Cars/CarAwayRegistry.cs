@@ -36,6 +36,15 @@ namespace CMS21_Together_Server.Data.Cars
 
 		public static bool IsAwayFrom(int loader, int clientId) => claims.TryGetValue(loader, out var away) && away.Owner != clientId;
 
+		public static int OwnerOf(int loader) => claims.TryGetValue(loader, out var away) ? away.Owner : -1;
+
+		public static bool Blocks(int loader, int clientId, string what)
+		{
+			if (!claims.TryGetValue(loader, out var away) || away.Owner == clientId) return false;
+			Logger.Info($"[Away] {what} on loader {loader} from client {clientId} refused: {away.Kind} by client {away.Owner}.");
+			return true;
+		}
+
 		public static bool IsOwner(int loader, int clientId, CarAwayKind kind, int spawnSeq) =>
 			claims.TryGetValue(loader, out var away) && away.Owner == clientId && away.Kind == kind && away.SpawnSeq == spawnSeq;
 
