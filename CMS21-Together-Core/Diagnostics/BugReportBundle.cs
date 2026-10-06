@@ -6,6 +6,7 @@ using System.IO.Compression;
 using System.Linq;
 using System.Text;
 using System.Text.RegularExpressions;
+using CMS21_Together_Core.Data.Digest;
 using Newtonsoft.Json;
 
 namespace CMS21_Together_Core.Diagnostics;
@@ -42,6 +43,20 @@ public class BugReportBundle
 		entries.Add(new KeyValuePair<string, byte[]>(EntryName(name), new UTF8Encoding(false).GetBytes(Redaction.Scrub(text ?? "", secrets))));
 
 	public void AddJson(string name, object value) => AddText(name, JsonConvert.SerializeObject(value, Formatting.Indented));
+
+	public void AddState(IEnumerable<(string Key, string SubKey, Projection Projection)> sections)
+	{
+		foreach (var section in sections.GroupBy(s => s.Key))
+		{
+			var list = section.ToList();
+			if (list.Count == 1 && string.IsNullOrEmpty(list[0].SubKey)) AddJson($"state/{section.Key}.json", StateEntry(list[0].Projection));
+			else AddJson($"state/{section.Key}.json", list.ToDictionary(s => s.SubKey ?? "", s => StateEntry(s.Projection)));
+		}
+	}
+
+	private static object StateEntry(Projection projection) => projection == null
+		? (object)"not ready"
+		: new { hash = projection.Hash().ToString("X16"), rows = projection.Sorted().Select(r => $"{r.Id}|{r.Field}={r.Value}").ToList() };
 
 	public void AddFile(string name, string path, Func<string, string> transform = null)
 	{
