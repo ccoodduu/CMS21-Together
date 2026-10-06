@@ -2,6 +2,39 @@
 
 Newest first. One entry per work session.
 
+## 2026-10-06 (morning, autonomous loop) — M0 contract, test lanes, save robustness
+
+- `session-persistence-and-rejoin` groups 1–3 done and merged/pushed to `main`:
+  - Contract: versioned save sections, `SessionRegistry`, `SyncBegin/SyncEnd{Items}/SyncAck` + client
+    `SyncTracker`, `GameDataManager.StateLock`, `RequestSave`, `--command-file`, 30 s no-progress sync timeout.
+  - Group 3: crash-safe writes, rotating backups, start copies, fallback + quarantine + refusal, `--check-save`,
+    `DisconnectReason`, save on `/stop` and window close.
+- Harness: **isolated parallel test lanes** (taken as the first M0 harness task, as proposed on 2026-10-05).
+  Each test install patches its own Unity company name (`RDGTogether-<X>`) into its own `globalgamemanagers`, so it
+  has its own save folder and registry key; the real save and registry are never written (each run fingerprints
+  them and fails if they changed). Lane 1 = A, B, `Server`, port 7777; lane 2 = C, D, `Server2`, port 7787.
+  KickingOtherSession aborts a run. Server port is configurable; the client's UDP no longer always targets 127.0.0.1.
+- Runs (all PASSED): `20261006-074033_L1_connect`, `074125_L1_server-restart` and `074125_L2_connect` (at the same
+  time), `Test-ServerSaves.ps1` (14 server-only checks). `connect` notes the known idle late-join bug (row 6).
+- Found: before group 6, a session wrote `profile4.cms21b` and left the `selectedProfile` pref at 4 (seen in lane A).
+- Drafted M1 rows: `hosting-and-join-ui`, `release-and-docs`, `mod-compatibility`, `desync-detection-and-resync`
+  (second reviews running). Native decompile spike running in the background.
+- Unattended rule used: the game is only started after 10 min without keyboard/mouse input
+  (`tools/test-env/Get-UserIdleSeconds.ps1`).
+- Group 6 (client save safety) done: `profile-safety` passed twice (`080402_L2`, `080549_L2`). The session no
+  longer writes the `selectedProfile` pref at all, so no crash recovery is needed. M0 is complete except a clean
+  regression run. Native decompile spike done: `docs/spikes/native-decompile.md`.
+- **Memory limit:** the first `Run-All` with both lanes (four game instances + server checks) ran the 32 GB PC low on
+  memory; Claude Code stopped the run, and two clients had hung during the garage load (`connect` and
+  `server-restart` each failed once and passed on rerun = flaky under memory pressure). Fix: lanes take turns with
+  the game (global mutex in `Run-Session.ps1`, refuses below 12 GB free). Lanes still let a second agent work in
+  its own worktree and deploy without overwriting the first lane's build. Game tests paused until the user OKs a
+  rerun (Claude Code asks not to restart a run it stopped for memory on its own).
+- Client logs now go to MelonLoader's `Latest.log` (they only reached the mod's own window before); not yet
+  checked in game.
+- Next: `Run-All` on lane 1 → merge to `main`; then M1: `sync-players-and-scenes` slice 1 (presence roster,
+  fixes the idle late-join bug) here, and one M1 row per extra agent in its own worktree + lane 2.
+
 ## 2026-10-06 (night, with the user) — planning done
 
 - Seven changes drafted, each reviewed, then one integration pass; workshop split into `sync-workshop-machines`
