@@ -325,6 +325,9 @@ These override the decisions above where they differ; the runtime spike confirms
   QUESTIONS.md row 2 question 2). The unlock is `UnlockParkingLevelAction()` on the UIEnter key, without a dialog;
   price = `UnlockedLevels × Cost_BaseParkingLevel` (50,000), halved by the `cheaper_parking` upgrade; the money check
   is only in the UI, so the server checks it.
+- **Scene gate (from `docs/spikes/outdoor-scenes.md`):** the `SaveCarToFile(…, true)` park postfix also fires for car
+  purchases outside the garage, and the `LoadCarFromFile(int, true)` unpark prefix fires when the parking scene only
+  shows a car; both hooks act only in the garage scene.
 - **Layout (1.3, static):** 10 slots per level, 80 levels, 1 level unlocked on a new profile. The codec serializes and
   deserializes with the current `saveVersion`; `IsDefault()` means `carToLoad` is empty.
 
