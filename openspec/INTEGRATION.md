@@ -194,7 +194,7 @@ Verbs are globally unique (`Commands.Discover` throws on a duplicate). Existing:
 | `Run-All.ps1` skips scenarios whose first line is `# run-all: skip` unless named in `-Scenarios` | 12 (task 2.5) |
 | `tools/release/Build-Release.ps1`, `Install-ReleaseToTestEnv.ps1 -Lane`, `Collect-Logs.ps1` (+ `.bat`); `Deploy-Mod.ps1` removes release-only files | 12 |
 | `tools/test-env/Compare-Database.ps1`, `tools/test-env/fixtures/mod-targets/` | 9 |
-| server commands `password`, `serverinfo` (8); `compat`, temporary `kick-test` (9); `desync`, `bugreport` (14); existing `kick`, `stop` (`kick` moves to `Server.Refuse`) | as listed |
+| server commands `password`, `serverinfo` (8); `compat` (9); `desync`, `bugreport` (14); existing `kick`, `stop` (`kick` moves to `Server.Refuse`) | as listed |
 
 Scenarios (unique): 7 `server-restart`, `profile-safety`, `rejoin`, `latejoin`, `persistence-restart`,
 `duplicate-identity`; 6 `presence-latejoin`, `scenes`, `presence`, `purchases`; 1 `car-parts`, `car-parts-latejoin`;

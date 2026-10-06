@@ -45,6 +45,17 @@ See proposal.md — Why. Observed in the code and the game stubs:
   `GarageLoader.Save(false)` on a timer). The test installs carry only CMS21-Together, TogetherTestHarness and
   CMS21LoadOptimizer.
 
+- Observed on the test installs (task 1.1, `compat-report patches` in run `20261006-101337_L2_compat-refusal`, menu
+  and garage): `GameSettings.BuildVersion` = `1.0.40` (in `Assembly-CSharp-firstpass`, like `Inventory`,
+  `CarLoader`, `FPSCamera` and every game type the fixtures target), `Application.version` = `1.0`.
+  `PlatformManager.GetDLCs()` returns 33 entries in the menu already (same list in the garage), all `Owned = false`
+  on these installs; 11 of them have `ProductId = "-1"` (Dodge, Jeep, Tuning, Plymouth, Bentley Remastered, Garage
+  Customization, Dodge Modern, Maserati Remastered, Ram, Rims, Chrysler), so product ids are not unique (see
+  review.md, Implementation notes). Harmony's registry holds patches by CMS21-Together (40), TogetherTestHarness (12),
+  MelonLoader itself (12, on `mscorlib`, `System` and `0Harmony` methods) and CMS21LoadOptimizer (5, on
+  `UnityWebRequestTexture.GetTexture`, `DownloadHandlerTexture.GetContent`, `Texture2D.Compress`); the patch owner id
+  is the patching assembly's full name. `MelonHandler.Plugins` is empty; `MelonHandler.Mods` lists the three mods.
+
 ## Goals / Non-Goals
 
 **Goals:** refuse every mismatch that would corrupt a session before the join sync; a refused player knows what to

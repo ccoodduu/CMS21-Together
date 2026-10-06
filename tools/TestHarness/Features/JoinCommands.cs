@@ -70,6 +70,7 @@ public static class JoinCommands
                 ["maxPlayers"] = info.MaxPlayers,
                 ["steamId"] = info.SteamId.ToString(),
                 ["difficulty"] = info.Difficulty.ToString(),
+                ["sharedDlc"] = info.SharedDlc ?? new List<string>(),
             },
             ["toasts"] = ModNotify.History.Select(t => t.Text).ToList(),
             ["panel"] = MultiplayerMenuModel.JoinPanelOpen ? "join" : "none",
