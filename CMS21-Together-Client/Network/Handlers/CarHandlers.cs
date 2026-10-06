@@ -15,7 +15,7 @@ namespace CMS21Together.Network.Handlers
         [PacketHandler(PacketTypes.CarSpawnResponse)]
         public static void HandleCarSpawnResponse(long clientId, CarSpawnResponsePacket packet)
         {
-            MelonCoroutines.Start(ProcessCarSpawnResponse(packet));
+            ClientScene.GarageBound(() => MelonCoroutines.Start(ProcessCarSpawnResponse(packet)));
         }
 
         private static IEnumerator ProcessCarSpawnResponse(CarSpawnResponsePacket packet)
@@ -63,7 +63,7 @@ namespace CMS21Together.Network.Handlers
         [PacketHandler(PacketTypes.CarSpawnDelete)]
         public static void HandleCarSpawnDelete(long clientId, CarSpawnDeletePacket packet)
         {
-            MelonCoroutines.Start(ProcessCarSpawnDelete(packet));
+            ClientScene.GarageBound(() => MelonCoroutines.Start(ProcessCarSpawnDelete(packet)));
         }
 
         private static IEnumerator ProcessCarSpawnDelete(CarSpawnDeletePacket packet)
@@ -95,7 +95,7 @@ namespace CMS21Together.Network.Handlers
         [PacketHandler(PacketTypes.CarSpawnRejected)]
         public static void HandleCarSpawnRejected(long clientId, CarSpawnRejectedPacket packet)
         {
-            MelonCoroutines.Start(ProcessCarSpawnRejected(packet));
+            ClientScene.GarageBound(() => MelonCoroutines.Start(ProcessCarSpawnRejected(packet)));
         }
 
         private static IEnumerator ProcessCarSpawnRejected(CarSpawnRejectedPacket packet)

@@ -11,6 +11,8 @@ public class GameData
 	public GarageAndToolsTab GarageTools { get; private set; }
 
 
+	public static void Clear() => Instance = null;
+
 	public GameData()
 	{
 		Instance = this;

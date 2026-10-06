@@ -34,6 +34,9 @@ foreach ($name in $Ctx.Instances) {
 foreach ($name in $Ctx.Instances) { Connect-HarnessInstance $name; Wait-InGarage $name }
 $during = Send-HarnessCommand -Instance $a -Verb profile-pref
 Write-Host "$a pref during session: $($during | ConvertTo-Json -Compress)"
+$sessionFailures = @()
+if ($during.selected -ne 4) { $sessionFailures += "$a uses profile $($during.selected) ($($during.selectedName)) during the session, expected slot 4" }
+if ($during.pref -ne $prefBefore[$a].pref) { $sessionFailures += "$a selectedProfile pref is $($during.pref) during the session, was $($prefBefore[$a].pref)" }
 
 Send-HarnessCommand -Instance $a -Verb to-menu -Arguments "save" | Out-Null
 Wait-HarnessStatus -Instance $a -TimeoutSec 120 -What "menu" -Condition { param($s) $s.scene -eq "Menu" -and $s.playable -and -not $s.connected } | Out-Null
@@ -45,7 +48,7 @@ foreach ($name in $Ctx.Instances) {
     Send-HarnessCommand -Instance $name -Verb to-menu | Out-Null
     Wait-InMenu $name
 }
-$failures = @()
+$failures = @($sessionFailures)
 foreach ($name in $Ctx.Instances) {
     $after = Send-HarnessCommand -Instance $name -Verb profile-pref
     Write-Host "$name pref after: $($after | ConvertTo-Json -Compress)"

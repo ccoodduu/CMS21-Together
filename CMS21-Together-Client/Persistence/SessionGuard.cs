@@ -10,6 +10,7 @@ namespace CMS21Together.Persistence;
 [HarmonyPatch]
 public static class SessionGuard
 {
+	public const int SessionProfileSlot = 4;
 	private const string SelectedProfileKey = "selectedProfile";
 
 	private static readonly HashSet<string> loggedBlocks = new HashSet<string>();
@@ -70,6 +71,18 @@ public static class SessionGuard
 	[HarmonyPatch(typeof(PlatformManager), nameof(PlatformManager.DeleteSave))]
 	[HarmonyPrefix]
 	private static bool PlatformManagerDeleteSave(string fileName) => Allow($"PlatformManager.DeleteSave({fileName})");
+
+	// The game reads the selected profile from the PlayerPrefs value on every call, which would put a session on
+	// the player's own profile; while the guard is on, the session slot is answered without touching the pref.
+	[HarmonyPatch(typeof(ProfileManager), nameof(ProfileManager.GetSelectedProfile))]
+	[HarmonyPrefix]
+	private static bool GetSelectedProfile(ProfileManager __instance, ref int __result)
+	{
+		if (!Active) return true;
+		__instance.selectedProfile = SessionProfileSlot;
+		__result = SessionProfileSlot;
+		return false;
+	}
 
 	[HarmonyPatch(typeof(GarageLoader), nameof(GarageLoader.Save))]
 	[HarmonyPrefix]

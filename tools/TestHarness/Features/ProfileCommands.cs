@@ -13,6 +13,8 @@ public static class ProfileCommands
         {
             ["pref"] = manager.RDGPlayerPrefs.GetInt("selectedProfile", -1),
             ["field"] = manager.ProfileManager.selectedProfile,
+            ["selected"] = manager.ProfileManager.GetSelectedProfile(),
+            ["selectedName"] = manager.ProfileManager.GetSelectedProfileData()?.Name,
             ["profileSlots"] = manager.GameDataManager.ProfileData?.Length ?? 0,
             ["guardActive"] = SessionGuard.Active,
         };

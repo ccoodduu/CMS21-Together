@@ -20,6 +20,7 @@ public static class ClientData
 		IsServerUpdating = false;
 		SyncTracker.Reset();
 		PresenceManager.Clear();
+		ClientScene.ClearPending();
 	}
 
 	public static void Update()

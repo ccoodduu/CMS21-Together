@@ -86,6 +86,7 @@ public static class SyncTracker
 		Acked = true;
 		Client.Instance.Send(new SyncAck { snapshotId = CurrentSnapshotId });
 		ClientData.IsInitialSyncFinished = true;
+		ClientScene.DrainPending();
 		Log.Success($"Initial synchronization finished (snapshot {CurrentSnapshotId}).");
 	}
 

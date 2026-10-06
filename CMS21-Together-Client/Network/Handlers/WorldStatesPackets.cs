@@ -54,6 +54,12 @@ public static class WorldStatesPackets
 	[PacketHandler(PacketTypes.GarageState)]
 	public static void HandleGarageState(long senderId, GarageState packet)
 	{
+		int snapshotId = SyncTracker.ReceivingSnapshotId;
+		ClientScene.GarageBound(() => ApplyGarageState(packet, snapshotId));
+	}
+
+	private static void ApplyGarageState(GarageState packet, int snapshotId)
+	{
 	    if (packet?.GarageUpgradeLevels == null) {
 	       Log.Error("Packet or GarageUpgradeLevels is null!");
 	       return;
@@ -73,7 +79,7 @@ public static class WorldStatesPackets
 	    }
 	    
 	    tools.PrepareItems();
-	    MelonCoroutines.Start( GarageUpgrades.SyncUpgrades(packet, tools, SyncTracker.ReceivingSnapshotId));
+	    MelonCoroutines.Start( GarageUpgrades.SyncUpgrades(packet, tools, snapshotId));
 	}
 	
 	[PacketHandler(PacketTypes.SyncBegin)]

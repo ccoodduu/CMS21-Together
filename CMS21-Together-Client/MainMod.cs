@@ -82,16 +82,7 @@ namespace CMS21Together
 
 		public override void OnSceneWasInitialized(int buildindex, string sceneName)
 		{
-			if (!Client.Instance.IsConnectionValid || !ClientData.IsInitialSyncFinished) return;
-			if (ClientScene.IsTransitionScene(sceneName)) return;
-
-			var scene = ClientScene.FromSceneName(sceneName);
-			if (scene == GameScene.Garage || scene == GameScene.Menu) return;
-
-			ClientScene.LocalScene = scene;
-			PresenceManager.FindLocalMotor();
-			PresenceManager.PublishLocal();
-			PresenceManager.ReconcileAll();
+			SceneReady.OnSceneInitialized(sceneName);
 		}
 
 		public override void OnUpdate()

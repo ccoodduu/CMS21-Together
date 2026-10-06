@@ -31,13 +31,15 @@ public static class ModGameManager
 		save.WriteSaveHeader(writer);
 		save.WriteSaveVersion(writer);
 
-		manager.GameDataManager.ProfileData[4] = save;
-		manager.ProfileManager.selectedProfile = 4;
+		manager.GameDataManager.ProfileData[SessionGuard.SessionProfileSlot] = save;
+		manager.ProfileManager.selectedProfile = SessionGuard.SessionProfileSlot;
 		Singleton<GameManager>.Instance.ProfileManager.SetNameForCurrentProfile("ClientSave");
 		Singleton<GameManager>.Instance.ProfileManager.SetDifficultyForCurrentProfile(DifficultyLevel.Normal);
 		manager.ProfileManager.Load();
-			
+		manager.ProfileManager.selectedProfile = SessionGuard.SessionProfileSlot;
+
 		CurrentSave = manager.ProfileManager.GetSelectedProfileData();
+		Log.Info($"[SessionGuard] Session profile slot {manager.ProfileManager.selectedProfile}, name '{CurrentSave?.Name}'.");
 		manager.GameDataManager.LoadProfile();
 		manager.StartCoroutine(manager.GameDataManager.Load(true));
 		NotificationCenter.m_instance.StartCoroutine(NotificationCenter.m_instance.SelectSceneToLoad("garage", SceneType.Garage, true, false));
