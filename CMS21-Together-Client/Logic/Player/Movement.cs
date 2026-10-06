@@ -35,7 +35,7 @@ public static class Movement
 
 	public static void UpdateMovement()
 	{
-		if (ClientScene.LocalScene == GameScene.Loading || !PresenceManager.HasLocalMotor) return;
+		if (ClientScene.LocalScene == GameScene.Loading || !PresenceManager.HasLocalMotor || SeatEngine.IsSeated) return;
 		if (Time.time < nextSendTime) return;
 
 		var packet = CaptureLocal();

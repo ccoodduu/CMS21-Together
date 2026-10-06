@@ -92,6 +92,32 @@ public static class SeatEngineCommands
         MelonLogger.Msg($"[Harness] seat-trace {key}({arguments}){state} mode {game["mode"]}, inInterior {game["inInterior"]}, engine {game["engine"]} #{counts[key]}");
     }
 
+    [HarnessCommand("sit")]
+    private static object Sit(string args)
+    {
+        var parts = (args ?? "").Split(new[] { ' ' }, StringSplitOptions.RemoveEmptyEntries);
+        if (parts.Length != 2 || parts[1] != "left" && parts[1] != "right") throw new ArgumentException("usage: sit <carLoaderId> left|right");
+        var carLoader = LoadedCar(parts[0]);
+        var game = GameScript.Get() ?? throw new InvalidOperationException("no GameScript");
+        game.StartCoroutine(game.SitInside(carLoader, parts[1] == "left", gameMode.Interior));
+        return new { loader = int.Parse(parts[0]), side = parts[1] };
+    }
+
+    [HarnessCommand("stand")]
+    private static object Stand(string args)
+    {
+        var game = GameScript.Get() ?? throw new InvalidOperationException("no GameScript");
+        game.StartCoroutine(game.ExitFromInterior(true));
+        return GameState();
+    }
+
+    private static CarLoader LoadedCar(string index)
+    {
+        var carLoader = CarLoaderPlaces.Get()?.GetCarLoaderByIndex(int.Parse(index));
+        if (carLoader == null || string.IsNullOrEmpty(carLoader.carToLoad) || !carLoader.IsCarLoaded()) throw new ArgumentException($"no loaded car on loader {index}");
+        return carLoader;
+    }
+
     private static string Describe(object value)
     {
         if (value is CarLoader carLoader) return $"loader {CarLoaderPlaces.Get()?.GetCarLoaderId(carLoader).ToString() ?? "?"} '{carLoader.carToLoad}'";

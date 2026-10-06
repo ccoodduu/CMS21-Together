@@ -71,6 +71,7 @@ public static class StateDump
             name = p.Value.Record.Username,
             scene = p.Value.Record.Scene.ToString(),
             seat = p.Value.Record.SeatCarLoaderId,
+            seatLeft = p.Value.Record.SeatLeft,
             engineRunning = p.Value.Record.EngineRunning,
             avatarActive = p.Value.HasAvatar && p.Value.Avatar.gameObject.activeSelf,
             avatarPosition = p.Value.HasAvatar ? Vec(p.Value.Avatar.transform.position) : null,
@@ -89,6 +90,8 @@ public static class StateDump
             position = new { x = Round(movement.Position.X), y = Round(movement.Position.Y), z = Round(movement.Position.Z) },
             scene = ClientScene.LocalScene.ToString(),
             name = PlayerSettings.PlayerName,
+            seat = SeatEngine.SeatCarLoaderId,
+            seatLeft = SeatEngine.SeatLeft,
         };
     }
 
