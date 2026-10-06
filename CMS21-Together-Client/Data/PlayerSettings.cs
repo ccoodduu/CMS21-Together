@@ -13,6 +13,7 @@ public static class PlayerSettings
 	private static MelonPreferences_Entry<string> resyncHotkey;
 	private static MelonPreferences_Entry<string> adminKey;
 	private static MelonPreferences_Entry<string> serverPath;
+	private static MelonPreferences_Entry<string> sessionPanelHotkey;
 
 	public static string NameOverride { get; set; }
 
@@ -26,7 +27,11 @@ public static class PlayerSettings
 		resyncHotkey = category.CreateEntry("ResyncHotkey", "F7", description: "Key that reloads the garage from the server when something looks out of sync.");
 		adminKey = category.CreateEntry("AdminKey", "", description: "Admin key of a dedicated server you run (its admin_key); lets you kick players there. Keep it secret.");
 		serverPath = category.CreateEntry("ServerPath", "", description: "Server program started by Host. Empty = TogetherServer\\CMS21_Together_Server.exe in the game folder.");
+		sessionPanelHotkey = category.CreateEntry("SessionPanelHotkey", "F9", description: "Key that opens the session panel (players, ping, kick, Steam friends).");
 	}
+
+	public static UnityEngine.KeyCode SessionPanelKey =>
+		System.Enum.TryParse(sessionPanelHotkey?.Value, true, out UnityEngine.KeyCode key) ? key : UnityEngine.KeyCode.F9;
 
 	public static string AdminKey => adminKey?.Value ?? "";
 

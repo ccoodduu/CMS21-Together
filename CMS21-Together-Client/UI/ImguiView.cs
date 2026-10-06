@@ -1,3 +1,4 @@
+using System.Linq;
 using CMS21_Together_Core.Data.Enum;
 using CMS21Together.Data;
 using CMS21Together.Session;
@@ -32,6 +33,7 @@ public static class ImguiView
 			}
 			if (MultiplayerMenuModel.JoinPanelOpen) DrawJoinPanel();
 			else if (MultiplayerMenuModel.HostPanelOpen) DrawHostPanel();
+			else if (MultiplayerMenuModel.FriendsPanelOpen) DrawFriendsPanel();
 			if (ConnectionStatus.MessagePending) DrawMessage("Multiplayer", ConnectionStatus.Message, MultiplayerMenuModel.AcknowledgeMessage);
 			else if (ModNotify.Messages.Count > 0)
 			{
@@ -40,22 +42,18 @@ public static class ImguiView
 			}
 		}
 
-		if (JoinService.PendingConfirmation != null)
-		{
-			FreeCursor();
-			DrawConfirm($"Leave this session and join {JoinService.PendingConfirmation}?");
-		}
-		else
-		{
-			RestoreCursor();
-		}
+		if (MultiplayerMenuModel.SessionPanelOpen) DrawSessionPanel();
+		if (JoinService.PendingConfirmation != null) DrawConfirm($"Leave this session and join {JoinService.PendingConfirmation}?");
+		if (JoinService.PendingConfirmation != null || MultiplayerMenuModel.SessionPanelOpen) FreeCursor();
+		else RestoreCursor();
 		if (ConnectionStatus.IsBusy) DrawStatusOverlay();
 		DrawToasts();
 	}
 
 	private static void DrawJoinPanel()
 	{
-		var area = new Rect(Screen.width - PanelWidth - Margin, Margin + 44f, PanelWidth, PanelHeight + TabsHeight);
+		bool password = MultiplayerMenuModel.PasswordFieldShown;
+		var area = new Rect(Screen.width - PanelWidth - Margin, Margin + 44f, PanelWidth, PanelHeight + TabsHeight + (password ? PasswordHeight : 0f));
 		GUI.Box(area, "", boxStyle);
 		float x = area.x + 12f, y = area.y + 10f, w = area.width - 24f;
 
@@ -66,6 +64,13 @@ public static class ImguiView
 		y += 22f;
 		MultiplayerMenuModel.TargetText = GUI.TextField(new Rect(x, y, w, 26f), MultiplayerMenuModel.TargetText ?? "");
 		y += 34f;
+		if (password)
+		{
+			GUI.Label(new Rect(x, y, w, 20f), "Server password", labelStyle);
+			y += 22f;
+			MultiplayerMenuModel.PasswordText = GUI.TextField(new Rect(x, y, w, 26f), MultiplayerMenuModel.PasswordText ?? "");
+			y += 34f;
+		}
 		GUI.Label(new Rect(x, y, w, 20f), "Your name", labelStyle);
 		y += 22f;
 		if (MultiplayerMenuModel.NameEditable)
@@ -81,15 +86,106 @@ public static class ImguiView
 	}
 
 	private const float TabsHeight = 38f;
+	private const float PasswordHeight = 56f;
 
 	private static float DrawTabs(float x, float y, float w)
 	{
-		float half = (w - 8f) / 2f;
-		string join = MultiplayerMenuModel.JoinPanelOpen ? "> Join <" : "Join";
-		string host = MultiplayerMenuModel.HostPanelOpen ? "> Host <" : "Host";
-		if (GUI.Button(new Rect(x, y, half, 28f), join) && !MultiplayerMenuModel.JoinPanelOpen) MultiplayerMenuModel.OpenJoinPanel();
-		if (GUI.Button(new Rect(x + half + 8f, y, half, 28f), host) && !MultiplayerMenuModel.HostPanelOpen) MultiplayerMenuModel.OpenHostPanel();
+		float third = (w - 16f) / 3f;
+		if (GUI.Button(new Rect(x, y, third, 28f), MultiplayerMenuModel.JoinPanelOpen ? "> Join <" : "Join") && !MultiplayerMenuModel.JoinPanelOpen)
+			MultiplayerMenuModel.OpenJoinPanel();
+		if (GUI.Button(new Rect(x + third + 8f, y, third, 28f), MultiplayerMenuModel.HostPanelOpen ? "> Host <" : "Host") && !MultiplayerMenuModel.HostPanelOpen)
+			MultiplayerMenuModel.OpenHostPanel();
+		if (GUI.Button(new Rect(x + 2f * (third + 8f), y, third, 28f), MultiplayerMenuModel.FriendsPanelOpen ? "> Friends <" : "Friends") && !MultiplayerMenuModel.FriendsPanelOpen)
+			MultiplayerMenuModel.OpenFriendsPanel();
 		return y + TabsHeight;
+	}
+
+	private static float friendsPanelHeight = 300f;
+
+	private static void DrawFriendsPanel()
+	{
+		var area = new Rect(Screen.width - PanelWidth - Margin, Margin + 44f, PanelWidth, friendsPanelHeight);
+		GUI.Box(area, "", boxStyle);
+		float x = area.x + 12f, y = area.y + 10f, w = area.width - 24f;
+
+		y = DrawTabs(x, y, w);
+		y = DrawFriends(x, y, w);
+		if (!string.IsNullOrEmpty(MultiplayerMenuModel.ActionMessage))
+		{
+			GUI.Label(new Rect(x, y, w, 40f), MultiplayerMenuModel.ActionMessage, errorStyle);
+			y += 44f;
+		}
+		if (GUI.Button(new Rect(x, y, 120f, 32f), "Close")) MultiplayerMenuModel.Close();
+		y += 40f;
+		friendsPanelHeight = y - area.y + 6f;
+	}
+
+	private const int MaxFriendRows = 12;
+
+	private static float DrawFriends(float x, float y, float w)
+	{
+		SteamFriendsList.RefreshIfDue();
+		GUI.Label(new Rect(x, y, w, 26f), "Steam friends", titleStyle);
+		y += 30f;
+		if (!string.IsNullOrEmpty(SteamFriendsList.Status))
+		{
+			GUI.Label(new Rect(x, y, w, 40f), SteamFriendsList.Status, labelStyle);
+			return y + 44f;
+		}
+
+		foreach (var friend in SteamFriendsList.Rows.Take(MaxFriendRows))
+		{
+			string status = friend.CanJoin ? "in a Together session" : friend.PlayingThisGame ? "playing CMS21" : "online";
+			GUI.Label(new Rect(x, y, w - 100f, 26f), $"{friend.Name}  ({status})", labelStyle);
+			if (friend.CanJoin && GUI.Button(new Rect(x + w - 90f, y, 90f, 26f), "Join")) MultiplayerMenuModel.JoinFriend(friend.Id);
+			else if (!friend.CanJoin && SteamFriendsList.CanInvite && GUI.Button(new Rect(x + w - 90f, y, 90f, 26f), "Invite")) MultiplayerMenuModel.InviteFriend(friend.Id);
+			y += 30f;
+		}
+		if (SteamFriendsList.Rows.Count > MaxFriendRows)
+		{
+			GUI.Label(new Rect(x, y, w, 22f), $"... and {SteamFriendsList.Rows.Count - MaxFriendRows} more", smallStyle);
+			y += 24f;
+		}
+		return y + 4f;
+	}
+
+	private const float SessionPanelWidth = 480f;
+	private static float sessionPanelHeight = 300f;
+
+	private static void DrawSessionPanel()
+	{
+		var area = new Rect(Margin, Margin + 44f, SessionPanelWidth, sessionPanelHeight);
+		GUI.Box(area, "", boxStyle);
+		float x = area.x + 12f, y = area.y + 10f, w = area.width - 24f;
+
+		var rows = MultiplayerMenuModel.PlayerRows();
+		string title = rows.Count == 0 ? "Not in a session" : $"Session - {ClientData.ServerInfo?.ServerName ?? JoinService.CurrentTarget?.ToString() ?? "server"}";
+		GUI.Label(new Rect(x, y, w, 26f), title, titleStyle);
+		y += 32f;
+
+		bool admin = MultiplayerMenuModel.IsAdmin;
+		foreach (var row in rows)
+		{
+			string ping = row.PingMs.HasValue ? $"{row.PingMs} ms" : "- ms";
+			GUI.Label(new Rect(x, y, 190f, 26f), row.IsLocal ? $"{row.Name} (you)" : row.Name, labelStyle);
+			GUI.Label(new Rect(x + 195f, y, 110f, 26f), row.Scene, labelStyle);
+			GUI.Label(new Rect(x + 310f, y, 60f, 26f), ping, labelStyle);
+			if (admin && !row.IsLocal && GUI.Button(new Rect(x + w - 70f, y, 70f, 26f), "Kick")) MultiplayerMenuModel.Kick(row.Id);
+			y += 30f;
+		}
+		if (rows.Count > 0) y += 6f;
+
+		y = DrawFriends(x, y, w);
+		if (!string.IsNullOrEmpty(MultiplayerMenuModel.ActionMessage))
+		{
+			GUI.Label(new Rect(x, y, w, 40f), MultiplayerMenuModel.ActionMessage, labelStyle);
+			y += 44f;
+		}
+
+		if (GUI.Button(new Rect(x, y, 120f, 32f), $"Close ({PlayerSettings.SessionPanelKey})")) MultiplayerMenuModel.CloseSessionPanel();
+		if (LocalServerHost.State == HostState.Running && GUI.Button(new Rect(x + 130f, y, 140f, 32f), "Stop server")) MultiplayerMenuModel.HostStop();
+		y += 40f;
+		sessionPanelHeight = y - area.y + 6f;
 	}
 
 	private static float hostPanelHeight = 420f;

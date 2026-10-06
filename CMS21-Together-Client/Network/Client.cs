@@ -117,6 +117,7 @@ public class Client
 		ConnectionStatus.OnLocalDisconnect();
 		ClientData.ServerInfo = null;
 		ClientData.Reset();
+		SessionNotifications.Reset();
 		Log.Info("Disconnected from server.");
 	}
 }

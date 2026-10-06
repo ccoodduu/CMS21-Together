@@ -101,6 +101,7 @@ namespace CMS21Together
 				if (!JoinService.Join(target, out string error)) Log.Warn($"[Join] {error}");
 			}
 			if (Client.Instance.IsConnectionValid && Input.GetKeyDown(PlayerSettings.ResyncKey)) ResyncController.Request();
+			if (Input.GetKeyDown(PlayerSettings.SessionPanelKey)) MultiplayerMenuModel.ToggleSessionPanel();
 			if (PlayerSettings.DevHotkeys && Client.Instance.IsConnectionValid && Input.GetKeyDown(KeyCode.F6)) Logic.Car.Placement.DevCarSpawner.SpawnRandom();
 			if (Client.Instance.IsConnectionValid) Logic.Car.Details.CarDetailsSync.Update();
 			ConnectionStatus.Update();
@@ -132,6 +133,7 @@ namespace CMS21Together
 			PlayerSettings.Initialize();
 			GuardSettings.Initialize();
 			Logic.Car.Details.CarDetailsSync.Initialize();
+			SessionNotifications.Initialize();
 		}
 
 		public override void OnApplicationQuit()

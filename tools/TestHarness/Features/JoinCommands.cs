@@ -92,6 +92,15 @@ public static class JoinCommands
             case "open host":
                 MultiplayerMenuModel.OpenHostPanel();
                 break;
+            case "open friends":
+                MultiplayerMenuModel.OpenFriendsPanel();
+                break;
+            case "open session":
+                MultiplayerMenuModel.OpenSessionPanel();
+                break;
+            case "close session":
+                MultiplayerMenuModel.CloseSessionPanel();
+                break;
             case "close":
                 MultiplayerMenuModel.Close();
                 break;
@@ -99,10 +108,23 @@ public static class JoinCommands
                 MultiplayerMenuModel.AcknowledgeMessage();
                 break;
             default:
-                throw new ArgumentException("usage: mp-ui open join|open host|close|ok");
+                throw new ArgumentException("usage: mp-ui open join|open host|open friends|open session|close session|close|ok");
         }
         return Session();
     }
+
+    [HarnessCommand("mp-players")]
+    private static object Players(string args) => PlayerRows();
+
+    private static List<Dictionary<string, object>> PlayerRows() => MultiplayerMenuModel.PlayerRows().Select(r => new Dictionary<string, object>
+    {
+        ["id"] = r.Id,
+        ["name"] = r.Name,
+        ["scene"] = r.Scene,
+        ["pingMs"] = r.PingMs,
+        ["local"] = r.IsLocal,
+        ["kickable"] = MultiplayerMenuModel.IsAdmin && !r.IsLocal,
+    }).ToList();
 
     [HarnessCommand("mp-host")]
     private static object Host(string args)
@@ -187,6 +209,16 @@ public static class JoinCommands
             ["toasts"] = ModNotify.History.Select(t => t.Text).ToList(),
             ["panel"] = MultiplayerMenuModel.Panel.ToString().ToLowerInvariant(),
             ["host"] = HostStatus(),
+            ["sessionPanel"] = MultiplayerMenuModel.SessionPanelOpen,
+            ["players"] = PlayerRows(),
+            ["passwordField"] = MultiplayerMenuModel.PasswordFieldShown,
+            ["friends"] = new Dictionary<string, object>
+            {
+                ["available"] = SteamFriendsList.Available,
+                ["status"] = SteamFriendsList.Status,
+                ["count"] = SteamFriendsList.Rows.Count,
+                ["joinable"] = SteamFriendsList.Rows.Count(r => r.CanJoin),
+            },
             ["panelError"] = MultiplayerMenuModel.PanelError,
             ["pendingConfirmation"] = JoinService.PendingConfirmation?.ToString(),
         };
