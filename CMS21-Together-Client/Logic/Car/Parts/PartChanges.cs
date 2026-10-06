@@ -9,8 +9,25 @@ namespace CMS21Together.Logic.Car.Parts;
 
 public static class PartChanges
 {
+	private static readonly List<CarPartsChangePacket> heldForTest = new List<CarPartsChangePacket>();
+
+	public static bool TestHoldRemote { get; set; }
+
+	public static void TestReleaseRemote()
+	{
+		TestHoldRemote = false;
+		var held = heldForTest.ToList();
+		heldForTest.Clear();
+		foreach (var change in held) OnRemoteChange(change);
+	}
+
 	public static void OnRemoteChange(CarPartsChangePacket change)
 	{
+		if (TestHoldRemote)
+		{
+			heldForTest.Add(change);
+			return;
+		}
 		PartTransactions.AbortFor(change.CarLoaderID, change.BodyParts.Select(r => r.Key).Concat(change.SubParts.Select(r => r.Key)));
 		ApplyInventory(change.InventoryDelta);
 		change.InventoryDelta = null;

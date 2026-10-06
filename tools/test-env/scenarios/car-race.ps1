@@ -68,5 +68,38 @@ $clientLogs = ($Ctx.Instances | ForEach-Object { Get-Content -LiteralPath (Join-
 $resolved = ($serverLog -match "rejected: s:2\.3 changed already") -or ($clientLogs -match "another player changed s:2\.3 first")
 Check $resolved "the race was resolved (server rejection or client-side abort of the slower unmount)"
 
+# Server rejection (task 3.7): B holds A's relayed change, so B unmounts the same part without knowing it is gone; the
+# server rejects B's change, B restores the server's part state and removes its own item, then applies A's change.
+Send-HarnessCommand -Instance $a -Verb part-fast-mount -Arguments "$loader $key" | Out-Null
+$deadline = (Get-Date).AddSeconds(20)
+do {
+    Start-Sleep -Milliseconds 500
+    $ra = Send-HarnessCommand -Instance $a -Verb car-ready -Arguments "$loader"
+    $rb = Send-HarnessCommand -Instance $b -Verb car-ready -Arguments "$loader"
+} while (-not ($ra.unmounted -eq 0 -and $rb.unmounted -eq 0) -and (Get-Date) -lt $deadline)
+Check ($ra.unmounted -eq 0 -and $rb.unmounted -eq 0) "the part is mounted again on both before the second race"
+Start-Sleep -Seconds 2
+$before = Send-HarnessCommand -Instance $a -Verb dump
+$mark = Get-ServerLogMark
+Send-HarnessCommand -Instance $b -Verb part-hold-remote -Arguments "on" | Out-Null
+Send-HarnessCommand -Instance $a -Verb part-fast-unmount -Arguments "$loader $key" | Out-Null
+Wait-ServerLog -Pattern "\[Cars\] Change .* from client \d+ on loader $loader`: revision" -After $mark -TimeoutSec 10 | Out-Null
+Send-HarnessCommand -Instance $b -Verb part-fast-unmount -Arguments "$loader $key" | Out-Null
+$rejected = Wait-ServerLog -Pattern "rejected: $([regex]::Escape($key)) changed already" -After $mark -TimeoutSec 15
+Check ([bool]$rejected) "the server rejects B's stale unmount ($rejected)"
+Start-Sleep -Seconds 2
+Send-HarnessCommand -Instance $b -Verb part-hold-remote -Arguments "off" | Out-Null
+Start-Sleep -Seconds 3
+$readyA = Send-HarnessCommand -Instance $a -Verb car-ready -Arguments "$loader"
+$readyB = Send-HarnessCommand -Instance $b -Verb car-ready -Arguments "$loader"
+Check ($readyA.stateHash -eq $readyB.stateHash) "A and B agree after the rejection ($($readyA.stateHash) / $($readyB.stateHash))"
+$dumpA = Save-HarnessDump -Instance $a -RunDir $Ctx.RunDir -Label "after-reject"
+$dumpB = Save-HarnessDump -Instance $b -RunDir $Ctx.RunDir -Label "after-reject"
+$extraA = (Count-Item $dumpA $itemId) - (Count-Item $before $itemId)
+$extraB = (Count-Item $dumpB $itemId) - (Count-Item $before $itemId)
+Check ($extraA -eq 1 -and $extraB -eq 1) "after the rejection each client has exactly one more '$itemId' (A +$extraA, B +$extraB)"
+$diff = Compare-HarnessDumps $dumpA $dumpB -Sections @("inventory")
+Check ($diff.Count -eq 0) "inventories are equal after the rejection"
+
 $Ctx.Result.notes += $failures
 $Ctx.Result.passed = ($failures.Count -eq 0)

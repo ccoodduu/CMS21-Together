@@ -55,6 +55,10 @@ $readyA = Wait-Ready $a
 Wait-Ready $b | Out-Null
 $same = Wait-Same "spawn"
 Check ($same[0].stateHash -eq $same[1].stateHash) "B has A's spawned car in the same state ($($same[0].stateHash) / $($same[1].stateHash))"
+$mark = Get-ServerLogMark
+Send-ServerCommand "cars"
+$carsLine = Wait-ServerLog -Pattern "loader ${loader}: $car SpawnSeq \d+, revision \d+, baseline True" -After $mark -TimeoutSec 10
+Check ([bool]$carsLine) "the cars command lists the spawned car ($carsLine)"
 
 $claimKey = "s:2.0"
 Send-HarnessCommand -Instance $a -Verb part-claim -Arguments "$loader $claimKey" | Out-Null
@@ -99,6 +103,9 @@ do {
     $gone = @($a, $b | ForEach-Object { (Send-HarnessCommand -Instance $_ -Verb car-ready -Arguments "$loader").loaded }) -notcontains $true
 } while (-not $gone -and (Get-Date) -lt $deadline)
 Check $gone "the car is gone on both after A deletes it"
+$mark = Get-ServerLogMark
+Send-ServerCommand "cars"
+Check ([bool](Wait-ServerLog -Pattern "no cars" -After $mark -TimeoutSec 10)) "the cars command shows no cars after the delete"
 Send-HarnessCommand -Instance $b -Verb car-hold-snapshot -Arguments "8" | Out-Null
 Send-HarnessCommand -Instance $a -Verb car-spawn -Arguments "$loader $car 0" | Out-Null
 $readyA = Wait-Ready $a

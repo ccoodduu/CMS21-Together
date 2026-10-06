@@ -1,6 +1,7 @@
 using System;
 using CMS21_Together_Core.Network.Packets;
 using CMS21_Together_Server.Data;
+using CMS21_Together_Server.Data.Cars;
 using CMS21_Together_Server.Log;
 
 namespace CMS21_Together_Server.Network
@@ -39,6 +40,7 @@ namespace CMS21_Together_Server.Network
 					Logger.Info("  exit / stop       - Stop the server");
 					Logger.Info("  save              - Save the session now");
 					Logger.Info("  compat            - Show game version, shared DLC, mod lists and last refusals");
+					Logger.Info("  cars              - Show the cars, their revisions, part counts and claims");
 					Logger.Info("  kick <id>         - Kick a player by ID");
 					Logger.Info("  money add <val>   - Add money");
 					Logger.Info("  money set <val>   - Set money");
@@ -61,6 +63,12 @@ namespace CMS21_Together_Server.Network
 				case "compat":
 					Logger.Info("Compatibility:");
 					foreach (string line in CompatibilityPolicy.Describe())
+						Logger.Info($"  {line}");
+					break;
+
+				case "cars":
+					Logger.Info("Cars:");
+					foreach (string line in CarPartsStore.Describe())
 						Logger.Info($"  {line}");
 					break;
 

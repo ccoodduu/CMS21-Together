@@ -115,7 +115,10 @@ function Get-ServerLogLines {
 }
 
 # Returns a mark for Wait-ServerLog -After: the number of lines in the current server log.
-function Get-ServerLogMark { (Get-ServerLogLines).Count }
+function Get-ServerLogMark {
+    $lines = Get-ServerLogLines
+    if ($lines.Count -gt 0 -and $lines[-1] -eq "") { $lines.Count - 1 } else { $lines.Count }
+}
 
 function Wait-ServerLog {
     param([string]$Pattern, [int]$After = 0, [int]$TimeoutSec = 60)

@@ -27,6 +27,18 @@ namespace CMS21_Together_Server.Data.Cars
 
 		public static CarLoaderEntry Get(int loader) => State.LoadedCars.TryGetValue(loader, out var entry) ? entry : null;
 
+		public static IEnumerable<string> Describe()
+		{
+			if (State.LoadedCars.Count == 0) yield return "no cars";
+			foreach (var pair in State.LoadedCars.OrderBy(p => p.Key))
+			{
+				var entry = pair.Value;
+				var held = CarClaims.Held(pair.Key).ToList();
+				string claims = held.Count == 0 ? "none" : string.Join(", ", held.Select(c => $"{c.Key} by {c.Owner}"));
+				yield return $"loader {pair.Key}: {entry.Spawn?.CarToLoad} SpawnSeq {entry.SpawnSeq}, revision {entry.Revision}, baseline {entry.HasBaseline}, {entry.BodyParts.Count} body, {entry.SubParts.Count} mechanical ({entry.SubParts.Values.Count(s => s.Unmounted)} unmounted), claims: {claims}";
+			}
+		}
+
 		public static CarLoaderEntry RegisterSpawn(CarSpawnResponsePacket spawn, int clientId)
 		{
 			if (State.LoadedCars.ContainsKey(spawn.CarLoaderID)) ClearLoader(spawn.CarLoaderID, ClearReason.Deleted);

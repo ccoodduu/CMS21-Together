@@ -54,6 +54,14 @@ public static class CarCommands
         return CarPartsSync.TestSnapshotDelaySeconds;
     }
 
+    [HarnessCommand("part-hold-remote")]
+    private static object PartHoldRemote(string args)
+    {
+        if ((args ?? "").Trim() == "on") PartChanges.TestHoldRemote = true;
+        else PartChanges.TestReleaseRemote();
+        return PartChanges.TestHoldRemote;
+    }
+
     [HarnessCommand("car-loaded")]
     private static object CarLoaded(string args)
     {

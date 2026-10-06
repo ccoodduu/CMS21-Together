@@ -85,6 +85,9 @@ namespace CMS21_Together_Server.Data.Cars
 			}
 		}
 
+		public static IEnumerable<(string Key, int Owner)> Held(int loader) =>
+			claims.TryGetValue(loader, out var held) ? held.OrderBy(p => p.Key).Select(p => (p.Key, p.Value.Owner)) : Enumerable.Empty<(string, int)>();
+
 		public static void SendActive(int loader, int clientId)
 		{
 			var entry = CarPartsStore.Get(loader);
