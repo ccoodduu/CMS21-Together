@@ -14,13 +14,26 @@ function Wait-InGarage([string]$Name) {
     } | Out-Null
 }
 
+function InventoryEntries($Dump) {
+    @("#") + @($Dump.inventory.items | ForEach-Object { "item $($_.ID) $($_.UID)" }) + @($Dump.inventory.groups | ForEach-Object { "group $($_.ID) $($_.UID)" })
+}
+
+function InventoryDiff {
+    $left = InventoryEntries (Send-HarnessCommand -Instance $a -Verb dump)
+    $right = InventoryEntries (Send-HarnessCommand -Instance $b -Verb dump)
+    $diff = @(Compare-Object -ReferenceObject $left -DifferenceObject $right)
+    $onlyA = @($diff | Where-Object { $_.SideIndicator -eq "<=" } | ForEach-Object { $_.InputObject })
+    $onlyB = @($diff | Where-Object { $_.SideIndicator -eq "=>" } | ForEach-Object { $_.InputObject })
+    "inventory only on A: [$($onlyA -join '; ')], only on B: [$($onlyB -join '; ')]"
+}
+
 function Wait-Same([string]$What, [int]$TimeoutSec = 30) {
     try {
         $dump = Wait-HarnessDumpsEqual -Left $a -Right $b -Sections $sections -TimeoutSec $TimeoutSec
         Check $true "$What`: A and B are equal"
         return $dump
     } catch {
-        Check $false "$What`: $($_.Exception.Message)"
+        Check $false "$What`: $($_.Exception.Message); $(InventoryDiff)"
         return (Send-HarnessCommand -Instance $a -Verb dump)
     }
 }
@@ -28,6 +41,7 @@ function Wait-Same([string]$What, [int]$TimeoutSec = 30) {
 function Cmd([string]$Name, [string]$Verb, [string]$Arguments = "") { Send-HarnessCommand -Instance $Name -Verb $Verb -Arguments $Arguments }
 function Hold([string]$State) { foreach ($name in $Ctx.Instances) { Cmd $name tool-hold $State | Out-Null } }
 function GroupCount($Dump, $Uid) { @($Dump.inventory.groups | Where-Object { $_.UID -eq $Uid }).Count }
+function ItemCount($Dump, $Uid) { @($Dump.inventory.items | Where-Object { $_.UID -eq $Uid }).Count }
 
 foreach ($name in $Ctx.Instances) {
     Wait-HarnessStatus -Instance $name -TimeoutSec 300 -What "main menu" -Condition { param($s) $s.scene -eq "Menu" -and $s.playable } | Out-Null
@@ -46,7 +60,9 @@ for ($round = 1; $round -le 5; $round++) {
     Start-Sleep -Seconds 1
     Hold "off"
     $d = Wait-Same "round $round`: two puts"
-    $held = (Send-HarnessCommand -Instance $a -Verb dump).tools.TireChanger.uid
+    $changer = (Send-HarnessCommand -Instance $a -Verb dump).tools.TireChanger
+    $held = $changer.uid
+    $parts = @($changer.items)
     $other = if ($held -eq $w1) { $w2 } else { $w1 }
     Check (($held -eq $w1 -or $held -eq $w2) -and (GroupCount $d $other) -eq 1 -and (GroupCount $d $held) -eq 0) "round $round`: one wheel on the changer ($held), the other in the inventory"
 
@@ -56,7 +72,8 @@ for ($round = 1; $round -le 5; $round++) {
     Start-Sleep -Seconds 2
     Hold "off"
     $d = Wait-Same "round $round`: two takes"
-    Check ((GroupCount $d $held) -eq 1 -and $d.tools.TireChanger.uid -eq 0) "round $round`: the taken wheel is in the inventory once"
+    $once = @($parts | Where-Object { (ItemCount $d $_) -eq 1 }).Count
+    Check ((GroupCount $d $held) -eq 0 -and $parts.Count -eq 2 -and $once -eq 2 -and $d.tools.TireChanger.uid -eq 0) "round $round`: the taken wheel (put separated) is back as its rim and tire, once each"
 }
 
 $w = (Cmd $a give-group "wheel").UID
