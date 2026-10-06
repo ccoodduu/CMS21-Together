@@ -101,6 +101,7 @@ namespace CMS21Together
 				if (!JoinService.Join(target, out string error)) Log.Warn($"[Join] {error}");
 			}
 			if (Client.Instance.IsConnectionValid && Input.GetKeyDown(PlayerSettings.ResyncKey)) ResyncController.Request();
+			if (PlayerSettings.DevHotkeys && Client.Instance.IsConnectionValid && Input.GetKeyDown(KeyCode.F6)) Logic.Car.Placement.DevCarSpawner.SpawnRandom();
 			ConnectionStatus.Update();
 
 			if (Client.Instance.IsConnectionValid)

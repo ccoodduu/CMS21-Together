@@ -108,6 +108,13 @@ public static class CarPlacementCommands
         return "sent";
     }
 
+    [HarnessCommand("dev-spawn")]
+    private static object DevSpawn(string args)
+    {
+        CMS21Together.Logic.Car.Placement.DevCarSpawner.SpawnRandom();
+        return "spawning";
+    }
+
     [HarnessCommand("parking")]
     private static object Parking(string args)
     {

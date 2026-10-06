@@ -19,7 +19,7 @@ public static class PlayerSettings
 		category = MelonPreferences.CreateCategory("CMS21Together");
 		playerName = category.CreateEntry("PlayerName", "", description: "Name shown to other players. Empty = Steam name.");
 		lastJoinTarget = category.CreateEntry("LastJoinTarget", "", description: "Last server joined (IP:port or Steam server ID).");
-		devHotkeys = category.CreateEntry("DevHotkeys", false, description: "F5 joins the last server (developer shortcut).");
+		devHotkeys = category.CreateEntry("DevHotkeys", false, description: "F5 joins the last server, F6 spawns a random base-game car in a connected garage (developer shortcuts).");
 		advertisePresence = category.CreateEntry("AdvertisePresence", true, description: "Show the server in Steam rich presence so friends can join.");
 		resyncHotkey = category.CreateEntry("ResyncHotkey", "F7", description: "Key that reloads the garage from the server when something looks out of sync.");
 	}

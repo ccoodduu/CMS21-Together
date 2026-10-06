@@ -82,5 +82,8 @@ $mark = Get-ServerLogMark
 Send-ServerCommand "placement"
 Check ([bool](Wait-ServerLog -Pattern "parking: 1 levels, 0/10 slots used" -After $mark -TimeoutSec 10)) "the placement command shows the empty parking"
 
+Send-HarnessCommand -Instance $b -Verb dev-spawn | Out-Null
+Wait-SamePlacement "F6 test car" { param($p) @($p.cars | Where-Object { $_.loader -ne 1 -and $_.inPlace }).Count -eq 1 } 120 | Out-Null
+
 $Ctx.Result.notes += $failures
 $Ctx.Result.passed = ($failures.Count -eq 0)
