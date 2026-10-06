@@ -13,7 +13,7 @@ Prerequisites (merged): `session-persistence-and-rejoin` groups 1–2 (contract,
 
 ## 1. Spike: runtime trace of the test track, test path and dyno (harness only, no behaviour change)
 
-- [ ] 1.1 Add `tools/TestHarness/Features/TestDriveCommands.cs` with native-only verbs: `testdrive-trace on|off|report`
+- [ ] 1.1 **Partly done (2026-10-06):** trace, `testdrive-go/-drive/-finish/-partnames`; `pathtest-run`, `dyno-run`, `diag-examine` missing. Add `tools/TestHarness/Features/TestDriveCommands.cs` with native-only verbs: `testdrive-trace on|off|report`
       (logging-only prefix/postfix with fire counters on `NotificationCenter.SelectSceneToLoad(string, SceneType, bool,
       bool)`, `SideCarsPanel.DriveAction`, `MapWindow.VerifyCarStateIfInterior`, `CarLoader.CloseCar`,
       `GarageLoader.Save`, `TrackManager.ReturnToGarage`, `PrepareCarPhysics.SaveMileage`, `TestTrackManager.DoneTest`,
@@ -31,7 +31,7 @@ Prerequisites (merged): `session-persistence-and-rejoin` groups 1–2 (contract,
       `Examine(true)` per part, the body of the tools' coroutines). Verify: the harness builds with
       `tools/test-env/Deploy-Mod.ps1` and `testdrive-trace report` lists every hook with count 0 (unpatchable targets
       reported, not thrown).
-- [ ] 1.2 Scenario `tools/test-env/scenarios/test-drive-trace.ps1` (instance A only, connected, guard `Enforce` with
+- [x] 1.2 **Done (2026-10-06):** results in design.md "Runtime trace results". Scenario `tools/test-env/scenarios/test-drive-trace.ps1` (instance A only, connected, guard `Enforce` with
       `guard-allow` for the row 13 entries): `car-spawn`, damage a few parts, `testdrive-trace on`, `testdrive-go`,
       `testdrive-drive 5000`, `testdrive-finish all`, wait for the garage, `testdrive-trace report`; repeat with
       `testdrive-finish abort`; then `guard-log`. Record in design.md ("Runtime trace results"): call order; whether

@@ -10,9 +10,15 @@ Newest first. One entry per work session.
   paints a part and tunes the modules, so `car-details` covers them.
 - Row 4 task 4.7: new scenario `car-details-request`. A holds back its spawn snapshot (`cardetails-hold on`); the
   server must ask for it after 10 s and store the answer.
-- Row 13 (test drive and diagnostics): the trace and verbs for the spike (`testdrive-trace`, `testdrive-go`,
-  `testdrive-drive`, `testdrive-finish`) and the spike scenario `test-drive-trace` are committed, not yet run.
-- Running: full lane-1 regression of the row 4 branch (started before these changes).
+- Lane-1 regression `20261006-151624` of the row 4 branch: all 26 PASSED. After it, `car-details` (now with tint,
+  paint and tuning) and `car-details-request` passed. `main` fast-forwarded to row 4 (`48ad607`).
+- Row 13 (test drive and diagnostics), branch `change/sync-test-drive-and-diagnostics`: the runtime trace
+  (`test-drive-trace`) answers spike 1.2; results are in the change's design.md "Runtime trace results". In short:
+  the order the design assumed holds, the track car has the same part order, and `GlobalData.Load` keeps the three
+  globals. Today the driven kilometres are lost, because the garage reloads the car from the server snapshot.
+- Two bugs found by the trace and fixed on `main`: row 4's detail hooks and the presence update threw exceptions on
+  the test track.
+- Next: spike 1.3 (hold and replay the departure) and 1.4 (path test, dyno; their harness verbs are still to write).
 
 ## 2026-10-06 (15:10–15:40) — row 3 merged; row 4 car details (branch `change/sync-car-details`)
 
