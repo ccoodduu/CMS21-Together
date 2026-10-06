@@ -15,7 +15,8 @@ public enum CarDetailSection
 	BodyCosmetics = 32,
 	Plates = 64,
 	Info = 128,
-	BonusParts = 256
+	BonusParts = 256,
+	Dyno = 512
 }
 
 public enum ModCarFluidType
@@ -54,6 +55,7 @@ public class ModCarDetails
 	public ModLPData Plates;
 	public ModCarInfo Info;
 	public ModBonusParts BonusParts;
+	public ModDynoResult Dyno;
 }
 
 [Serializable]
@@ -140,4 +142,31 @@ public class ModBonusParts
 	public ModColor Color;
 	public ModPaintType PaintType;
 	public ModPaintData PaintData;
+}
+
+[Serializable]
+public class ModEngineData
+{
+	public bool IsElectric;
+	public float IdleRpm;
+	public float IdleRpmTorque;
+	public float IdleRpmCurveBias;
+	public float PeakRpm;
+	public float PeakRpmTorque;
+	public float PeakRpmCurveBias;
+	public float MaxRpm;
+	public float Inertia;
+	public float EngineFrictionTorque;
+	public float EngineFrictionRotational;
+	public float EngineFrictionViscous;
+	public float LimiterTriggerRpm;
+	public float TuningValue;
+	public bool Measured;
+}
+
+[Serializable]
+public class ModDynoResult
+{
+	public ModEngineData Engine;
+	public int MeasuredDragIndex;
 }

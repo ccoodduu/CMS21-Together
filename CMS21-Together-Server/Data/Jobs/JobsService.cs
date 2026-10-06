@@ -201,6 +201,11 @@ namespace CMS21_Together_Server.Data.Jobs
 				Server.SendToClient(world, clientId);
 				return;
 			}
+			if (active.CarLoaderId >= 0 && CarAwayRegistry.Blocks(active.CarLoaderId, clientId, $"end of job {packet.JobId}"))
+			{
+				Server.SendToClient(world, clientId);
+				return;
+			}
 			State.ActiveJobs.Remove(active);
 			world.Money += packet.Payout;
 			StatsHandlers.ApplyExp(packet.Xp);

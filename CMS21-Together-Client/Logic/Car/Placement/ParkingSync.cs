@@ -88,7 +88,11 @@ public static class ParkingSync
 		deadline = Time.realtimeSinceStartup + 2f;
 		while (carLoader.GetPlaceNo() < 0 && Time.realtimeSinceStartup < deadline) yield return null;
 		CarSpawnHooks.Release(loader);
-		if (!carLoader.IsCarLoaded()) yield break;
+		if (!carLoader.IsCarLoaded())
+		{
+			Log.Warn($"[Parking] Loader {loader}: the car from slot {slot} did not finish loading in {LoadTimeoutSeconds} s; not unparked on the server.");
+			yield break;
+		}
 		mirror.TryGetValue(slot, out var id);
 		pendingUnpark.Add(loader);
 		Log.Info($"[Parking] Loader {loader}: unparking slot {slot} ({carLoader.carToLoad}) to place {carLoader.GetPlaceNo()}.");

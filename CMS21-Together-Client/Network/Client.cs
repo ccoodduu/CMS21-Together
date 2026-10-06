@@ -117,6 +117,7 @@ public class Client
 		ConnectionStatus.OnLocalDisconnect();
 		ClientData.ServerInfo = null;
 		ClientData.Reset();
+		GlobalData.NewMileage = 0;
 		Log.Info("Disconnected from server.");
 	}
 }

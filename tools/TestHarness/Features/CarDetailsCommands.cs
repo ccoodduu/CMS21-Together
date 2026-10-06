@@ -10,7 +10,7 @@ public static class CarDetailsCommands
     private static readonly CarDetailSection[] Sections =
     {
         CarDetailSection.Fluids, CarDetailSection.Wheels, CarDetailSection.Alignment, CarDetailSection.Tuning, CarDetailSection.Paint,
-        CarDetailSection.BodyCosmetics, CarDetailSection.Plates, CarDetailSection.Info,
+        CarDetailSection.BodyCosmetics, CarDetailSection.Plates, CarDetailSection.Info, CarDetailSection.Dyno,
     };
 
     [HarnessCommand("cardetails-show")]
