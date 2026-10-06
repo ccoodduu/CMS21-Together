@@ -56,5 +56,5 @@ fixes the idle late-join bug) and are mergeable on their own. Part 2 = M4 (group
 ## 7. Final scenarios and docs
 
 - [ ] 7.1 `scenarios/presence.ps1`: both connect (`Ann`/`Bob`); A teleports, B sees A within 0.3 m; load a car on loader 0 (reuse `sync-car-parts`' car command), A `sit 0 left`, B sees seat 0/left and hidden body; B reconnects and still sees A seated; A `engine on`, B sees running + audio; B deletes the car, A is unseated; A disconnects, B's roster is empty; passes when all checks hold
-- [ ] 7.2 README: player name preference, who is visible where, that non-garage scenes are not shared, and car purchases going to the shared parking; verify the text matches the specs
+- [x] 7.2 README: player name preference, who is visible where, that non-garage scenes are not shared, and car purchases going to the shared parking; verify the text matches the specs **Done 2026-10-06 (README "Playing together"); car purchases to the shared parking are added with part 2 (group 6).**
 - [ ] 7.3 Run `Run-Session.ps1` for `presence-latejoin`, `scenes`, `presence`, `purchases` and the full regression run; all pass in two instances; record results in STATUS.md

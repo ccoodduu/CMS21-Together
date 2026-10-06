@@ -21,7 +21,7 @@ to do.
 
 ## 3. Single-player audit
 
-- [ ] 3.1 Run the D6 checks in a two-instance session (guard `LogOnly` where a check needs the feature) and fill D6's table with the outcome per item (handled / blocked / known gap + owner). Include whether `GarageLoader.Save(bool)` reaches `GameDataManager.Save(int)` (row 7's block) with AutosaveMod's call path. Done when every row of D6 has an outcome. **Open:** the per-item in-game audit has not run yet.
+- [x] 3.1 Run the D6 checks in a two-instance session (guard `LogOnly` where a check needs the feature) and fill D6's table with the outcome per item (handled / blocked / known gap + owner). Include whether `GarageLoader.Save(bool)` reaches `GameDataManager.Save(int)` (row 7's block) with AutosaveMod's call path. Done when every row of D6 has an outcome. **Done 2026-10-06:** outcomes in design.md "D6 outcomes"; camera modes left for the M1 playtest checklist.
 - [x] 3.2 Pause menu: skip `CreateSaveButton`/`CreateSaveAndQuitButton` while connected; restore `Time.timeScale = 1` after any writer 3.1 found that pauses while connected. Verify a screenshot of the pause menu without save buttons, and that A's `stats-add` while B has the pause menu open reaches B's dump within 2 s.
 - [ ] 3.3 Fix tasks or rules for every other "handled"/"blocked" outcome of 3.1 (added here as 3.4+ by the session doing 3.1), and a `QUESTIONS.md` or owning-row note for each known gap. Verify each by its own check from 3.1.
 

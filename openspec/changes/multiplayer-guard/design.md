@@ -170,3 +170,16 @@ No save or server change. Client preferences get defaults (`Mode = Enforce`). Ro
 
 1. Exact pie option ids and which window each opens (task 1.1 fills D4).
 2. Whether `GarageLoader.Save(bool)` reaches `GameDataManager.Save(int)` (task 3.1; affects row 7, not this design).
+
+### D6 outcomes (task 3.1, 2026-10-06)
+
+| Assumption | Outcome | Evidence |
+|---|---|---|
+| Pause menu pauses the game | Handled: the game keeps running behind the pause menu | `guard` (`20261006-094732`): B received A's scrap within 2 s with `PauseQuit` open |
+| Pause menu save buttons | Handled: hidden while connected | screenshot `shot_pause_B.png` (Continue, Tutorials, Settings, Return to Menu) |
+| `Time.timeScale` writers | No writer found | native decompile: nothing in the game assembly writes `Time.timeScale` (static trace, review.md) |
+| Camera modes | Known gap, photo mode allowed (user decision), examine modes blocked by the row 1 rules | runtime walk-through not done; part of the user's M1 playtest checklist |
+| Game autosave (`GarageLoader.Save`) | Handled by row 7: `GarageLoader.Save` reaches `GameDataManager.Save`, which `SessionGuard` blocks | client logs: "GarageLoader.Save called during a session" followed by "Blocked GameDataManager.Save(0)" (`20261006-084505_L1_scenes`) |
+| Modal windows over remotely changed data | Inventory and warehouse windows refresh on server updates (`InventoryHandlers.Refresh*Window`); the shop list is not refreshed: known gap, owner row 10 (`economy-audit`) | code read |
+| Timers while a window is open | Note for row 3 (order expiry runs on the server) | design of row 3 |
+| Steam stats outside jobs | `stat_level` is set from `WorldState` (shared level); other stats belong to rows 3/10 | `WorldStatesPackets.HandleWorldState`, native stat map in `docs/spikes/native-decompile.md` |
