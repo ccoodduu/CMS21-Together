@@ -35,6 +35,7 @@ foreach ($name in $Ctx.Instances) {
 }
 Send-HarnessCommand -Instance $a -Verb set-name -Arguments "Ann" | Out-Null
 Send-HarnessCommand -Instance $b -Verb set-name -Arguments "Bob" | Out-Null
+foreach ($name in $Ctx.Instances) { Send-HarnessCommand -Instance $name -Verb guard-allow -Arguments "Scene:Junkyard" | Out-Null }
 Connect-HarnessInstance $a; Wait-InGarage $a
 Connect-HarnessInstance $b; Wait-InGarage $b
 Wait-Roster $b "Ann" "Garage" $true
