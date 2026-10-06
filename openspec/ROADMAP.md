@@ -6,9 +6,9 @@ by a friend from a release zip and joinable without typing IDs by hand.
 
 ## Status (2026-10-06)
 
-M0–M2 done; M3 done in code (rows 3, 4, 13 merged). M4: rows 6 part 2, 8 part 2 and 10 merged (2026-10-06 evening). The M2 and M3
-playtests are the user's. Still in M4: row 5a (`change/sync-workshop-machines`, all machines pass except the engine
-stand) and 5b (`change/sync-workshop-car-tools`, in code). Two test lanes can run in parallel since the pagefile was
+M0–M2 done; M3 done in code (rows 3, 4, 13 merged). M4: rows 5a, 5b, 6 part 2, 8 part 2 and 10 merged (2026-10-06 evening;
+the engine stand of row 5a is a hand check). The M2 and M3 playtests are the user's. Next: the guard entries of the
+merged rows (`change/guard-open`), then rows 7 part 2 and 14d. Two test lanes can run in parallel since the pagefile was
 raised (commit limit 64 GB); until the user answers QUESTIONS.md, one lane at a time because of Claude Code's memory
 guard.
 

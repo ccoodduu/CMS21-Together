@@ -8,7 +8,8 @@ namespace CMS21_Together_Core.Network.Packets;
 public enum ItemActionType
 {
     Add,
-    Remove
+    Remove,
+    Update
 }
 
 [Serializable]

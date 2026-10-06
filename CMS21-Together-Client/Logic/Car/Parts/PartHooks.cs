@@ -48,6 +48,7 @@ public static class PartHooks
 				return;
 			}
 		}
+		Logic.Tools.EngineStandParts.MarkPart(script);
 	}
 
 	private static void MarkLoader(CarLoader carLoader)

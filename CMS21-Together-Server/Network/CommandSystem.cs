@@ -52,6 +52,7 @@ namespace CMS21_Together_Server.Network
 					Logger.Info("  jobs              - Show orders, active jobs and the order generator");
 					Logger.Info("  cardetails <id>   - Show the stored details of a loader");
 					Logger.Info("  away              - Show cars on the test track, test path or dyno");
+					Logger.Info("  tools             - Show the workshop machines, tool positions and claims");
 					Logger.Info("  desync [check]    - Show recent desync repairs; check compares every player now");
 					Logger.Info("  bugreport         - List the bug-report bundles in BugReports/");
 					Logger.Info("  economy [n]       - Show the last n economy requests and a count per reason");
@@ -147,6 +148,12 @@ namespace CMS21_Together_Server.Network
 				case "jobs":
 					Logger.Info("Jobs:");
 					foreach (string line in Data.Jobs.JobsService.Describe())
+						Logger.Info($"  {line}");
+					break;
+
+				case "tools":
+					Logger.Info("Tools:");
+					foreach (string line in Data.Tools.ToolsStore.Describe())
 						Logger.Info($"  {line}");
 					break;
 

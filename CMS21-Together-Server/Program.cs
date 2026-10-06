@@ -97,6 +97,7 @@ namespace CMS21_Together_Server
 			Data.Presence.PresenceEvents.Left += Data.Reconciliation.ReconciliationService.OnLeft;
 			Data.Jobs.JobsService.Initialize();
 			Data.Cars.CarAwayRegistry.Initialize();
+			Data.Tools.ToolsStore.Initialize();
 			Logger.CurrentLogLevel = Config.LogLevel;
 			Logger.Info($"Log Level set to: {Logger.CurrentLogLevel}");
 			

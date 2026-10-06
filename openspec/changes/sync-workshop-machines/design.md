@@ -24,7 +24,7 @@ See proposal.md for the motivation. State today:
     items instead of adding own "synced" flags), and `GameDataManager.StateLock` held around every server dispatch,
     `Client.Disconnect` and save build.
   - `sync-car-parts`: part keys (`PartKeys`, `CarSubPartIdentity.BuildKey`), the nested record
-    `CarSubPartUpdatePacket`, `PartTransaction` + `InventoryDelta` for a non-car root, hooks that ignore
+    `CarSubPartUpdatePacket`, `PartTransactions` + `InventoryDelta` for a non-car root, hooks that ignore
     `PartScript`s outside a car registry, UID-idempotent inventory ADD.
   - `sync-players-and-scenes` D3/D6: `ClientScene.IsGarageReady` and `ClientScene.GarageBound(apply, mirrorOnly)`
     (drop or mirror while away, queue between `SyncEnd` and `SyncAck`); `PresenceEvents.Left`/`SceneChanged`;
@@ -133,7 +133,7 @@ What makes that safe:
 Alternative considered: server-side atomic transfer (the slot packet carries the inventory delta, like
 `sync-car-parts`' `CarPartsChange`). Cleaner, but the put-side removal happens in vanilla UI code before any tool hook
 can open a transaction, which the stubs do not let us see. Spike 1.3 records the real order; if it shows a hook that
-always precedes the inventory change, a `PartTransaction`-style buffer can replace item 2 later without changing
+always precedes the inventory change, a `PartTransactions`-style buffer can replace item 2 later without changing
 packets.
 
 ### D4. Suppression is per operation, not per tool
@@ -200,7 +200,7 @@ Remote: `MelonCoroutines.Start(stand.SetGroupOnEngineStand(group, false))` (it i
 neutral `ClearEngineStand()` only, never `TakeOffEngineFromStand()`.
 
 Parts mounted or unmounted on the engine on the stand are part changes with an inventory effect, so they reuse
-`sync-car-parts`' client `PartTransaction` and `InventoryDelta` with keys rooted at `EngineStandLogic.engineGameObject`
+`sync-car-parts`' client `PartTransactions` and `InventoryDelta` with keys rooted at `EngineStandLogic.engineGameObject`
 instead of a car (row 1 D3 supports a non-car root, and its hooks ignore `PartScript`s outside a car registry), sent
 as `ToolPartChangePacket { ModToolId Tool; long EngineUid; Preconditions; CarSubPartUpdatePacket[] SubParts;
 InventoryDelta Delta }`. The server checks preconditions against `Slots[tool].Parts` and the delta against
@@ -295,7 +295,7 @@ Decisions taken without the user (recorded here instead of asking), plus the use
    workable, disable it while connected.
 2. **`ItemActionType.Update`** is owned by this change; the idempotent ADD is `sync-car-parts`'.
 3. **The stand part overlay** depends on `sync-car-parts` (D7). If row 1 is merged without a non-car root for
-   `PartTransaction`, task 1.2 parks task 11.3 and records the gap in ROADMAP/QUESTIONS instead of building a
+   `PartTransactions`, task 1.2 parks task 11.3 and records the gap in ROADMAP/QUESTIONS instead of building a
    parallel mechanism here.
 4. **Minigames are not skipped or mirrored.** The balance result is taken from `FinishBalance()`; the balancer is
    locked for others while one player has the minigame open (user decision 2026-10-05).

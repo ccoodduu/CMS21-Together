@@ -62,7 +62,7 @@ public static class PartChanges
 		if (result.Revision > sync.Revision) sync.Revision = result.Revision;
 	}
 
-	private static void ApplyInventory(InventoryDelta delta)
+	public static void ApplyInventory(InventoryDelta delta)
 	{
 		if (delta == null || delta.IsEmpty) return;
 		var inventory = Singleton<GameManager>.Instance.Inventory;
