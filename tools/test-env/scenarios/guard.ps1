@@ -42,7 +42,9 @@ if (-not $inventory.shown) { $failures += "Inventory did not open after the bloc
 Start-Sleep -Seconds 2
 
 Try-Guard $a "Pie:wheel_take" "blocked" | Out-Null
-$menu = Send-HarnessCommand -Instance $a -Verb guard-try -Arguments "PieMenu:TireChanger"
+$null = Send-HarnessCommand -Instance $a -Verb guard-try -Arguments "PieMenu:TireChanger"
+Start-Sleep -Milliseconds 1500
+$menu = Send-HarnessCommand -Instance $a -Verb guard-try -Arguments "PieState:TireChanger"
 $menu.options | Set-Content -LiteralPath (Join-Path $Ctx.RunDir "pie_tirechanger.txt") -Encoding utf8
 if (-not ($menu.options | Where-Object { $_ -like "wheel_take enabled=False" })) { $failures += "tire changer menu does not show wheel_take locked: $($menu.options -join ', ')" }
 Start-Sleep -Seconds 1

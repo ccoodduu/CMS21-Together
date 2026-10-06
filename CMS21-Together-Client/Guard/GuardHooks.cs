@@ -36,8 +36,7 @@ public static class GuardHooks
 	}
 
 	[HarmonyPatch(typeof(PieMenuController), nameof(PieMenuController.PrepareIcons))]
-	[HarmonyPrefix]
-	[HarmonyPriority(Priority.First)]
+	[HarmonyPostfix]
 	private static void LockPieOptions(PieMenuController __instance, Il2CppStringArray iconsToLoad)
 	{
 		var options = __instance.options;

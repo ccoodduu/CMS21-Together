@@ -49,10 +49,12 @@ public static class GuardCommands
         if (parts.Length == 0) throw new ArgumentException("usage: guard-try <Kind:Id> [keep|void]");
         string option = parts.Length > 1 ? parts[1].Trim().ToLowerInvariant() : "";
         if (parts[0].StartsWith("PieMenu:", StringComparison.OrdinalIgnoreCase)) return OpenMachineMenu(parts[0].Substring("PieMenu:".Length));
+        if (parts[0].StartsWith("PieState:", StringComparison.OrdinalIgnoreCase)) return ReadMachineMenu(parts[0].Substring("PieState:".Length));
 
         var (kind, id) = ParseKey(parts[0]);
         string key = FeatureGuard.Key(kind, id);
         GuardNotice.Forget();
+        FeatureGuard.RecentDecisions.Clear();
         var result = new Dictionary<string, object> { ["key"] = key };
         switch (kind)
         {
@@ -70,9 +72,8 @@ public static class GuardCommands
                 break;
         }
 
-        var last = FeatureGuard.LastDecision;
-        result["result"] = last == null || last.Value.Key != key ? "not reached"
-            : last.Value.Decision == GuardDecision.Allow ? "allowed" : "blocked";
+        result["result"] = !FeatureGuard.RecentDecisions.TryGetValue(key, out var decision) ? "not reached"
+            : decision == GuardDecision.Allow ? "allowed" : "blocked";
         result["message"] = GuardNotice.LastText;
         result["gameMode"] = GameMode.Get()?.GetCurrentMode().ToString();
         return result;
@@ -130,6 +131,20 @@ public static class GuardCommands
         }
     }
 
+
+    private static object ReadMachineMenu(string machine)
+    {
+        var type = (IOSpecialType)Enum.Parse(typeof(IOSpecialType), machine.Trim(), true);
+        var controller = UnityEngine.Object.FindObjectOfType<PieMenuController>();
+        if (controller == null) throw new InvalidOperationException("no PieMenuController in this scene");
+        if (!PieMenuHelper.GetIniEntryForMachine(type, out string entry)) throw new ArgumentException($"no pie menu for {type}");
+        var options = controller.ReadOptionsFromIni(entry);
+        return new Dictionary<string, object>
+        {
+            ["entry"] = entry,
+            ["options"] = options.Select(id => $"{id} enabled={controller.options.ContainsKey(id) && controller.options[id].Enabled}").ToList(),
+        };
+    }
     private static object OpenMachineMenu(string machine)
     {
         var type = (IOSpecialType)Enum.Parse(typeof(IOSpecialType), machine.Trim(), true);

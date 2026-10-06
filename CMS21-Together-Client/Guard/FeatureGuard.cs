@@ -65,6 +65,8 @@ public static class FeatureGuard
 
 	public static (string Key, GuardDecision Decision)? LastDecision { get; private set; }
 
+	public static readonly Dictionary<string, GuardDecision> RecentDecisions = new Dictionary<string, GuardDecision>();
+
 	public static IReadOnlyCollection<GuardBlock> Blocks => blocks;
 
 	public static string Key(GuardKind kind, string id) => $"{kind}:{id}";
@@ -92,6 +94,7 @@ public static class FeatureGuard
 		string key = Key(kind, id);
 		var decision = Evaluate(kind, id, key, canBlock);
 		LastDecision = (key, decision);
+		RecentDecisions[key] = decision;
 		return decision;
 	}
 
