@@ -452,3 +452,57 @@ money and the delete; `pointsToReset` semantics and the `cheaper_parking` id; wh
 off; the `BarType` → `scrapType` mapping and the 0x18 price field; the per-condition scrap filter; case item ids,
 `originalItem` at `TakeLoot`, the XP card's lower bound; where `ShopLicenseBuyWindow.currentPrice` comes from; the
 refill units; the `uniqueMod` range.
+
+## Static findings and implementation notes (2026-10-06, code only, no game run yet)
+
+Read from the decompile (`economy_clean`, `economy2_clean`, plus a new decompile of `ScrapUpgrade.CalculateUpgrade`,
+`ShopLicenseBuyWindow.UpdatePriceText`/`BuyAction`, `ScrapPerConditionWindow.AcceptAction`) and the interop assemblies.
+Group 1's game run confirms or corrects each point.
+
+- **Scrap grade (1.6):** `ScrapProduction.ProcessGameResult(BarType)`: `Success` → `GetScrapFromItem(item, 0)`,
+  `Bonus` → type 1, `BigBonus` → type 2 (inlined), `Fail` → no scrap. The price at `0x18` is `PartProperty.Price`, the
+  value the server's `Database` holds. Rounding is `Convert.ToInt32(float)` (to even). `MakeScrap` plays `ScrapMaking`,
+  calls `AddPlayerScraps` and deletes the item through a tail jump into `Inventory.Delete`.
+- **Scrap per condition (1.6):** the slider value is passed as is (0 … 100). An item is scrapped when its special group
+  is not `SpecialCase`/`SpecialMap` and `Helper.RoundCondition(min(Condition, Dent)) ≤ slider`; the server assumes
+  `RoundCondition(x) = round(x × 100)`. Only single items (no groups), scrap type 0. The items leave the list by a LINQ
+  filter, not `Inventory.Delete`.
+- **Quality upgrade (1.6):** the target is always `Quality + 1`; `itemValue = UIHelper.GetPriceForQuality(item, target,
+  0.5)`, which the server approximates with `PricingCalculator.GetPrice(item with Quality = target, 0.5)`; a client cost
+  that differs is logged and the server's wins. `UpgradeAction` and `UpgradeFromOutside` carry their own copy of
+  `UpgradeItem`'s body, so all three are hooked. Without `ItemActionType.Update` (row 5a not merged) the server sends
+  `Remove` + `Add` of the same UID.
+- **License plates (1.8):** `currentPrice = round((custom ? 1000 : 100) × (1 − currentDiscount)) × currentAmount`. The
+  rule is a bound: `0 < price ≤ amount × (1000 or 100)`, `Arg` = custom. The plate item: `LicensePlate`, condition 1,
+  examined, paint type 1, white, `LPData { Name = itemID, Custom = text }` (`ModLPData.Name/Custom` added for it). A
+  blank plate's text is a literal the decompile does not show; the mod sends "".
+- **Crates (1.7):** case and map ids are `specialCase` (special group 13) and `specialMap` (14); `TakeLoot` card types
+  `CR`, `XP`, `Scrap`, `Case`, `Map`. `SetItem` stores `originalItem` and deletes the case through `Inventory.Delete`.
+  The XP card's lower bound is still unknown; the rule uses 1 and widens every range to levels L−1 … L+1.
+- **Skill reset (1.5):** `pointsToReset` is the sum of `GetUpgradeCost` over unlocked point skills, i.e. the spent
+  points (`CalculateSpentPoints`). `cheaper_parking` is a point skill (cost 2), `car_wash` a money upgrade.
+  `SyncUpgrades` already writes `false` into `Unlocked`; the skills tab now also reruns `PrepareItems`.
+- **Car sale (1.4):** `<SellCarCoroutine>d__135`: fade in, hide windows, `AddPlayerMoney`, `CarLoader.DeleteCar(true)`,
+  `GarageOnFootWithoutFader`, `GarageLoader.Save`, fade out. The seller skips all of it; on accept it closes `CarInfo`
+  and plays `AddMoney`/`AddMoneyBig`. No client entry point for a parked car was found statically; the server accepts
+  `ParkingSlot` + `CarId` anyway.
+- **Barn trip (D5):** `SubmitPanelAction` case 7 returns early with 0 barns (not Sandbox); the trip request is sent
+  only when the barn count dropped during the call. A trip to a scene the guard blocks is refused before the game
+  method runs, so no fee and no barn use happen for it.
+- **Fluid spill:** charged when the part's `sendMessageOnHide` is one of the `Zero*` messages and that fluid's level is
+  above 0. The coroutine reads `GameScript.GetIOMouseOverCarLoader2()`, which may be empty when the harness drives it.
+- **Interop names:** `NotificationCenter.__c__DisplayClass17_0.Method_Internal_Void_Boolean_PDM_0` is assumed to be
+  the case lambda and `_PDM_1` the map lambda (declaration order); the barn-map prefix sits on both and acts only for
+  a map item. The welder and detailing accepts are `…DisplayClass5_0/6_0.Method_Internal_Void_Boolean_PDM_0`. These
+  are patched by hand (`FeeHooks.InstallLambdaHooks`, status in `econ-ledger`), the rest by attributes.
+
+Deviations from the decisions above (each small, listed for review):
+
+- D1: no Harmony finalizer. A scope remembers its frame and is dropped (with a warning) when a later frame finds it,
+  which covers a call that threw without relying on finalizers under Unhollower.
+- D11: the job payout scope is not on the stack (the end coroutine spans frames); `JobEndContext.Scope` is consulted
+  after the stack while the job end is active. Row 6's purchase capture is not on `main`, so nothing replaced it.
+- D7/A8: the "other players get a toast" is an `EconomyResult` with `RequestId = 0` sent to the others.
+- D6: a job car is refused `Invalid`, an away car or another player's part claim `Busy`, a missing car `Gone`.
+- D14: the guard scenario's blocked-window example moved from `Window:Scrap` to the still-planned `Window:Tune`;
+  `guard-try Action:SellCar` no longer runs the sale coroutine when the action is allowed.

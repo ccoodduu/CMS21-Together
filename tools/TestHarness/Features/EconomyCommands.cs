@@ -300,7 +300,8 @@ public static partial class EconomyCommands
     {
         string before = Stats();
         WindowManager.Instance.Show(WindowID.Upgrades, false);
-        var tab = UnityEngine.Object.FindObjectOfType<SkillsTab>() ?? throw new InvalidOperationException("no SkillsTab");
+        var tabs = Resources.FindObjectsOfTypeAll(UnhollowerRuntimeLib.Il2CppType.Of<SkillsTab>());
+        var tab = tabs != null && tabs.Length > 0 ? tabs[0].Cast<SkillsTab>() : throw new InvalidOperationException("no SkillsTab");
         bool canReset = tab.CanReset(out ResetUpgradeLockReason reason);
         int points = tab.pointsToReset;
         tab.ResetSkillsAction();
