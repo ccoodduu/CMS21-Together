@@ -1,5 +1,6 @@
 using System;
 using System.Linq;
+using CMS21_Together_Core;
 using CMS21_Together_Server.Data;
 using CMS21_Together_Server.Network;
 using Terminal.Gui;
@@ -14,7 +15,7 @@ namespace CMS21_Together_Server.Log
         private Label PlayersLabel;
         private Label GameStateLabel;
 
-        public ServerWindow() : base($"CMS21 Together Server v{Program.SERVER_VERSION}")
+        public ServerWindow() : base($"CMS21 Together Server v{BuildInfo.FullVersion}")
         {
             // Dashboard (Top)
             var dashboardFrame = new FrameView("Dashboard")

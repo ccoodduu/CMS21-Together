@@ -1,5 +1,6 @@
 ﻿using System;
 using System.IO;
+using BuildInfo = CMS21_Together_Core.BuildInfo;
 using CMS21_Together_Core.Data.Enum;
 using CMS21_Together_Core.Logging;
 using CMS21_Together_Core.Network;
@@ -21,9 +22,8 @@ namespace CMS21Together
 	{
 		public const int MAX_PLAYER = 4;
 		public const int PORT = NetworkConstants.DEFAULT_PORT;
-		public const string ASSEMBLY_MOD_VERSION = "0.5.0" + ASSEMBLY_HOTFIX_VERSION;
-		public const string ASSEMBLY_HOTFIX_VERSION = "";
-		public const string MOD_VERSION = "Together " + ASSEMBLY_MOD_VERSION + ASSEMBLY_HOTFIX_VERSION;
+		public const string ASSEMBLY_MOD_VERSION = BuildInfo.ModVersion;
+		public const string MOD_VERSION = "Together " + ASSEMBLY_MOD_VERSION;
 		
 		public bool isModInitialized;
 		public static bool IsSteamAvailable { get; private set; }
@@ -37,7 +37,7 @@ namespace CMS21Together
 			PacketRouter.Initialize(System.Reflection.Assembly.GetExecutingAssembly());
 			Client.Init();
 
-			Log.Info("Together Mod Initialized!");
+			Log.Info($"Together Mod {BuildInfo.FullVersion} initialized!");
 			isModInitialized = true;
 		}
 		

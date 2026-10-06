@@ -96,3 +96,13 @@ exempted, `-IncludeSave` drops `players[].Key`); row 14 adopted `Log\`, `admin_k
 `release-smoke` is excluded from `Run-All` by a `# run-all: skip` marker (task 2.5, `Run-All.ps1` change owned here).
 `BuildInfo`, `build-info`, scripts and scenario are registered in INTEGRATION.md; the milestone definition of done in
 ROADMAP now names `Build-Release.ps1`, `release-smoke` and `docs/try-it.md`.
+
+## Implementation notes (part 1, 2026-10-06)
+
+1. **`BuildInfo.Version` added** (the plain `TogetherVersion`, e.g. `0.6.0`): the Steam `VersionString` needs it (D1) and
+   the generated class is its only compile-time source. Additive; the other members are as in D1.
+2. **Name clash with `MelonLoader.BuildInfo`.** Client and harness files that also import `MelonLoader` must write
+   `using BuildInfo = CMS21_Together_Core.BuildInfo;` (done in `MainMod.cs` and the harness `build-info`). Rows 8 and 9
+   hit this when they show or check versions on the client.
+3. **Release label.** `-p:TogetherBuildLabel=` (empty) builds the plain version; part 2's `-Release` uses that. A global
+   property overrides `Directory.Build.props`, so no extra switch is needed.

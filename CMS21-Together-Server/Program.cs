@@ -1,6 +1,7 @@
 using System;
 using System.IO;
 using System.Reflection;
+using CMS21_Together_Core;
 using CMS21_Together_Core.Network;
 using CMS21_Together_Server.Data;
 using CMS21_Together_Server.Data.Persistence;
@@ -11,8 +12,7 @@ namespace CMS21_Together_Server
 {
 	internal class Program
 	{
-		public const string SERVER_VERSION = "1.0";
-		public const string MOD_VERSION = "0.5.0";
+		public const string MOD_VERSION = BuildInfo.ModVersion;
 
 		public const int CONNECTION_TIMEOUT = 10;
 
@@ -56,7 +56,7 @@ namespace CMS21_Together_Server
 			
 			SetupLogging();
 			CMS21_Together_Core.Logging.Log.SetLogger(new ServerLoggerAdapter());
-			Logger.Info($"CMS21 Together Server v{SERVER_VERSION}");
+			Logger.Info($"CMS21 Together Server v{BuildInfo.FullVersion}");
 			PacketRouter.Initialize(Assembly.GetExecutingAssembly());
 			
 			Config = ServerConfig.LoadOrCreate();

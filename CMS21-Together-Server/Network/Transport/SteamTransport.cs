@@ -25,7 +25,7 @@ namespace CMS21_Together_Server.Network.Transport
                     GamePort = (ushort)port,
                     QueryPort = (ushort)(port + 1),
                     Secure = false,
-                    VersionString = Program.SERVER_VERSION
+                    VersionString = BuildInfo.Version
                 });
 
                 bool isConnectedToSteam = false;
