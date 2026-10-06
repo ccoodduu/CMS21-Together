@@ -23,6 +23,7 @@ public static class ClientData
 		IsServerUpdating = false;
 		SyncTracker.Reset();
 		PresenceManager.Clear();
+		SeatEngine.Reset();
 		ClientScene.ClearPending();
 		CarPartsSync.Reset();
 		Logic.Car.Placement.ParkingSync.Reset();
@@ -39,5 +40,6 @@ public static class ClientData
 		if (!IsInitialSyncFinished) return;
 		
 		Movement.UpdateMovement();
+		SeatEngine.Update();
 	}
 }

@@ -136,6 +136,7 @@ namespace CMS21Together
 			Logic.Car.Details.CarDetailsSync.Initialize();
 			Logic.Car.Away.TestDriveSync.Initialize();
 			Logic.Car.Away.PathTestSync.Initialize();
+			SeatEngine.Initialize();
 		}
 
 		public override void OnApplicationQuit()

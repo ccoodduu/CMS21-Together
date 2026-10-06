@@ -1,3 +1,4 @@
+using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using CMS21_Together_Core.Data;
@@ -78,6 +79,7 @@ public static class PresenceManager
 	{
 		if (!Roster.TryGetValue(playerId, out var player)) return;
 		DestroyAvatar(player);
+		RemoteEngines.Remove(playerId);
 		Roster.Remove(playerId);
 		Log.Info($"[Presence] Player {playerId} left.");
 		RichPresence.Publish();
@@ -86,6 +88,7 @@ public static class PresenceManager
 	public static void Clear()
 	{
 		foreach (var player in Roster.Values) DestroyAvatar(player);
+		RemoteEngines.Clear();
 		Roster.Clear();
 	}
 
@@ -97,6 +100,12 @@ public static class PresenceManager
 	public static void Reconcile(int playerId)
 	{
 		if (!Roster.TryGetValue(playerId, out var player)) return;
+		ReconcileAvatar(player);
+		RemoteEngines.Apply(player);
+	}
+
+	private static void ReconcileAvatar(RemotePlayer player)
+	{
 		var record = player.Record;
 
 		bool visible = record.Scene == ClientScene.LocalScene
@@ -119,12 +128,40 @@ public static class PresenceManager
 
 	public static PlayerPresenceRecord CaptureLocalRecord()
 	{
-		return new PlayerPresenceRecord
+		var record = new PlayerPresenceRecord
 		{
 			PlayerId = Client.Instance.ID,
 			Scene = ClientScene.LocalScene,
 			LastMovement = ClientScene.LocalScene == GameScene.Loading || !HasLocalMotor ? null : Movement.CaptureLocal()
 		};
+		if (ClientScene.IsGarageReady) SeatEngine.FillRecord(record);
+		return record;
+	}
+
+	public static IEnumerator EnsureNotSeatedIn(int carLoaderId)
+	{
+		float deadline = Time.realtimeSinceStartup + 5f;
+		while (SeatEngine.PendingCarLoaderId == carLoaderId && Time.realtimeSinceStartup < deadline) yield return null;
+		if (SeatEngine.SeatCarLoaderId != carLoaderId)
+		{
+			if (SeatEngine.EngineCarLoaderId == carLoaderId) Singleton<GameManager>.Instance?.EngineAudioController?.EngineStop();
+			yield break;
+		}
+
+		var game = GameScript.Get();
+		if (game == null) yield break;
+		Log.Info($"[Presence] Car {carLoaderId} is removed or moved by another player, leaving the seat.");
+		game.StartCoroutine(game.ExitFromInterior(false));
+		while (SeatEngine.InSeatedMode && Time.realtimeSinceStartup < deadline) yield return null;
+	}
+
+	public static Transform SeatHandle(PlayerPresenceRecord record)
+	{
+		if (record.SeatCarLoaderId == PlayerPresenceRecord.NoCar || !ClientScene.IsGarageReady) return null;
+		var carLoader = CarLoaderPlaces.Get()?.GetCarLoaderByIndex(record.SeatCarLoaderId);
+		if (carLoader == null || string.IsNullOrEmpty(carLoader.carToLoad)) return null;
+		var handle = record.SeatLeft ? carLoader.GetLeftSeatHandle() : carLoader.GetRightSeatHandle();
+		return handle == null ? null : handle.transform;
 	}
 
 	public static void PublishLocal()

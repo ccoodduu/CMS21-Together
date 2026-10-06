@@ -73,11 +73,20 @@ public static class StateDump
             name = p.Value.Record.Username,
             scene = p.Value.Record.Scene.ToString(),
             seat = p.Value.Record.SeatCarLoaderId,
+            seatLeft = p.Value.Record.SeatLeft,
             engineRunning = p.Value.Record.EngineRunning,
             avatarActive = p.Value.HasAvatar && p.Value.Avatar.gameObject.activeSelf,
             avatarPosition = p.Value.HasAvatar ? Vec(p.Value.Avatar.transform.position) : null,
             nameTag = NameTags.IsDrawn(p.Value),
+            engineCarLoaderId = p.Value.Record.EngineCarLoaderId,
+            engineRpm = Round(p.Value.Record.EngineRpm),
         });
+        dump["remoteEngines"] = RemoteEngines.All.Select(e => (object)new
+        {
+            playerId = e.PlayerId,
+            carLoaderId = e.CarLoaderId,
+            audioPlaying = e.IsPlaying,
+        }).ToList();
         return dump;
     }
 
@@ -91,6 +100,9 @@ public static class StateDump
             position = new { x = Round(movement.Position.X), y = Round(movement.Position.Y), z = Round(movement.Position.Z) },
             scene = ClientScene.LocalScene.ToString(),
             name = PlayerSettings.PlayerName,
+            seat = SeatEngine.SeatCarLoaderId,
+            seatLeft = SeatEngine.SeatLeft,
+            engine = new { carLoaderId = SeatEngine.EngineCarLoaderId, running = SeatEngine.EngineRunning, rpm = Round(SeatEngine.EngineRpm) },
         };
     }
 

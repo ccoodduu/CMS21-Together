@@ -41,6 +41,7 @@ namespace CMS21Together.Logic.Hook
 			Log.Info($"[Scene] Leaving {from} for {to} ({newSceneName}), profile slot {Singleton<GameManager>.Instance.ProfileManager.selectedProfile}.");
 			ClientScene.RaiseLeavingScene(from, to);
 
+			SeatEngine.Reset();
 			ClientScene.LocalScene = GameScene.Loading;
 			PresenceManager.PublishLocal();
 			PresenceManager.ReconcileAll();

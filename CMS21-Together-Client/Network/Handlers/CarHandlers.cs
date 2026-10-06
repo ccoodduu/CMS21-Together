@@ -70,6 +70,7 @@ namespace CMS21Together.Network.Handlers
             }
 
             if (string.IsNullOrEmpty(carLoader.carToLoad)) yield break;
+            yield return Logic.Player.PresenceManager.EnsureNotSeatedIn(packet.CarLoaderID);
 
             CarSpawnHooks.Suppress(packet.CarLoaderID);
             try
