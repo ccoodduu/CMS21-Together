@@ -87,5 +87,7 @@ public enum PacketTypes
 	CarAwayUpdate,
 	CarAwayRelease,
 	TestDriveResult,
-	TestDriveResultAck
+	TestDriveResultAck,
+	PlayerPings,
+	KickRequest
 }

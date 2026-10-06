@@ -118,6 +118,7 @@ public class Client
 		ClientData.ServerInfo = null;
 		ClientData.Reset();
 		GlobalData.NewMileage = 0;
+		SessionNotifications.Reset();
 		Log.Info("Disconnected from server.");
 	}
 }

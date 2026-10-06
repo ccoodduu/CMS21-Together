@@ -27,6 +27,10 @@ Run `TogetherServer\CMS21_Together_Server.exe` from the game folder (or unzip
 creates `server_config.ini` next to it. The shared garage is saved in `Saves\server_save.json` in the server
 folder. Type `/stop` in the server window to shut it down with a final save.
 
+Or host from the game: in the main menu, click **Multiplayer** > **Host**, choose the settings and press **Start**.
+The game starts that server and joins it. **Stop** on the same tab (or **Stop server** in the F9 panel) saves the
+session and shuts the server down; quitting the game does the same.
+
 ## Join
 
 In the main menu, click **Multiplayer** (top right), type the address and press **Join**:
@@ -38,8 +42,9 @@ In the main menu, click **Multiplayer** (top right), type the address and press 
   the address. Players in a session show **Join Game** in the Steam friends list, which also works with the game
   closed.
 
-If a join fails, the menu says why (server not reachable, other mod version, server full, kicked, server stopped).
-The address is remembered for next time.
+If a join fails, the menu says why (server not reachable, other mod version, server full, wrong password, kicked,
+server stopped). After "Wrong server password" the Join tab asks for the password. The address is remembered for next
+time. In a session, **F9** shows the players with their ping, your Steam friends, and for the host a **Kick** button.
 
 ## What works
 

@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using CMS21_Together_Core.Data.Enum;
 using CMS21_Together_Core.Network;
 using CMS21_Together_Server.Log;
 
@@ -26,6 +27,18 @@ namespace CMS21_Together_Server.Data
 		public List<string> ModsRequired { get; private set; } = new List<string>();
 		public List<string> ModsIgnored { get; private set; } = new List<string>();
 		public List<string> ModsGameplay { get; private set; } = new List<string>();
+		public string Password { get; private set; } = string.Empty;
+		public bool PasswordSteam { get; private set; }
+		public string AdminKey { get; private set; } = string.Empty;
+		public Gamemode NewSessionDifficulty { get; private set; } = Gamemode.Normal;
+
+		private static readonly string[][] HostingKeyLines =
+		{
+			new[] { "password", "# Password for DirectIP joins. Empty = none. Sent as plain text, do not reuse an important password", "password = \"\"" },
+			new[] { "password_steam", "# Ask Steam joins for the password too (True/False)", "password_steam = False" },
+			new[] { "admin_key", "# Players whose game sends this key (CMS21Together.AdminKey) may kick others. Empty = no admin", "admin_key = \"\"" },
+			new[] { "new_session_difficulty", "# Difficulty of a new session when no save exists: Easy, Normal or Expert", "new_session_difficulty = Normal" },
+		};
 
 		private static readonly string[][] CompatibilityKeyLines =
 		{
@@ -57,12 +70,41 @@ namespace CMS21_Together_Server.Data
 					case "--public-address":
 						PublicAddress = value;
 						break;
+					case "--password":
+						Password = value;
+						break;
+					case "--admin-key":
+						AdminKey = value;
+						break;
+					case "--new-difficulty":
+						if (TryParseDifficulty(value, out var difficulty)) NewSessionDifficulty = difficulty;
+						break;
 				}
 			}
 		}
 
+		public void SetPassword(string password) => Password = password ?? string.Empty;
+
+		public static bool TryParseDifficulty(string value, out Gamemode difficulty)
+		{
+			if (!Enum.TryParse(value?.Replace("\"", "").Trim(), true, out difficulty) || !Enum.IsDefined(typeof(Gamemode), difficulty))
+			{
+				Logger.Warn($"Unknown difficulty '{value}' for new sessions; use Easy, Normal or Expert.");
+				return false;
+			}
+			if (difficulty == Gamemode.Sandbox)
+			{
+				Logger.Warn("Sandbox is not supported for new sessions; use Easy, Normal or Expert.");
+				return false;
+			}
+			return true;
+		}
+
+		private static string Masked(string secret) => string.IsNullOrEmpty(secret) ? "none" : "set";
+
 		public string Describe() =>
 			$"name '{ServerName}', port {Port}, max players {MaxPlayers}, steam {UseSteam}, public address '{PublicAddress}', autosave {AutosaveIntervalSeconds}s, backups {BackupCount}, " +
+			$"password {Masked(Password)}{(PasswordSteam ? " (also Steam)" : "")}, admin key {Masked(AdminKey)}, new sessions {NewSessionDifficulty}, " +
 			$"game version {GameVersion}, mods required [{string.Join(", ", ModsRequired)}], ignored [{string.Join(", ", ModsIgnored)}], gameplay [{string.Join(", ", ModsGameplay)}]";
 
 		public static ServerConfig LoadOrCreate()
@@ -119,7 +161,7 @@ namespace CMS21_Together_Server.Data
 					sw.WriteLine("# Resend a section automatically when a player's state is confirmed out of sync");
 					sw.WriteLine("desync_autofix = True");
 					sw.WriteLine("");
-					foreach (var lines in CompatibilityKeyLines)
+					foreach (var lines in HostingKeyLines.Concat(CompatibilityKeyLines))
 					{
 						sw.WriteLine(lines[1]);
 						sw.WriteLine(lines[2]);
@@ -209,6 +251,18 @@ namespace CMS21_Together_Server.Data
 						case "mods_gameplay":
 							config.ModsGameplay = ParseList(value);
 							break;
+						case "password":
+							config.Password = Unquote(value);
+							break;
+						case "password_steam":
+							if (bool.TryParse(value, out bool passwordSteam)) config.PasswordSteam = passwordSteam;
+							break;
+						case "admin_key":
+							config.AdminKey = Unquote(value);
+							break;
+						case "new_session_difficulty":
+							if (TryParseDifficulty(value, out var difficulty)) config.NewSessionDifficulty = difficulty;
+							break;
 					}
 				}
 
@@ -223,12 +277,18 @@ namespace CMS21_Together_Server.Data
 			return config;
 		}
 
+		private static string Unquote(string value)
+		{
+			string trimmed = value.Trim();
+			return trimmed.Length >= 2 && trimmed.StartsWith("\"") && trimmed.EndsWith("\"") ? trimmed.Substring(1, trimmed.Length - 2) : trimmed;
+		}
+
 		private static List<string> ParseList(string value) =>
 			value.Replace("\"", "").Split(',').Select(s => s.Trim()).Where(s => s.Length > 0).ToList();
 
 		private static void AppendMissingKeys(string path, HashSet<string> seenKeys)
 		{
-			var missing = CompatibilityKeyLines.Where(k => !seenKeys.Contains(k[0])).ToList();
+			var missing = HostingKeyLines.Concat(CompatibilityKeyLines).Where(k => !seenKeys.Contains(k[0])).ToList();
 			if (missing.Count == 0) return;
 
 			var lines = new List<string>();

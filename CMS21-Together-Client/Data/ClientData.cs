@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using CMS21_Together_Core.Network.Packets;
 using CMS21Together.Logic.Car.Parts;
 using CMS21Together.Logic.Player;
@@ -13,9 +14,11 @@ public static class ClientData
 	public static bool IsInitialSyncFinished { get; set; }
 	public static bool IsServerUpdating { get; set; }
 	public static ServerInfoPacket ServerInfo { get; set; }
+	public static Dictionary<int, int> PlayerPings { get; set; } = new Dictionary<int, int>();
 
 	public static void Reset()
 	{
+		PlayerPings = new Dictionary<int, int>();
 		IsWorldStateSynced = false;
 		IsGarageStateSynced = false;
 		IsInventorySynced = false;

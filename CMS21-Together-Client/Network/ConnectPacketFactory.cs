@@ -24,6 +24,8 @@ public static class ConnectPacketFactory
 			protocolHash = LocalEnvironment.SentProtocolHash,
 			dlc = LocalEnvironment.OwnedDlc,
 			mods = mods,
+			password = JoinService.CurrentPassword,
+			adminKey = JoinService.CurrentAdminKey,
 		};
 
 		var verdicts = new ModClassifier(ModClassifierRules.Default).ClassifyAll(mods);

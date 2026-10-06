@@ -40,7 +40,7 @@ namespace CMS21_Together_Server.Data.Persistence.Sections
 
 			GameDataManager.CurrentState.WorldState = new WorldState
 			{
-				Gamemode = Gamemode.Normal,
+				Gamemode = Program.Config?.NewSessionDifficulty ?? Gamemode.Normal,
 				Money = StartMoney,
 				Level = StartLevel,
 				Exp = Math.Min(480, maxExpInThisLevel - 1)
