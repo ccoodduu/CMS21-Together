@@ -192,6 +192,12 @@ public static class CarDetailsIO
 			var part = parts[entry.PartIndex];
 			if (Math.Abs(part.Dust - entry.Dust) > 0.0005f) carLoader.EnableDust(part, entry.Dust);
 			if (Math.Abs(part.WashFactor - entry.WashFactor) > 0.0005f) carLoader.SetWashFactor(part, entry.WashFactor);
+			if (entry.TintColor != null && (part.IsTinted != entry.IsTinted || !Same(part.TintColor, entry.TintColor)))
+			{
+				var tint = ToGame(entry.TintColor);
+				part.SetColorAndOpacity(tint, Mathf.RoundToInt(tint.a * 255f), entry.IsTinted);
+				if (part.handle != null) PaintHelper.SetWindowProperties(part.handle, tint);
+			}
 		}
 	}
 
@@ -220,6 +226,9 @@ public static class CarDetailsIO
 		data.CarFrom = (CarFrom)(int)info.CarFrom;
 		carLoader.CarInfoData = data;
 	}
+
+	private static bool Same(Color color, ModColor mod) =>
+		Math.Abs(color.r - mod.r) < 0.002f && Math.Abs(color.g - mod.g) < 0.002f && Math.Abs(color.b - mod.b) < 0.002f && Math.Abs(color.a - mod.a) < 0.002f;
 
 	private static ModColor ToMod(Color color) => new ModColor { r = color.r, g = color.g, b = color.b, a = color.a };
 

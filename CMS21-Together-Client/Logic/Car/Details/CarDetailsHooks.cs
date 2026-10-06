@@ -14,4 +14,9 @@ public static class CarDetailsHooks
 	[HarmonyPatch(typeof(CarLoader), nameof(CarLoader.ChangeLicencePlateTexture), typeof(CarPart), typeof(string))]
 	[HarmonyPostfix]
 	private static void AfterPlateTexture(CarLoader __instance) => CarDetailsSync.MarkDirty(__instance, CarDetailSection.Plates);
+
+	[HarmonyPatch(typeof(CMS.UI.Windows.TintingWindow), "TintAction")]
+	[HarmonyPostfix]
+	private static void AfterTint(CMS.UI.Windows.TintingWindow __instance) =>
+		CarDetailsSync.MarkDirty(__instance.tintManager?.carLoader, CarDetailSection.BodyCosmetics);
 }
