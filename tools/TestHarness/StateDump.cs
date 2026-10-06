@@ -22,6 +22,8 @@ public static class StateDump
             ["connectionValid"] = client != null && client.IsConnectionValid,
             ["playerId"] = client?.ID ?? 0,
             ["initialSyncFinished"] = ClientData.IsInitialSyncFinished,
+            ["snapshotId"] = SyncTracker.CurrentSnapshotId,
+            ["syncAcked"] = SyncTracker.Acked,
             ["remotePlayers"] = ClientData.Players.Count,
         };
     }

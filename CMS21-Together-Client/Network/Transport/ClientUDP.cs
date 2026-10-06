@@ -13,11 +13,6 @@ public class ClientUDP
 	public UdpClient socket;
     public IPEndPoint endPoint;
 
-    public ClientUDP()
-    {
-        endPoint = new IPEndPoint(IPAddress.Parse("127.0.0.1"), MainMod.PORT);
-    }
-
     public void Connect(int _localPort)
     {
         socket = new UdpClient(_localPort);

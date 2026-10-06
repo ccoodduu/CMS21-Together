@@ -66,5 +66,91 @@ function Compare-HarnessDumps {
     return $differences
 }
 
+$script:ServerDir = $null
+$script:ServerCommandFile = $null
+$script:ServerProcess = $null
+$script:ConnectAddress = "127.0.0.1"
+
+function Initialize-TestServer {
+    param([string]$ServerDir, [string]$CommandFile, [string]$ConnectAddress = "127.0.0.1")
+    $script:ServerDir = $ServerDir
+    $script:ServerCommandFile = $CommandFile
+    $script:ConnectAddress = $ConnectAddress
+}
+
+function Connect-HarnessInstance([string]$Instance) {
+    Send-HarnessCommand -Instance $Instance -Verb connect -Arguments $script:ConnectAddress | Out-Null
+}
+
+function Get-TestServerProcesses {
+    $exe = Join-Path $script:ServerDir "CMS21_Together_Server.exe"
+    Get-Process -Name "CMS21_Together_Server" -ErrorAction SilentlyContinue |
+        Where-Object { $_.Path -and $_.Path -ieq $exe }
+}
+
+function Get-ServerLogPath { Join-Path $script:ServerDir "Log\Latest.txt" }
+
+function Get-ServerLogLines {
+    $path = Get-ServerLogPath
+    if (-not (Test-Path -LiteralPath $path)) { return @() }
+    try {
+        $stream = [System.IO.File]::Open($path, 'Open', 'Read', 'ReadWrite')
+        try {
+            $reader = New-Object System.IO.StreamReader($stream)
+            return @($reader.ReadToEnd() -split "\r?\n")
+        } finally { $stream.Dispose() }
+    } catch { return @() }
+}
+
+# Returns a mark for Wait-ServerLog -After: the number of lines in the current server log.
+function Get-ServerLogMark { (Get-ServerLogLines).Count }
+
+function Wait-ServerLog {
+    param([string]$Pattern, [int]$After = 0, [int]$TimeoutSec = 60)
+    $deadline = (Get-Date).AddSeconds($TimeoutSec)
+    while ((Get-Date) -lt $deadline) {
+        $lines = Get-ServerLogLines
+        $start = if ($lines.Count -lt $After) { 0 } else { $After }
+        for ($i = $start; $i -lt $lines.Count; $i++) {
+            if ($lines[$i] -match $Pattern) { return $lines[$i] }
+        }
+        Start-Sleep -Milliseconds 300
+    }
+    throw "Timeout after $TimeoutSec s waiting for server log line matching '$Pattern'"
+}
+
+function Start-TestServer {
+    if (Get-TestServerProcesses) { throw "The server in $script:ServerDir is already running." }
+    $exe = Join-Path $script:ServerDir "CMS21_Together_Server.exe"
+    Remove-Item -LiteralPath (Get-ServerLogPath) -ErrorAction SilentlyContinue
+    $script:ServerProcess = Start-Process -FilePath $exe -WorkingDirectory $script:ServerDir -WindowStyle Minimized `
+        -ArgumentList @("--command-file", "`"$script:ServerCommandFile`"") -PassThru
+    Start-Sleep -Milliseconds 500
+    Wait-ServerLog -Pattern "Server started\. Listening port" -TimeoutSec 60 | Out-Null
+    return $script:ServerProcess
+}
+
+function Stop-TestServer {
+    Get-TestServerProcesses | Stop-Process -Force
+    $deadline = (Get-Date).AddSeconds(10)
+    while ((Get-TestServerProcesses) -and (Get-Date) -lt $deadline) {
+        Start-Sleep -Milliseconds 200
+    }
+    $script:ServerProcess = $null
+}
+
+function Send-ServerCommand {
+    param([string]$Line)
+    for ($attempt = 0; $attempt -lt 20; $attempt++) {
+        try {
+            [System.IO.File]::AppendAllText($script:ServerCommandFile, "$Line`r`n")
+            return
+        } catch { Start-Sleep -Milliseconds 100 }
+    }
+    throw "Could not write server command '$Line' to $script:ServerCommandFile"
+}
+
 Export-ModuleMember -Function Get-HarnessDir, Get-HarnessStatus, Wait-HarnessStatus, Send-HarnessCommand,
-    Save-HarnessDump, Save-HarnessScreenshot, Compare-HarnessDumps
+    Save-HarnessDump, Save-HarnessScreenshot, Compare-HarnessDumps,
+    Initialize-TestServer, Connect-HarnessInstance, Get-ServerLogMark, Wait-ServerLog, Start-TestServer, Stop-TestServer,
+    Send-ServerCommand

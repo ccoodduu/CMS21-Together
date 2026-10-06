@@ -1,14 +1,15 @@
 #Requires -Version 5.1
 <#
-Runs one test scenario: starts the local server and the test installs, runs scenarios\<Scenario>.ps1,
-collects logs, dumps and screenshots in tools\runs\<timestamp>_<Scenario>, then shuts everything down.
+Runs one test scenario in one test lane: resets the lane's profiles from the seed, starts the lane's server and
+test installs, runs scenarios\<Scenario>.ps1, collects logs, dumps and screenshots in
+tools\runs\<timestamp>_L<lane>_<Scenario>, then shuts the lane down.
 
-The test installs share the real game's save folder and registry settings with the Steam install,
-so both are backed up before the run and restored afterwards, whatever happens.
+Each install has its own save folder and registry key (see TestLanes.psm1), so the real game's saves are never
+written. The run checks that with a fingerprint of the real save folder and registry key before and after.
 #>
 param(
     [string]$Scenario = "connect",
-    [string[]]$Instances = @("A", "B"),
+    [int]$Lane = 1,
     [string]$Window = "960x540",
     [switch]$Sound,
     [switch]$KeepRunning
@@ -18,43 +19,67 @@ $ErrorActionPreference = "Stop"
 $TestRoot = "$env:USERPROFILE\CMS21-TestInstalls"
 $repo = Resolve-Path (Join-Path $PSScriptRoot "..\..")
 $gameProcess = "Car Mechanic Simulator 2021"
-$saveDir = "$env:USERPROFILE\AppData\LocalLow\Red Dot Games\Car Mechanic Simulator 2021"
-$registryKey = "HKCU\Software\Red Dot Games\Car Mechanic Simulator 2021"
+$steamLog = "C:\Program Files (x86)\Steam\logs\console_log.txt"
 
 Import-Module (Join-Path $PSScriptRoot "HarnessClient.psm1") -Force
+Import-Module (Join-Path $PSScriptRoot "TestLanes.psm1") -Force
+
+$laneInfo = Get-TestLane $Lane
+$Instances = $laneInfo.Instances
+$serverDir = $laneInfo.ServerDir
 
 $scenarioFile = Join-Path $PSScriptRoot "scenarios\$Scenario.ps1"
 if (-not (Test-Path -LiteralPath $scenarioFile)) { throw "Unknown scenario: $Scenario" }
-if (Get-Process -Name $gameProcess -ErrorAction SilentlyContinue) { throw "The game is already running; refusing to start a test run." }
-if (Get-Process -Name "CMS21_Together_Server" -ErrorAction SilentlyContinue) { throw "A Together server is already running." }
+if (Get-LaneGameProcesses $laneInfo) { throw "A game instance of lane $Lane is already running; refusing to start a test run." }
+foreach ($name in $Instances) { Assert-InstanceIsolated $name }
 
-$runDir = Join-Path $repo ("tools\runs\{0}_{1}" -f (Get-Date -Format "yyyyMMdd-HHmmss"), $Scenario)
+$runDir = Join-Path $repo ("tools\runs\{0}_L{1}_{2}" -f (Get-Date -Format "yyyyMMdd-HHmmss"), $Lane, $Scenario)
 New-Item -ItemType Directory -Force -Path $runDir | Out-Null
-$backupDir = Join-Path $runDir "_backup"
-New-Item -ItemType Directory -Force -Path $backupDir | Out-Null
-Copy-Item -LiteralPath $saveDir -Destination (Join-Path $backupDir "LocalLow") -Recurse
-cmd /c "reg export `"$registryKey`" `"$(Join-Path $backupDir 'settings.reg')`" /y >nul 2>&1"
-if ($LASTEXITCODE -ne 0) { throw "Registry backup failed" }
 
-function Restore-GameState {
-    Get-ChildItem -LiteralPath $saveDir -Recurse -File -Include *.cms21b | Remove-Item -Force
-    Copy-Item -Path (Join-Path $backupDir "LocalLow\*") -Destination $saveDir -Recurse -Force
-    $regFile = Join-Path $backupDir "settings.reg"
-    cmd /c "reg delete `"$registryKey`" /f >nul 2>&1 & reg import `"$regFile`" >nul 2>&1"
-    if ($LASTEXITCODE -ne 0) { Write-Host "WARNING: registry restore failed, import $regFile manually" -ForegroundColor Red }
-    Write-Host "Restored saves and registry settings"
+$serverSaves = Join-Path $serverDir "Saves"
+$serverConfig = Join-Path $serverDir "server_config.ini"
+$backupDir = Join-Path $runDir "_backup"
+New-Item -ItemType Directory -Force -Path (Join-Path $backupDir "Server") | Out-Null
+if (Test-Path -LiteralPath $serverSaves) { Copy-Item -LiteralPath $serverSaves -Destination (Join-Path $backupDir "Server\Saves") -Recurse }
+Copy-Item -LiteralPath $serverConfig -Destination (Join-Path $backupDir "Server\server_config.ini")
+Initialize-TestServer -ServerDir $serverDir -CommandFile (Join-Path $runDir "server_commands.txt") -ConnectAddress $laneInfo.ConnectAddress
+
+function Restore-ServerState {
+    if (Test-Path -LiteralPath $serverSaves) { Remove-Item -LiteralPath $serverSaves -Recurse -Force }
+    $savedSaves = Join-Path $backupDir "Server\Saves"
+    if (Test-Path -LiteralPath $savedSaves) { Copy-Item -LiteralPath $savedSaves -Destination $serverSaves -Recurse }
+    Copy-Item -LiteralPath (Join-Path $backupDir "Server\server_config.ini") -Destination $serverConfig -Force
+    Write-Host "Restored server saves and config"
 }
 
-$result = [ordered]@{ scenario = $Scenario; passed = $false; notes = @(); started = (Get-Date).ToString("s") }
-$server = $null
-try {
-    $serverDir = Join-Path $TestRoot "Server"
-    $server = Start-Process -FilePath (Join-Path $serverDir "CMS21_Together_Server.exe") -WorkingDirectory $serverDir -PassThru
+function Stop-LaneGames {
+    $deadline = (Get-Date).AddSeconds(20)
+    while ((Get-LaneGameProcesses $laneInfo) -and (Get-Date) -lt $deadline) { Start-Sleep -Milliseconds 500 }
+    Get-LaneGameProcesses $laneInfo | Stop-Process -Force
+}
 
+function Test-SteamKick([int]$FromLine) {
+    if (-not (Test-Path -LiteralPath $steamLog)) { return $false }
+    $lines = @(Get-Content -LiteralPath $steamLog -ErrorAction SilentlyContinue)
+    if ($lines.Count -le $FromLine) { return $false }
+    return [bool]($lines[$FromLine..($lines.Count - 1)] | Select-String -SimpleMatch "waiting for user response to KickingOtherSession")
+}
+
+$realFingerprint = Get-RealProfileFingerprint
+$result = [ordered]@{ scenario = $Scenario; lane = $Lane; passed = $false; notes = @(); started = (Get-Date).ToString("s") }
+$runStart = Get-Date
+try {
+    foreach ($name in $Instances) { Reset-InstanceProfile $name }
+    Start-TestServer | Out-Null
+
+    $steamLogStart = if (Test-Path -LiteralPath $steamLog) { @(Get-Content -LiteralPath $steamLog).Count } else { 0 }
     $size = $Window.Split('x')
     foreach ($name in $Instances) {
         $dir = Join-Path $TestRoot $name
-        Remove-Item -LiteralPath (Join-Path $dir "UserData\TestHarness\status.json") -ErrorAction SilentlyContinue
+        $harnessDir = Join-Path $dir "UserData\TestHarness"
+        Remove-Item -LiteralPath (Join-Path $harnessDir "status.json") -ErrorAction SilentlyContinue
+        Get-ChildItem -LiteralPath $harnessDir -Filter "reply_*.json" -ErrorAction SilentlyContinue | Remove-Item -Force
+        Remove-Item -LiteralPath (Join-Path $harnessDir "command.txt") -ErrorAction SilentlyContinue
         $arguments = @(
             "--melonloader.disablestartscreen", "--melonloader.agfoffline",
             "-screen-fullscreen", "0", "-screen-width", $size[0], "-screen-height", $size[1],
@@ -65,7 +90,17 @@ try {
         Write-Host "Started instance $name"
     }
 
-    $ctx = [pscustomobject]@{ RunDir = $runDir; Instances = $Instances; Result = $result }
+    $deadline = (Get-Date).AddSeconds(60)
+    while ((Get-Date) -lt $deadline) {
+        if (Test-SteamKick $steamLogStart) {
+            & (Join-Path $PSScriptRoot "Cancel-SteamLaunch.ps1") | Out-Null
+            throw "Steam asks to end a session on another device (KickingOtherSession); run aborted. Set Steam offline on the other device."
+        }
+        if (@($Instances | Where-Object { Get-HarnessStatus $_ }).Count -eq $Instances.Count) { break }
+        Start-Sleep -Seconds 2
+    }
+
+    $ctx = [pscustomobject]@{ RunDir = $runDir; Instances = $Instances; Result = $result; ServerDir = $serverDir; Lane = $laneInfo }
     & $scenarioFile -Ctx $ctx
 }
 catch {
@@ -77,25 +112,36 @@ finally {
         foreach ($name in $Instances) {
             try { Send-HarnessCommand -Instance $name -Verb quit -TimeoutSec 5 | Out-Null } catch { }
         }
-        $deadline = (Get-Date).AddSeconds(20)
-        while ((Get-Process -Name $gameProcess -ErrorAction SilentlyContinue) -and (Get-Date) -lt $deadline) { Start-Sleep -Milliseconds 500 }
-        Get-Process -Name $gameProcess -ErrorAction SilentlyContinue | Stop-Process -Force
-        if ($server) { Stop-Process -Id $server.Id -Force -ErrorAction SilentlyContinue }
+        Stop-LaneGames
+        Stop-TestServer
         Start-Sleep -Seconds 1
     }
 
     foreach ($name in $Instances) {
         $log = Join-Path $TestRoot "$name\MelonLoader\Latest.log"
         if (Test-Path -LiteralPath $log) { Copy-Item -LiteralPath $log -Destination (Join-Path $runDir "client_$name.log") }
+        $playerLog = Join-Path (Get-InstanceSaveDir $name) "Player.log"
+        if (Test-Path -LiteralPath $playerLog) { Copy-Item -LiteralPath $playerLog -Destination (Join-Path $runDir "player_$name.log") }
     }
-    $serverLog = Join-Path $TestRoot "Server\Log\Latest.txt"
-    if (Test-Path -LiteralPath $serverLog) { Copy-Item -LiteralPath $serverLog -Destination (Join-Path $runDir "server.log") }
+    $serverLogs = @(Get-ChildItem -LiteralPath (Join-Path $serverDir "Log") -Filter "Log_*.txt" -ErrorAction SilentlyContinue |
+        Where-Object { $_.LastWriteTime -ge $runStart } | Sort-Object Name)
+    for ($i = 0; $i -lt $serverLogs.Count; $i++) {
+        $target = if ($i -eq $serverLogs.Count - 1) { "server.log" } else { "server_$($i + 1).log" }
+        Copy-Item -LiteralPath $serverLogs[$i].FullName -Destination (Join-Path $runDir $target)
+    }
+    if (Test-Path -LiteralPath $serverSaves) { Copy-Item -LiteralPath $serverSaves -Destination (Join-Path $runDir "server_saves_after") -Recurse }
 
-    if (-not $KeepRunning) { Restore-GameState } else { Write-Host "KeepRunning: restore saves later with the backup in $backupDir" }
+    if (-not $KeepRunning) { Restore-ServerState } else { Write-Host "KeepRunning: server saves backup in $backupDir" }
+
+    if ((Get-RealProfileFingerprint) -ne $realFingerprint) {
+        $result.passed = $false
+        $result.notes += "REAL SAVE FOLDER OR REGISTRY CHANGED DURING THE RUN"
+        Write-Host "WARNING: the real save folder or registry key changed during the run" -ForegroundColor Red
+    }
 
     $result.finished = (Get-Date).ToString("s")
     $result | ConvertTo-Json -Depth 5 | Set-Content -LiteralPath (Join-Path $runDir "result.json") -Encoding utf8
-    Write-Host ("RESULT {0}: {1}" -f $Scenario, $(if ($result.passed) { "PASSED" } else { "FAILED" }))
+    Write-Host ("RESULT L{0} {1}: {2}" -f $Lane, $Scenario, $(if ($result.passed) { "PASSED" } else { "FAILED" }))
     $result.notes | ForEach-Object { Write-Host "  $_" }
     Write-Host "Run folder: $runDir"
 }

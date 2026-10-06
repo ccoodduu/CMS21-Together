@@ -1,4 +1,7 @@
 using System;
+using System.Linq;
+using System.Net;
+using System.Net.Sockets;
 using CMS21_Together_Core;
 using CMS21_Together_Core.Data.Enum;
 using CMS21_Together_Core.Logging;
@@ -37,15 +40,32 @@ public class Client
 		Instance.Steam = null;
 	}
 
-	public void ConnectToServer(string ip = "127.0.0.1")
+	public void ConnectToServer(string address = "127.0.0.1")
 	{
 		if (IsConnected) return;
-		
+
+		var (host, port) = ParseAddress(address);
 		NetworkType = NetworkType.DirectIP;
-		Tcp.Connect(ip, MainMod.PORT);
+		UDP.endPoint = new IPEndPoint(ResolveHost(host), port);
+		Tcp.Connect(host, port);
 		Application.runInBackground = true;
 		OnConnectionValidated += OnConnectionSuccessful;
 		IsConnected = true;
+	}
+
+	private static (string Host, int Port) ParseAddress(string address)
+	{
+		address = string.IsNullOrWhiteSpace(address) ? "127.0.0.1" : address.Trim();
+		int colon = address.LastIndexOf(':');
+		if (colon > 0 && address.IndexOf(':') == colon && int.TryParse(address.Substring(colon + 1), out int port))
+			return (address.Substring(0, colon), port);
+		return (address, MainMod.PORT);
+	}
+
+	private static IPAddress ResolveHost(string host)
+	{
+		if (IPAddress.TryParse(host, out IPAddress ip)) return ip;
+		return Dns.GetHostAddresses(host).First(a => a.AddressFamily == AddressFamily.InterNetwork);
 	}
 
 	public void ConnectToSteamServer()

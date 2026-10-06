@@ -1,6 +1,6 @@
 #Requires -Version 5.1
 <#
-Creates (or refreshes) two side-by-side test installs of CMS21 for local multiplayer tests.
+Creates (or refreshes) side-by-side test installs of CMS21 for local multiplayer tests (two per test lane).
 
 Game binaries and data are NTFS hard links to the Steam install, so each install costs almost no
 disk space. Every file a test run may write (MelonLoader, Mods, UserData, UserLibs, boot.config)
@@ -9,11 +9,12 @@ is a real copy: writing through a hard link would modify the Steam install.
 param(
     [string]$GameDir = "C:\Program Files (x86)\Steam\steamapps\common\Car Mechanic Simulator 2021",
     [string]$TestRoot = "$env:USERPROFILE\CMS21-TestInstalls",
-    [string[]]$Instances = @("A", "B"),
+    [string[]]$Instances = @("A", "B", "C", "D"),
     [switch]$Force
 )
 
 $ErrorActionPreference = "Stop"
+Import-Module (Join-Path $PSScriptRoot "TestLanes.psm1") -Force
 $dataDirName = "Car Mechanic Simulator 2021_Data"
 $copiedDirs = @("MelonLoader", "UserData")
 $extraMods = @("CMS21LoadOptimizer.dll", "LoadOptimizer.cfg")
@@ -74,6 +75,8 @@ foreach ($name in $Instances) {
     }
 
     Set-Content -LiteralPath (Join-Path $dir "steam_appid.txt") -Value "1190000" -Encoding ascii
+    Set-InstanceCompany $name
 }
 
-Write-Host "Done. Deploy the mod with Deploy-Mod.ps1."
+New-ProfileSeed
+Write-Host "Done. Deploy the mod with Deploy-Mod.ps1 -Lane <n>."
