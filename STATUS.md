@@ -20,6 +20,25 @@ Newest first. One entry per work session.
   the test track.
 - Next: spike 1.3 (hold and replay the departure) and 1.4 (path test, dyno; their harness verbs are still to write).
 
+## 2026-10-06 (15:55–16:35) — row 13 implemented; handoff before a reboot (pagefile)
+
+- Row 13 spikes 1.1–1.4 done as far as the harness reaches (results in the change's design.md). D2 now holds the
+  departure coroutine in `MoveNext` instead of replaying it.
+- Row 13 groups 2–7 are in code on `change/sync-test-drive-and-diagnostics`: server `CarAwayRegistry`, enforcement,
+  test drive fold, dyno details section; client `CarAwaySync`, locks, labels, `TestDriveSync`, `DynoSync`,
+  `PathTestSync`; guard entries allowed. `test-drive` PASSED (claim, locks, +5 km on both, refusal, abort, fallback).
+- Not run yet: `diagnostics`, `test-drive-latejoin`, and the full regression (one was stopped for the reboot).
+- Pagefile raised to 32–48 GB (was 8–16 GB, needs the reboot). The game commits 8–10 GB per instance but uses
+  2–4.5 GB, so the commit limit, not RAM, kept the lanes taking turns.
+- Background agents (stopped by the reboot): row 5a code on `change/sync-workshop-machines`, row 10 OpenSpec draft on
+  `change/economy-audit`. Check what they pushed; their worktrees stay in `.claude/worktrees/`.
+- Next after the reboot, in order:
+  1. Check the commit limit is about 64 GB (`Win32_OperatingSystem.TotalVirtualMemorySize`).
+  2. `Run-Session.ps1`: hold the lane mutex only while the games start and load, and start a lane only when the
+     commit headroom (limit − committed) is at least about 22 GB; then run lanes 1 and 2 together (`Run-All -Lanes 1,2`).
+  3. Run `diagnostics` and `test-drive-latejoin`, fix, then the full regression; merge row 13 into `main` if green.
+  4. Continue M4: review and test row 5a's branch, then 5b, 6 part 2, 10, 8 part 2.
+
 ## 2026-10-06 (15:10–15:40) — row 3 merged; row 4 car details (branch `change/sync-car-details`)
 
 - Lane-1 regression `20261006-144952` of the row 3 branch: all 25 scenarios PASSED. `main` = `635b22b` (row 3).
