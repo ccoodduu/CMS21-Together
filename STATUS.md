@@ -2,6 +2,31 @@
 
 Newest first. One entry per work session.
 
+## 2026-10-06 (11:50–12:40) — eight research spikes; row 2 (lifts, places, parking) nearly done
+
+- Eight parallel agents wrote static spikes into `docs/spikes/` (no game, no code): `orders-and-jobs`, `car-details`,
+  `workshop-machines`, `workshop-car-tools`, `test-drive`, `outdoor-scenes`, `economy-paths`, `generator-client`.
+  Each lists what changes the design of its row and the runtime checks still needed. Highlights:
+  - generator client: headless looks plausible but unproven; Steam on another PC is the blocker; recommendation:
+    use it for orders only (best candidate for row 3's generator), not as a replacement for row 16.
+  - economy: every money/scrap/XP change goes through `GlobalData.AddPlayerMoney/Scraps/Exp`; the mod hooks money only
+    per feature, 28 callers change money locally only (two reachable today: the fluid-spill fine, skill reset);
+    server bugs found: Expert XP not doubled, item sales paid at full price, scraps not copied into the profile wrapper.
+  - test drive: the mod's `LoaderAddition.VanillaLoad` dropped the per-car mileage loop, so test-track mileage is lost.
+  - workshop machines / car tools / car details: many design hooks never fire (inlined or shared native bodies); each
+    doc gives the replacement.
+- Row 2 (`change/sync-car-placement-and-lifts`): static + runtime spike (`placement-spike`), packets, server
+  (`Data/Placement`, handlers, `car-placement` save section and snapshot, `placement` command), client
+  (`Logic/Car/Placement`: `LifterSync`, `CarPlacementSync`, `ParkingSync`, `CarLoading`, `NewCarDataCodec`), guard
+  allows moving cars, lifts and parking management. Scenarios `car-placement`, `car-placement-race` (net-hold races:
+  lift, park, unpark, swap, priced arrival, level unlock) and `car-placement-latejoin` (late join with a raised lift
+  and a parked car, server restart) pass.
+  - Found and fixed: when two players take the same parked car onto the same loader, the loser's refusal deleted the
+    winner's car (`ParkingSync.KeepAfterRejection`).
+  - Moving onto an occupied place swaps the cars (default for QUESTIONS.md row 2 question 1).
+- Open in row 2: scenario `car-parking-full` (written, not run yet); 5.6 (the parking scene itself stays guarded).
+- Running: full lane-1 regression of `2eb0d3c`.
+
 ## 2026-10-06 (11:25–11:45) — row 1 complete in code (branch `change/sync-car-parts`)
 
 - Every task in `sync-car-parts/tasks.md` is checked. New since the last entry:
