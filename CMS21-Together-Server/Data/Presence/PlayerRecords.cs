@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using CMS21_Together_Core.Data;
 using CMS21_Together_Core.Data.Enum;
+using CMS21_Together_Core.Data.GameType;
 using CMS21_Together_Server.Log;
 using CMS21_Together_Server.Network;
 
@@ -90,11 +91,12 @@ namespace CMS21_Together_Server.Data.Presence
 
 		public static string Describe(PlayerRecord record)
 		{
-			string place = record.Position == null
-				? record.Scene.ToString()
-				: $"{record.Scene} at ({record.Position.X:F2}, {record.Position.Y:F2}, {record.Position.Z:F2})";
+			string place = record.Position == null ? record.Scene.ToString() : $"{record.Scene} at {Format(record.Position)}";
 			return $"{ShortKey(record.Key)} '{record.Name}' last seen {record.LastSeenUtc:u}, {place}";
 		}
+
+		public static string Format(Vector3Serializable position) =>
+			FormattableString.Invariant($"({position.X:F2}, {position.Y:F2}, {position.Z:F2})");
 
 		public static IEnumerable<string> DescribeAll()
 		{

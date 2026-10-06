@@ -23,7 +23,7 @@ namespace CMS21_Together_Server.Data.Presence
 			if (record == null || record.Scene != GameScene.Garage || record.Position == null || record.Rotation == null) return 0;
 
 			Server.SendToClient(new PlayerRestorePacket { Position = record.Position, Rotation = record.Rotation }, clientId);
-			Logger.Info($"[Players] Client[{clientId}] restored to its last garage position ({record.Position.X:F2}, {record.Position.Y:F2}, {record.Position.Z:F2}).");
+			Logger.Info($"[Players] Client[{clientId}] restored to its last garage position {PlayerRecords.Format(record.Position)}.");
 			return 1;
 		}
 	}
