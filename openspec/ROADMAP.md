@@ -6,13 +6,11 @@ by a friend from a release zip and joinable without typing IDs by hand.
 
 ## Status (2026-10-06)
 
-M0 done. `main` has: the sync contract (versioned save sections, `SyncBegin/SyncEnd{Items}/SyncAck`,
-`StateLock`), crash-safe server saves with backups/fallback/refusal and `--check-save`, client save safety (no
-profile writes or profile switch during a session, profile backups), `DisconnectReason`, configurable port,
-isolated parallel test lanes and `Run-All`. M1 in progress: presence roster, spawn slots, names and name tags
-(row 6 slice 1; the idle late-join bug is fixed). Still from upstream: movement/animation, money/exp/level/scrap/
-skills, garage upgrades, server-authoritative inventory/shop/warehouse/exchange, car spawn/delete in the garage;
-cars and jobs are not part of the snapshot yet; the handshake checks the mod version only.
+M0–M2 done; M3 done in code (rows 3, 4, 13 merged; regression `20261006-165221` green on two lanes). The M2 and M3
+playtests are the user's. M4 in progress on branches: row 5a (`change/sync-workshop-machines`), 5b
+(`change/sync-workshop-car-tools`), 6 part 2 seat/engine (`change/sync-players-and-scenes-part2`), 8 part 2
+(`change/hosting-and-join-ui-part2`), 10 drafted (`change/economy-audit`, decisions in QUESTIONS.md). Two test lanes
+run in parallel since the pagefile was raised (commit limit 64 GB).
 
 ## Changes
 

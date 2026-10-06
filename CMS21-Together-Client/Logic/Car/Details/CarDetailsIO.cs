@@ -15,7 +15,7 @@ namespace CMS21Together.Logic.Car.Details;
 public static class CarDetailsIO
 {
 	public const CarDetailSection Polled = CarDetailSection.Fluids | CarDetailSection.Wheels | CarDetailSection.Alignment | CarDetailSection.Info;
-	public const CarDetailSection All = Polled | CarDetailSection.Tuning | CarDetailSection.Paint | CarDetailSection.BodyCosmetics | CarDetailSection.Plates;
+	public const CarDetailSection All = Polled | CarDetailSection.Tuning | CarDetailSection.Paint | CarDetailSection.BodyCosmetics | CarDetailSection.Plates | CarDetailSection.Dyno;
 
 	public static ModCarDetails Read(CarLoader carLoader, CarDetailSection sections)
 	{
@@ -32,6 +32,8 @@ public static class CarDetailsIO
 		if (sections.HasFlag(CarDetailSection.Paint))
 			details.Paint = new ModCarPaint { Color = ToMod(carLoader.color), FactoryColor = ToMod(carLoader.factoryColor), FactoryPaintType = (ModPaintType)(int)carLoader.factoryPaintType, IsCustom = carLoader.IsCustomPaintType, PaintData = ToMod(carLoader.GetPaintData()) };
 		if (sections.HasFlag(CarDetailSection.BodyCosmetics)) details.BodyCosmetics = ReadCosmetics(carLoader);
+		if (sections.HasFlag(CarDetailSection.Dyno) && !Away.DynoSync.IsOpenOn(carLoader))
+			details.Dyno = new ModDynoResult { Engine = ToMod(carLoader.EngineData), MeasuredDragIndex = carLoader.MeasuredDragIndex };
 		if (sections.HasFlag(CarDetailSection.Plates))
 		{
 			var plates = carLoader.LicensePlatesData;
@@ -147,6 +149,7 @@ public static class CarDetailsIO
 		Try("cosmetics", () => ApplyCosmetics(carLoader, details.BodyCosmetics));
 		Try("plates", () => ApplyPlates(carLoader, details.Plates));
 		Try("info", () => ApplyInfo(carLoader, details.Info));
+		Try("dyno", () => ApplyDyno(carLoader, details.Dyno));
 	}
 
 	private static void Try(string what, Action apply)
@@ -286,6 +289,31 @@ public static class CarDetailsIO
 		data.CarFrom = (CarFrom)(int)info.CarFrom;
 		carLoader.CarInfoData = data;
 	}
+
+	private static void ApplyDyno(CarLoader carLoader, ModDynoResult dyno)
+	{
+		if (dyno?.Engine == null || Away.DynoSync.IsOpenOn(carLoader)) return;
+		carLoader.EngineData = ToGame(dyno.Engine);
+		carLoader.MeasuredDragIndex = dyno.MeasuredDragIndex;
+	}
+
+	private static ModEngineData ToMod(EngineData engine) => new ModEngineData
+	{
+		IsElectric = engine.isElectric, IdleRpm = engine.idleRpm, IdleRpmTorque = engine.idleRpmTorque, IdleRpmCurveBias = engine.idleRpmCurveBias,
+		PeakRpm = engine.peakRpm, PeakRpmTorque = engine.peakRpmTorque, PeakRpmCurveBias = engine.peakRpmCurveBias, MaxRpm = engine.maxRpm,
+		Inertia = engine.inertia, EngineFrictionTorque = engine.engineFrictionTorque, EngineFrictionRotational = engine.engineFrictionRotational,
+		EngineFrictionViscous = engine.engineFrictionViscous, LimiterTriggerRpm = engine.limiterTriggerRpm, TuningValue = engine.tuningValue,
+		Measured = engine.measured,
+	};
+
+	private static EngineData ToGame(ModEngineData engine) => new EngineData
+	{
+		isElectric = engine.IsElectric, idleRpm = engine.IdleRpm, idleRpmTorque = engine.IdleRpmTorque, idleRpmCurveBias = engine.IdleRpmCurveBias,
+		peakRpm = engine.PeakRpm, peakRpmTorque = engine.PeakRpmTorque, peakRpmCurveBias = engine.PeakRpmCurveBias, maxRpm = engine.MaxRpm,
+		inertia = engine.Inertia, engineFrictionTorque = engine.EngineFrictionTorque, engineFrictionRotational = engine.EngineFrictionRotational,
+		engineFrictionViscous = engine.EngineFrictionViscous, limiterTriggerRpm = engine.LimiterTriggerRpm, tuningValue = engine.TuningValue,
+		measured = engine.Measured,
+	};
 
 	private static bool Same(Color color, ModColor mod) =>
 		Math.Abs(color.r - mod.r) < 0.002f && Math.Abs(color.g - mod.g) < 0.002f && Math.Abs(color.b - mod.b) < 0.002f && Math.Abs(color.a - mod.a) < 0.002f;
