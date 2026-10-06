@@ -149,6 +149,28 @@ last mark, only the entries that differ from `lastKnown` (floats differ by more 
 - Tint opacity: `TintColor` is stored as is; the applier gets the opacity from
   `WindowTintManager.GetOpacityFromColor(TintColor)`. The probe checks the round trip.
 
+### D4b: Corrections from the static spike (2026-10-06, `docs/spikes/car-details.md`)
+
+These override the D4 table where they differ; probe 1.2 checks them at runtime.
+- `TintingWindow`, `WheelsAlignmentWindow` and `LampAlignmentWindow.HideAction` share one native body with 36 other
+  windows' close methods, so a patch on one fires for all of them: never patch `HideAction`. The paint shop and the
+  tint window also restore their previews after `Hide` returns. Commit points: postfix `PaintshopManager.SubmitColor`
+  (only for the garage car, `paintshopType == 0`) and postfix `TintingWindow.TintAction`.
+- Alignment changes outside its windows too (`CheckMessageOnHide` randomises it, the headlight mount sets it) and has
+  no preview state: it moves to the 1 Hz poll with fluids, wheels and info.
+- Tuning: `PartModule.Tune(short[], float)` is the single hook for ECU and carburettor (both `ApplyAction`s tail-jump
+  into it); `EcuModule.SetStage` shares its body with unrelated setters and must not be patched.
+- Lights: `SwitchCarLights` only checks; nothing in the game writes `LightsOn`. Drop the hook and the field.
+- Bonus parts: players fit and remove them through `CarLoader.TakeOffBonusPart(InteractiveObject, bool)`
+  (`SwapBonusPart` has no callers). Apply remote changes with the `BonusPart` methods, never `TakeOffBonusPart`
+  (it adds an inventory item or needs the selected item).
+- The paint shop and tint window "wash first?" prompt takes money and cleans the whole car: postfix
+  `CarLoader.EnableDust`/`SetWashFactor` when `part == null`.
+- `ResizeWheel()` and `TunePart` act on the car under the mouse: never call them on a receiver. `SetET` is never called
+  (the game writes ET inline), so wheels stay on the poll.
+- `FluidsData` and `LicensePlatesData` are structs with references: writing them back from managed code is checked
+  at runtime (GC write barrier) before relying on it; the codec in row 2 already initialises `FluidsData` fully.
+
 ### D5: No echo and no flood without suppression flags
 - Applying a remote section first writes the incoming values to `lastKnown`, then applies, then re-reads the
   section from the game into `lastKnown`, so normalisation by the setters is absorbed. Hooks or polls that see
