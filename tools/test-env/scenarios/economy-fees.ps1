@@ -94,8 +94,11 @@ Send-ServerCommand "money set 200000"
 Wait-StatsEqual "money set 200000" { param($s) $s.money -eq 200000 } | Out-Null
 Send-HarnessCommand -Instance $a -Verb car-spawn -Arguments "0 $car 0" | Out-Null
 Send-HarnessCommand -Instance $b -Verb car-spawn -Arguments "1 $car 0" | Out-Null
+Send-HarnessCommand -Instance $a -Verb car-spawn -Arguments "2 $car 0" | Out-Null
+Send-HarnessCommand -Instance $b -Verb car-spawn -Arguments "3 $car 0" | Out-Null
+Send-HarnessCommand -Instance $b -Verb car-spawn -Arguments "4 $car 0" | Out-Null
 foreach ($name in $Ctx.Instances) {
-    foreach ($loader in 0, 1) { Check (Wait-Ready $name $loader) "$name has loader $loader ready" }
+    foreach ($loader in 0, 1, 2, 3, 4) { Check (Wait-Ready $name $loader) "$name has loader $loader ready" }
 }
 Start-Sleep -Seconds 3
 Check-Unattributed "after connecting and spawning"
@@ -125,9 +128,9 @@ Fee-Step $b "tool-repair" "" "PartRepair" $null -GuardKey "Window:RepairPart" -W
 # A wrong amount is refused and the requester's prediction is corrected.
 $before = (Dump $a).stats.money
 $mark = Get-ServerLogMark
-Send-HarnessCommand -Instance $a -Verb econ-send -Arguments "FluidSpill -70" | Out-Null
+Send-HarnessCommand -Instance $a -Verb econ-send -Arguments "FluidSpill -900" | Out-Null
 $refused = try { Wait-ServerLog -Pattern "\[Economy\] client \d+ FluidSpill\(0\) refused Invalid" -After $mark -TimeoutSec 15 } catch { $null }
-Check ([bool]$refused) "a spill fine of 70 is refused Invalid ($refused)"
+Check ([bool]$refused) "a spill fine of 900 is refused Invalid ($refused)"
 $stats = Wait-StatsEqual "after the refused fee"
 Check ($stats.money -eq $before) "the refused fee changed no money ($before -> $($stats.money))"
 
@@ -150,8 +153,8 @@ $before = (Dump $a).stats.money
 $mark = Get-ServerLogMark
 foreach ($name in $Ctx.Instances) { Send-HarnessCommand -Instance $name -Verb net-hold -Arguments "on" | Out-Null }
 $race = @()
-try { Send-HarnessCommand -Instance $a -Verb econ-fee -Arguments "spill 0" | Out-Null; $race += "A" } catch { Write-Host "A race spill: $($_.Exception.Message)" }
-try { Send-HarnessCommand -Instance $b -Verb econ-fee -Arguments "spill 1" | Out-Null; $race += "B" } catch { Write-Host "B race spill: $($_.Exception.Message)" }
+try { Send-HarnessCommand -Instance $a -Verb econ-fee -Arguments "spill 2" | Out-Null; $race += "A" } catch { Write-Host "A race spill: $($_.Exception.Message)" }
+try { Send-HarnessCommand -Instance $b -Verb econ-fee -Arguments "spill 3" | Out-Null; $race += "B" } catch { Write-Host "B race spill: $($_.Exception.Message)" }
 Start-Sleep -Seconds 6
 foreach ($name in $Ctx.Instances) { Send-HarnessCommand -Instance $name -Verb net-hold -Arguments "off" | Out-Null }
 if ($race.Count -eq 0) { Skip "race step (no part with fluid left)" }
@@ -177,7 +180,7 @@ Send-HarnessCommand -Instance $a -Verb econ-unattributed -Arguments "reset" | Ou
 Send-ServerCommand "money set 30"
 Wait-StatsEqual "money set 30" { param($s) $s.money -eq 30 } | Out-Null
 try {
-    Send-HarnessCommand -Instance $b -Verb econ-fee -Arguments "spill 1" | Out-Null
+    Send-HarnessCommand -Instance $b -Verb econ-fee -Arguments "spill 4" | Out-Null
     $stats = Wait-StatsEqual "fee with too little money" { param($s) $s.money -eq 0 }
     Check ($stats.money -eq 0) "a fine larger than the 30 money leaves 0 on both ($($stats.money))"
 } catch { Skip "clamp step ($($_.Exception.Message))" }
