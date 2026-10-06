@@ -32,6 +32,8 @@ public static class ClientData
 		PartClaims.Reset();
 		Logic.Car.Away.CarAwaySync.Reset();
 		PartTransactions.Reset();
+		Logic.Economy.EconomyScope.Reset();
+		Logic.Economy.EconomyRequests.Reset();
 	}
 
 	public static void Update()

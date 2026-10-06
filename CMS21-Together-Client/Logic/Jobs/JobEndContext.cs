@@ -1,5 +1,6 @@
 using CMS21_Together_Core.Logging;
 using CMS21_Together_Core.Network.Packets;
+using CMS21Together.Logic.Economy;
 using CMS21Together.Network;
 using UnityEngine;
 
@@ -18,8 +19,15 @@ public static class JobEndContext
 	private static int xp;
 	private static int moneyBefore;
 	private static float startedAt;
+	private static readonly EconomyScopeEntry scope = new EconomyScopeEntry
+	{
+		Name = "JobPayout", Mode = EconomyMode.Covered, Claims = EconomyKind.Money | EconomyKind.Exp,
+		CaptureMoney = amount => CaptureMoney(amount), CaptureExp = amount => CaptureExp(amount),
+	};
 
 	public static bool IsActive => jobId >= 0 && Time.realtimeSinceStartup - startedAt < TimeoutSeconds;
+
+	public static EconomyScopeEntry Scope => IsActive ? scope : null;
 
 	public static void Begin(Job job, int carLoaderId)
 	{

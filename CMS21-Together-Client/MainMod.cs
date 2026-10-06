@@ -40,6 +40,7 @@ namespace CMS21Together
 			PacketRouter.Initialize(System.Reflection.Assembly.GetExecutingAssembly());
 			Client.Init();
 			JoinRequests.Initialize();
+			Logic.Economy.FeeHooks.InstallLambdaHooks();
 
 			Log.Info($"Together Mod {BuildInfo.FullVersion} initialized!");
 			isModInitialized = true;
