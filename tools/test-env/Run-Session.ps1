@@ -12,7 +12,8 @@ param(
     [int]$Lane = 1,
     [string]$Window = "960x540",
     [switch]$Sound,
-    [switch]$KeepRunning
+    [switch]$KeepRunning,
+    [int]$MinFreeMemoryGb = 12
 )
 
 $ErrorActionPreference = "Stop"
@@ -30,6 +31,18 @@ $serverDir = $laneInfo.ServerDir
 
 $scenarioFile = Join-Path $PSScriptRoot "scenarios\$Scenario.ps1"
 if (-not (Test-Path -LiteralPath $scenarioFile)) { throw "Unknown scenario: $Scenario" }
+
+# Two game instances use most of the PC's 32 GB; two lanes at once ran it out of memory and hung clients.
+# Lanes therefore take turns with the game: the mutex is held for the whole run.
+$gameMutex = New-Object System.Threading.Mutex($false, "Global\CMS21TogetherGameLane")
+try {
+    if (-not $gameMutex.WaitOne([TimeSpan]::FromMinutes(30))) { throw "Another lane has been running the game for 30 minutes; giving up." }
+} catch [System.Threading.AbandonedMutexException] { }
+$freeGb = (Get-CimInstance Win32_OperatingSystem).FreePhysicalMemory / 1MB
+if ($freeGb -lt $MinFreeMemoryGb) {
+    $gameMutex.ReleaseMutex()
+    throw ("Only {0:N1} GB RAM free (need {1} GB for two game instances); not starting." -f $freeGb, $MinFreeMemoryGb)
+}
 if (Get-LaneGameProcesses $laneInfo) { throw "A game instance of lane $Lane is already running; refusing to start a test run." }
 foreach ($name in $Instances) { Assert-InstanceIsolated $name }
 
@@ -144,4 +157,5 @@ finally {
     Write-Host ("RESULT L{0} {1}: {2}" -f $Lane, $Scenario, $(if ($result.passed) { "PASSED" } else { "FAILED" }))
     $result.notes | ForEach-Object { Write-Host "  $_" }
     Write-Host "Run folder: $runDir"
+    $gameMutex.ReleaseMutex()
 }
