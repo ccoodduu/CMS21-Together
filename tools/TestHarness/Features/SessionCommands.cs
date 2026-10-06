@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using CMS21_Together_Core.Network.Packets;
 using CMS21Together.Network;
+using CMS21Together.Persistence;
 
 namespace TogetherTestHarness.Features;
 
@@ -46,6 +47,20 @@ public static class SessionCommands
 
         Client.Instance.Send(new StatsActionPacket { ScrapsDelta = scrap, ExpDelta = exp });
         return $"sent scrap {scrap}, exp {exp}";
+    }
+
+    [HarnessCommand("player-key")]
+    private static object PlayerKey(string args)
+    {
+        string value = (args ?? "").Trim();
+        if (value.Length > 0)
+            PlayerIdentity.Override = string.Equals(value, "reset", StringComparison.OrdinalIgnoreCase) ? null : value;
+        return new Dictionary<string, object>
+        {
+            ["key"] = PlayerIdentity.Key,
+            ["override"] = !string.IsNullOrEmpty(PlayerIdentity.Override),
+            ["file"] = PlayerIdentity.FilePath,
+        };
     }
 
     [HarnessCommand("to-menu")]

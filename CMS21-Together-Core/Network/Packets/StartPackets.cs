@@ -30,6 +30,7 @@ public class ConnectPacket : INetworkData
 	[OptionalField] public List<ModReport> mods;
 	[OptionalField] public string password;
 	[OptionalField] public string adminKey;
+	[OptionalField] public string playerKey;
 }
 
 [Serializable]

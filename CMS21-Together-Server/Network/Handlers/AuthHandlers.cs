@@ -35,13 +35,30 @@ namespace CMS21_Together_Server.Network.Handlers
 				Server.Refuse(client.ID, DisconnectReason.WrongPassword, "");
 				return;
 			}
+
+			string identity = PlayerRecords.Resolve(client, packet.playerKey);
+			if (identity == null)
+			{
+				Server.Refuse(client.ID, DisconnectReason.MissingIdentity, "");
+				return;
+			}
+			var holder = PlayerRecords.ConnectedWith(identity, client.ID);
+			if (holder != null)
+			{
+				Logger.Info($"{PlayerRecords.ShortKey(identity)} is already connected as Client[{holder.ID}].");
+				Server.Refuse(client.ID, DisconnectReason.DuplicateIdentity, "");
+				return;
+			}
+			client.Identity = identity;
+
 			client.IsAdmin = !string.IsNullOrEmpty(Program.Config.AdminKey) && packet.adminKey == Program.Config.AdminKey;
 			client.OnConnectedSuccessfully.Invoke();
 			SharedDlc.Add(client.ID, packet.dlc);
 			Server.SendToClient(BuildServerInfo(client.ID), client.ID);
 
 			var record = PresenceRegistry.Add(client.ID, packet.username);
-			Logger.Info($"Player {record.PlayerId} '{record.Username}' joined{(client.IsAdmin ? " (admin)" : "")}");
+			PlayerRecords.OnJoined(identity, record.Username, out bool returning);
+			Logger.Info($"Player {record.PlayerId} '{record.Username}' joined as {PlayerRecords.ShortKey(identity)} ({(returning ? "returning" : "new")}){(client.IsAdmin ? " (admin)" : "")}");
 			Server.SendToClients(new PlayerPresencePacket { Record = record.Copy() }, record.PlayerId);
 		}
 

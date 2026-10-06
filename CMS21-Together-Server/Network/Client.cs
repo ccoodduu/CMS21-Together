@@ -15,6 +15,8 @@ namespace CMS21_Together_Server.Network
 
 		public int ID;
 		public long SteamID { get; set; }
+		public string Identity { get; set; }
+		public bool RestoreOffered { get; set; }
 
 		public NetworkType ConnectionType;
 
@@ -101,6 +103,11 @@ namespace CMS21_Together_Server.Network
 				LastHeartbeatTime = 0;
 				IsAdmin = false;
 				RttMs = 0;
+
+				PlayerRecords.OnLeft(this);
+				Identity = null;
+				SteamID = 0;
+				RestoreOffered = false;
 
 				if (PresenceRegistry.Remove(ID))
 				{

@@ -134,6 +134,7 @@ namespace CMS21_Together_Server.Network.Transport
                 client.IsConnected = true;
                 client.ConnectionType = NetworkType.Steam;
                 client.SteamConnection = connection;
+                client.SteamID = (long)clientID;
                 Server.SendToClient(Server.WelcomePacket(client.ID), client.ID);
             }
         }

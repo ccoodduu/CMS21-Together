@@ -43,6 +43,11 @@ using `GameDataManager.CurrentState.X`, the section only moves that object in an
 
 `SyncOrder` keys and values are append-only. Do not renumber.
 
+Save section `players` (`PlayerRecordsSection`, `Data/Presence/`) is save-only: one `PlayerRecord` per identity
+(`steam:<id>` or `guid:<player key>`) with name, last seen and the last place. Live positions are copied into it on
+leave and before every save. The `self` provider sends `PlayerRestore` from it on the first snapshot of a connection,
+only when the last place was the garage.
+
 ## Items
 
 An *item* is whatever unit the client reports with `SyncTracker.Applied(key, snapshotId)`. `SendSnapshot` returns

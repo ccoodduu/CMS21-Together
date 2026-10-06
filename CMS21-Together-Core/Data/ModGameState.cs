@@ -14,7 +14,8 @@ public class ModGameState
 	public CarState CarState = new CarState();
 	public PlacementState PlacementState = new PlacementState();
 	public JobsState JobsState = new JobsState();
-	
+	public Dictionary<string, PlayerRecord> PlayerRecords = new Dictionary<string, PlayerRecord>();
+
 	[NonSerialized] public PlayerState PlayerState = new PlayerState();
 }
 
