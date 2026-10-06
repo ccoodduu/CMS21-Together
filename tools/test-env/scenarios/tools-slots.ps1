@@ -138,6 +138,7 @@ Check ((ItemCount $d $battery) -eq 1) "the battery is back once"
 
 # Engine stand: build an engine, rotate, unmount one part, B takes it off.
 Cmd $a tool-stand-create "EngineStand1 engine_v8_stary" | Out-Null
+try { Wait-HarnessDump -Instance $a -TimeoutSec 60 -What "engine built on A's stand" -Condition { param($x) (Tool $x "EngineStand1").uid -ne 0 } | Out-Null } catch { }
 $d = Wait-Same "engine on the stand" 60
 Check ((Tool $d "EngineStand1").uid -ne 0) "an engine is on engine stand 1"
 Cmd $a tool-angle "EngineStand1 90" | Out-Null
