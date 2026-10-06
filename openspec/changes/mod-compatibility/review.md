@@ -169,3 +169,9 @@ content outside the shared set is recorded for rows 1, 2, 5a in INTEGRATION.md (
    old build to provoke).
 5. Refusal history shows an empty name: clients send `PlayerName` empty when it is unset (the Steam name is
    resolved later by row 6). Cosmetic; the slot id is shown too.
+
+## Decision (main session, 2026-10-06): DLC ids
+
+DLC product ids are not unique (11 of 33 report "-1"), so the shared DLC set uses each DLC's position in the game's
+DLC list, the numbering `PartProperty.DLC` and `CarBundleLoader.CheckHaveDLCForCar` use. Update design D3 and the
+`SharedDlc` field when rows 1, 2 or 5a start enforcing it.
