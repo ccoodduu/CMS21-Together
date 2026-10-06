@@ -2,6 +2,24 @@
 
 Newest first. One entry per work session.
 
+## 2026-10-06 (10:40) — in flight (read this after a context compaction)
+
+- **M1 is complete in code.** Row 9 part 1 (agent, `change/mod-compatibility`) passed `compat-refusal` and a lane-2
+  regression. It is merged into `change/sync-players-and-scenes` in the separate worktree
+  `..\CMS21-Together-m1` (commit `dcf7997`, includes the DLC-id decision). A lane-2 `Run-All` from that worktree is
+  running. Next: if green, fast-forward `main` to it, build the dev zip (`tools\release\Build-Release.ps1`), write
+  the M1 "what to try" checklist here and notify the user; then remove the worktree.
+- **M2 / row 1** on `change/sync-car-parts` (main checkout): baselines, late join, live changes and claims pass
+  (`car-baseline`, `car-live`). Commit `87c4b89` adds transactions with inventory deltas and resync requests,
+  **not yet run**: deploy lane 1 and run `car-live` (it now also checks the server log line
+  "[Cars] Change ... inventory +1"). A lane-1 `Run-All` of `42f25fe` (before transactions) is running.
+  After that: merge `main` (M1) into `change/sync-car-parts`, row 1 remaining tasks (engine crane group, MarkDirty/
+  RebuildRegistry API, race scenario 5.4), then row 2.
+- Decisions taken without the user: DLC ids = position in the game's DLC list (11 of 33 product ids are "-1");
+  test scenarios use base-game cars (`car_boltatlanta`); a DLC car made the game show its missing-DLC window.
+- User: page file is fixed at 8 GB (commit limit 40 GB). Two lanes at once need ~32 GB page file; suggested, the
+  user decides (needs a reboot).
+
 ## 2026-10-06 (09:45–10:15) — M1 rows done except row 9; M2 started (cars)
 
 - Row 8 part 1 complete: Steam rich presence join strings, join requests with a leave-and-join dialog, cold start
