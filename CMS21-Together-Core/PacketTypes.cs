@@ -81,5 +81,11 @@ public enum PacketTypes
 	JobRemoved,
 
 	CarDetailsUpdate,
-	CarDetailsRequest
+	CarDetailsRequest,
+
+	CarAwayRequest,
+	CarAwayUpdate,
+	CarAwayRelease,
+	TestDriveResult,
+	TestDriveResultAck
 }

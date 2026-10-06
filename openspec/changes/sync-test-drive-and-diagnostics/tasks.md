@@ -56,11 +56,11 @@ Prerequisites (merged): `session-persistence-and-rejoin` groups 1–2 (contract,
 
 ## 2. Core: packets and DTOs
 
-- [ ] 2.1 Append `CarAwayRequest`, `CarAwayUpdate`, `CarAwayRelease`, `TestDriveResult`, `TestDriveResultAck` to the end
+- [x] 2.1 **Done (2026-10-06):** 62 → 67 packets on client and server (`connect`). Append `CarAwayRequest`, `CarAwayUpdate`, `CarAwayRelease`, `TestDriveResult`, `TestDriveResultAck` to the end
       of `PacketTypes`; add `Network/Packets/TestDrivePackets.cs` with the fields of design.md D14 and enums
       `CarAwayKind`, `CarAwayRefusal`. Verify: the solution builds and `PacketRouter.Initialize` logs 5 more packets on
       client and server start.
-- [ ] 2.2 `ModCarDetails.cs`: `ModEngineData` (every `EngineData` field from the decompiled struct), `ModDynoResult
+- [ ] 2.2 **In code (2026-10-06):** round trip checked with the dyno scenario later. `ModCarDetails.cs`: `ModEngineData` (every `EngineData` field from the decompiled struct), `ModDynoResult
       { Engine, MeasuredDragIndex }`, `ModCarDetails.Dyno`, `CarDetailSection.Dyno = 512`; `CarPackets.cs`:
       `CarSpawnResponsePacket.SpecialState` (default 0). Verify: a Newtonsoft and a BinaryFormatter round trip keep every
       field (server debug command or a small console check), and a `cars` section saved by the previous build loads
