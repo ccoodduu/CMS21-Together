@@ -51,7 +51,7 @@ $engineId = $crane.engine
 Start-Sleep -Seconds 2
 Cmd $a tool-put "EngineStand1 $($crane.group)" | Out-Null
 try { Wait-HarnessDump -Instance $a -TimeoutSec 60 -What "engine built on A's stand" -Condition { param($x) $x.tools.EngineStand1.uid -ne 0 } | Out-Null } catch { }
-$standBuilt = (Cmd $a dump).tools.EngineStand1.uid -ne 0
+Start-Sleep -Seconds 5; $standBuilt = (Cmd $b dump).tools.EngineStand1.uid -ne 0
 if (-not $standBuilt) { $note = "engine stand steps skipped: the game's build coroutine throws when the harness drives it (also disconnected); hand check"; Write-Host "NOTE: $note"; $Ctx.Result.notes += $note }
 else {
     Cmd $a tool-angle "EngineStand1 90" | Out-Null
