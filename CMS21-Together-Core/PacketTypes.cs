@@ -91,5 +91,7 @@ public enum PacketTypes
 	ToolsState,
 	ToolClaim,
 	ToolClaimUpdate,
-	ToolPartChangeResult
+	ToolPartChangeResult,
+
+	ToolAction
 }

@@ -13,7 +13,31 @@ public enum ModToolId
 	EngineStand1,
 	EngineStand2,
 	BrakeLathe,
-	BatteryCharger
+	BatteryCharger,
+	Welder,
+	CarWash,
+	InteriorDetailing,
+	InteriorDetailingStationary,
+	OilBin,
+	EngineCrane,
+	Paintshop,
+	Dyno
+}
+
+public enum ToolActionKind
+{
+	Weld,
+	Wash,
+	InteriorDetailing,
+	DrainOil,
+	EngineOut,
+	EngineIn,
+	PaintCar
+}
+
+public static class ModTools
+{
+	public static bool IsMachine(ModToolId tool) => tool >= ModToolId.TireChanger && tool <= ModToolId.BatteryCharger;
 }
 
 public enum ToolProperty

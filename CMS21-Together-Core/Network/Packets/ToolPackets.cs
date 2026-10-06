@@ -92,4 +92,13 @@ namespace CMS21_Together_Core.Network.Packets
         public ModToolId Tool;
         public int OwnerPlayerId = Released;
     }
+
+    [Serializable]
+    [NetworkPacket(PacketTypes.ToolAction)]
+    public class ToolActionPacket : INetworkData
+    {
+        public ModToolId Tool;
+        public int CarLoaderID;
+        public ToolActionKind Kind;
+    }
 }
