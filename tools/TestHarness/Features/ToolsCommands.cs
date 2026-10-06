@@ -408,7 +408,7 @@ public static class ToolsCommands
         }
         var place = (CarPlace)Enum.Parse(typeof(CarPlace), parts[1], true);
         manager.MoveTo(tool, place, true);
-        return new { tool = tool.ToString(), place = place.ToString(), moved = true };
+        return new { tool = tool.ToString(), place = place.ToString(), moved = !manager.IsOnDefaultPosition(tool) };
     }
 
     [HarnessCommand("tool-repair")]

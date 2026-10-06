@@ -165,16 +165,20 @@ if (-not $standBuilt) {
     Check (@($d.inventory.groups | Where-Object { $_.ID -eq $engineId }).Count -eq $engineGroups + 1) "exactly one engine group came back"
 }
 
-Cmd $a car-delete "0" | Out-Null
-Start-Sleep -Seconds 3
-# Tool positions.
+# Tool positions. MoveTo does nothing on a place without a loaded car, so car 0 waits on CarLifter1.
+Cmd $a car-move "0 CarLifter1" | Out-Null
+Start-Sleep -Seconds 6
 foreach ($tool in "Welder", "Oilbin", "EngineCrane") {
     $moved = Cmd $a tool-move "$tool CarLifter1"
-    Write-Host "$tool to CarLifter1: $($moved | ConvertTo-Json -Compress)"
-    Wait-Same "$tool at CarLifter1" | Out-Null
+    Check ($moved.moved -eq $true) "A's $tool moved to CarLifter1"
+    $d = Wait-Same "$tool at CarLifter1"
+    Check ($d.toolPositions.$tool -eq "CarLifter1") "$tool is at CarLifter1 on both"
     Cmd $a tool-move "$tool default" | Out-Null
-    Wait-Same "$tool back home" | Out-Null
+    $d = Wait-Same "$tool back home"
+    Check ($d.toolPositions.$tool -eq "default") "$tool is home on both"
 }
+Cmd $a car-delete "0" | Out-Null
+Start-Sleep -Seconds 3
 
 # Repair table and part paint (ItemActionType.Update).
 $worn = (Cmd $a give-item "tarczaHamulcowa_1 0.3").UID
