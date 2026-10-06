@@ -69,10 +69,23 @@ New-Item -ItemType Directory -Force -Path $runDir | Out-Null
 
 $serverSaves = Join-Path $serverDir "Saves"
 $serverConfig = Join-Path $serverDir "server_config.ini"
+$runMarker = Join-Path $serverDir "harness_run_in_progress.txt"
+if (Test-Path -LiteralPath $runMarker) {
+    $interrupted = (Get-Content -LiteralPath $runMarker -Raw).Trim()
+    if (Test-Path -LiteralPath (Join-Path $interrupted "Server\server_config.ini")) {
+        if (Test-Path -LiteralPath $serverSaves) { Remove-Item -LiteralPath $serverSaves -Recurse -Force }
+        $interruptedSaves = Join-Path $interrupted "Server\Saves"
+        if (Test-Path -LiteralPath $interruptedSaves) { Copy-Item -LiteralPath $interruptedSaves -Destination $serverSaves -Recurse }
+        Copy-Item -LiteralPath (Join-Path $interrupted "Server\server_config.ini") -Destination $serverConfig -Force
+        Write-Host "Restored the server state an interrupted run left behind (backup $interrupted)"
+    }
+    Remove-Item -LiteralPath $runMarker -Force
+}
 $backupDir = Join-Path $runDir "_backup"
 New-Item -ItemType Directory -Force -Path (Join-Path $backupDir "Server") | Out-Null
 if (Test-Path -LiteralPath $serverSaves) { Copy-Item -LiteralPath $serverSaves -Destination (Join-Path $backupDir "Server\Saves") -Recurse }
 Copy-Item -LiteralPath $serverConfig -Destination (Join-Path $backupDir "Server\server_config.ini")
+Set-Content -LiteralPath $runMarker -Value $backupDir -Encoding utf8
 Initialize-TestServer -ServerDir $serverDir -CommandFile (Join-Path $runDir "server_commands.txt") -ConnectAddress $laneInfo.ConnectAddress
 
 function Restore-ServerState {
@@ -171,7 +184,7 @@ finally {
     }
     if (Test-Path -LiteralPath $serverSaves) { Copy-Item -LiteralPath $serverSaves -Destination (Join-Path $runDir "server_saves_after") -Recurse }
 
-    if (-not $KeepRunning) { Restore-ServerState } else { Write-Host "KeepRunning: server saves backup in $backupDir" }
+    if (-not $KeepRunning) { Restore-ServerState; Remove-Item -LiteralPath $runMarker -Force -ErrorAction SilentlyContinue } else { Write-Host "KeepRunning: server saves backup in $backupDir" }
 
     foreach ($name in $Instances) {
         $clientLog = Join-Path $runDir "client_$name.log"
