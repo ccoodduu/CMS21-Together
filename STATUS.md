@@ -2,6 +2,25 @@
 
 Newest first. One entry per work session.
 
+## 2026-10-06 (11:25–11:45) — row 1 complete in code (branch `change/sync-car-parts`)
+
+- Every task in `sync-car-parts/tasks.md` is checked. New since the last entry:
+  - Engine crane out/in is one part transaction (`EngineCraneHooks`, scenario `car-crane`); engine swaps are refused
+    while connected (a swap rebuilds the engine under `root` and shifts part keys). The crane needs the oil drained
+    first, and draining is row 4 (`DrainTool` stays guarded), so players can use the crane only after row 4.
+  - Server returns OR-merged `examined` flags in the accepted result (putting the engine back resets them).
+  - `cars` server command; `car-race` round 2 forces a server rejection (`part-hold-remote`) and checks the inventory
+    revert; `car-live` holds B in `Loading` (`car-hold-snapshot`) to exercise the D8 queue.
+  - DLC rule: DLC ids are now positions in the game's DLC list; a DLC car's spawn is refused unless every connected
+    player owns its DLC (scenario `car-dlc`; 91 DLC cars in the game).
+  - Guard: row 1's modes, pie entries and windows are allowed while connected (engine swap and building engines stay
+    blocked); the `guard` scenario uses the row 4 `BonusDisassemble` mode as its blocked example.
+  - Harness fix: `Get-ServerLogMark` skipped the first new log line.
+- Two checks need a person in the game (M2 playtest): event order and item IDs of a body-part unmount through the
+  pie menu, and whether a second action can start before the first finishes.
+- Running: a full lane-1 regression of `0f10bf9`; if green, row 1 is merged into `main`. An agent does row 2's
+  static spikes (`docs/spikes/car-placement.md`).
+
 ## 2026-10-06 (11:00–11:25) — row 1: race fixed, API, dumps (branch `change/sync-car-parts`)
 
 - `main` (M1) is merged into `change/sync-car-parts`. Lane-1 regression `20261006-105712` PASSED with every car
