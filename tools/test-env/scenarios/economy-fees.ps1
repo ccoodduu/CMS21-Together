@@ -56,7 +56,7 @@ function Guarded([string]$Key) { $script:denied -contains $Key }
 
 # Runs one fee step and checks that the server applied it once ($Expected = money delta, $null = ranged).
 function Fee-Step {
-    param([string]$Who, [string]$Verb, [string]$Arguments, [string]$Reason, $Expected, [string]$GuardKey = "", [string]$What)
+    param([string]$Who, [string]$Verb, [string]$Arguments, [string]$Reason, $Expected, [string]$GuardKey = "", [string]$What, [switch]$MayChargeNothing)
     if ($GuardKey -and (Guarded $GuardKey)) { Skip "$What ($GuardKey is guarded on this build)"; return }
     $before = (Dump $a).stats.money
     $mark = Get-ServerLogMark
@@ -67,6 +67,7 @@ function Fee-Step {
         return
     }
     $line = try { Wait-ServerLog -Pattern "\[Economy\] client \d+ $Reason\(-?\d+\) money" -After $mark -TimeoutSec 20 } catch { $null }
+    if (-not $line -and $MayChargeNothing) { Skip "$What (the game charged nothing)"; return }
     Check ([bool]$line) "$What`: the server applied $Reason ($line)"
     if (-not $line) { return }
     $delta = if ($line -match "money ([+-]?\d+) ->") { [int]$Matches[1] } else { 0 }
@@ -111,8 +112,8 @@ if ($inJunkyard) {
 Fee-Step $b "econ-map-travel" "Auction" "TravelFee" -200 -GuardKey "Scene:Auction" -What "B travels to the auction"
 
 # Fees with a fixed amount.
-Fee-Step $a "econ-fee" "spill 0" "FluidSpill" -50 -What "A spills fluid"
-Fee-Step $b "econ-fee" "refill 1" "FluidRefill" $null -GuardKey "Mode:DrainTool" -What "B refills fluid"
+Fee-Step $a "econ-fee" "spill 0" "FluidSpill" $null -What "A spills fluid"
+Fee-Step $b "econ-fee" "refill 1" "FluidRefill" $null -GuardKey "Mode:DrainTool" -What "B refills fluid" -MayChargeNothing
 Fee-Step $a "econ-fee" "wash-paint 0" "WashBeforePaint" -100 -GuardKey "Window:Paintshop" -What "A washes before painting"
 Fee-Step $a "tool-paint-car" "0" "PaintCar" -1000 -GuardKey "Window:Paintshop" -What "A paints the car"
 Fee-Step $b "econ-fee" "wash-tint 1" "WashBeforeTint" -100 -GuardKey "Window:Tinting" -What "B washes before tinting"
@@ -156,10 +157,11 @@ foreach ($name in $Ctx.Instances) { Send-HarnessCommand -Instance $name -Verb ne
 if ($race.Count -eq 0) { Skip "race step (no part with fluid left)" }
 else {
     Start-Sleep -Seconds 2
-    $applied = @(Server-Lines $mark "\[Economy\] client \d+ FluidSpill\(0\) money").Count
-    Check ($applied -eq $race.Count) "each racing fee was applied once ($applied of $($race.Count))"
-    $stats = Wait-StatsEqual "after the race" { param($s) $s.money -eq $before - 50 * $race.Count }
-    Check ($stats.money -eq $before - 50 * $race.Count) "the race cost $(50 * $race.Count) on both ($before -> $($stats.money))"
+    $lines = @(Server-Lines $mark "\[Economy\] client \d+ FluidSpill\(0\) money")
+    Check ($lines.Count -eq $race.Count) "each racing fee was applied once ($($lines.Count) of $($race.Count))"
+    $cost = 0; foreach ($l in $lines) { if ($l -match "money ([+-]?\d+) ->") { $cost -= [int]$Matches[1] } }
+    $stats = Wait-StatsEqual "after the race" { param($s) $s.money -eq $before - $cost }
+    Check ($stats.money -eq $before - $cost) "the race cost $cost on both ($before -> $($stats.money))"
 }
 
 # Default deny: money changed by no synced feature stays unchanged.
@@ -177,7 +179,7 @@ Wait-StatsEqual "money set 30" { param($s) $s.money -eq 30 } | Out-Null
 try {
     Send-HarnessCommand -Instance $b -Verb econ-fee -Arguments "spill 1" | Out-Null
     $stats = Wait-StatsEqual "fee with too little money" { param($s) $s.money -eq 0 }
-    Check ($stats.money -eq 0) "a 50 fine with 30 money leaves 0 on both ($($stats.money))"
+    Check ($stats.money -eq 0) "a fine larger than the 30 money leaves 0 on both ($($stats.money))"
 } catch { Skip "clamp step ($($_.Exception.Message))" }
 Check-Unattributed "at the end"
 

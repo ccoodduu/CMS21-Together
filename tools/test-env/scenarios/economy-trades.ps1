@@ -43,6 +43,11 @@ function Wait-Shared([string]$What, [scriptblock]$Condition = { param($d) $true 
         $differ = @(Compare-HarnessDumps -Left $da -Right $db -Sections stats, inventory, skills, cars)
     } while (-not ($differ.Count -eq 0 -and (& $Condition $da)) -and (Get-Date) -lt $deadline)
     Check ($differ.Count -eq 0) "$What`: A and B agree on stats, inventory, skills and cars (differ: $($differ -join ', '))"
+    if ($differ -contains "cars") {
+        foreach ($dump in $da, $db) {
+            Write-Host "  cars $($dump.instance): $(@($dump.cars | Where-Object { $_.carToLoad } | ForEach-Object { "$($_.index) $($_.carToLoad) $($_.syncState) rev $($_.revision) place $($_.placeNo)" }) -join '; ')"
+        }
+    }
     Check ([bool](& $Condition $da)) "$What`: expected state reached"
     foreach ($dump in $da, $db) { Check ($dump.economy.unattributed -eq 0) "$What`: $($dump.instance) has no unattributed call ($($dump.economy.unattributed))" }
     return $da
@@ -124,7 +129,7 @@ try {
     Check (Wait-Ready $a $jobLoader) "the job car is on loader $jobLoader"
     $mark = Get-ServerLogMark
     Send-HarnessCommand -Instance $a -Verb econ-sell-car -Arguments "$jobLoader 20000" | Out-Null
-    Check ([bool](Economy-Line $mark "CarSale\($jobLoader\) refused Invalid")) "a job car cannot be sold"
+    Check ([bool](Economy-Line $mark "CarSale\(\d+\) refused Invalid: loader $jobLoader is a job car")) "a job car cannot be sold"
     Check (Has-Car $b $jobLoader) "the job car stays for B"
 } catch { Skip "job car sale ($($_.Exception.Message))" }
 Skip "selling a parked car (no client entry point found yet, task 1.4)"

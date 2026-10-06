@@ -250,6 +250,7 @@ public static partial class EconomyCommands
                 var script = registry.Sub(key);
                 result["key"] = key;
                 result["message"] = script.sendMessageOnHide;
+                GameScript.Get().IOMouseOverCarLoader = carLoader;
                 script.StartCoroutine(script.Hide());
                 break;
             case "refill":

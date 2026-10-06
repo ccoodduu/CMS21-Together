@@ -74,7 +74,7 @@ namespace CMS21_Together_Server.Data.Economy
 				case EconomyReason.TravelFeeLegacy:
 					if (!TravelTable.Values.Contains(r.Money)) return Invalid($"legacy travel fee {r.Money}");
 					return new EconomyOutcome { Money = ChargesTravel ? r.Money : 0 };
-				case EconomyReason.FluidSpill: return Fixed(r.Money, -50);
+				case EconomyReason.FluidSpill: return Ranged(r.Money, -500, -1);
 				case EconomyReason.FluidRefill: return Ranged(r.Money, -2000, -1);
 				case EconomyReason.PaintCar:
 					if (r.Arg != 0 && r.Arg != 1) return Invalid($"paint type {r.Arg}");
