@@ -44,8 +44,13 @@ function Wait-Shared([string]$What, [scriptblock]$Condition = { param($d) $true 
     } while (-not ($differ.Count -eq 0 -and (& $Condition $da)) -and (Get-Date) -lt $deadline)
     Check ($differ.Count -eq 0) "$What`: A and B agree on stats, inventory, skills and cars (differ: $($differ -join ', '))"
     if ($differ -contains "cars") {
-        foreach ($dump in $da, $db) {
-            Write-Host "  cars $($dump.instance): $(@($dump.cars | Where-Object { $_.carToLoad } | ForEach-Object { "$($_.index) $($_.carToLoad) $($_.syncState) rev $($_.revision) place $($_.placeNo)" }) -join '; ')"
+        foreach ($carA in @($da.cars)) {
+            $carB = @($db.cars | Where-Object { $_.index -eq $carA.index })[0]
+            foreach ($prop in $carA.PSObject.Properties.Name) {
+                $left = $carA.$prop | ConvertTo-Json -Depth 6 -Compress
+                $right = if ($carB) { $carB.$prop | ConvertTo-Json -Depth 6 -Compress } else { "(no car)" }
+                if ($left -ne $right) { Write-Host "  car $($carA.index) $prop A: $($left.Substring(0, [Math]::Min(300, $left.Length)))"; Write-Host "  car $($carA.index) $prop B: $($right.Substring(0, [Math]::Min(300, $right.Length)))" }
+            }
         }
     }
     Check ([bool](& $Condition $da)) "$What`: expected state reached"
