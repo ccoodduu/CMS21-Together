@@ -160,6 +160,17 @@ public static class JobsCommands
         return new { job.id, payout = 1234, xp = 50 };
     }
 
+    [HarnessCommand("job-spawn-unclaimed")]
+    private static object JobSpawnUnclaimed(string args)
+    {
+        var request = new CMS21_Together_Core.Network.Packets.CarSpawnRequestPacket
+        {
+            CarLoaderID = int.Parse((args ?? "").Trim()), CarToLoad = "car_boltatlanta", IsJob = true, JobID = 9999, PlaceNo = -1
+        };
+        CMS21Together.Network.Client.Instance.Send(request);
+        return "sent";
+    }
+
     [HarnessCommand("job-check")]
     private static object JobCheck(string args)
     {

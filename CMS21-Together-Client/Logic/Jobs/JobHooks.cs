@@ -106,6 +106,15 @@ public static class JobHooks
 		JobEndContext.Begin(job, CarLoaderPlaces.Get().GetCarLoaderId(carLoader));
 	}
 
+	[HarmonyPatch(typeof(CMS.MainMenu.Windows.TutorialsWindow), "RunTutorialAction")]
+	[HarmonyPrefix]
+	private static bool BeforeTutorial()
+	{
+		if (!Connected) return true;
+		UIManager.Get()?.ShowInfoWindow("Tutorials are not available while playing together.");
+		return false;
+	}
+
 	[HarmonyPatch(typeof(GlobalData), nameof(GlobalData.AddPlayerMoney))]
 	[HarmonyPrefix]
 	private static void BeforeAddMoney(int money) => JobEndContext.CaptureMoney(money);
