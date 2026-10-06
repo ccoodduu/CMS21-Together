@@ -49,9 +49,24 @@ public static class CarDetailsCommands
             tinted++;
         }
         details.Plates.LicensePlateNumberFront = $"TST {random.Next(100, 999)}";
+        int painted = -1;
+        for (int i = 0; i < details.BodyCosmetics.Count && painted < 0; i++)
+        {
+            if (details.BodyCosmetics[i].IsTinted) continue;
+            painted = i;
+            details.BodyCosmetics[i].Color = new ModColor { r = (float)Math.Round(random.NextDouble(), 2), g = 0.2f, b = 0.6f, a = 1f };
+            details.BodyCosmetics[i].PaintType = ModPaintType.Matt;
+        }
+        foreach (var module in details.Tuning.Modules)
+        {
+            module.Data.IsTuned = true;
+            module.Data.TuningValue = (float)Math.Round(random.NextDouble(), 2);
+            if (module.Data.Values != null)
+                for (int v = 0; v < module.Data.Values.Length; v++) module.Data.Values[v] = (short)random.Next(0, 100);
+        }
         CarDetailsIO.Apply(carLoader, details);
-        CarDetailsSync.MarkDirty(carLoader, CarDetailSection.BodyCosmetics | CarDetailSection.Plates);
-        return new { mileage = details.Info.Mileage, plate = details.Plates.LicensePlateNumberFront, tinted };
+        CarDetailsSync.MarkDirty(carLoader, CarDetailSection.BodyCosmetics | CarDetailSection.Plates | CarDetailSection.Tuning);
+        return new { mileage = details.Info.Mileage, plate = details.Plates.LicensePlateNumberFront, tinted, painted, tuned = details.Tuning.Modules.Count };
     }
 
     [HarnessCommand("cardetails-hold")]

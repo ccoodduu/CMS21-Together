@@ -1,7 +1,11 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
+using CMS.PartModules;
 using CMS21_Together_Core.Data.GameType;
 using CMS21_Together_Core.Logging;
+using CMS21_Together_Core.Network.Packets;
+using CMS21Together.Logic.Car.Parts;
 using UnityEngine;
 
 namespace CMS21Together.Logic.Car.Details;
@@ -26,7 +30,7 @@ public static class CarDetailsIO
 		}
 		if (sections.HasFlag(CarDetailSection.Tuning)) details.Tuning = ReadTuning(carLoader);
 		if (sections.HasFlag(CarDetailSection.Paint))
-			details.Paint = new ModCarPaint { Color = ToMod(carLoader.color), FactoryColor = ToMod(carLoader.factoryColor), FactoryPaintType = (ModPaintType)(int)carLoader.factoryPaintType, IsCustom = carLoader.IsCustomPaintType };
+			details.Paint = new ModCarPaint { Color = ToMod(carLoader.color), FactoryColor = ToMod(carLoader.factoryColor), FactoryPaintType = (ModPaintType)(int)carLoader.factoryPaintType, IsCustom = carLoader.IsCustomPaintType, PaintData = ToMod(carLoader.GetPaintData()) };
 		if (sections.HasFlag(CarDetailSection.BodyCosmetics)) details.BodyCosmetics = ReadCosmetics(carLoader);
 		if (sections.HasFlag(CarDetailSection.Plates))
 		{
@@ -89,7 +93,32 @@ public static class CarDetailsIO
 		var gearbox = carLoader.GetRoot()?.GetComponentInChildren<GearboxHandle>();
 		if (gearbox != null)
 			tuning.Gearbox = new ModGearboxData { GearRatio = gearbox.gearRatio == null ? null : (float[])gearbox.gearRatio, FinalDriveRatio = gearbox.finalDriveRatio };
+		foreach (var pair in Modules(carLoader))
+		{
+			var module = pair.Value;
+			var values = module.GetValues();
+			var ecu = module.TryCast<EcuModule>();
+			tuning.Modules.Add(new ModPartTuning
+			{
+				PartKey = pair.Key,
+				Data = new ModTuningData { IsTuned = module.IsTuned(), Values = values == null ? null : (short[])values, TuningValue = module.data.TuningValue },
+				EcuStage = ecu == null ? -1 : ecu.Stage,
+			});
+		}
 		return tuning;
+	}
+
+	private static Dictionary<string, PartModule> Modules(CarLoader carLoader)
+	{
+		var result = new Dictionary<string, PartModule>();
+		int loader = CarLoaderPlaces.Get().GetCarLoaderId(carLoader);
+		var registry = loader < 0 ? null : CarPartsSync.Get(loader).Registry;
+		var root = carLoader.GetRoot();
+		if (registry == null || root == null) return result;
+		foreach (var module in root.GetComponentsInChildren<PartModule>(true))
+			if (registry.TryGetSubPath(module.PartScript, out int[] path))
+				result[PartKeys.Sub(path)] = module;
+		return result;
 	}
 
 	private static List<ModBodyCosmetics> ReadCosmetics(CarLoader carLoader)
@@ -101,7 +130,7 @@ public static class CarDetailsIO
 			var part = parts[i];
 			result.Add(new ModBodyCosmetics
 			{
-				PartIndex = i, Color = ToMod(part.Color), PaintType = (ModPaintType)(int)part.PaintType, Livery = part.Livery, LiveryStrength = part.LiveryStrength,
+				PartIndex = i, Color = ToMod(part.Color), PaintType = (ModPaintType)(int)part.PaintType, PaintData = ToMod(part.PaintData), Livery = part.Livery, LiveryStrength = part.LiveryStrength,
 				IsTinted = part.IsTinted, TintColor = ToMod(part.TintColor), Dust = part.Dust, WashFactor = part.WashFactor,
 			});
 		}
@@ -167,11 +196,30 @@ public static class CarDetailsIO
 
 	private static void ApplyTuning(CarLoader carLoader, ModCarTuning tuning)
 	{
-		if (tuning?.Gearbox == null) return;
-		var gearbox = carLoader.GetRoot()?.GetComponentInChildren<GearboxHandle>();
-		if (gearbox == null) return;
-		if (tuning.Gearbox.GearRatio != null) gearbox.gearRatio = tuning.Gearbox.GearRatio;
-		gearbox.finalDriveRatio = tuning.Gearbox.FinalDriveRatio;
+		if (tuning == null) return;
+		var gearbox = tuning.Gearbox == null ? null : carLoader.GetRoot()?.GetComponentInChildren<GearboxHandle>();
+		if (gearbox != null)
+		{
+			if (tuning.Gearbox.GearRatio != null) gearbox.gearRatio = tuning.Gearbox.GearRatio;
+			gearbox.finalDriveRatio = tuning.Gearbox.FinalDriveRatio;
+		}
+		if (tuning.Modules == null || tuning.Modules.Count == 0) return;
+		var modules = Modules(carLoader);
+		foreach (var entry in tuning.Modules)
+		{
+			if (entry.Data == null || !modules.TryGetValue(entry.PartKey ?? "", out var module)) continue;
+			var values = module.GetValues();
+			bool same = module.IsTuned() == entry.Data.IsTuned && Math.Abs(module.data.TuningValue - entry.Data.TuningValue) < 0.0005f
+			            && Enumerable.SequenceEqual(values == null ? Array.Empty<short>() : (short[])values, entry.Data.Values ?? Array.Empty<short>());
+			if (same) continue;
+			if (entry.Data.IsTuned)
+				module.Tune(entry.Data.Values ?? Array.Empty<short>(), entry.Data.TuningValue);
+			else
+			{
+				var data = new CMS.Containers.TuningData { IsTuned = false, Values = entry.Data.Values ?? Array.Empty<short>(), TuningValue = entry.Data.TuningValue };
+				module.CopyDataFrom(ref data);
+			}
+		}
 	}
 
 	private static void ApplyPaint(CarLoader carLoader, ModCarPaint paint)
@@ -180,6 +228,10 @@ public static class CarDetailsIO
 		if (paint.FactoryColor != null) carLoader.SetFactoryColor(ToGame(paint.FactoryColor));
 		carLoader.SetFactoryPaintType((PaintType)(int)paint.FactoryPaintType);
 		if (paint.Color != null) carLoader.color = ToGame(paint.Color);
+		if (paint.IsCustom && (!carLoader.IsCustomPaintType || !Same(carLoader.GetPaintData(), paint.PaintData)))
+			carLoader.SetCustomCarPaintType(ToGame(paint.PaintData));
+		else if (!paint.IsCustom && carLoader.IsCustomPaintType)
+			carLoader.IsCustomPaintType = false;
 	}
 
 	private static void ApplyCosmetics(CarLoader carLoader, List<ModBodyCosmetics> cosmetics)
@@ -190,6 +242,14 @@ public static class CarDetailsIO
 		{
 			if (parts == null || entry.PartIndex < 0 || entry.PartIndex >= parts.Count) continue;
 			var part = parts[entry.PartIndex];
+			if (entry.Color != null && !Same(part.Color, entry.Color)) carLoader.SetCarColor(part, ToGame(entry.Color));
+			if (entry.PaintType == ModPaintType.Custom)
+			{
+				if (part.PaintType != PaintType.Custom || !Same(part.PaintData, entry.PaintData)) carLoader.SetCustomCarPaintType(part, ToGame(entry.PaintData));
+			}
+			else if ((int)part.PaintType != (int)entry.PaintType) carLoader.SetCarPaintType(part, (PaintType)(int)entry.PaintType);
+			if ((entry.Livery ?? "") != (part.Livery ?? "") || Math.Abs(part.LiveryStrength - entry.LiveryStrength) > 0.0005f)
+				carLoader.SetCarLivery(part, entry.Livery ?? "", entry.LiveryStrength);
 			if (Math.Abs(part.Dust - entry.Dust) > 0.0005f) carLoader.EnableDust(part, entry.Dust);
 			if (Math.Abs(part.WashFactor - entry.WashFactor) > 0.0005f) carLoader.SetWashFactor(part, entry.WashFactor);
 			if (entry.TintColor != null && (part.IsTinted != entry.IsTinted || !Same(part.TintColor, entry.TintColor)))
@@ -229,6 +289,16 @@ public static class CarDetailsIO
 
 	private static bool Same(Color color, ModColor mod) =>
 		Math.Abs(color.r - mod.r) < 0.002f && Math.Abs(color.g - mod.g) < 0.002f && Math.Abs(color.b - mod.b) < 0.002f && Math.Abs(color.a - mod.a) < 0.002f;
+
+	private static bool Same(PaintData data, ModPaintData mod) =>
+		Math.Abs(data.Metal - mod.metal) < 0.002f && Math.Abs(data.Roughness - mod.roughness) < 0.002f && Math.Abs(data.ClearCoat - mod.clearCoat) < 0.002f
+		&& Math.Abs(data.NormalStrength - mod.normalStrenght) < 0.002f && Math.Abs(data.Fresnel - mod.fresnel) < 0.002f;
+
+	private static ModPaintData ToMod(PaintData data) =>
+		new ModPaintData { metal = data.Metal, roughness = data.Roughness, clearCoat = data.ClearCoat, normalStrenght = data.NormalStrength, fresnel = data.Fresnel };
+
+	private static PaintData ToGame(ModPaintData data) =>
+		new PaintData { Metal = data.metal, Roughness = data.roughness, ClearCoat = data.clearCoat, NormalStrength = data.normalStrenght, Fresnel = data.fresnel };
 
 	private static ModColor ToMod(Color color) => new ModColor { r = color.r, g = color.g, b = color.b, a = color.a };
 
