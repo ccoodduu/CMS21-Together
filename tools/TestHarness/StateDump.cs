@@ -58,6 +58,7 @@ public static class StateDump
         };
         dump["inventory"] = Inventory();
         dump["cars"] = Cars();
+        dump["placement"] = Placement();
         dump["players"] = PresenceManager.Roster.Where(p => p.Value.HasAvatar).ToDictionary(
             p => p.Key.ToString(),
             p => (object)Vec(p.Value.Avatar.transform.position));
@@ -166,6 +167,38 @@ public static class StateDump
             cars.Add(car);
         }
         return cars;
+    }
+
+    private static object Placement()
+    {
+        var places = CarLoaderPlaces.Get();
+        var garage = GarageLoader.Get();
+        var data = Singleton<GameManager>.Instance?.GameDataManager;
+        if (places == null || garage == null || data == null) return null;
+
+        var lifters = new List<object>();
+        for (int i = 0; garage.carLifter != null && i < garage.carLifter.Length; i++)
+        {
+            var connected = garage.carLifter[i].GetConnectedCarLoader();
+            lifters.Add(new { index = i, state = garage.carLifter[i].GetState().ToString(), car = connected == null ? -1 : places.GetCarLoaderId(connected) });
+        }
+        var cars = new List<object>();
+        for (int i = 0; i < places.GetCarLoadersCount(); i++)
+        {
+            var carLoader = places.GetCarLoaderByIndex(i);
+            if (carLoader == null || string.IsNullOrEmpty(carLoader.carToLoad)) continue;
+            string inPlace = null;
+            foreach (CarPlace place in System.Enum.GetValues(typeof(CarPlace)))
+                if (carLoader.IsInPlace(place)) inPlace = place.ToString();
+            cars.Add(new { loader = i, carLoader.carToLoad, placeNo = carLoader.GetPlaceNo(), inPlace });
+        }
+        var slots = new List<object>();
+        for (int i = 0; i < GlobalData.GetMaxParkingPlacesAmount(); i++)
+        {
+            var car = data.LoadCarInParking(i);
+            if (car != null && !car.IsDefault()) slots.Add(new { index = i, car.carToLoad });
+        }
+        return new { lifters, cars, parking = new { levels = GlobalData.UnlockedParkingLevels, slots } };
     }
 
     private static float Round(float value) => Mathf.Round(value * 1000f) / 1000f;

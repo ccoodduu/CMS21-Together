@@ -182,20 +182,7 @@ public static class CarPartsSync
 		if (needsLoad)
 		{
 			sync.State = LoaderSyncState.Loading;
-			carLoader.placeNo = spawn.PlaceNo;
-			carLoader.ConfigVersion = spawn.ConfigVersion;
-			carLoader.customerCar = spawn.IsJob;
-			CarSpawnHooks.Suppress(loader);
-			try
-			{
-				carLoader.StartCoroutine(carLoader.LoadCar(spawn.CarToLoad));
-				while (!carLoader.IsCarLoaded()) yield return new WaitForEndOfFrame();
-				carLoader.PlaceAtPosition(true, true);
-			}
-			finally
-			{
-				CarSpawnHooks.Release(loader);
-			}
+			yield return Placement.CarLoading.Load(carLoader, loader, spawn);
 		}
 		else
 		{

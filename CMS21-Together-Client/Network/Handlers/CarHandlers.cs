@@ -42,28 +42,8 @@ namespace CMS21Together.Network.Handlers
                 yield break;
             }
 
-            // Apply variables
-            carLoader.placeNo = packet.PlaceNo;
-            carLoader.ConfigVersion = packet.ConfigVersion;
-            carLoader.customerCar = packet.IsJob;
-
-            CarSpawnHooks.Suppress(packet.CarLoaderID);
-            try
-            {
-                carLoader.StartCoroutine(carLoader.LoadCar(packet.CarToLoad));
-                Log.Info($"[CarHandlers] Loading {packet.CarToLoad} from server into Loader {packet.CarLoaderID}");
-
-                // Wait for native LoadCar to finish (sets carLoader.done = true)
-                while (!carLoader.IsCarLoaded())
-                    yield return new WaitForEndOfFrame();
-
-                // Place it at position (critical for clients who didn't call TakeJob)
-                carLoader.PlaceAtPosition(true, true);
-            }
-            finally
-            {
-                CarSpawnHooks.Release(packet.CarLoaderID);
-            }
+            Log.Info($"[CarHandlers] Loading {packet.CarToLoad} from server into Loader {packet.CarLoaderID}{(packet.CarData == null ? "" : " from its saved data")}");
+            yield return Logic.Car.Placement.CarLoading.Load(carLoader, packet.CarLoaderID, packet);
         }
 
         [PacketHandler(PacketTypes.CarSpawnDelete)]
