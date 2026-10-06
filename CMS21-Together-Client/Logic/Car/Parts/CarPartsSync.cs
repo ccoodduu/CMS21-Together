@@ -44,6 +44,19 @@ public static class CarPartsSync
 	private static readonly Dictionary<string, List<CarPartsSnapshotPacket>> incoming = new Dictionary<string, List<CarPartsSnapshotPacket>>();
 
 	public static event Action<int> BaselineUploaded;
+	public static event Action<int, IReadOnlyCollection<string>> LocalPartsCommitted;
+
+	public static void MarkDirty(int loader, PartScript script) => PartChangeTracker.MarkDirty(loader);
+
+	public static void MarkDirty(int loader, CarPart part) => PartChangeTracker.MarkDirty(loader);
+
+	public static void RebuildRegistry(int loader)
+	{
+		var carLoader = CarLoaderPlaces.Get()?.GetCarLoaderByIndex(loader);
+		if (carLoader != null && carLoader.IsCarLoaded()) Get(loader).Registry = PartRegistry.Build(carLoader);
+	}
+
+	internal static void RaiseLocalPartsCommitted(int loader, IReadOnlyCollection<string> keys) => LocalPartsCommitted?.Invoke(loader, keys);
 
 	public static IEnumerable<LoaderSync> All => loaders.Values;
 

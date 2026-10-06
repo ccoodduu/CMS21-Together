@@ -21,6 +21,8 @@ public static class PartChangeTracker
 	private static readonly HashSet<int> mechanicalDirty = new HashSet<int>();
 	private static readonly Dictionary<int, (string Hash, int Polls)> stability = new Dictionary<int, (string, int)>();
 	private static int nextTxId = 1;
+	private static readonly Dictionary<int, List<string>> sentKeys = new Dictionary<int, List<string>>();
+
 	private static float nextBodyScan;
 	private static bool running;
 
@@ -37,11 +39,19 @@ public static class PartChangeTracker
 		}
 	}
 
+	public static List<string> TakeSentKeys(int txId)
+	{
+		if (!sentKeys.TryGetValue(txId, out var keys)) return new List<string>();
+		sentKeys.Remove(txId);
+		return keys;
+	}
+
 	public static void Reset()
 	{
 		dirty.Clear();
 		mechanicalDirty.Clear();
 		stability.Clear();
+		sentKeys.Clear();
 	}
 
 	private static IEnumerator Run()
@@ -131,6 +141,7 @@ public static class PartChangeTracker
 		change.InventoryDelta = PartTransactions.TakeFor(sync.Loader, body.Select(r => r.Key).Concat(sub.Select(r => r.Key)), change.TxId);
 		foreach (var record in body) sync.Body[record.Key] = record;
 		foreach (var record in sub) sync.Sub[record.Key] = record;
+		sentKeys[change.TxId] = body.Select(r => r.Key).Concat(sub.Select(r => r.Key)).ToList();
 		Client.Instance.Send(change);
 		Log.Debug($"[Parts] Loader {sync.Loader}: change {change.TxId} sent ({body.Count} body, {sub.Count} mechanical, {change.Preconditions.Count} preconditions).");
 	}

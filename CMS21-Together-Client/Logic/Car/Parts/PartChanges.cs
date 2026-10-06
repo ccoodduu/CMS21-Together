@@ -35,6 +35,7 @@ public static class PartChanges
 		if (result.Accepted)
 		{
 			if (result.Revision > sync.Revision) sync.Revision = result.Revision;
+			CarPartsSync.RaiseLocalPartsCommitted(result.CarLoaderID, PartChangeTracker.TakeSentKeys(result.TxId));
 			return;
 		}
 
