@@ -1,3 +1,4 @@
+using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
@@ -32,9 +33,15 @@ public static class ToolPositionSync
 	[HarmonyPrefix]
 	private static void BeforeMove(ToolsMoveManager __instance, IOSpecialType tool, CarPlace place)
 	{
-		if (applying || !Movable.Contains(tool) || !__instance.CanMove(tool, place)) return;
+		if (applying || !Movable.Contains(tool) || !CanMoveOrUnknown(__instance, tool, place)) return;
 		waiting.Remove((int)tool);
 		ToolSync.SendPosition((int)tool, (int)place);
+	}
+
+	private static bool CanMoveOrUnknown(ToolsMoveManager manager, IOSpecialType tool, CarPlace place)
+	{
+		try { return manager.CanMove(tool, place); }
+		catch (Exception) { return true; }
 	}
 
 	[HarmonyPatch(typeof(ToolsMoveManager), nameof(ToolsMoveManager.SetOnDefaultPosition))]
