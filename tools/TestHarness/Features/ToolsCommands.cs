@@ -117,6 +117,46 @@ public static class ToolsCommands
         return group;
     }
 
+    private static System.Collections.IEnumerator Drive(Il2CppSystem.Collections.IEnumerator routine)
+    {
+        var build = routine?.TryCast<EngineStandLogic._SetGroupOnEngineStand_d__8>();
+        while (routine != null)
+        {
+            int state = build?.__1__state ?? -99;
+            bool more;
+            try { more = routine.MoveNext(); }
+            catch (Exception e)
+            {
+                MelonLoader.MelonLogger.Warning($"[Harness] stand build failed in state {state}: {e.GetType().Name} {e.Message.Split('\n')[0]}");
+                yield break;
+            }
+            MelonLoader.MelonLogger.Msg($"[Harness] stand build state {state} -> {(more ? "running" : "done")}");
+            if (!more) yield break;
+            yield return null;
+        }
+    }
+
+    [HarnessCommand("tool-stand-context")]
+    private static object StandContext(string args)
+    {
+        var game = GameScript.Get();
+        var hovered = game?.IOMouseOverCarLoader;
+        var stand = ToolsManager.Get()?.EngineStandLogic;
+        return new
+        {
+            camera = Camera.main != null,
+            hoveredCar = hovered == null ? null : hovered.carToLoad,
+            hoveredRootCuller = hovered != null && hovered.root != null && hovered.root.GetComponent<PartScriptCuller>() != null,
+            hoveredGameObject = game?.IOMouseOverGO == null ? null : game.IOMouseOverGO.name,
+            standCuller = stand?.PartScriptCuller != null,
+            standTransform = stand?.EngineStand != null,
+            loaderCullers = Enumerable.Range(0, CarLoaderPlaces.Get().GetCarLoadersCount())
+                .Select(i => CarLoaderPlaces.Get().GetCarLoaderByIndex(i))
+                .Where(c => c != null && c.IsCarLoaded())
+                .Select(c => $"{c.carToLoad}:{(c.root != null && c.root.GetComponent<PartScriptCuller>() != null)}").ToList(),
+        };
+    }
+
     [HarnessCommand("tool-put")]
     private static object Put(string args)
     {
@@ -153,7 +193,7 @@ public static class ToolsCommands
             case ModToolId.EngineStand1:
                 var stand = (EngineStandSync)ToolSync.Machine(tool);
                 Inv.DeleteGroup(uid);
-                stand.Logic.StartCoroutine(stand.Logic.SetGroupOnEngineStand(group, false));
+                MelonLoader.MelonCoroutines.Start(Drive(stand.Logic.SetGroupOnEngineStand(group, false)));
                 break;
             default:
                 throw new ArgumentException($"{tool} cannot be loaded from the harness");
