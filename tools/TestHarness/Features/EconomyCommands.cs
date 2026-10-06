@@ -260,7 +260,12 @@ public static partial class EconomyCommands
                 refill.Hide();
                 break;
             case "wash-paint":
-                result["shown"] = WindowManager.Instance.Show(WindowID.Paintshop, false);
+                var paintshopWindow = Window<PaintshopWindow>(WindowID.Paintshop, false);
+                var paintshopManager = UnityEngine.Object.FindObjectOfType<CMS.Managers.PaintshopManager>() ?? throw new InvalidOperationException("no paint shop in this scene");
+                paintshopManager.carLoader = carLoader;
+                paintshopManager.PaintshopType = PaintshopType.Garage;
+                GameScript.Get().StartCoroutine(paintshopWindow.ShowCoroutine(true));
+                result["shown"] = true;
                 break;
             case "wash-tint":
                 result["shown"] = WindowManager.Instance.Show(WindowID.Tinting, false);
