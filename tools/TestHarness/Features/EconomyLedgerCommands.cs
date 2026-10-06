@@ -3,6 +3,8 @@ using System.Collections.Generic;
 using System.Linq;
 using CMS21Together.Data;
 using CMS21Together.Logic.Economy;
+using CMS21Together.Network;
+using CMS21_Together_Core.Network.Packets;
 
 namespace TogetherTestHarness.Features;
 
@@ -45,6 +47,33 @@ public static partial class EconomyCommands
             ["lastResult"] = last == null ? null : new { id = last.RequestId, reason = last.Reason.ToString(), last.Accepted, refusal = last.Refusal.ToString(), last.Money, last.Scraps },
             ["lambdaPatches"] = FeeHooks.LambdaPatches,
         };
+    }
+
+    [HarnessCommand("econ-send")]
+    private static object SendRaw(string args)
+    {
+        var parts = Split(args);
+        if (parts.Length < 2) throw new ArgumentException("usage: econ-send <Reason> <money> [arg] [scraps] [exp] [itemUid]");
+        var request = new EconomyRequestPacket
+        {
+            Reason = (EconomyReason)Enum.Parse(typeof(EconomyReason), parts[0], true),
+            Money = int.Parse(parts[1]),
+            Arg = parts.Length > 2 ? int.Parse(parts[2]) : 0,
+            Scraps = parts.Length > 3 ? int.Parse(parts[3]) : 0,
+            Exp = parts.Length > 4 ? int.Parse(parts[4]) : 0,
+            ItemUid = parts.Length > 5 ? long.Parse(parts[5]) : 0,
+        };
+        int id = EconomyRequests.Send(request);
+        return new { id, reason = request.Reason.ToString() };
+    }
+
+    [HarnessCommand("econ-skill-unlock")]
+    private static object SkillUnlock(string args)
+    {
+        var parts = Split(args);
+        if (parts.Length != 2) throw new ArgumentException("usage: econ-skill-unlock <skill id> <level>");
+        Client.Instance.Send(new UpgradeRequest { id = parts[0], level = int.Parse(parts[1]), type = CMS21_Together_Core.Data.Enum.UpgradeType.Points });
+        return "sent";
     }
 
     public static object EconomySection() => new Dictionary<string, object>

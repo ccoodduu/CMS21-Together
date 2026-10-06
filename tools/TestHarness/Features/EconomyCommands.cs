@@ -279,6 +279,22 @@ public static partial class EconomyCommands
         return Result(before, result);
     }
 
+    [HarnessCommand("econ-unmount")]
+    private static object Unmount(string args)
+    {
+        var carLoader = LoadedCar((args ?? "").Trim());
+        var registry = CMS21Together.Logic.Car.Parts.PartRegistry.Build(carLoader);
+        string key = registry.SubKeys.FirstOrDefault(k =>
+        {
+            var part = registry.Sub(k);
+            return !part.IsUnmounted && part.GetUnmountWith().Count == 0 && !part.IsBlocked() && string.IsNullOrEmpty(part.sendMessageOnHide);
+        }) ?? throw new InvalidOperationException("no free mounted part without fluid");
+        string before = Stats();
+        var script = registry.Sub(key);
+        script.StartCoroutine(script.Hide());
+        return Result(before, new Dictionary<string, object> { ["key"] = key });
+    }
+
     [HarnessCommand("econ-skill-reset")]
     private static object SkillReset(string args)
     {
