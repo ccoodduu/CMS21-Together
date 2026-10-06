@@ -99,3 +99,26 @@ updated together (the version check enforces this). No saved state. Rollback mea
    No dyno run is mirrored.
 4. No FixForTogether code is adapted. Its findings (final-state-only for car-effect tools, `MeasurePower` as the dyno
    commit point) inform this design. If code is adapted later, credit TogetherFixer and link the repository.
+
+## Code (2026-10-06)
+
+The code follows `docs/spikes/workshop-car-tools.md` where it corrects D1. Names as written (not yet run in the game):
+
+- `ToolActionPacket { ModToolId Tool; int CarLoaderID; ToolActionKind Kind }`, without the `Group` field (the effect
+  needs no engine contents). `ToolActionKind` = `Weld, Wash, InteriorDetailing, DrainOil, EngineOut, EngineIn,
+  PaintCar`; no `EngineSwap` kind while swaps are refused (D2 fallback). The server relays it if the loader is in
+  `CarPartsStore`; machine handlers accept only `ModTools.IsMachine` ids.
+- Commit points are the postfixes of `WelderLogic`/`CarWashLogic`/`InteriorDetailingToolkitLogic._DoWorkAnim_d__1.MoveNext`
+  and `ToolsManager._UseOilDrain_d__40.MoveNext` returning false; no `MelonCoroutines` watcher.
+- Row 4 API in use: `CarDetailsSync.MarkDirty(CarLoader, CarDetailSection)` (no `FlushNow`; BodyCosmetics marks are
+  repeated after 1 s in case a tween is still writing). Row 1 API: `CarPartsSync.MarkDirty(int, CarPart)`.
+- Paint shop: `PaintshopManager.SubmitColor` postfix (`PaintshopType.Garage`) sends the action; row 4's own postfix
+  sends `Paint | BodyCosmetics`. `BonusParts` is not synced by row 4 yet.
+- The paint/tint "wash first" answer (`CarLoader.EnableDust`/`SetWashFactor` with `part == null`) marks `BodyCosmetics`.
+- Engine crane: postfixes with `__runOriginal` on `ActionUnMountGroup` and `InsertEngineToCar`; row 1's
+  `EngineCraneHooks` owns the transaction and refuses swaps.
+- Dyno: `CarLoader.MeasurePower` postfix → row 13's `DynoSync.Commit`, behind `#if SYNC_TEST_DRIVE` until rebased.
+- Interior detailing: stationary when the car stands at `CarPlace.CarWash`.
+- Remote effect: `GarageTool.particles.Play()` + `SoundManager.PlaySFX(sfx, car root)`, stopped after `effectTime` +
+  0.5 s; paint: `PaintshopManager.particleSystem` + `CarPaint`. Skipped while the same tool runs locally. Oil drain and
+  the crane only count the action.
