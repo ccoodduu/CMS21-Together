@@ -93,6 +93,7 @@ public static class CarPartsSync
 		var sync = Get(packet.CarLoaderID);
 		sync.SpawnSeq = packet.SpawnSeq;
 		sync.State = LoaderSyncState.Loading;
+		Details.CarDetailsSync.OnCarLoading(sync.Loader);
 		sync.Registry = null;
 		MelonCoroutines.Start(UploadWhenSettled(sync, packet.SpawnSeq));
 	}
@@ -104,6 +105,7 @@ public static class CarPartsSync
 		sync.CarToLoad = spawn.CarToLoad;
 		sync.Registry = null;
 		sync.State = LoaderSyncState.Loading;
+		Details.CarDetailsSync.OnCarLoading(sync.Loader);
 	}
 
 	public static void OnCarDeleted(int loader)
@@ -190,6 +192,7 @@ public static class CarPartsSync
 		if (needsLoad)
 		{
 			sync.State = LoaderSyncState.Loading;
+			Details.CarDetailsSync.OnCarLoading(loader);
 			yield return Placement.CarLoading.Load(carLoader, loader, spawn);
 		}
 		else

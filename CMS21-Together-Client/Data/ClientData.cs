@@ -27,6 +27,7 @@ public static class ClientData
 		CarPartsSync.Reset();
 		Logic.Car.Placement.ParkingSync.Reset();
 		Logic.Jobs.JobsSync.Reset();
+		Logic.Car.Details.CarDetailsSync.Reset();
 		PartChangeTracker.Reset();
 		PartClaims.Reset();
 		PartTransactions.Reset();

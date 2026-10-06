@@ -102,6 +102,7 @@ namespace CMS21Together
 			}
 			if (Client.Instance.IsConnectionValid && Input.GetKeyDown(PlayerSettings.ResyncKey)) ResyncController.Request();
 			if (PlayerSettings.DevHotkeys && Client.Instance.IsConnectionValid && Input.GetKeyDown(KeyCode.F6)) Logic.Car.Placement.DevCarSpawner.SpawnRandom();
+			if (Client.Instance.IsConnectionValid) Logic.Car.Details.CarDetailsSync.Update();
 			ConnectionStatus.Update();
 
 			if (Client.Instance.IsConnectionValid)
@@ -129,6 +130,7 @@ namespace CMS21Together
 			ModConsole.Initialize();
 			PlayerSettings.Initialize();
 			GuardSettings.Initialize();
+			Logic.Car.Details.CarDetailsSync.Initialize();
 		}
 
 		public override void OnApplicationQuit()
