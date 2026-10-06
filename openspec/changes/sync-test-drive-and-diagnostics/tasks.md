@@ -172,6 +172,6 @@ Prerequisites (merged): `session-persistence-and-rejoin` groups 1–2 (contract,
       of examined flags on both; B late-joins once more (`disconnect`/`connect`) → `dyno`, `specialState`, examined
       flags equal; restart keeps `dyno`. Pass = all comparisons empty. Verify with `Run-Session.ps1 -Scenario
       diagnostics`.
-- [ ] 8.4 Full regression `tools/test-env/Run-All.ps1` with the three scenarios added; record run ids and results in
+- [x] 8.4 **Done (2026-10-06):** `20261006-165221` green on lanes 1+2 (30 scenarios, `car-parking-full` flaky: a server-loop stall, fixed in f5e2956); ROADMAP and INTEGRATION.md updated. Full regression `tools/test-env/Run-All.ps1` with the three scenarios added; record run ids and results in
       `STATUS.md`, update ROADMAP status, INTEGRATION.md (packets, APIs `CarAwaySync`/`DynoSync.Commit`, harness verbs,
       scenarios, `cars`/`car-details` additive fields) and row 6 D6's note on examined parts. Verify: `Run-All` green.
