@@ -78,6 +78,25 @@ Newest first. One entry per work session.
   stopped by Claude Code because free RAM ran critically low with four games. See QUESTIONS.md: until you answer,
   I run one lane at a time and do not restart that regression myself.
 
+## 2026-10-06 (18:15–20:10) — rows 6 part 2, 8 part 2 and 10 merged; four fixes on `main`
+
+- `main` = `43fca9a`: rows 6 part 2 (seat and engine), 8 part 2 (host from the game, password, admin key, kick,
+  ping, toasts) and 10 (economy: every money, scrap and XP path through the server, travel fees by the server rule
+  `travel_fees`) merged after a single-lane regression `20261006-184911` (36 of 37; the one failure was the job car's
+  place, fixed below and re-run: `economy-trades`, `jobs`, `jobs-latejoin`, `car-placement`, `car-live`, `car-race`,
+  `car-baseline` pass).
+- Fixes found by the new scenarios, all on `main`:
+  - items synced through the inventory keep valid mount (bolt) data and groups keep their size (an engine could be
+    built at scale 0 or throw on the engine stand);
+  - a job car's place reaches the other players (the game places it after loading, and a move that arrives while
+    the other player's copy still loads is now kept until it has loaded);
+  - the spawner's part revision follows its own baseline uploads;
+  - the spill fine depends on the part (an oil pan costs 100), so the server accepts a bounded range.
+- Still open in M4: row 5a (workshop machines: everything passes except the engine stand, whose build coroutine
+  throws a native exception in the harness; a probe that logs each build step is ready) and row 5b (car tools, in
+  code on `change/sync-workshop-car-tools`, not run yet). Several row 10 steps (paint, tint, welder, interior,
+  repair, auction, barn) are skipped until rows 5a/5b open those windows in the guard.
+
 ## 2026-10-06 (15:10–15:40) — row 3 merged; row 4 car details (branch `change/sync-car-details`)
 
 - Lane-1 regression `20261006-144952` of the row 3 branch: all 25 scenarios PASSED. `main` = `635b22b` (row 3).
