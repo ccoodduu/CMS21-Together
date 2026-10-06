@@ -194,6 +194,14 @@ namespace CMS21_Together_Server.Data
 			}
 		}
 
+		public static JObject BuildSaveCopy()
+		{
+			lock (StateLock)
+			{
+				return BuildEnvelope();
+			}
+		}
+
 		private static JObject BuildEnvelope()
 		{
 			var sections = new JObject();

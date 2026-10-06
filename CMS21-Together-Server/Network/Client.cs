@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using CMS21_Together_Core.Data.Enum;
 using CMS21_Together_Core.Network.Packets;
 using CMS21_Together_Server.Data;
@@ -29,6 +30,9 @@ namespace CMS21_Together_Server.Network
 		public Action OnConnectedSuccessfully;
 
 		public bool IsAdmin { get; set; }
+		public string GameVersion { get; set; }
+		public string ModVersion { get; set; }
+		public List<string> Mods { get; set; } = new List<string>();
 		public float RttMs { get; private set; }
 
 		public float LastHeartbeatTime { get; set; }
