@@ -1,7 +1,7 @@
 using CMS21_Together_Core;
 using CMS21_Together_Core.Network;
 using CMS21_Together_Core.Network.Packets;
-using CMS21_Together_Server.Data;
+using CMS21_Together_Server.Data.Cars;
 using CMS21_Together_Server.Log;
 
 namespace CMS21_Together_Server.Network.Handlers
@@ -13,9 +13,6 @@ namespace CMS21_Together_Server.Network.Handlers
         {
             Logger.Debug($"[CarHandlers] Received CarSpawnRequest from client {clientId} for Loader {packet.CarLoaderID} (Car: {packet.CarToLoad}, Job: {packet.IsJob})");
 
-            var carState = GameDataManager.CurrentState.CarState;
-            
-            // Validate and store the car in the server state
             if (string.IsNullOrEmpty(packet.CarToLoad))
             {
                 Logger.Error($"[CarHandlers] CarSpawnRequest from client {clientId} missing CarToLoad!");
@@ -27,7 +24,7 @@ namespace CMS21_Together_Server.Network.Handlers
                 return;
             }
 
-            var response = new CarSpawnResponsePacket
+            var entry = CarPartsStore.RegisterSpawn(new CarSpawnResponsePacket
             {
                 CarLoaderID = packet.CarLoaderID,
                 CarToLoad = packet.CarToLoad,
@@ -35,28 +32,16 @@ namespace CMS21_Together_Server.Network.Handlers
                 PlaceNo = packet.PlaceNo,
                 IsJob = packet.IsJob,
                 JobID = packet.JobID
-            };
+            }, (int)clientId);
 
-            // Store in state
-            carState.LoadedCars[packet.CarLoaderID] = response;
-
-            // Broadcast the approved spawn to ALL OTHER clients
-            Server.SendToClients(response, (int)clientId);
-            Logger.Debug($"[CarHandlers] Broadcasted CarSpawnResponse for Loader {packet.CarLoaderID} to other clients.");
+            Server.SendToClients(entry.Spawn, (int)clientId);
         }
 
         [PacketHandler(PacketTypes.CarSpawnDelete)]
         public static void HandleCarSpawnDelete(long clientId, CarSpawnDeletePacket packet)
         {
             Logger.Debug($"[CarHandlers] Received CarSpawnDelete from client {clientId} for Loader {packet.CarLoaderID}");
-
-            var carState = GameDataManager.CurrentState.CarState;
-            if (carState.LoadedCars.ContainsKey(packet.CarLoaderID))
-            {
-                carState.LoadedCars.Remove(packet.CarLoaderID);
-            }
-            
-            // Broadcast the deletion to all other clients
+            CarPartsStore.ClearLoader(packet.CarLoaderID, ClearReason.Deleted);
             Server.SendToClients(packet, (int)clientId);
         }
     }

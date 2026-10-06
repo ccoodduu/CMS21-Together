@@ -33,8 +33,8 @@ public enum PacketTypes
 	CarSpawnResponse,
 	CarSpawnDelete,
 	CarSpawnRejected,
-	CarBodyPartUpdate,
-	CarSubPartUpdate,
+	CarPartsChange,
+	CarPartsChangeResult,
 
 	SyncBegin,
 	SyncAck,
@@ -42,5 +42,11 @@ public enum PacketTypes
 	PlayerPresence,
 	PlayerRoster,
 
-	ServerInfo
+	ServerInfo,
+
+	CarPartClaim,
+	CarPartClaimUpdate,
+	CarPartsSnapshot,
+	CarPartsResyncRequest,
+	CarSpawnAck
 }

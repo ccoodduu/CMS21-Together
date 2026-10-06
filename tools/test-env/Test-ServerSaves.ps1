@@ -120,7 +120,7 @@ try {
 
     # 3.5: --check-save
     $out = & $exe --check-save $fixture | Out-String
-    $results["check-save fixture exit 0"] = ($LASTEXITCODE -eq 0 -and $out -match "money 23456, level 11" -and $out -match "inventory: 3 items, 1 groups, warehouse 1 items" -and $out -match "cars: 1 loaded")
+    $results["check-save fixture exit 0"] = ($LASTEXITCODE -eq 0 -and $out -match "money 23456, level 11" -and $out -match "inventory: 3 items, 1 groups, warehouse 1 items" -and $out -match "cars: 0 loaded" -and $out -match "Migrated section 'cars' v1 -> v2" -and $out -match "Dropping car_dnb_censor")
     Write-Host $out
     $garbage = Join-Path $serverDir "garbage.json"; Set-Content -LiteralPath $garbage -Value "nope" -Encoding ascii
     & $exe --check-save $garbage | Out-Null
