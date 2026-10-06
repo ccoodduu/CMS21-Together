@@ -49,7 +49,9 @@ public static class PartApplier
 		}
 
 		if (!string.IsNullOrEmpty(record.TunedID) && script.tunedID != record.TunedID) script.TunePart(record.TunedID);
-		script.SetConditionNormal(record.Condition);
+		// SetConditionNormal throws after storing Condition while the part's highlighter is not set up yet.
+		if (script.ho != null) script.SetConditionNormal(record.Condition);
+		else script.Condition = Mathf.Clamp01(record.Condition);
 		script.Quality = record.Quality;
 		script.IsExamined = record.IsExamined;
 		script.UpdateDust(record.Dust, true);
