@@ -17,4 +17,37 @@
             <HintPath>Libs\Newtonsoft.Json.dll</HintPath>
         </Reference>
     </ItemGroup>
+
+    <Target Name="GenerateTogetherBuildInfo" BeforeTargets="CoreCompile">
+        <Exec Command="git rev-parse --short HEAD" WorkingDirectory="$(MSBuildProjectDirectory)" ConsoleToMSBuild="true"
+              IgnoreExitCode="true" StandardOutputImportance="low" StandardErrorImportance="low" EchoOff="true">
+            <Output TaskParameter="ConsoleOutput" PropertyName="_TogetherGitOutput" />
+            <Output TaskParameter="ExitCode" PropertyName="_TogetherGitExitCode" />
+        </Exec>
+        <PropertyGroup>
+            <_TogetherCommit Condition="'$(_TogetherGitExitCode)' == '0'">$(_TogetherGitOutput.Trim())</_TogetherCommit>
+            <_TogetherModVersion>$(TogetherVersion)</_TogetherModVersion>
+            <_TogetherModVersion Condition="'$(TogetherBuildLabel)' != ''">$(TogetherVersion)-$(TogetherBuildLabel)</_TogetherModVersion>
+            <_TogetherFullVersion>$(_TogetherModVersion)</_TogetherFullVersion>
+            <_TogetherFullVersion Condition="'$(_TogetherCommit)' != ''">$(_TogetherModVersion)+$(_TogetherCommit)</_TogetherFullVersion>
+            <_TogetherFullVersion Condition="'$(TogetherDirty)' == 'true'">$(_TogetherFullVersion).dirty</_TogetherFullVersion>
+            <_TogetherBuildInfoFile>$(IntermediateOutputPath)BuildInfo.g.cs</_TogetherBuildInfoFile>
+        </PropertyGroup>
+        <ItemGroup>
+            <_TogetherBuildInfoLine Include="namespace CMS21_Together_Core%3B" />
+            <_TogetherBuildInfoLine Include="public static class BuildInfo" />
+            <_TogetherBuildInfoLine Include="{" />
+            <_TogetherBuildInfoLine Include="%09public const string Version = &quot;$(TogetherVersion)&quot;%3B" />
+            <_TogetherBuildInfoLine Include="%09public const string ModVersion = &quot;$(_TogetherModVersion)&quot;%3B" />
+            <_TogetherBuildInfoLine Include="%09public const string FullVersion = &quot;$(_TogetherFullVersion)&quot;%3B" />
+            <_TogetherBuildInfoLine Include="%09public const string Commit = &quot;$(_TogetherCommit)&quot;%3B" />
+            <_TogetherBuildInfoLine Include="%09public static string LoadedFullVersion => FullVersion%3B" />
+            <_TogetherBuildInfoLine Include="}" />
+        </ItemGroup>
+        <WriteLinesToFile File="$(_TogetherBuildInfoFile)" Lines="@(_TogetherBuildInfoLine)" Overwrite="true" WriteOnlyWhenDifferent="true" />
+        <ItemGroup>
+            <Compile Include="$(_TogetherBuildInfoFile)" />
+            <FileWrites Include="$(_TogetherBuildInfoFile)" />
+        </ItemGroup>
+    </Target>
 </Project>

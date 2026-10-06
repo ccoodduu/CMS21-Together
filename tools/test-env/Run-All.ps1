@@ -3,11 +3,14 @@
 Regression run: deploys this worktree to the given lanes, runs every scenario (spread round-robin over the
 lanes, which take turns with the game, see Run-Session.ps1) plus the server-only save checks, reruns a failed
 scenario once to tell flaky from broken, and writes tools\runs\<timestamp>_regression.json.
+Scenarios whose first line is "# run-all: skip" only run when named in -Scenarios. -List prints the scenarios
+that would run and exits.
 #>
 param(
     [int[]]$Lanes = @(1),
     [string[]]$Scenarios,
-    [switch]$SkipDeploy
+    [switch]$SkipDeploy,
+    [switch]$List
 )
 
 $ErrorActionPreference = "Stop"
@@ -15,8 +18,12 @@ $repo = Resolve-Path (Join-Path $PSScriptRoot "..\..")
 $scenarioDir = Join-Path $PSScriptRoot "scenarios"
 if (-not $Scenarios) {
     $Scenarios = Get-ChildItem -LiteralPath $scenarioDir -Filter "*.ps1" | Sort-Object Name |
-        Where-Object { -not (Select-String -LiteralPath $_.FullName -Pattern "^# run-all: skip" -Quiet) } |
+        Where-Object { (Get-Content -LiteralPath $_.FullName -TotalCount 1) -ne "# run-all: skip" } |
         ForEach-Object { $_.BaseName }
+}
+if ($List) {
+    $Scenarios | ForEach-Object { Write-Host $_ }
+    return
 }
 
 if (-not $SkipDeploy) {

@@ -1,7 +1,8 @@
 #Requires -Version 5.1
 <#
 Builds client, server and test harness, then copies them into the test installs and the server folder of
-one test lane. Run it from the worktree whose build the lane should test.
+one test lane. Run it from the worktree whose build the lane should test. Files that only a release install
+(tools\release\Install-ReleaseToTestEnv.ps1) adds, such as UserLibs\steam_api64.dll and TogetherServer\, are removed.
 #>
 param(
     [int]$Lane = 1,
@@ -46,16 +47,7 @@ $serverDir = $laneInfo.ServerDir
 New-Item -ItemType Directory -Force -Path $serverDir | Out-Null
 Get-ChildItem -LiteralPath $serverBin | Where-Object { $_.Name -notin @("Log", "server_config.ini", "Saves") } |
     Copy-Item -Destination $serverDir -Recurse -Force
-$config = Join-Path $serverDir "server_config.ini"
-if (-not (Test-Path -LiteralPath $config)) {
-    Set-Content -LiteralPath $config -Encoding ascii -Value @(
-        "max_players = 4",
-        "use_steam = False",
-        'GSLT_Token = ""',
-        "log_level = 1"
-    )
-}
-$lines = @(Get-Content -LiteralPath $config | Where-Object { $_ -notmatch '^\s*port\s*=' }) + "port = $($laneInfo.Port)"
-Set-Content -LiteralPath $config -Encoding ascii -Value $lines
+Remove-ReleaseOnlyFiles $laneInfo
+Set-LaneServerConfig $laneInfo
 
 Write-Host "Deployed lane $Lane ($($laneInfo.Instances -join ', '), $serverDir, port $($laneInfo.Port)) from $repo"

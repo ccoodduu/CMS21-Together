@@ -30,19 +30,15 @@ Who never dreamed playing CMS with friends?  This mod make it possible !
 From the release 0.5.0 of the mod, Dedicated server is available, in addition of the actual mod you can now run a separated server so that anyone can join the "world" at any moment whilst the server is running.<br/>
 You can get the server as a standalone by downloading the file "CMS21-Together Dedicated Server" on each new release, or you can still simply host directly from the game as you were doing it since 0.4.0.
 
+> This repository is a fork of [Fozkais/CMS21-Together](https://github.com/Fozkais/CMS21-Together), continuing its
+> dedicated-server (Dev) architecture. Its builds are not compatible with upstream releases.
+
 ## Installation
 
-You can follow this video : https://www.youtube.com/watch?v=BKX5lMkSfco&t=1s <br/>
-And below is the installation guide :<br/>
-<br/>
-1- Download Latest build on release page<br/>
-2- Download and Install MelonLoader on version 0.5.7<br/>
-3- extract uncrompress the zip file on game root folder<br/>
-4- Launch the game !<br/>
-<br/>
-From this point on, you should be able to launch the game with the mod, once launched you should have a new button to access multiplayer features. <br/>
-<br/>
-If you have any questions or want to talk about the mod, you can join the official mod discord : https://discord.gg/MzaUAN54Zk
+Development builds of this fork come as a client zip and a server zip, built with `tools/release/Build-Release.ps1`.
+How to install, host, join and report problems: [docs/try-it.md](docs/try-it.md) (the same text is in each zip as
+`CMS21-Together-TRY-IT.txt` / `TRY-IT.txt`).
+
 ## Authors
 
 * **Fozkais** - *Main dev* - [Fozkais](https://github.com/Fozkais)

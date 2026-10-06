@@ -126,6 +126,40 @@ function Get-RealProfileFingerprint {
     return (($files -join "`n") + "`nregistry|$registry")
 }
 
+function Set-LaneServerConfig($LaneInfo) {
+    $config = Join-Path $LaneInfo.ServerDir "server_config.ini"
+    if (-not (Test-Path -LiteralPath $config)) {
+        Set-Content -LiteralPath $config -Encoding ascii -Value @(
+            "max_players = 4",
+            "use_steam = False",
+            'GSLT_Token = ""',
+            "log_level = 1"
+        )
+    }
+    $lines = @(Get-Content -LiteralPath $config | Where-Object { $_ -notmatch '^\s*port\s*=' }) + "port = $($LaneInfo.Port)"
+    Set-Content -LiteralPath $config -Encoding ascii -Value $lines
+}
+
+# Files only a release zip installs; Deploy-Mod.ps1 removes them so dev runs stay Steam-free.
+$script:ReleaseOnlyInstanceFiles = @(
+    "UserLibs\steam_api64.dll", "TogetherServer", "CMS21-Together-TRY-IT.txt", "CMS21-Together-release.json",
+    "Mods\CMS21-Together.pdb", "UserLibs\CMS21_Together_Core.pdb"
+)
+$script:ReleaseOnlyServerFiles = @("steam_api64.dll", "TRY-IT.txt", "release.json")
+
+function Remove-ReleaseOnlyFiles($LaneInfo) {
+    foreach ($name in $LaneInfo.Instances) {
+        foreach ($relative in $script:ReleaseOnlyInstanceFiles) {
+            $path = Join-Path (Join-Path $script:TestRoot $name) $relative
+            if (Test-Path -LiteralPath $path) { Remove-Item -LiteralPath $path -Recurse -Force }
+        }
+    }
+    foreach ($relative in $script:ReleaseOnlyServerFiles) {
+        $path = Join-Path $LaneInfo.ServerDir $relative
+        if (Test-Path -LiteralPath $path) { Remove-Item -LiteralPath $path -Force }
+    }
+}
+
 function Get-LaneGameProcesses($LaneInfo) {
     $dirs = $LaneInfo.Instances | ForEach-Object { (Join-Path $script:TestRoot $_) + "\" }
     Get-Process -Name $script:ProductName -ErrorAction SilentlyContinue | Where-Object {
@@ -136,4 +170,4 @@ function Get-LaneGameProcesses($LaneInfo) {
 
 Export-ModuleMember -Function Get-TestLane, Get-InstanceCompany, Get-InstanceSaveDir, Get-InstanceRegistryKey,
     Set-InstanceCompany, Assert-InstanceIsolated, New-ProfileSeed, Reset-InstanceProfile, Get-RealProfileFingerprint,
-    Get-LaneGameProcesses
+    Get-LaneGameProcesses, Set-LaneServerConfig, Remove-ReleaseOnlyFiles

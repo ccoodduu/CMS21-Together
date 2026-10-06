@@ -6,3 +6,4 @@ bin/
 
 /tools/runs/
 /.claude/worktrees/
+/tools/release/out/
