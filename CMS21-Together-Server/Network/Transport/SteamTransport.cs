@@ -134,14 +134,7 @@ namespace CMS21_Together_Server.Network.Transport
                 client.IsConnected = true;
                 client.ConnectionType = NetworkType.Steam;
                 client.SteamConnection = connection;
-                Server.SendToClient(new ConnectPacket()
-                {
-                    gameVersion = "",
-                    username = "",
-                    message = "Welcome to server!",
-                    modVersion = Program.MOD_VERSION,
-                    playerID = client.ID
-                }, client.ID);
+                Server.SendToClient(Server.WelcomePacket(client.ID), client.ID);
             }
         }
 
@@ -193,6 +186,7 @@ namespace CMS21_Together_Server.Network.Transport
                     catch (Exception ex)
                     {
                         Logger.Error($"Error packet {packetId}: {ex.Message}");
+                        Server.RefuseUnreadableConnect(id, (PacketTypes)packetId);
                     }
                 }
             }

@@ -1,0 +1,901 @@
+[
+  {
+    "Name": "QoLmod",
+    "Version": "4.4",
+    "Author": "Meitzi / (works with MelonLoader v0.5.7)",
+    "File": "QoLmod.dll",
+    "Assembly": "QoLmod",
+    "Targets": [
+      {
+        "Assembly": "Assembly-CSharp-firstpass",
+        "Type": "BonusPart",
+        "Method": "Change"
+      },
+      {
+        "Assembly": "Assembly-CSharp-firstpass",
+        "Type": "BonusPart",
+        "Method": "Create"
+      },
+      {
+        "Assembly": "Assembly-CSharp-firstpass",
+        "Type": "CMS.CarEditor.Tabs.CarEditorUI",
+        "Method": "AddNewCarPart"
+      },
+      {
+        "Assembly": "Assembly-CSharp-firstpass",
+        "Type": "CMS.CarEditor.Tabs.CarEditorUI",
+        "Method": "ChangeInspectorName"
+      },
+      {
+        "Assembly": "Assembly-CSharp-firstpass",
+        "Type": "CMS.CarEditor.Tabs.CarEditorUI",
+        "Method": "Save"
+      },
+      {
+        "Assembly": "Assembly-CSharp-firstpass",
+        "Type": "CMS.CarEditor.Tabs.CarEditorUI",
+        "Method": "SelectCategory"
+      },
+      {
+        "Assembly": "Assembly-CSharp-firstpass",
+        "Type": "CMS.Managers.BonusPartsManager",
+        "Method": "TryDeleteBonusPart"
+      },
+      {
+        "Assembly": "Assembly-CSharp-firstpass",
+        "Type": "CMS.Managers.CarPlaceManager",
+        "Method": "SetPlaceIsOccupied"
+      },
+      {
+        "Assembly": "Assembly-CSharp-firstpass",
+        "Type": "CMS.Managers.PaintshopManager",
+        "Method": "BackupColor"
+      },
+      {
+        "Assembly": "Assembly-CSharp-firstpass",
+        "Type": "CMS.Managers.PaintshopManager",
+        "Method": "RestoreColor"
+      },
+      {
+        "Assembly": "Assembly-CSharp-firstpass",
+        "Type": "CMS.Managers.PaintshopManager",
+        "Method": "SetCustomPaintType"
+      },
+      {
+        "Assembly": "Assembly-CSharp-firstpass",
+        "Type": "CMS.Managers.PaintshopManager",
+        "Method": "SetLivery"
+      },
+      {
+        "Assembly": "Assembly-CSharp-firstpass",
+        "Type": "CMS.Managers.PaintshopManager",
+        "Method": "SetPaintType"
+      },
+      {
+        "Assembly": "Assembly-CSharp-firstpass",
+        "Type": "CMS.Managers.PaintshopManager",
+        "Method": "TryGetMoneyForPaint"
+      },
+      {
+        "Assembly": "Assembly-CSharp-firstpass",
+        "Type": "CMS.Managers.PaintshopManager",
+        "Method": "UpdateColor"
+      },
+      {
+        "Assembly": "Assembly-CSharp-firstpass",
+        "Type": "CMS.Managers.ParkingCarPlaceManager",
+        "Method": "MoveCar"
+      },
+      {
+        "Assembly": "Assembly-CSharp-firstpass",
+        "Type": "CMS.Managers.WindowTintManager",
+        "Method": "PrepareWindowsArray"
+      },
+      {
+        "Assembly": "Assembly-CSharp-firstpass",
+        "Type": "CMS.Managers.WindowTintManager",
+        "Method": "SetAllWindowsCurrentState"
+      },
+      {
+        "Assembly": "Assembly-CSharp-firstpass",
+        "Type": "CMS.SceneLoaders.Tracks.Dragstrip",
+        "Method": "StartRace"
+      },
+      {
+        "Assembly": "Assembly-CSharp-firstpass",
+        "Type": "CMS.Tracks.CarPhysics.BaseCarPhysics",
+        "Method": "SetupEngineSounds"
+      },
+      {
+        "Assembly": "Assembly-CSharp-firstpass",
+        "Type": "CMS.Tracks.CarPhysics.BaseCarPhysics",
+        "Method": "SetupInterior"
+      },
+      {
+        "Assembly": "Assembly-CSharp-firstpass",
+        "Type": "CMS.Tracks.Dragstrip.DragLaneManager",
+        "Method": "SetupPlayerSide"
+      },
+      {
+        "Assembly": "Assembly-CSharp-firstpass",
+        "Type": "CMS.UI.Controls.LastColorsSection",
+        "Method": "FillLastColors"
+      },
+      {
+        "Assembly": "Assembly-CSharp-firstpass",
+        "Type": "CMS.UI.Logic.Auction.AuctionBidding",
+        "Method": "Open"
+      },
+      {
+        "Assembly": "Assembly-CSharp-firstpass",
+        "Type": "CMS.UI.Logic.Auction.AuctionBidding",
+        "Method": "StartAuction"
+      },
+      {
+        "Assembly": "Assembly-CSharp-firstpass",
+        "Type": "CMS.UI.Logic.CarInfo.PartListItem",
+        "Method": "SetupPartData"
+      },
+      {
+        "Assembly": "Assembly-CSharp-firstpass",
+        "Type": "CMS.UI.Logic.ChoosePartDown.ChoosePartPageManager",
+        "Method": "Refresh"
+      },
+      {
+        "Assembly": "Assembly-CSharp-firstpass",
+        "Type": "CMS.UI.Logic.Map.Info.PhotoLocationsPanel",
+        "Method": "FillLocationInfo"
+      },
+      {
+        "Assembly": "Assembly-CSharp-firstpass",
+        "Type": "CMS.UI.Logic.Paintshop.Tabs.LiveriesTab",
+        "Method": "PrepareLiveries"
+      },
+      {
+        "Assembly": "Assembly-CSharp-firstpass",
+        "Type": "CMS.UI.Logic.Paintshop.Tabs.PaintTypeTab",
+        "Method": "HandleCurrentItemInput"
+      },
+      {
+        "Assembly": "Assembly-CSharp-firstpass",
+        "Type": "CMS.UI.Logic.Parking.ParkingCarPanel",
+        "Method": "PrepareForCar"
+      },
+      {
+        "Assembly": "Assembly-CSharp-firstpass",
+        "Type": "CMS.UI.Logic.Photo.FramesTab",
+        "Method": "FillLogos"
+      },
+      {
+        "Assembly": "Assembly-CSharp-firstpass",
+        "Type": "CMS.UI.Logic.Scrap.ScrapProduction",
+        "Method": "ProcessGameResult"
+      },
+      {
+        "Assembly": "Assembly-CSharp-firstpass",
+        "Type": "CMS.UI.Logic.Scrap.ScrapUpgrade",
+        "Method": "UpgradeAction"
+      },
+      {
+        "Assembly": "Assembly-CSharp-firstpass",
+        "Type": "CMS.UI.Logic.Shop.ShopPage",
+        "Method": "Activate"
+      },
+      {
+        "Assembly": "Assembly-CSharp-firstpass",
+        "Type": "CMS.UI.Logic.Shop.ShopPage",
+        "Method": "HideAction"
+      },
+      {
+        "Assembly": "Assembly-CSharp-firstpass",
+        "Type": "CMS.UI.Logic.ShowroomCarItem",
+        "Method": "SetupForCarConfigData"
+      },
+      {
+        "Assembly": "Assembly-CSharp-firstpass",
+        "Type": "CMS.UI.Logic.ShowroomCarItem",
+        "Method": "SetupForCarLoader"
+      },
+      {
+        "Assembly": "Assembly-CSharp-firstpass",
+        "Type": "CMS.UI.Logic.Tabs.CarInfo.CarSummaryTab",
+        "Method": "SellCar"
+      },
+      {
+        "Assembly": "Assembly-CSharp-firstpass",
+        "Type": "CMS.UI.Logic.Tune.TuningBar",
+        "Method": "DecrementValue"
+      },
+      {
+        "Assembly": "Assembly-CSharp-firstpass",
+        "Type": "CMS.UI.Logic.Tune.TuningBar",
+        "Method": "IncrementValue"
+      },
+      {
+        "Assembly": "Assembly-CSharp-firstpass",
+        "Type": "CMS.UI.Logic.Warehouse.WarehouseInventoryTab",
+        "Method": "FillItem"
+      },
+      {
+        "Assembly": "Assembly-CSharp-firstpass",
+        "Type": "CMS.UI.SaveIcon",
+        "Method": "StartAnimation"
+      },
+      {
+        "Assembly": "Assembly-CSharp-firstpass",
+        "Type": "CMS.UI.WindowManager",
+        "Method": "SetWindowAsActive"
+      },
+      {
+        "Assembly": "Assembly-CSharp-firstpass",
+        "Type": "CMS.UI.Windows.Base.BaseInventory",
+        "Method": "DrawPage"
+      },
+      {
+        "Assembly": "Assembly-CSharp-firstpass",
+        "Type": "CMS.UI.Windows.Base.BaseInventory",
+        "Method": "FillItem"
+      },
+      {
+        "Assembly": "Assembly-CSharp-firstpass",
+        "Type": "CMS.UI.Windows.Base.BaseInventory",
+        "Method": "RedrawCurrentPage"
+      },
+      {
+        "Assembly": "Assembly-CSharp-firstpass",
+        "Type": "CMS.UI.Windows.Base.BaseInventory",
+        "Method": "SetSortType"
+      },
+      {
+        "Assembly": "Assembly-CSharp-firstpass",
+        "Type": "CMS.UI.Windows.CarInfoWindow",
+        "Method": "EnableTab"
+      },
+      {
+        "Assembly": "Assembly-CSharp-firstpass",
+        "Type": "CMS.UI.Windows.CarInfoWindow",
+        "Method": "OnTabChange"
+      },
+      {
+        "Assembly": "Assembly-CSharp-firstpass",
+        "Type": "CMS.UI.Windows.CarInfoWindow",
+        "Method": "Show"
+      },
+      {
+        "Assembly": "Assembly-CSharp-firstpass",
+        "Type": "CMS.UI.Windows.ChoosePartDownWindow",
+        "Method": "Hide"
+      },
+      {
+        "Assembly": "Assembly-CSharp-firstpass",
+        "Type": "CMS.UI.Windows.ChoosePartDownWindow",
+        "Method": "Show"
+      },
+      {
+        "Assembly": "Assembly-CSharp-firstpass",
+        "Type": "CMS.UI.Windows.DynoWindow",
+        "Method": "Show"
+      },
+      {
+        "Assembly": "Assembly-CSharp-firstpass",
+        "Type": "CMS.UI.Windows.InventoryWindow",
+        "Method": "OnCategoryChange"
+      },
+      {
+        "Assembly": "Assembly-CSharp-firstpass",
+        "Type": "CMS.UI.Windows.InventoryWindow",
+        "Method": "Show"
+      },
+      {
+        "Assembly": "Assembly-CSharp-firstpass",
+        "Type": "CMS.UI.Windows.LampAlignmentWindow",
+        "Method": "Show"
+      },
+      {
+        "Assembly": "Assembly-CSharp-firstpass",
+        "Type": "CMS.UI.Windows.OrdersWindow",
+        "Method": "FillJobDetails"
+      },
+      {
+        "Assembly": "Assembly-CSharp-firstpass",
+        "Type": "CMS.UI.Windows.PaintshopWindow",
+        "Method": "EnableUI"
+      },
+      {
+        "Assembly": "Assembly-CSharp-firstpass",
+        "Type": "CMS.UI.Windows.PaintshopWindow",
+        "Method": "Hide"
+      },
+      {
+        "Assembly": "Assembly-CSharp-firstpass",
+        "Type": "CMS.UI.Windows.PaintshopWindow",
+        "Method": "OnTabChange"
+      },
+      {
+        "Assembly": "Assembly-CSharp-firstpass",
+        "Type": "CMS.UI.Windows.PaintshopWindow",
+        "Method": "PrepareTopMenu"
+      },
+      {
+        "Assembly": "Assembly-CSharp-firstpass",
+        "Type": "CMS.UI.Windows.ParkingManagementWindow",
+        "Method": "BackAction"
+      },
+      {
+        "Assembly": "Assembly-CSharp-firstpass",
+        "Type": "CMS.UI.Windows.ParkingManagementWindow",
+        "Method": "OnDestinationButtonClick"
+      },
+      {
+        "Assembly": "Assembly-CSharp-firstpass",
+        "Type": "CMS.UI.Windows.ParkingManagementWindow",
+        "Method": "OnDestinationItemSelect"
+      },
+      {
+        "Assembly": "Assembly-CSharp-firstpass",
+        "Type": "CMS.UI.Windows.ParkingManagementWindow",
+        "Method": "OnDestinationParkingLevelChange"
+      },
+      {
+        "Assembly": "Assembly-CSharp-firstpass",
+        "Type": "CMS.UI.Windows.ParkingManagementWindow",
+        "Method": "OnSourceButtonClick"
+      },
+      {
+        "Assembly": "Assembly-CSharp-firstpass",
+        "Type": "CMS.UI.Windows.ParkingManagementWindow",
+        "Method": "OnSourceItemSelect"
+      },
+      {
+        "Assembly": "Assembly-CSharp-firstpass",
+        "Type": "CMS.UI.Windows.ParkingManagementWindow",
+        "Method": "OnSourceParkingLevelChange"
+      },
+      {
+        "Assembly": "Assembly-CSharp-firstpass",
+        "Type": "CMS.UI.Windows.ParkingManagementWindow",
+        "Method": "OnStateChange"
+      },
+      {
+        "Assembly": "Assembly-CSharp-firstpass",
+        "Type": "CMS.UI.Windows.ParkingWindow",
+        "Method": "LoadCar"
+      },
+      {
+        "Assembly": "Assembly-CSharp-firstpass",
+        "Type": "CMS.UI.Windows.ParkingWindow",
+        "Method": "OnParkingAlleyChange"
+      },
+      {
+        "Assembly": "Assembly-CSharp-firstpass",
+        "Type": "CMS.UI.Windows.PathTestWindow",
+        "Method": "Hide"
+      },
+      {
+        "Assembly": "Assembly-CSharp-firstpass",
+        "Type": "CMS.UI.Windows.PathTestWindow",
+        "Method": "Show"
+      },
+      {
+        "Assembly": "Assembly-CSharp-firstpass",
+        "Type": "CMS.UI.Windows.PauseQuitWindow",
+        "Method": "Prepare"
+      },
+      {
+        "Assembly": "Assembly-CSharp-firstpass",
+        "Type": "CMS.UI.Windows.PhotoWindow",
+        "Method": "HideSettingsAction"
+      },
+      {
+        "Assembly": "Assembly-CSharp-firstpass",
+        "Type": "CMS.UI.Windows.PhotoWindow",
+        "Method": "OnTabChange"
+      },
+      {
+        "Assembly": "Assembly-CSharp-firstpass",
+        "Type": "CMS.UI.Windows.PhotoWindow",
+        "Method": "Show"
+      },
+      {
+        "Assembly": "Assembly-CSharp-firstpass",
+        "Type": "CMS.UI.Windows.RepairPartWindow",
+        "Method": "ProcessGameResult"
+      },
+      {
+        "Assembly": "Assembly-CSharp-firstpass",
+        "Type": "CMS.UI.Windows.RepairPartWindow",
+        "Method": "StartMiniGame"
+      },
+      {
+        "Assembly": "Assembly-CSharp-firstpass",
+        "Type": "CMS.UI.Windows.ShopBuyWindow",
+        "Method": "BuyItem"
+      },
+      {
+        "Assembly": "Assembly-CSharp-firstpass",
+        "Type": "CMS.UI.Windows.ShopBuyWindow",
+        "Method": "Show"
+      },
+      {
+        "Assembly": "Assembly-CSharp-firstpass",
+        "Type": "CMS.UI.Windows.ShopLicenseBuyWindow",
+        "Method": "BuyItem"
+      },
+      {
+        "Assembly": "Assembly-CSharp-firstpass",
+        "Type": "CMS.UI.Windows.ShopListWindow",
+        "Method": "FillItems"
+      },
+      {
+        "Assembly": "Assembly-CSharp-firstpass",
+        "Type": "CMS.UI.Windows.ShopListWindow",
+        "Method": "OnGridItemSelect"
+      },
+      {
+        "Assembly": "Assembly-CSharp-firstpass",
+        "Type": "CMS.UI.Windows.TintingWindow",
+        "Method": "GetTintCost"
+      },
+      {
+        "Assembly": "Assembly-CSharp-firstpass",
+        "Type": "CMS.UI.Windows.TintingWindow",
+        "Method": "PrepareWindowSelector"
+      },
+      {
+        "Assembly": "Assembly-CSharp-firstpass",
+        "Type": "CMS.UI.Windows.TintingWindow",
+        "Method": "RestoreAllAction"
+      },
+      {
+        "Assembly": "Assembly-CSharp-firstpass",
+        "Type": "CMS.UI.Windows.TintingWindow",
+        "Method": "RestoreBackup"
+      },
+      {
+        "Assembly": "Assembly-CSharp-firstpass",
+        "Type": "CMS.UI.Windows.TintingWindow",
+        "Method": "TintAction"
+      },
+      {
+        "Assembly": "Assembly-CSharp-firstpass",
+        "Type": "CMS.UI.Windows.TintingWindow",
+        "Method": "UnregisterColorPaletteEvents"
+      },
+      {
+        "Assembly": "Assembly-CSharp-firstpass",
+        "Type": "CMS.UI.Windows.WarehouseWindow",
+        "Method": "Show"
+      },
+      {
+        "Assembly": "Assembly-CSharp-firstpass",
+        "Type": "CMS.UI.Windows.WarehouseWindow",
+        "Method": "SwitchTab"
+      },
+      {
+        "Assembly": "Assembly-CSharp-firstpass",
+        "Type": "CMS.UI.Windows.WarehouseWindow",
+        "Method": "SwitchToInventory"
+      },
+      {
+        "Assembly": "Assembly-CSharp-firstpass",
+        "Type": "CMS.UI.Windows.WarehouseWindow",
+        "Method": "SwitchToWarehouse"
+      },
+      {
+        "Assembly": "Assembly-CSharp-firstpass",
+        "Type": "CMS.UI.Windows.WarehouseWindow",
+        "Method": "SwitchWarehouseTabAction"
+      },
+      {
+        "Assembly": "Assembly-CSharp-firstpass",
+        "Type": "CMS.UI.Windows.WheelBalanceWindow",
+        "Method": "StartMiniGame"
+      },
+      {
+        "Assembly": "Assembly-CSharp-firstpass",
+        "Type": "CMS.UI.Windows.WheelsAlignmentWindow",
+        "Method": "Show"
+      },
+      {
+        "Assembly": "Assembly-CSharp-firstpass",
+        "Type": "CameraManager",
+        "Method": "ChangeCamera"
+      },
+      {
+        "Assembly": "Assembly-CSharp-firstpass",
+        "Type": "CameraManager",
+        "Method": "EnableFPSCamera"
+      },
+      {
+        "Assembly": "Assembly-CSharp-firstpass",
+        "Type": "CameraManager",
+        "Method": "EnterToFluidRefill"
+      },
+      {
+        "Assembly": "Assembly-CSharp-firstpass",
+        "Type": "CameraManager",
+        "Method": "EnterToOilRefill"
+      },
+      {
+        "Assembly": "Assembly-CSharp-firstpass",
+        "Type": "CarBundleLoader",
+        "Method": "BodyPart"
+      },
+      {
+        "Assembly": "Assembly-CSharp-firstpass",
+        "Type": "CarBundleLoader",
+        "Method": "GetListOfTuningPartsNames"
+      },
+      {
+        "Assembly": "Assembly-CSharp-firstpass",
+        "Type": "CarBundleLoader",
+        "Method": "LoadModdingPartsToShop"
+      },
+      {
+        "Assembly": "Assembly-CSharp-firstpass",
+        "Type": "CarInputManager",
+        "Method": "Start"
+      },
+      {
+        "Assembly": "Assembly-CSharp-firstpass",
+        "Type": "CarLoader",
+        "Method": "CloseCar"
+      },
+      {
+        "Assembly": "Assembly-CSharp-firstpass",
+        "Type": "CarLoader",
+        "Method": "DeleteCar"
+      },
+      {
+        "Assembly": "Assembly-CSharp-firstpass",
+        "Type": "CarLoader",
+        "Method": "LoadAndPrepareModel"
+      },
+      {
+        "Assembly": "Assembly-CSharp-firstpass",
+        "Type": "CarLoader",
+        "Method": "LoadCar"
+      },
+      {
+        "Assembly": "Assembly-CSharp-firstpass",
+        "Type": "CarLoader",
+        "Method": "LoadCarFromFile"
+      },
+      {
+        "Assembly": "Assembly-CSharp-firstpass",
+        "Type": "CarLoader",
+        "Method": "LoadConfig"
+      },
+      {
+        "Assembly": "Assembly-CSharp-firstpass",
+        "Type": "CarLoader",
+        "Method": "SaveCarToFile"
+      },
+      {
+        "Assembly": "Assembly-CSharp-firstpass",
+        "Type": "CarLoader",
+        "Method": "SetAdditionalCarRot"
+      },
+      {
+        "Assembly": "Assembly-CSharp-firstpass",
+        "Type": "CarLoader",
+        "Method": "SetChassis"
+      },
+      {
+        "Assembly": "Assembly-CSharp-firstpass",
+        "Type": "CarLoader",
+        "Method": "SetEngine"
+      },
+      {
+        "Assembly": "Assembly-CSharp-firstpass",
+        "Type": "CarLoader",
+        "Method": "ShowHideBonusPartsToMount"
+      },
+      {
+        "Assembly": "Assembly-CSharp-firstpass",
+        "Type": "CarLoader",
+        "Method": "SwitchCarPart"
+      },
+      {
+        "Assembly": "Assembly-CSharp-firstpass",
+        "Type": "CarLoader",
+        "Method": "TunePart"
+      },
+      {
+        "Assembly": "Assembly-CSharp-firstpass",
+        "Type": "CarLoader",
+        "Method": "UpdateCarBodyPart"
+      },
+      {
+        "Assembly": "Assembly-CSharp-firstpass",
+        "Type": "CarLoader",
+        "Method": "UpdateET"
+      },
+      {
+        "Assembly": "Assembly-CSharp-firstpass",
+        "Type": "CarLoaderExtended",
+        "Method": "LoadConfig"
+      },
+      {
+        "Assembly": "Assembly-CSharp-firstpass",
+        "Type": "CarSupport",
+        "Method": "SetupForCar"
+      },
+      {
+        "Assembly": "Assembly-CSharp-firstpass",
+        "Type": "EngineAudioController",
+        "Method": "Prepare"
+      },
+      {
+        "Assembly": "Assembly-CSharp-firstpass",
+        "Type": "ExtendedFlycam",
+        "Method": "LateUpdate"
+      },
+      {
+        "Assembly": "Assembly-CSharp-firstpass",
+        "Type": "FPSCamera",
+        "Method": "EnablePhotoMode"
+      },
+      {
+        "Assembly": "Assembly-CSharp-firstpass",
+        "Type": "FPSCamera",
+        "Method": "UpdateHeight"
+      },
+      {
+        "Assembly": "Assembly-CSharp-firstpass",
+        "Type": "FPSCamera",
+        "Method": "UpdateRotation"
+      },
+      {
+        "Assembly": "Assembly-CSharp-firstpass",
+        "Type": "FreeTrackManager",
+        "Method": "Restart"
+      },
+      {
+        "Assembly": "Assembly-CSharp-firstpass",
+        "Type": "GameInventory",
+        "Method": "PrepareInteriorMaterials"
+      },
+      {
+        "Assembly": "Assembly-CSharp-firstpass",
+        "Type": "GameMode",
+        "Method": "SetCurrentMode"
+      },
+      {
+        "Assembly": "Assembly-CSharp-firstpass",
+        "Type": "GameMode",
+        "Method": "SetPartSelectMode"
+      },
+      {
+        "Assembly": "Assembly-CSharp-firstpass",
+        "Type": "GameScript",
+        "Method": "ClickIO"
+      },
+      {
+        "Assembly": "Assembly-CSharp-firstpass",
+        "Type": "GameScript",
+        "Method": "ExitFromInterior"
+      },
+      {
+        "Assembly": "Assembly-CSharp-firstpass",
+        "Type": "GameScript",
+        "Method": "SetIOMouseOver"
+      },
+      {
+        "Assembly": "Assembly-CSharp-firstpass",
+        "Type": "GameScript",
+        "Method": "SetIOMouseOverNull"
+      },
+      {
+        "Assembly": "Assembly-CSharp-firstpass",
+        "Type": "GameScript",
+        "Method": "SitInside"
+      },
+      {
+        "Assembly": "Assembly-CSharp-firstpass",
+        "Type": "GameScript",
+        "Method": "StartCountTimeToSetIOMouseOverNull"
+      },
+      {
+        "Assembly": "Assembly-CSharp-firstpass",
+        "Type": "GarageTeleport",
+        "Method": "Use"
+      },
+      {
+        "Assembly": "Assembly-CSharp-firstpass",
+        "Type": "GenerateGallery",
+        "Method": "Generate"
+      },
+      {
+        "Assembly": "Assembly-CSharp-firstpass",
+        "Type": "GenerateGallery",
+        "Method": "GenerateForCar"
+      },
+      {
+        "Assembly": "Assembly-CSharp-firstpass",
+        "Type": "GenerateGallery",
+        "Method": "PositionCar"
+      },
+      {
+        "Assembly": "Assembly-CSharp-firstpass",
+        "Type": "Inventory",
+        "Method": "Add"
+      },
+      {
+        "Assembly": "Assembly-CSharp-firstpass",
+        "Type": "Inventory",
+        "Method": "AddGroup"
+      },
+      {
+        "Assembly": "Assembly-CSharp-firstpass",
+        "Type": "Inventory",
+        "Method": "GetItems"
+      },
+      {
+        "Assembly": "Assembly-CSharp-firstpass",
+        "Type": "Inventory",
+        "Method": "GetItemsForBrakeLathe"
+      },
+      {
+        "Assembly": "Assembly-CSharp-firstpass",
+        "Type": "ItemFollowCamera",
+        "Method": "OnModeChange"
+      },
+      {
+        "Assembly": "Assembly-CSharp-firstpass",
+        "Type": "ItemFollowCamera",
+        "Method": "TurnOffObject"
+      },
+      {
+        "Assembly": "Assembly-CSharp-firstpass",
+        "Type": "NotificationCenter",
+        "Method": "MoveCarToParking"
+      },
+      {
+        "Assembly": "Assembly-CSharp-firstpass",
+        "Type": "OrbCreationExtensions.GameObjectExtensions",
+        "Method": "GetWorldBounds"
+      },
+      {
+        "Assembly": "Assembly-CSharp-firstpass",
+        "Type": "OrbitCamera",
+        "Method": "ChangeTarget"
+      },
+      {
+        "Assembly": "Assembly-CSharp-firstpass",
+        "Type": "OrbitCamera",
+        "Method": "Init"
+      },
+      {
+        "Assembly": "Assembly-CSharp-firstpass",
+        "Type": "PaintHelper",
+        "Method": "SetColor"
+      },
+      {
+        "Assembly": "Assembly-CSharp-firstpass",
+        "Type": "PaintHelper",
+        "Method": "SetCustomPaintType"
+      },
+      {
+        "Assembly": "Assembly-CSharp-firstpass",
+        "Type": "PaintHelper",
+        "Method": "SetWindowProperties"
+      },
+      {
+        "Assembly": "Assembly-CSharp-firstpass",
+        "Type": "ParkingManager",
+        "Method": "HideCarAtPlace"
+      },
+      {
+        "Assembly": "Assembly-CSharp-firstpass",
+        "Type": "PartScript",
+        "Method": "SetCondition"
+      },
+      {
+        "Assembly": "Assembly-CSharp-firstpass",
+        "Type": "PartScript",
+        "Method": "ShowMountAnimation"
+      },
+      {
+        "Assembly": "Assembly-CSharp-firstpass",
+        "Type": "PartScript",
+        "Method": "ShowMounted"
+      },
+      {
+        "Assembly": "Assembly-CSharp-firstpass",
+        "Type": "PartScript",
+        "Method": "TunePart"
+      },
+      {
+        "Assembly": "Assembly-CSharp-firstpass",
+        "Type": "PieMenuController",
+        "Method": "CloseAnim"
+      },
+      {
+        "Assembly": "Assembly-CSharp-firstpass",
+        "Type": "PieMenuController",
+        "Method": "PreparePieMenuWithFader"
+      },
+      {
+        "Assembly": "Assembly-CSharp-firstpass",
+        "Type": "PieMenuController",
+        "Method": "ReadOptionsFromIni"
+      },
+      {
+        "Assembly": "Assembly-CSharp-firstpass",
+        "Type": "PieMenuController",
+        "Method": "Show"
+      },
+      {
+        "Assembly": "Assembly-CSharp-firstpass",
+        "Type": "PieMenuController",
+        "Method": "_GetIsAvailable_b__74_37"
+      },
+      {
+        "Assembly": "Assembly-CSharp-firstpass",
+        "Type": "RaceTrackManager",
+        "Method": "Restart"
+      },
+      {
+        "Assembly": "Assembly-CSharp-firstpass",
+        "Type": "SpeedTrackManager",
+        "Method": "Restart"
+      },
+      {
+        "Assembly": "Assembly-CSharp-firstpass",
+        "Type": "SpringClampLogic",
+        "Method": "SetGroupOnSpringClamp"
+      },
+      {
+        "Assembly": "Assembly-CSharp-firstpass",
+        "Type": "TempInventory",
+        "Method": "RemoveItem"
+      },
+      {
+        "Assembly": "Assembly-CSharp-firstpass",
+        "Type": "TestTrackManager",
+        "Method": "Restart"
+      },
+      {
+        "Assembly": "Assembly-CSharp-firstpass",
+        "Type": "TireChangerLogic",
+        "Method": "SetGroupOnTireChanger"
+      },
+      {
+        "Assembly": "Assembly-CSharp-firstpass",
+        "Type": "TrackManager",
+        "Method": "RunRestart"
+      },
+      {
+        "Assembly": "Assembly-CSharp-firstpass",
+        "Type": "UIManager",
+        "Method": "ShowAskWindow"
+      },
+      {
+        "Assembly": "Assembly-CSharp-firstpass",
+        "Type": "VPCameraController",
+        "Method": "NextCameraMode"
+      },
+      {
+        "Assembly": "Assembly-CSharp-firstpass",
+        "Type": "Warehouse",
+        "Method": "Delete"
+      },
+      {
+        "Assembly": "Assembly-CSharp-firstpass",
+        "Type": "WheelBalancerLogic",
+        "Method": "SetGroupOnWheelBalancer"
+      },
+      {
+        "Assembly": "UnityEngine.CoreModule",
+        "Type": "UnityEngine.Resources",
+        "Method": "Load"
+      },
+      {
+        "Assembly": "UnityEngine.UI",
+        "Type": "UnityEngine.UI.InputField",
+        "Method": "KeyPressed"
+      }
+    ]
+  }
+]

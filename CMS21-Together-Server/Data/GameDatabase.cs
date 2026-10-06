@@ -13,7 +13,8 @@ namespace CMS21_Together_Server.Data
 		public static Dictionary<string, PartProperty> ItemsDatabase;
 		public static Dictionary<string, Dictionary<int, UpgradeData>> GarageUpgrades;
 		public static PlayerUpgrades PlayerUpgrades;
-		
+		public static DatabaseMeta Meta { get; private set; }
+
 		public static bool isInitialized { get; private set; }
 		
 		public static void Initialize()
@@ -40,8 +41,31 @@ namespace CMS21_Together_Server.Data
 			PlayerUpgrades = LoadPlayerUpgradeDatabase();
 			if (PlayerUpgrades == null)
 				return;
-			
+
+			Meta = LoadMeta();
 			isInitialized = true;
+		}
+
+		private static DatabaseMeta LoadMeta()
+		{
+			string filePath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Database/meta.json");
+			if (!File.Exists(filePath))
+			{
+				Logger.Info("Database/meta.json not found: the database's game version is unknown.");
+				return null;
+			}
+
+			try
+			{
+				var meta = JsonConvert.DeserializeObject<DatabaseMeta>(File.ReadAllText(filePath));
+				Logger.Info($"Database exported from game {meta?.GameVersion} by exporter {meta?.ExporterVersion} at {meta?.ExportedAtUtc}.");
+				return meta;
+			}
+			catch (Exception ex)
+			{
+				Logger.Error($"Error reading Database/meta.json: {ex.Message}");
+				return null;
+			}
 		}
 
 		private static Dictionary<string, PartProperty> LoadItemDataBase()
@@ -160,5 +184,13 @@ namespace CMS21_Together_Server.Data
 				return null;
 			}
 		}
+	}
+
+	public class DatabaseMeta
+	{
+		public string GameVersion;
+		public string ExporterVersion;
+		public string ExportedAtUtc;
+		public List<string> Tables = new List<string>();
 	}
 }

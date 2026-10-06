@@ -1,0 +1,91 @@
+[
+  {
+    "Name": "TK Aftermarket",
+    "Version": "0.7.4",
+    "Author": "TK3R",
+    "File": "TKAftermarket.dll",
+    "Assembly": "TKAftermarket",
+    "Targets": [
+      {
+        "Assembly": "Assembly-CSharp-firstpass",
+        "Type": "CMS.Extensions.StringExtension",
+        "Method": "Localize"
+      },
+      {
+        "Assembly": "Assembly-CSharp-firstpass",
+        "Type": "CMS.UI.Logic.Shop.PartsPageManager",
+        "Method": "DrawPage"
+      },
+      {
+        "Assembly": "Assembly-CSharp-firstpass",
+        "Type": "CMS.UI.Windows.Base.BaseInventory",
+        "Method": "DrawPage"
+      },
+      {
+        "Assembly": "Assembly-CSharp-firstpass",
+        "Type": "CMS.UI.Windows.Base.BaseInventory",
+        "Method": "RedrawCurrentPage"
+      },
+      {
+        "Assembly": "Assembly-CSharp-firstpass",
+        "Type": "CMS.UI.Windows.InventoryWindow",
+        "Method": "OnCategoryChange"
+      },
+      {
+        "Assembly": "Assembly-CSharp-firstpass",
+        "Type": "CarLoader",
+        "Method": "CreateParts"
+      },
+      {
+        "Assembly": "Assembly-CSharp-firstpass",
+        "Type": "CarLoader",
+        "Method": "LoadCar"
+      },
+      {
+        "Assembly": "Assembly-CSharp-firstpass",
+        "Type": "CarLoaderExtended",
+        "Method": "Awake"
+      },
+      {
+        "Assembly": "Assembly-CSharp-firstpass",
+        "Type": "GameInventory",
+        "Method": "FillPartPropertyList"
+      },
+      {
+        "Assembly": "Assembly-CSharp-firstpass",
+        "Type": "GameInventory",
+        "Method": "ReadTuningData"
+      },
+      {
+        "Assembly": "Assembly-CSharp-firstpass",
+        "Type": "InteractiveObject",
+        "Method": "Start"
+      },
+      {
+        "Assembly": "Assembly-CSharp-firstpass",
+        "Type": "MountObject",
+        "Method": "Awake"
+      },
+      {
+        "Assembly": "Assembly-CSharp-firstpass",
+        "Type": "PartScript",
+        "Method": "Awake"
+      },
+      {
+        "Assembly": "Assembly-CSharp-firstpass",
+        "Type": "PartScript",
+        "Method": "ChangeOnTunePartIfShould"
+      },
+      {
+        "Assembly": "Assembly-CSharp-firstpass",
+        "Type": "UIManager",
+        "Method": "GetPartsVariants"
+      },
+      {
+        "Assembly": "UnityEngine.CoreModule",
+        "Type": "UnityEngine.Resources",
+        "Method": "Load"
+      }
+    ]
+  }
+]

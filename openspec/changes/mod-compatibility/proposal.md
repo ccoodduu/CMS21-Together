@@ -21,15 +21,18 @@ Two parts that land at different times (see tasks.md):
   read.
 - **Game version**: the client sends `GameSettings.BuildVersion` (today `1.0.40`); the server compares it with
   `game_version` from its config (`auto` = `Database/meta.json`, otherwise the first accepted client of the run).
-- **DLC set**: the client sends the product ids of owned DLC (`PlatformManager.GetDLCs()`, `DLC.Owned`); the server
-  compares the set with `dlc` from its config (`auto` = first accepted client of the run, `none` = no DLC).
+- **DLC set** (user decision 2026-10-06: a different DLC set never refuses a client): the client sends the product
+  ids of owned DLC (`PlatformManager.GetDLCs()`, `DLC.Owned`); the server keeps the **shared DLC set** — the DLC owned
+  by every connected player — logs it when it changes, shows it in `compat` and sends it to every client in
+  `ServerInfo.SharedDlc`. Blocking DLC content outside that set from shared use (spawn, shared inventory, parking) is
+  a requirement for the rows that share cars, parts and tools (1, 2, 5a), not part of this change.
 - **Gameplay-mod check**: the client reports every loaded MelonLoader mod/plugin with the game methods its Harmony
   patches target (`Harmony.GetAllPatchedMethods()` + `Harmony.GetPatchInfo`, attributed to a mod by the patch
   method's assembly). A classifier in Core sorts each mod into *gameplay*, *visual* or *unknown* from those targets;
   the server applies its `mods_required`, `mods_ignored` and `mods_gameplay` lists and refuses a client whose
   gameplay mods do not match. Visual mods are ignored. This mod and the test harness are never counted.
-- Refusal with a clear reason: `DisconnectReason` (row 7) gains `GameVersionMismatch`, `DlcMismatch`,
-  `ModMismatch` (appended); the message names expected vs. actual values and the offending mods. The refusal reaches
+- Refusal with a clear reason: `DisconnectReason` (row 7) gains `GameVersionMismatch`, `ModMismatch` (appended);
+  the message names expected vs. actual values and the offending mods. The refusal reaches
   the refused client (fixes the `playerID = 0` bug) and frees the slot.
 - `compat` server command; harness verbs `compat-report`, `compat-override`.
 
@@ -39,7 +42,8 @@ Two parts that land at different times (see tasks.md):
   `Database/meta.json` (game version, exporter version, time). Row 16 adds its tables to the same exporter.
 
 **Packets**: changed `ConnectPacket` (fills `gameVersion`; adds `protocolHash`, `dlc`, `mods` as optional fields,
-both directions use the welcome too); `DisconnectPacket.reason` gains three appended values. No new packet types.
+both directions use the welcome too); `ServerInfoPacket` gains `SharedDlc` (`[OptionalField]`, resent when the set
+changes); `DisconnectPacket.reason` gains two appended values. No new packet types.
 
 **Hooks**: none on gameplay. Reads `GameSettings.BuildVersion`, `PlatformManager.GetDLCs()`, `GameInventory.PartPropertyList`
 (exporter), `MelonHandler.Mods/Plugins`, Harmony's patch registry.
@@ -51,8 +55,8 @@ backlog), unloading or disabling mods while connected, verifying that a client t
 
 ### New Capabilities
 - `session-compatibility`: which differences between a joining client and the server (mod build, game version,
-  DLC, gameplay mods) are refused, how gameplay mods are told apart from visual ones, how the server operator
-  configures it, and what the refused player is told.
+  gameplay mods) are refused, how gameplay mods are told apart from visual ones, how the server operator
+  configures it, what the refused player is told, and the shared DLC set of the connected players.
 - `game-data-export`: producing the server's game database from an installed game and recording which game version
   it came from.
 
@@ -67,9 +71,10 @@ backlog), unloading or disabling mods while connected, verifying that a client t
 - Server: `Network/Handlers/AuthHandlers.cs` (`OnConnected` runs the checks before row 7's identity step),
   `Network/Server.cs` / `Network/Transport/SteamTransport.cs` (welcome carries `protocolHash`; `Server.Refuse` closes
   the slot, Steam connection included), `Network/Transport/TCP.cs` (undeserializable `ConnectPacket`), new
-  `Data/CompatibilityPolicy.cs`, `Data/ServerConfig.cs` (`game_version`, `dlc`, `mods_required`, `mods_ignored`,
-  `mods_gameplay`), `Network/CommandSystem.cs` (`compat`), `Data/GameDatabase.cs` (reads `meta.json`).
-- Client: `Network/Handlers/AuthHandlers.cs` (check the welcome, then send for both transports) and
+  `Data/CompatibilityPolicy.cs` and `Data/SharedDlc.cs`, `Data/ServerConfig.cs` (`game_version`, `mods_required`,
+  `mods_ignored`, `mods_gameplay`), `Network/CommandSystem.cs` (`compat`), `Data/GameDatabase.cs` (reads `meta.json`).
+- Client: `Network/Handlers/AuthHandlers.cs` (check the welcome, then send for both transports; keeps the shared
+  DLC set from `ServerInfo` for rows 1, 2, 5a) and
   `Network/Transport/ClientSteam.cs` (stops sending its own `ConnectPacket`), new `ConnectPacketFactory`, new
   `Compatibility/` (`LocalEnvironment`, `ModInventory`), dev-only `Tools/DatabaseExporter/`.
 - Test harness: `Features/CompatCommands.cs` (`compat-report`, `compat-override`, `db-export`), scenario

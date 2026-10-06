@@ -30,6 +30,8 @@ namespace CMS21_Together_Server.Network
 		private float lastHeartbeatTime;
 		private bool ConnectionValid;
 
+		public bool IsAccepted => ConnectionValid;
+
 		public Client(int clientId)
 		{
 			ID = clientId;

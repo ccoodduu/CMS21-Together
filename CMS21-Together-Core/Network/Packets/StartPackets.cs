@@ -1,4 +1,7 @@
 using System;
+using System.Collections.Generic;
+using System.Runtime.Serialization;
+using CMS21_Together_Core.Data.Compatibility;
 
 namespace CMS21_Together_Core.Network.Packets;
 
@@ -18,6 +21,10 @@ public class ConnectPacket : INetworkData
 	public string message;
 	public string gameVersion;
 	public string modVersion;
+
+	[OptionalField] public string protocolHash;
+	[OptionalField] public List<string> dlc;
+	[OptionalField] public List<ModReport> mods;
 }
 
 [Serializable]
@@ -39,7 +46,9 @@ public enum DisconnectReason
 	MissingIdentity,
 	SyncFailed,
 	ServerFull,
-	WrongPassword
+	WrongPassword,
+	GameVersionMismatch,
+	ModMismatch
 }
 
 [Serializable]
@@ -53,4 +62,5 @@ public class ServerInfoPacket : INetworkData
 	public ulong SteamId;
 	public string PublicAddress;
 	public Data.Enum.Gamemode Difficulty;
+	[OptionalField] public List<string> SharedDlc;
 }

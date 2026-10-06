@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Net;
 using System.Net.Sockets;
 using CMS21_Together_Core;
+using CMS21_Together_Core.Data.Compatibility;
 using CMS21_Together_Core.Data.Enum;
 using CMS21_Together_Core.Network;
 using CMS21_Together_Core.Network.Packets;
@@ -69,14 +70,7 @@ namespace CMS21_Together_Server.Network
                         Clients[i].IsConnected = true;
                         Clients[i].ConnectionType = NetworkType.DirectIP;
 
-                        SendToClient(new ConnectPacket()
-                        {
-                            gameVersion = "",
-                            username = "",
-                            message = "Welcome to server!",
-                            modVersion = Program.MOD_VERSION,
-                            playerID = Clients[i].ID
-                        }, Clients[i].ID);
+                        SendToClient(WelcomePacket(Clients[i].ID), Clients[i].ID);
                         return;
                     }
                 }
@@ -91,6 +85,23 @@ namespace CMS21_Together_Server.Network
             }
         }
         
+        public static ConnectPacket WelcomePacket(int clientId) => new ConnectPacket
+        {
+            gameVersion = "",
+            username = "",
+            message = "Welcome to server!",
+            modVersion = Program.MOD_VERSION,
+            protocolHash = ProtocolHash.Value,
+            playerID = clientId
+        };
+
+        public static void RefuseUnreadableConnect(int clientId, PacketTypes packetType)
+        {
+            if (packetType != PacketTypes.Connect || !Clients.TryGetValue(clientId, out var client) || client.IsAccepted) return;
+            Refuse(clientId, DisconnectReason.VersionMismatch,
+                $"The server ({Program.MOD_VERSION}) could not read your connection details: your build of Together differs from the server's.");
+        }
+
         private static void UDPReceiveCallback(IAsyncResult _result)
         {
             try

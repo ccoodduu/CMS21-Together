@@ -1,0 +1,10 @@
+[
+  {
+    "Name": "Autosave Mod",
+    "Version": "1.0.0",
+    "Author": "User",
+    "File": "AutosaveMod.dll",
+    "Assembly": "AutosaveMod",
+    "Targets": []
+  }
+]

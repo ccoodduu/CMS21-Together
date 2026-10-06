@@ -142,3 +142,30 @@ open for the user.
 DLC: do not refuse a client for a different DLC set. The server tracks the DLC set owned by every connected
 player; DLC content not owned by all (cars, parts, tools) is blocked from shared use (spawn, shared inventory,
 parking). Update the DLC requirement, design and tasks accordingly before implementing. Gameplay mods stay refused.
+
+Applied when the change started (2026-10-06): spec requirement "Same DLC set" replaced by "Shared DLC set" (no
+refusal; the server keeps the intersection of the connected players' DLC sets, logs it, shows it in `compat` and
+sends it in `ServerInfo.SharedDlc`); `DlcMismatch` and the `dlc` config key dropped; design D3 rewritten; task 4.6
+added and 5.1 changed (two clients with different DLC sets both join and see the intersection). Blocking DLC
+content outside the shared set is recorded for rows 1, 2, 5a in INTEGRATION.md ("DLC content").
+
+## Implementation notes (part 1, 2026-10-06)
+
+1. **DLC product ids are not unique.** `GetDLCs()` returns 11 of 33 DLC with `ProductId = "-1"` (older DLC merged
+   into remastered ones). Two owned "-1" DLC collapse into one id, and the shared set cannot say which of them is
+   shared. Part 1 still sends product ids (design D3), which is enough for M1 (nobody in the group owns DLC).
+   *Proposed fix (before rows 1, 2, 5a use the set):* identify DLC by its position in `GetDLCs()` — the id that
+   `PlatformManager.IsDLCInstalled(int)` takes and that `PartProperty.DLC` uses as id + 1 (QoLmod calls
+   `IsDLCInstalled(data.DLC - 1)`) — and keep the product id and name for messages. That is also the form rows 1, 2,
+   5a need to test a part or car against the set. Needs the user's OK since it changes D3's id choice.
+2. **Game types live in `Assembly-CSharp-firstpass`**, not `Assembly-CSharp` (all fixture targets and the stubs). The
+   classifier already treats both as game assemblies; the harness's `mod-add` fakes use `Assembly-CSharp-firstpass`.
+3. **The client's welcome check makes the server's mod-version check unreachable in the harness:**
+   `mp-fake-version 0.0.1` is now refused by the client before it sends (same message wording, so row 8's `join-ui`
+   still passes). The server-side build check is exercised by `compat-override protocol-sent x`.
+4. **Not verified:** the Steam send path (lanes run without Steam; `ClientSteam.OnConnected` no longer sends, so
+   both transports send from `HandleConnect` after the welcome — confirmed by code only, to be checked in the M1 Steam
+   test with a friend) and the undeserializable-`ConnectPacket` refusal (`Server.RefuseUnreadableConnect`; needs an
+   old build to provoke).
+5. Refusal history shows an empty name: clients send `PlayerName` empty when it is unset (the Steam name is
+   resolved later by row 6). Cosmetic; the slot id is shown too.

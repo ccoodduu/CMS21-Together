@@ -1,5 +1,7 @@
 using System;
+using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using CMS21_Together_Core.Network;
 using CMS21_Together_Server.Log;
 
@@ -18,6 +20,18 @@ namespace CMS21_Together_Server.Data
 		public int BackupCount { get; private set; } = 5;
 		public string ServerName { get; private set; } = "CMS21 Together Server";
 		public string PublicAddress { get; private set; } = string.Empty;
+		public string GameVersion { get; private set; } = "auto";
+		public List<string> ModsRequired { get; private set; } = new List<string>();
+		public List<string> ModsIgnored { get; private set; } = new List<string>();
+		public List<string> ModsGameplay { get; private set; } = new List<string>();
+
+		private static readonly string[][] CompatibilityKeyLines =
+		{
+			new[] { "game_version", "# Game version clients must run: auto (database version, else the first client) or e.g. 1.0.40", "game_version = auto" },
+			new[] { "mods_required", "# Gameplay mods every client must have and may use, comma separated: Name or Name@Version", "mods_required =" },
+			new[] { "mods_ignored", "# Mods treated as visual (allowed) whatever the mod check finds, comma separated", "mods_ignored =" },
+			new[] { "mods_gameplay", "# Mods treated as gameplay (refused unless required) whatever the mod check finds, comma separated", "mods_gameplay =" },
+		};
 
 		public void ApplyArguments(string[] args)
 		{
@@ -46,7 +60,8 @@ namespace CMS21_Together_Server.Data
 		}
 
 		public string Describe() =>
-			$"name '{ServerName}', port {Port}, max players {MaxPlayers}, steam {UseSteam}, public address '{PublicAddress}', autosave {AutosaveIntervalSeconds}s, backups {BackupCount}";
+			$"name '{ServerName}', port {Port}, max players {MaxPlayers}, steam {UseSteam}, public address '{PublicAddress}', autosave {AutosaveIntervalSeconds}s, backups {BackupCount}, " +
+			$"game version {GameVersion}, mods required [{string.Join(", ", ModsRequired)}], ignored [{string.Join(", ", ModsIgnored)}], gameplay [{string.Join(", ", ModsGameplay)}]";
 
 		public static ServerConfig LoadOrCreate()
 		{
@@ -96,6 +111,12 @@ namespace CMS21_Together_Server.Data
 					sw.WriteLine("# Number of rotating backups of the save in Saves/backups");
 					sw.WriteLine("backup_count = 5");
 					sw.WriteLine("");
+					foreach (var lines in CompatibilityKeyLines)
+					{
+						sw.WriteLine(lines[1]);
+						sw.WriteLine(lines[2]);
+						sw.WriteLine("");
+					}
 					sw.WriteLine("# Log Level Configuration");
 					sw.WriteLine("# 0 = Base (Info, Warn, Error, Success)");
 					sw.WriteLine("# 1 = Debug (Show all internal messages)");
@@ -113,6 +134,7 @@ namespace CMS21_Together_Server.Data
 		private static ServerConfig ParseConfig(string path)
 		{
 			var config = new ServerConfig();
+			var seenKeys = new HashSet<string>();
 
 			try
 			{
@@ -129,6 +151,7 @@ namespace CMS21_Together_Server.Data
 
 					string key = parts[0].Trim().ToLowerInvariant();
 					string value = parts[1].Trim();
+					seenKeys.Add(key);
 
 					switch (key)
 					{
@@ -159,10 +182,24 @@ namespace CMS21_Together_Server.Data
 						case "backup_count":
 							if (int.TryParse(value, out int backups) && backups >= 1) config.BackupCount = backups;
 							break;
+						case "game_version":
+							string gameVersion = value.Replace("\"", "").Trim();
+							config.GameVersion = gameVersion.Length == 0 ? "auto" : gameVersion;
+							break;
+						case "mods_required":
+							config.ModsRequired = ParseList(value);
+							break;
+						case "mods_ignored":
+							config.ModsIgnored = ParseList(value);
+							break;
+						case "mods_gameplay":
+							config.ModsGameplay = ParseList(value);
+							break;
 					}
 				}
 
 				Logger.Success("Configuration loaded successfully.");
+				AppendMissingKeys(path, seenKeys);
 			}
 			catch (Exception ex)
 			{
@@ -170,6 +207,25 @@ namespace CMS21_Together_Server.Data
 			}
 
 			return config;
+		}
+
+		private static List<string> ParseList(string value) =>
+			value.Replace("\"", "").Split(',').Select(s => s.Trim()).Where(s => s.Length > 0).ToList();
+
+		private static void AppendMissingKeys(string path, HashSet<string> seenKeys)
+		{
+			var missing = CompatibilityKeyLines.Where(k => !seenKeys.Contains(k[0])).ToList();
+			if (missing.Count == 0) return;
+
+			var lines = new List<string>();
+			foreach (var key in missing)
+			{
+				lines.Add("");
+				lines.Add(key[1]);
+				lines.Add(key[2]);
+			}
+			File.AppendAllLines(path, lines);
+			Logger.Info($"Added missing settings to '{ConfigFileName}' with defaults: {string.Join(", ", missing.Select(k => k[0]))}");
 		}
 	}
 }

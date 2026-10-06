@@ -3,7 +3,8 @@
 ## Purpose
 
 Decides whether a joining client is compatible with the server before it enters the session — same mod build,
-same game version, same DLC set and matching gameplay mods — and tells a refused player exactly what differs.
+same game version and matching gameplay mods — tells a refused player exactly what differs, and tracks which DLC
+every connected player owns so that DLC content is shared only when all players can load it.
 
 ## ADDED Requirements
 
@@ -37,17 +38,23 @@ the first client accepted since the server started.
 - **WHEN** the game version is set to automatic, no database version is recorded, and the first client reports 1.0.40
 - **THEN** that client is accepted, the server logs 1.0.40 as the reference, and later clients with another version are refused
 
-### Requirement: Same DLC set
-The server SHALL refuse a client whose set of owned DLC differs from the session's reference set. The reference is
-the configured set (which may be empty), or else the set of the first client accepted since the server started.
+### Requirement: Shared DLC set
+The server SHALL NOT refuse a client because of the DLC it owns. The client SHALL report the DLC it owns when it
+connects; the server SHALL keep the set of DLC owned by every connected player (the shared DLC set), update it when
+a player joins or leaves, log it when it changes and send it to every connected client. DLC content outside the
+shared set SHALL be blocked from shared use by the features that share cars, parts and tools.
 
-#### Scenario: Client owns a DLC the others do not
-- **WHEN** the reference set is empty and a client owns one DLC
-- **THEN** the client is refused with the DLC reason and a message naming the extra DLC
+#### Scenario: Players with different DLC join
+- **WHEN** one player owns DLC 1 and 2 and a second player owns DLC 2 and 3
+- **THEN** both are accepted, the shared DLC set is DLC 2, and both clients receive it
 
-#### Scenario: Client lacks a DLC
-- **WHEN** the reference set contains a DLC the client does not own
-- **THEN** the client is refused with the DLC reason and a message naming the missing DLC
+#### Scenario: Player leaves
+- **WHEN** the second player leaves
+- **THEN** the shared DLC set becomes the first player's set again and the remaining client receives it
+
+#### Scenario: Nobody owns DLC
+- **WHEN** a player who owns no DLC joins
+- **THEN** the shared DLC set is empty for as long as that player is connected
 
 ### Requirement: Gameplay-mod classification
 For every other loaded mod or plugin, the client SHALL report its name, version and the game methods its patches
@@ -98,7 +105,7 @@ the join sync.
 
 #### Scenario: Several differences
 - **WHEN** a client differs in game version and in mods
-- **THEN** the refusal names the first failing check in the order mod build, game version, DLC, mods, and the message lists every difference found
+- **THEN** the refusal names the first failing check in the order mod build, game version, mods, and the message lists every difference found
 
 ### Requirement: Compatibility visible to the operator
 The server SHALL log every client's reported game version, DLC set and classified mod list on connect, and SHALL
@@ -106,4 +113,4 @@ show the session's reference values and the last refusals on request.
 
 #### Scenario: Operator inspects the session
 - **WHEN** the operator asks the server for its compatibility state
-- **THEN** it prints the reference game version and DLC set (and whether each was configured, read from the database or pinned), the configured mod lists, and the last refusals with their reasons
+- **THEN** it prints the reference game version (and whether it was configured, read from the database or pinned), the shared DLC set with each connected player's DLC, the configured mod lists, and the last refusals with their reasons
