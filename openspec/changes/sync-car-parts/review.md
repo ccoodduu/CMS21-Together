@@ -117,3 +117,12 @@ All hook methods in the D2 table and the D7 setters exist in `Assembly-CSharp-fi
 - Engine swap fallback (blocked while connected) accepted by the user; noted in D Open Questions and task 0.1.
 - D6: the spawner's roll is marked as the interim plan until ROADMAP row 16 (server-side generation).
 - References to row 5 now name `sync-workshop-machines` / `sync-workshop-car-tools`.
+
+## Finding (2026-10-06): DLC cars
+
+Spawning `car_astonmartindb5` (DLC 23) on test installs without that DLC loads the car but makes the game show its
+"problem with following assets" window (missing DLC engine "Tadek Marek") on the other client. Per the user's DLC
+decision (QUESTIONS.md fifth round), a car whose `CarBundleLoader.CheckHaveDLCForCar` is not -1 must only be
+spawned into the shared garage when every connected player owns that DLC (set tracked by `mod-compatibility`).
+Enforce in `CarSpawnRequest` on the server (refuse with `CarSpawnRejected`) once row 9's DLC set is available; the
+same rule applies to rows 2/3 (parking, job cars) and 6 part 2 (bought cars). Test scenarios use base-game cars.
