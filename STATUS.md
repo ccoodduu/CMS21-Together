@@ -2,6 +2,23 @@
 
 Newest first. One entry per work session.
 
+## 2026-10-06 (11:00–11:25) — row 1: race fixed, API, dumps (branch `change/sync-car-parts`)
+
+- `main` (M1) is merged into `change/sync-car-parts`. Lane-1 regression `20261006-105712` PASSED with every car
+  scenario (`car-baseline`, `car-live`, `car-race`); `compat-refusal` and `join-presence` were FLAKY:
+  - `compat-refusal`: the scenario read a stale `status.json` (B still `Failed` from the previous refusal); it now
+    waits until B leaves `Failed` before the next join. Run `20261006-111147_L1_compat-refusal` PASSED.
+  - `join-presence` (`20261006-110303`): B froze while loading the menu after "Join request → yes" (log and status
+    stop at `SelectSceneToLoad(4) Menu`). First time in 5 runs; watch it.
+- Race fix (`d6205a5`): the slower client aborts its own transaction before applying the winner's inventory.
+- D11 API for other rows (`f318986`): `CarPartsSync.MarkDirty`, `RebuildRegistry`, `LocalPartsCommitted`.
+- Dumps carry the full car part state (task 5.2) incl. `blocked`; `car-live` checks that A and B block the same
+  parts after a remote unmount (task 3.3 done). `car-live` and `connect` PASSED with the larger dump.
+- Your idea (server-hosted generator client) is a spike in `ROADMAP.md` at the start of M3, and under "Decide later"
+  in `QUESTIONS.md`.
+- Running: an agent maps the engine crane out/in path with the native decompile (`docs/spikes/engine-crane.md`).
+  Next: engine crane group transaction (task 3.5), ordered change queue (3.2), then row 2.
+
 ## 2026-10-06 (11:00) — M1 done: dev build 0.6.0-dev.561
 
 - All M1 rows merged to `main` (`58ad6e2`): presence/names/scenes (row 6 part 1), join menu with readable failures and
@@ -40,23 +57,7 @@ the Steam join with a real friend is untested (needs you and a friend).
 - Runs: `20261006-101337_L2_compat-refusal` PASSED; regression `20261006-101633_regression` PASSED on lane 2.
 - Open (review.md Implementation notes): DLC product ids are not unique (11 × "-1"; proposed: use the
   `GetDLCs()` index, as `PartProperty.DLC`/`IsDLCInstalled` do — needs the user); Steam send path verified by code only.
-## 2026-10-06 (10:40) — in flight (read this after a context compaction)
-
-- **M1 is complete in code.** Row 9 part 1 (agent, `change/mod-compatibility`) passed `compat-refusal` and a lane-2
-  regression. It is merged into `change/sync-players-and-scenes` in the separate worktree
-  `..\CMS21-Together-m1` (commit `dcf7997`, includes the DLC-id decision). A lane-2 `Run-All` from that worktree is
-  running. Next: if green, fast-forward `main` to it, build the dev zip (`tools\release\Build-Release.ps1`), write
-  the M1 "what to try" checklist here and notify the user; then remove the worktree.
-- **M2 / row 1** on `change/sync-car-parts` (main checkout): baselines, late join, live changes and claims pass
-  (`car-baseline`, `car-live`). Commit `87c4b89` adds transactions with inventory deltas and resync requests,
-  **not yet run**: deploy lane 1 and run `car-live` (it now also checks the server log line
-  "[Cars] Change ... inventory +1"). A lane-1 `Run-All` of `42f25fe` (before transactions) is running.
-  After that: merge `main` (M1) into `change/sync-car-parts`, row 1 remaining tasks (engine crane group, MarkDirty/
-  RebuildRegistry API, race scenario 5.4), then row 2.
-- Decisions taken without the user: DLC ids = position in the game's DLC list (11 of 33 product ids are "-1");
-  test scenarios use base-game cars (`car_boltatlanta`); a DLC car made the game show its missing-DLC window.
-- User: page file is fixed at 8 GB (commit limit 40 GB). Two lanes at once need ~32 GB page file; suggested, the
-  user decides (needs a reboot).
+## 2026-10-06 (10:40) — in flight (superseded by the 11:00 entry)
 
 ## 2026-10-06 (09:45–10:15) — M1 rows done except row 9; M2 started (cars)
 
