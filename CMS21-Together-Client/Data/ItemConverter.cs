@@ -71,6 +71,10 @@ namespace CMS21Together.Data
                 IsBalanced = item.WheelData.IsBalanced
             };
 
+            var plate = item.LPData;
+            if (!object.ReferenceEquals(plate, null) && (!string.IsNullOrEmpty(plate.Name) || !string.IsNullOrEmpty(plate.Custom)))
+                modItem.LPData = new ModLPData { Name = plate.Name, Custom = plate.Custom };
+
             if (!object.ReferenceEquals(item.MountObjectData, null))
             {
                 modItem.MountObjectData = new ModMountObjectData
@@ -168,7 +172,10 @@ namespace CMS21Together.Data
             }
             item.WheelData = wheelData;
 
-            var mount = modItem.MountObjectData;
+            if (modItem.LPData != null && (modItem.LPData.Name != null || modItem.LPData.Custom != null))
+                item.LPData = new LPData { Name = modItem.LPData.Name, Custom = modItem.LPData.Custom };
+
+                        var mount = modItem.MountObjectData;
             float[] condition = mount?.Condition ?? new float[0];
             bool[] stuck = mount?.IsStuck ?? new bool[0];
             if (stuck.Length != condition.Length) System.Array.Resize(ref stuck, condition.Length);

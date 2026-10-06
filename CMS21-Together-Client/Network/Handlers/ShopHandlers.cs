@@ -53,11 +53,6 @@ namespace CMS21Together.Network.Handlers
                     }
                     Log.Info($"[ShopHandlers] Received SellSingle override for UID {packet.ItemUID}");
                 }
-                else if (packet.Action == ShopActionType.SellCondition)
-                {
-                    Singleton<GameManager>.Instance.Inventory.SellPerCondition(packet.SellCondition);
-                    Log.Info($"[ShopHandlers] Received SellCondition override for {packet.SellCondition}");
-                }
             }
             finally
             {

@@ -56,7 +56,10 @@ public static class StateDump
             ["scrap"] = GlobalData.PlayerScraps,
             ["exp"] = GlobalData.PlayerExp,
             ["level"] = GlobalData.PlayerLevel,
+            ["barns"] = GlobalData.BarnsAmount,
         };
+        dump["economy"] = Features.EconomyCommands.EconomySection();
+        dump["skills"] = Features.EconomyCommands.SkillsSection();
         dump["inventory"] = Inventory();
         dump["cars"] = Cars();
         dump["away"] = CMS21Together.Logic.Car.Away.CarAwaySync.All.OrderBy(a => a.Key)

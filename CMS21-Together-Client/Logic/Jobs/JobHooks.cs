@@ -118,8 +118,4 @@ public static class JobHooks
 		UIManager.Get()?.ShowInfoWindow("Tutorials are not available while playing together.");
 		return false;
 	}
-
-	[HarmonyPatch(typeof(GlobalData), nameof(GlobalData.AddPlayerMoney))]
-	[HarmonyPrefix]
-	private static void BeforeAddMoney(int money) => JobEndContext.CaptureMoney(money);
 }

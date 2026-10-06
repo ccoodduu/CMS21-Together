@@ -89,5 +89,7 @@ public enum PacketTypes
 	TestDriveResult,
 	TestDriveResultAck,
 	PlayerPings,
-	KickRequest
+	KickRequest,
+	EconomyRequest,
+	EconomyResult
 }
