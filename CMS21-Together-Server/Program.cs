@@ -86,6 +86,7 @@ namespace CMS21_Together_Server
 			Data.Reconciliation.ReconciliationService.IntervalSeconds = Config.DesyncCheckIntervalSeconds;
 			Data.Reconciliation.ReconciliationService.AutoFix = Config.DesyncAutofix;
 			Data.Presence.PresenceEvents.Left += Data.Reconciliation.ReconciliationService.OnLeft;
+			Data.Jobs.JobsService.Initialize();
 			Logger.CurrentLogLevel = Config.LogLevel;
 			Logger.Info($"Log Level set to: {Logger.CurrentLogLevel}");
 			

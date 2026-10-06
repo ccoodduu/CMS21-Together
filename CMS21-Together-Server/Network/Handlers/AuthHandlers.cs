@@ -89,6 +89,7 @@ namespace CMS21_Together_Server.Network.Handlers
 			}
 
 			client.SyncState = SyncState.InSession;
+			Data.Jobs.JobsService.OnInSession(client.ID);
 			Logger.Info($"Client[{client.ID}] joined (snapshot {packet.snapshotId}).");
 		}
 	}

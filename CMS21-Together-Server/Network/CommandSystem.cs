@@ -43,6 +43,7 @@ namespace CMS21_Together_Server.Network
 					Logger.Info("  compat            - Show game version, shared DLC, mod lists and last refusals");
 					Logger.Info("  cars              - Show the cars, their revisions, part counts and claims");
 					Logger.Info("  placement         - Show lifts, car places and parking slots");
+					Logger.Info("  jobs              - Show orders, active jobs and the order generator");
 					Logger.Info("  desync [check]    - Show recent desync repairs; check compares every player now");
 					Logger.Info("  kick <id>         - Kick a player by ID");
 					Logger.Info("  money add <val>   - Add money");
@@ -84,6 +85,12 @@ namespace CMS21_Together_Server.Network
 					}
 					foreach (string line in Data.Reconciliation.ReconciliationService.Describe())
 						Logger.Info(line);
+					break;
+
+				case "jobs":
+					Logger.Info("Jobs:");
+					foreach (string line in Data.Jobs.JobsService.Describe())
+						Logger.Info($"  {line}");
 					break;
 
 				case "placement":

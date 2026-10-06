@@ -27,33 +27,35 @@ public static class StatsHandlers
         // Exp & Level
         if (packet.ExpDelta > 0 && packet.ExpDelta < 10000) // basic validation
         {
-            int exp = packet.ExpDelta;
-            if (state.Gamemode == Gamemode.Expert) exp *= 2;
-            while (exp > 0)
-            {
-                int diffToNextLvl = GetDiffToNextLvl(state.Level - 1); // RealPlayerLevel is PlayerLevel + 1. So if Level is 1, PlayerLevel is 0.
-                int num = Math.Max(0, Math.Min(exp, diffToNextLvl - state.Exp));
-                exp -= num;
-                state.Exp += num;
-
-                if (state.Exp >= diffToNextLvl)
-                {
-                    state.Level++;
-                    state.Exp = 0;
-                    
-                    // Update available points for garage
-                    GameDataManager.CurrentState.GarageState.AvailablePoints = GarageUpgradeHandler.ComputeAvailablePoints(state, GameDataManager.CurrentState.GarageState);
-                    Server.SendToClients(GameDataManager.CurrentState.GarageState);
-                    
-                    Logger.Info($"[Stats] Level Up! New Level: {state.Level}");
-                }
-            }
+            ApplyExp(packet.ExpDelta);
             changed = true;
         }
 
         if (changed)
         {
             Server.SendToClients(state);
+        }
+    }
+
+    public static void ApplyExp(int exp)
+    {
+        var state = GameDataManager.CurrentState.WorldState;
+        if (state.Gamemode == Gamemode.Expert) exp *= 2;
+        while (exp > 0)
+        {
+            int diffToNextLvl = GetDiffToNextLvl(state.Level - 1);
+            int num = Math.Max(0, Math.Min(exp, diffToNextLvl - state.Exp));
+            exp -= num;
+            state.Exp += num;
+
+            if (state.Exp >= diffToNextLvl)
+            {
+                state.Level++;
+                state.Exp = 0;
+                GameDataManager.CurrentState.GarageState.AvailablePoints = GarageUpgradeHandler.ComputeAvailablePoints(state, GameDataManager.CurrentState.GarageState);
+                Server.SendToClients(GameDataManager.CurrentState.GarageState);
+                Logger.Info($"[Stats] Level Up! New Level: {state.Level}");
+            }
         }
     }
 

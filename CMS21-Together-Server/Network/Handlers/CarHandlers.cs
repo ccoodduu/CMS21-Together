@@ -26,6 +26,13 @@ namespace CMS21_Together_Server.Network.Handlers
                 return;
             }
 
+            if (packet.IsJob && (!Data.Jobs.JobsService.IsClaimedBy(packet.JobID, (int)clientId) || CarPartsStore.Get(packet.CarLoaderID) != null))
+            {
+                Logger.Info($"[Cars] Job car {packet.CarToLoad} for job {packet.JobID} on loader {packet.CarLoaderID} from client {clientId} refused: no claim or the loader is in use.");
+                Server.SendToClient(new CarSpawnRejectedPacket { CarLoaderID = packet.CarLoaderID, Reason = "This order is not yours to take any more." }, (int)clientId);
+                return;
+            }
+
             if (packet.Dlc >= 0 && !SharedDlc.Shared.Contains(packet.Dlc.ToString()))
             {
                 Logger.Info($"[Cars] Spawn of {packet.CarToLoad} on loader {packet.CarLoaderID} from client {clientId} refused: DLC {packet.Dlc} is not shared ({SharedDlc.Format(SharedDlc.Shared)}).");
