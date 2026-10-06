@@ -81,5 +81,15 @@ public enum PacketTypes
 	JobRemoved,
 
 	CarDetailsUpdate,
-	CarDetailsRequest
+	CarDetailsRequest,
+
+	ToolSlotUpdate,
+	ToolSlotRejected,
+	ToolSlotProperty,
+	ToolPartChange,
+	ToolPosition,
+	ToolsState,
+	ToolClaim,
+	ToolClaimUpdate,
+	ToolPartChangeResult
 }
