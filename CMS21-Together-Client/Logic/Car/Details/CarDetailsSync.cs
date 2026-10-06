@@ -35,7 +35,7 @@ public static class CarDetailsSync
 	private static readonly CarDetailSection[] Sections =
 	{
 		CarDetailSection.Fluids, CarDetailSection.Wheels, CarDetailSection.Alignment, CarDetailSection.Tuning, CarDetailSection.Paint,
-		CarDetailSection.BodyCosmetics, CarDetailSection.Plates, CarDetailSection.Info,
+		CarDetailSection.BodyCosmetics, CarDetailSection.Plates, CarDetailSection.Info, CarDetailSection.Dyno,
 	};
 
 	private static bool Active => ClientScene.IsGarageReady && Client.Instance != null && Client.Instance.IsConnectionValid && SyncTracker.Acked;
@@ -218,6 +218,7 @@ public static class CarDetailsSync
 			CarDetailSection.BodyCosmetics => details.BodyCosmetics,
 			CarDetailSection.Plates => details.Plates,
 			CarDetailSection.Info => details.Info,
+			CarDetailSection.Dyno => details.Dyno,
 			_ => null,
 		};
 		return JsonConvert.SerializeObject(value, Rounded);

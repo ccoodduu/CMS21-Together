@@ -232,7 +232,7 @@ public static class TestDriveCommands
     private static object PathTest(string args)
     {
         var parts = (args ?? "").Split(new[] { ' ' }, StringSplitOptions.RemoveEmptyEntries);
-        if (parts.Length != 2) throw new ArgumentException("usage: pathtest-run <loader> prepare|end|exit|state");
+        if (parts.Length != 2) throw new ArgumentException("usage: pathtest-run <loader> prepare|end|exit|report|state");
         var carLoader = LoadedCar(parts[0]);
         var manager = PathTestManager.Get() ?? throw new InvalidOperationException("no PathTestManager");
         switch (parts[1])
@@ -249,8 +249,11 @@ public static class TestDriveCommands
             case "exit":
                 manager.StartCoroutine(manager.ExitFromCar());
                 break;
+            case "report":
+                CMS21Together.Logic.Car.Away.PathTestSync.ReleaseAfterReport();
+                break;
             case "state": break;
-            default: throw new ArgumentException("usage: pathtest-run <loader> prepare|end|exit|state");
+            default: throw new ArgumentException("usage: pathtest-run <loader> prepare|end|exit|report|state");
         }
         var state = CarState(carLoader);
         state["testIsComplete"] = manager.testIsComplete;

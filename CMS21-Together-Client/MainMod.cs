@@ -104,6 +104,7 @@ namespace CMS21Together
 			if (PlayerSettings.DevHotkeys && Client.Instance.IsConnectionValid && Input.GetKeyDown(KeyCode.F6)) Logic.Car.Placement.DevCarSpawner.SpawnRandom();
 			if (Client.Instance.IsConnectionValid) Logic.Car.Details.CarDetailsSync.Update();
 			if (Client.Instance.IsConnectionValid) Logic.Car.Away.CarAwaySync.Update();
+			if (Client.Instance.IsConnectionValid) Logic.Car.Away.PathTestSync.Update();
 			ConnectionStatus.Update();
 
 			if (Client.Instance.IsConnectionValid)
@@ -134,6 +135,7 @@ namespace CMS21Together
 			GuardSettings.Initialize();
 			Logic.Car.Details.CarDetailsSync.Initialize();
 			Logic.Car.Away.TestDriveSync.Initialize();
+			Logic.Car.Away.PathTestSync.Initialize();
 		}
 
 		public override void OnApplicationQuit()

@@ -59,7 +59,6 @@ Connect-HarnessInstance $b
 Wait-InGarage $b
 $idA = (Get-HarnessStatus -Instance $a).playerId
 foreach ($name in $a, $b) {
-    Send-HarnessCommand -Instance $name -Verb guard-allow -Arguments "Scene:TestTrack" | Out-Null
     Send-HarnessCommand -Instance $name -Verb guard-allow -Arguments "Mode:CarDrive" | Out-Null
 }
 
