@@ -169,7 +169,7 @@ Verbs are globally unique (`Commands.Discover` throws on a duplicate). Existing:
 | Owner | Verbs |
 |---|---|
 | 7 | `stats-add`, `to-menu` (g1); `player-key`, `send-early-stats`, `profile-pref` (later groups) |
-| 6 | `travel`, `scene-list`, `teleport`, `set-name`, `leave-mark`, `sit`, `stand`, `engine`, `buy-car-here`, `junk-buy` |
+| 6 | `travel`, `scene-list`, `teleport`, `set-name`, `leave-mark`, `sit`, `stand`, `engine`, `seat-trace` (spike), `buy-car-here`, `junk-buy` |
 | 1 | `car-spawn`, `car-delete`, `car-loaded`, `car-list`, `car-ready`, `car-baseline`, `car-hold-snapshot`, `car-dlc-cars`, `car-request`, `part-state`, `part-keys`, `part-unmount`, `part-fast-unmount`, `part-fast-mount`, `part-action-unmount`, `part-claim`, `part-corrupt`, `part-hold-remote`, `crane-out`, `crane-in` |
 | 2 | `lift`, `lifters`, `car-move`, `car-place`, `placement`, `net-hold`, `park`, `unpark`, `park-swap`, `parking`, `parking-unlock`, `park-incoming`, `dev-spawn`, `placement-trace` and `parking-probe` (spike) |
 | 3 | `jobs-trace`, `orders-generate`, `orders-mission`, `orders-autogen`, `orders-list`, `order-slots`, `orders-accept`, `orders-decline`, `orders-reload`, `job-examine`, `job-check`, `job-finish`, `tutorial-run`, `job-spawn-unclaimed`, `job-end-dup` |
@@ -197,7 +197,7 @@ Verbs are globally unique (`Commands.Discover` throws on a duplicate). Existing:
 | server commands `password`, `serverinfo` (8); `compat` (9); `desync`, `bugreport` (14); existing `kick`, `stop` (`kick` moves to `Server.Refuse`) | as listed |
 
 Scenarios (unique): 7 `server-restart`, `profile-safety`, `rejoin`, `latejoin`, `persistence-restart`,
-`duplicate-identity`; 6 `presence-latejoin`, `scenes`, `presence`, `purchases`; 1 `car-parts`, `car-parts-latejoin`;
+`duplicate-identity`; 6 `presence-latejoin`, `scenes`, `seat-engine`, `seat-engine-trace` (spike), `presence`, `purchases`; 1 `car-parts`, `car-parts-latejoin`;
 2 `car-placement`, `car-placement-latejoin`, `car-parking-full`; 3 `jobs-trace`, `jobs`, `jobs-latejoin`,
 `jobs-restart`; 4 `car-details`, `car-details-latejoin`; 5a `tools-slots`, `tools-race`, `tools-latejoin`;
 5b `tools-car-effects`; 8 `join-ui`, `join-coldstart`, `host-from-game`, `session-admin`; 9 `compat-refusal`;
