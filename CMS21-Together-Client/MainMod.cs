@@ -123,6 +123,11 @@ namespace CMS21Together
 
 		public override void OnLateUpdate() { }
 
+		public override void OnGUI()
+		{
+			if (isModInitialized && Client.Instance.IsConnectionValid) NameTags.Draw();
+		}
+
 		public override void OnInitializeMelon()
 		{
 			ModConsole.Initialize();

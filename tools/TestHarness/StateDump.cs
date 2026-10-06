@@ -64,6 +64,7 @@ public static class StateDump
             engineRunning = p.Value.Record.EngineRunning,
             avatarActive = p.Value.HasAvatar && p.Value.Avatar.gameObject.activeSelf,
             avatarPosition = p.Value.HasAvatar ? Vec(p.Value.Avatar.transform.position) : null,
+            nameTag = NameTags.IsDrawn(p.Value),
         });
         return dump;
     }
