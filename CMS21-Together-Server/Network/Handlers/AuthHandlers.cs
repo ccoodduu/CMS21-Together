@@ -29,7 +29,8 @@ namespace CMS21_Together_Server.Network.Handlers
 			{
 				Server.SendToClient(new DisconnectPacket()
 				{
-					message = $"Server require mod version {Program.MOD_VERSION}."
+					message = $"Server require mod version {Program.MOD_VERSION}.",
+					reason = DisconnectReason.VersionMismatch
 				},(int)clientId);
 				return;
 			}

@@ -194,7 +194,8 @@ namespace CMS21_Together_Server.Network
                 SendToClient(new DisconnectPacket()
                 {
                     playerID = -1,
-                    message = "Server is closing."
+                    message = "Server is closing.",
+                    reason = DisconnectReason.ServerShutdown
                 }, client.ID);
             }
             

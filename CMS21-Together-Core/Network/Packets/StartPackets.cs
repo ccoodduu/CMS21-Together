@@ -26,4 +26,16 @@ public class DisconnectPacket : INetworkData
 {
 	public int playerID;
 	public string message;
+	public DisconnectReason reason;
+}
+[Serializable]
+public enum DisconnectReason
+{
+	None,
+	ServerShutdown,
+	Kicked,
+	VersionMismatch,
+	DuplicateIdentity,
+	MissingIdentity,
+	SyncFailed
 }

@@ -23,12 +23,12 @@ two-instance scenario. **Rest (last): groups 3–7**, after rows 1–6.
 
 ## 3. Save robustness (server)
 
-- [ ] 3.1 Crash-safe `SaveSession()` per D6 (hash of `Sections`, `.tmp` + `Flush(true)`, rotation in `Saves/backups/`, `File.Replace` with 3 retries); verify two saves without changes write once, and 10 × `Stop-TestServer` during autosave with `autosave_interval_seconds = 1` each restart loads.
-- [ ] 3.2 `autosave_interval_seconds` (300, 0 = off) and `backup_count` (5) in `ServerConfig` and the default file; verify with 10 s that files are written only when state changed.
-- [ ] 3.3 Start copy `backups/start_<ts>.json`, keep 3; verify four restarts leave the three newest.
-- [ ] 3.4 Load per D7 before `Server.Start` in `Program.Main`: candidate order, newer-version refusal, quarantine to `Saves/corrupt/`, resave after a fallback, refusal when files exist but none load; verify with prepared files: truncated main + valid bak1 → loads bak1 and quarantines main; all garbage → refuses and accepts no connection; `SaveVersion: 99` → refuses, no file moved or written.
-- [ ] 3.5 `--check-save <file>` before Terminal.Gui init; commit a v1 save from the current build (with a car and inventory) as `tools/test-env/fixtures/server_save_v1.json`; verify exit 0 with the fixture's money, level, inventory and car counts, exit 1 on garbage.
-- [ ] 3.6 `DisconnectReason reason` on `DisconnectPacket` (`None, ServerShutdown, Kicked, VersionMismatch, DuplicateIdentity, MissingIdentity, SyncFailed`); triggers per D6: `/stop` saves then sends `ServerShutdown`, `RequestSave()` after a leave or timeout, `SetConsoleCtrlHandler` save on window close; verify each by the save log line and the file timestamp.
+- [x] 3.1 Crash-safe `SaveSession()` per D6 (hash of `Sections`, `.tmp` + `Flush(true)`, rotation in `Saves/backups/`, `File.Replace` with 3 retries); verify two saves without changes write once, and 10 × `Stop-TestServer` during autosave with `autosave_interval_seconds = 1` each restart loads.
+- [x] 3.2 `autosave_interval_seconds` (300, 0 = off) and `backup_count` (5) in `ServerConfig` and the default file; verify with 10 s that files are written only when state changed.
+- [x] 3.3 Start copy `backups/start_<ts>.json`, keep 3; verify four restarts leave the three newest.
+- [x] 3.4 Load per D7 before `Server.Start` in `Program.Main`: candidate order, newer-version refusal, quarantine to `Saves/corrupt/`, resave after a fallback, refusal when files exist but none load; verify with prepared files: truncated main + valid bak1 → loads bak1 and quarantines main; all garbage → refuses and accepts no connection; `SaveVersion: 99` → refuses, no file moved or written.
+- [x] 3.5 `--check-save <file>` before Terminal.Gui init; commit a v1 save from the current build (with a car and inventory) as `tools/test-env/fixtures/server_save_v1.json`; verify exit 0 with the fixture's money, level, inventory and car counts, exit 1 on garbage.
+- [x] 3.6 `DisconnectReason reason` on `DisconnectPacket` (`None, ServerShutdown, Kicked, VersionMismatch, DuplicateIdentity, MissingIdentity, SyncFailed`); triggers per D6: `/stop` saves then sends `ServerShutdown`, `RequestSave()` after a leave or timeout, `SetConsoleCtrlHandler` save on window close; verify each by the save log line and the file timestamp. Verified by `tools/test-env/Test-ServerSaves.ps1` (server only, 14 checks, also covers 3.1–3.5).
 
 ## 4. Identity and player records
 

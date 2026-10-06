@@ -87,6 +87,7 @@ namespace CMS21_Together_Server.Network
 					playerID = ID,
 					message = "Disconnected"
 				}, ID);
+				GameDataManager.RequestSave();
 			}
 		}
 	}

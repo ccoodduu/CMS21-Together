@@ -1,0 +1,206 @@
+{
+  "WorldState": {
+    "updateGamemode": false,
+    "Gamemode": 0,
+    "Money": 23456,
+    "Level": 11,
+    "Exp": 321,
+    "Scraps": 42
+  },
+  "GarageState": {
+    "GarageUpgradeLevels": {
+      "scraps": [
+        true,
+        false,
+        false
+      ]
+    },
+    "PlayerUpgradeLevels": {
+      "fast_hands": [
+        true,
+        true,
+        false
+      ]
+    },
+    "AvailablePoints": 0
+  },
+  "InventoryState": {
+    "InventoryItems": [
+      {
+        "Color": null,
+        "Condition": 0.6,
+        "ConditionToShow": 0.0,
+        "Dent": 0.0,
+        "GearboxData": null,
+        "IsExamined": false,
+        "IsPainted": false,
+        "IsTinted": false,
+        "Livery": null,
+        "LiveryStrength": 0.0,
+        "LPData": null,
+        "MountObjectData": null,
+        "NormalID": null,
+        "OutsideRustEnabled": false,
+        "PaintData": {
+          "metal": 0.0,
+          "roughness": 0.0,
+          "clearCoat": 0.0,
+          "normalStrenght": 0.0,
+          "fresnel": 0.0,
+          "p_metal": 0.0,
+          "p_roughness": 0.0,
+          "p_clearCoat": 0.0,
+          "p_normalStrenght": 0.0,
+          "p_fresnel": 0.0
+        },
+        "PaintType": 0,
+        "Quality": 1,
+        "RepairAmount": 0,
+        "TintColor": null,
+        "TuningData": null,
+        "WashFactor": 0.0,
+        "WheelData": null,
+        "ID": "oilfilter_1",
+        "UID": 1001
+      },
+      {
+        "Color": null,
+        "Condition": 0.7,
+        "ConditionToShow": 0.0,
+        "Dent": 0.0,
+        "GearboxData": null,
+        "IsExamined": false,
+        "IsPainted": false,
+        "IsTinted": false,
+        "Livery": null,
+        "LiveryStrength": 0.0,
+        "LPData": null,
+        "MountObjectData": null,
+        "NormalID": null,
+        "OutsideRustEnabled": false,
+        "PaintData": {
+          "metal": 0.0,
+          "roughness": 0.0,
+          "clearCoat": 0.0,
+          "normalStrenght": 0.0,
+          "fresnel": 0.0,
+          "p_metal": 0.0,
+          "p_roughness": 0.0,
+          "p_clearCoat": 0.0,
+          "p_normalStrenght": 0.0,
+          "p_fresnel": 0.0
+        },
+        "PaintType": 0,
+        "Quality": 1,
+        "RepairAmount": 0,
+        "TintColor": null,
+        "TuningData": null,
+        "WashFactor": 0.0,
+        "WheelData": null,
+        "ID": "oilfilter_2",
+        "UID": 1002
+      },
+      {
+        "Color": null,
+        "Condition": 0.8,
+        "ConditionToShow": 0.0,
+        "Dent": 0.0,
+        "GearboxData": null,
+        "IsExamined": false,
+        "IsPainted": false,
+        "IsTinted": false,
+        "Livery": null,
+        "LiveryStrength": 0.0,
+        "LPData": null,
+        "MountObjectData": null,
+        "NormalID": null,
+        "OutsideRustEnabled": false,
+        "PaintData": {
+          "metal": 0.0,
+          "roughness": 0.0,
+          "clearCoat": 0.0,
+          "normalStrenght": 0.0,
+          "fresnel": 0.0,
+          "p_metal": 0.0,
+          "p_roughness": 0.0,
+          "p_clearCoat": 0.0,
+          "p_normalStrenght": 0.0,
+          "p_fresnel": 0.0
+        },
+        "PaintType": 0,
+        "Quality": 1,
+        "RepairAmount": 0,
+        "TintColor": null,
+        "TuningData": null,
+        "WashFactor": 0.0,
+        "WheelData": null,
+        "ID": "oilfilter_3",
+        "UID": 1003
+      }
+    ],
+    "InventoryGroupItems": [
+      {
+        "Index": 0,
+        "IsNormalGroup": true,
+        "ItemList": [],
+        "Size": 0.0,
+        "ID": "brakePads_group",
+        "UID": 2001
+      }
+    ],
+    "WarehouseItems": [
+      {
+        "Color": null,
+        "Condition": 1.0,
+        "ConditionToShow": 0.0,
+        "Dent": 0.0,
+        "GearboxData": null,
+        "IsExamined": false,
+        "IsPainted": false,
+        "IsTinted": false,
+        "Livery": null,
+        "LiveryStrength": 0.0,
+        "LPData": null,
+        "MountObjectData": null,
+        "NormalID": null,
+        "OutsideRustEnabled": false,
+        "PaintData": {
+          "metal": 0.0,
+          "roughness": 0.0,
+          "clearCoat": 0.0,
+          "normalStrenght": 0.0,
+          "fresnel": 0.0,
+          "p_metal": 0.0,
+          "p_roughness": 0.0,
+          "p_clearCoat": 0.0,
+          "p_normalStrenght": 0.0,
+          "p_fresnel": 0.0
+        },
+        "PaintType": 0,
+        "Quality": 0,
+        "RepairAmount": 0,
+        "TintColor": null,
+        "TuningData": null,
+        "WashFactor": 0.0,
+        "WheelData": null,
+        "ID": "tire_1",
+        "UID": 3001
+      }
+    ],
+    "WarehouseGroupItems": []
+  },
+  "CarState": {
+    "LoadedCars": {
+      "0": {
+        "CarLoaderID": 0,
+        "CarToLoad": "car_dnb_censor",
+        "ConfigVersion": 0,
+        "PlaceNo": 0,
+        "IsJob": false,
+        "JobID": 0
+      }
+    },
+    "BodyParts": {},
+    "SubParts": {}
+  }
+}

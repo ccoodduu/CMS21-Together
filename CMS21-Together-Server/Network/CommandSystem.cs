@@ -47,11 +47,14 @@ namespace CMS21_Together_Server.Network
 
 				case "exit":
 				case "stop":
+					Logger.Info("Stopping the server...");
+					GameDataManager.SaveSession(true);
+					Server.Stop();
 					Environment.Exit(0);
 					break;
 
 				case "save":
-					GameDataManager.RequestSave();
+					GameDataManager.RequestSave(true);
 					break;
 
 				case "kick":
@@ -60,7 +63,7 @@ namespace CMS21_Together_Server.Network
 						if (Server.Clients.ContainsKey(playerId) && Server.Clients[playerId].IsConnected)
 						{
 							Logger.Info($"Kicking player {playerId}...");
-							Server.SendToClient(new DisconnectPacket() { message = "You have been kicked by the server.", playerID = playerId }, playerId);
+							Server.SendToClient(new DisconnectPacket() { message = "You have been kicked by the server.", playerID = playerId, reason = DisconnectReason.Kicked }, playerId);
 							Server.Clients[playerId].Disconnect();
 						}
 						else

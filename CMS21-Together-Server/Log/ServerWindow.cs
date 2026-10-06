@@ -96,14 +96,9 @@ namespace CMS21_Together_Server.Log
 
         private void TickServer()
         {
-            if (ServerTime.Time - GameDataManager.lastAutoSaveTime >= GameDataManager.AutoSaveInterval)
-            {
-                GameDataManager.lastAutoSaveTime = ServerTime.Time;
-                GameDataManager.RequestSave();
-            }
             CommandFile.Poll(ServerTime.Time);
             Network.Server.Update();
-            GameDataManager.ProcessPendingSave();
+            GameDataManager.Tick(ServerTime.Time);
         }
 
         private void UpdateDashboard()

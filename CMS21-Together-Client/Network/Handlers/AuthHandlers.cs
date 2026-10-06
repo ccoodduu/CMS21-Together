@@ -45,7 +45,7 @@ public static class AuthHandler
 	{
 		if (packet.playerID == Client.Instance.ID || packet.playerID == -1)
 		{
-			Log.Info($"[Received From Server] Disconnected from server : {packet.message}");
+			Log.Info($"[Received From Server] Disconnected from server ({packet.reason}): {packet.message}");
 			Client.Instance.Disconnect();
 			NotificationCenter.m_instance.StartCoroutine(NotificationCenter.m_instance.SelectSceneToLoad("Menu", SceneType.Menu, true, false));
 		}

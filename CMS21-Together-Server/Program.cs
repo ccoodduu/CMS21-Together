@@ -38,6 +38,13 @@ namespace CMS21_Together_Server
 		
 		public static void Main(string[] args)
 		{
+			string checkSavePath = GetArgument(args, "--check-save");
+			if (checkSavePath != null)
+			{
+				Environment.Exit(CheckSave(checkSavePath));
+				return;
+			}
+
 			Terminal.Gui.Application.Init();
 			
 			Terminal.Gui.Colors.Base.Normal = Terminal.Gui.Application.Driver.MakeAttribute(Terminal.Gui.Color.White, Terminal.Gui.Color.Black);
@@ -66,16 +73,19 @@ namespace CMS21_Together_Server
 			
 			try
 			{
+				GameDataManager.BackupCount = Config.BackupCount;
+				GameDataManager.AutosaveIntervalSeconds = Config.AutosaveIntervalSeconds;
 				SessionRegistry.Initialize(Assembly.GetExecutingAssembly());
-				GameDataManager.TryLoadSession(null);
+				GameDataManager.LoadOrCreateSession();
 			}
 			catch (Exception ex)
 			{
-				Logger.Error($"Cannot start the session: {ex.Message}");
+				Logger.Error($"Cannot start the session, the server will not start: {ex.Message}");
 				Terminal.Gui.Application.Shutdown();
 				Exit();
 				return;
 			}
+			ConsoleCloseHandler.Install();
 
 			string commandFile = GetArgument(args, "--command-file");
 			if (commandFile != null)
@@ -87,6 +97,25 @@ namespace CMS21_Together_Server
 			Terminal.Gui.Application.Run(window);
 			Terminal.Gui.Application.Shutdown();
 			Exit();
+		}
+
+		private static int CheckSave(string path)
+		{
+			CMS21_Together_Core.Logging.Log.SetLogger(new ServerLoggerAdapter());
+			try
+			{
+				GameDatabase.Initialize();
+				SessionRegistry.Initialize(Assembly.GetExecutingAssembly());
+				foreach (string line in GameDataManager.CheckSave(path))
+					Console.WriteLine(line);
+				Console.WriteLine("OK");
+				return 0;
+			}
+			catch (Exception ex)
+			{
+				Console.WriteLine($"FAILED: {ex.Message}");
+				return 1;
+			}
 		}
 
 		private static string GetArgument(string[] args, string name)
