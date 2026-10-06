@@ -4,6 +4,7 @@ using CMS21_Together_Core.Network;
 using CMS21_Together_Core.Network.Packets;
 using CMS21Together.Data;
 using CMS21Together.Logic.Tools;
+using CMS21Together.Logic.Tools.CarTools;
 
 namespace CMS21Together.Network.Handlers;
 
@@ -50,4 +51,7 @@ public static class ToolHandlers
 
 	[PacketHandler(PacketTypes.ToolClaimUpdate)]
 	public static void OnClaimUpdate(long clientId, ToolClaimUpdatePacket packet) => ToolSync.OnClaimUpdate(packet);
+
+	[PacketHandler(PacketTypes.ToolAction)]
+	public static void OnAction(long clientId, ToolActionPacket packet) => ClientScene.GarageBound(() => CarToolActions.OnRemote(packet));
 }

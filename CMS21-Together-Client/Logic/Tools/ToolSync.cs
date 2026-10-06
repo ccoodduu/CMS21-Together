@@ -78,6 +78,7 @@ public static class ToolSync
 		applyRequested.Clear();
 		ToolPositionSync.Reset();
 		EngineStandParts.Reset();
+		CarTools.CarToolActions.Reset();
 	}
 
 	public static void TraceEvent(string text)
