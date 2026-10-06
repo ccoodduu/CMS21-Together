@@ -220,3 +220,26 @@ namespace CMS21_Together_Core.Network.Packets
         public string Reason;
     }
 }
+
+namespace CMS21_Together_Core.Network.Packets
+{
+    [Serializable]
+    [NetworkPacket(PacketTypes.CarDetailsUpdate)]
+    public class CarDetailsUpdatePacket : INetworkData
+    {
+        public int CarLoaderID;
+        public int SpawnSeq;
+        public bool IsFull;
+        public int SourceClientId;
+        public int ClientSeq;
+        public CMS21_Together_Core.Data.GameType.ModCarDetails Details;
+    }
+
+    [Serializable]
+    [NetworkPacket(PacketTypes.CarDetailsRequest)]
+    public class CarDetailsRequestPacket : INetworkData
+    {
+        public int CarLoaderID;
+        public int SpawnSeq;
+    }
+}

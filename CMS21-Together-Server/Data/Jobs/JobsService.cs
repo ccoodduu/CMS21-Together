@@ -86,7 +86,7 @@ namespace CMS21_Together_Server.Data.Jobs
 			}
 			var job = packet.Job;
 			if (job == null) return;
-			if (job.IsMission && job.id == 0)
+			if (job.IsMission && job.MissionID == 0)
 			{
 				Logger.Info("[Jobs] Tutorial mission refused.");
 				return;

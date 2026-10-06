@@ -10,7 +10,7 @@ namespace CMS21_Together_Server.Data.Persistence.Sections
 	public class CarsSection : ISaveSection
 	{
 		public string Key => SyncOrder.CarsKey;
-		public int Version => 2;
+		public int Version => 3;
 
 		public JToken Save() => JObject.FromObject(GameDataManager.CurrentState.CarState);
 
@@ -32,6 +32,7 @@ namespace CMS21_Together_Server.Data.Persistence.Sections
 
 		public JToken Migrate(JToken data, int fromVersion)
 		{
+			if (fromVersion == 2) return data;
 			if (fromVersion != 1) throw new NotSupportedException($"No migration from cars v{fromVersion}.");
 
 			var v1 = (JObject)data;

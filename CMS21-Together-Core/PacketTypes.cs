@@ -78,5 +78,8 @@ public enum PacketTypes
 	JobStarted,
 	JobProgress,
 	JobEndRequest,
-	JobRemoved
+	JobRemoved,
+
+	CarDetailsUpdate,
+	CarDetailsRequest
 }

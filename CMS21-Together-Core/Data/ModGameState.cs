@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using CMS21_Together_Core.Data.GameType;
 using CMS21_Together_Core.Network.Packets;
 using Newtonsoft.Json;
 
@@ -35,6 +36,7 @@ public class CarState
 
 	// Key: CarLoaderID (e.g. 0 to 4).
 	public Dictionary<int, CarLoaderEntry> LoadedCars = new Dictionary<int, CarLoaderEntry>();
+	public Dictionary<int, ModCarDetails> Details = new Dictionary<int, ModCarDetails>();
 }
 
 public class CarLoaderEntry
