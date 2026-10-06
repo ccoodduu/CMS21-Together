@@ -33,6 +33,7 @@ namespace CMS21_Together_Server.Network.Handlers
 			ParkRefusal refusal = ParkRefusal.None;
 			if (request.Price != 0 || entry == null) refusal = ParkRefusal.Invalid;
 			else if (entry.Spawn.IsJob) refusal = ParkRefusal.JobCar;
+			else if (CarAwayRegistry.Blocks(request.CarLoaderID, client, "park")) refusal = ParkRefusal.Taken;
 			int slot = -1;
 			if (refusal == ParkRefusal.None && !ParkingService.TryAdd(request.Car, request.PreferredSlot, out slot)) refusal = ParkRefusal.ParkingFull;
 

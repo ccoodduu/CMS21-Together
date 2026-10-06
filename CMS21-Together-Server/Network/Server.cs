@@ -277,6 +277,9 @@ namespace CMS21_Together_Server.Network
             Logger.Info("Server Stopped.");
         }
 
+        private const float StallSeconds = 2f;
+        private static float lastUpdateTime = -1f;
+
         public static void Update()
         {
             if (!isRunning) return;
@@ -285,11 +288,19 @@ namespace CMS21_Together_Server.Network
             
             lock (Data.GameDataManager.StateLock)
             {
+                float now = Data.ServerTime.Time;
+                if (lastUpdateTime >= 0f && now - lastUpdateTime > StallSeconds)
+                {
+                    Logger.Warn($"Server loop stalled for {now - lastUpdateTime:0.0} s; heartbeat deadlines moved by that much.");
+                    foreach (var stalled in Clients.Values) stalled.LastHeartbeatTime += now - lastUpdateTime;
+                }
+                lastUpdateTime = now;
                 ProcessRefusals();
                 Data.Cars.CarClaims.Expire(Data.ServerTime.Time);
                 Data.Reconciliation.ReconciliationService.Tick(Data.ServerTime.Time);
                 Data.Jobs.JobsService.Tick(Data.ServerTime.Time);
                 Data.Cars.CarDetailsStore.Tick(Data.ServerTime.Time);
+                Data.Cars.CarAwayRegistry.Tick(Data.ServerTime.Time);
                 foreach (var client in Clients.Values)
                 {
                     if (client.IsConnected)

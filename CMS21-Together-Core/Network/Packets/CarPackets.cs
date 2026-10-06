@@ -45,6 +45,7 @@ namespace CMS21_Together_Core.Network.Packets
         public int SpawnSeq;
         public byte[] CarData;
         public byte CarDataVersion;
+        public int SpecialState;
     }
 
     [Serializable]

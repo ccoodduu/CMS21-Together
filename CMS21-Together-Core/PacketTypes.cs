@@ -83,6 +83,11 @@ public enum PacketTypes
 	CarDetailsUpdate,
 	CarDetailsRequest,
 
+	CarAwayRequest,
+	CarAwayUpdate,
+	CarAwayRelease,
+	TestDriveResult,
+	TestDriveResultAck,
 	PlayerPings,
 	KickRequest
 }

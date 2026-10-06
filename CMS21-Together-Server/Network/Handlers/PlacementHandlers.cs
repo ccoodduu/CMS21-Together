@@ -17,6 +17,12 @@ namespace CMS21_Together_Server.Network.Handlers
 			int stored = PlacementRules.LifterState(lifter);
 			bool oneStep = request.ToState >= PlacementRules.OnFloor && request.ToState <= PlacementRules.Up && System.Math.Abs(request.ToState - request.FromState) == 1;
 			bool hasCar = PlacementRules.LoaderAtPlace(PlacementRules.PlaceOfLifter(lifter)) != null;
+			int? liftedCar = PlacementRules.LoaderAtPlace(PlacementRules.PlaceOfLifter(lifter));
+			if (liftedCar.HasValue && CarAwayRegistry.Blocks(liftedCar.Value, (int)clientId, $"lift {lifter}"))
+			{
+				PlacementRules.SendLifter(lifter, instant: false, only: (int)clientId);
+				return;
+			}
 			if (PlacementRules.PlaceOfLifter(lifter) < 0 || request.FromState != stored || !oneStep || !hasCar)
 			{
 				Logger.Info($"[Placement] Lift {lifter} {request.FromState}->{request.ToState} from client {clientId} refused (stored {stored}, car {hasCar}).");
@@ -41,7 +47,9 @@ namespace CMS21_Together_Server.Network.Handlers
 			int stored = entry.Spawn.PlaceNo;
 			int? other = PlacementRules.LoaderAtPlace(request.ToPlace);
 			string refusal = null;
-			if (request.FromPlace != stored) refusal = $"the car is at place {stored}";
+			if (CarAwayRegistry.Blocks(request.CarLoaderID, (int)clientId, "move")) refusal = "the car is away";
+			else if (other.HasValue && CarAwayRegistry.Blocks(other.Value, (int)clientId, "swap")) refusal = $"the car on place {request.ToPlace} is away";
+			else if (request.FromPlace != stored) refusal = $"the car is at place {stored}";
 			else if (request.ToPlace == stored) refusal = "the car is already there";
 			else if (other.HasValue && IsRaised(request.FromPlace)) refusal = "a swap with a car on a raised lift";
 			else if (other.HasValue && IsRaised(request.ToPlace)) refusal = $"the car on place {request.ToPlace} stands on a raised lift";
@@ -54,6 +62,7 @@ namespace CMS21_Together_Server.Network.Handlers
 
 			PlacementRules.ResetLifterAt(stored);
 			entry.Spawn.PlaceNo = request.ToPlace;
+			entry.Spawn.SpecialState = 0;
 			if (other.HasValue)
 			{
 				CarPartsStore.Get(other.Value).Spawn.PlaceNo = stored;

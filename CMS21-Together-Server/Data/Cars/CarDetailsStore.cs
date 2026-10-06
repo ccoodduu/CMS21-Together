@@ -22,6 +22,7 @@ namespace CMS21_Together_Server.Data.Cars
 		private const int MaxTuningValues = 64;
 		private const int MaxCosmetics = 256;
 		private const int MaxString = 64;
+		private const float MaxTestDriveKm = 2000f;
 
 		private static CarState State => GameDataManager.CurrentState.CarState;
 		private static readonly Dictionary<int, float> missingSince = new Dictionary<int, float>();
@@ -40,6 +41,12 @@ namespace CMS21_Together_Server.Data.Cars
 			if (!State.LoadedCars.TryGetValue(packet.CarLoaderID, out var car) || car.SpawnSeq != packet.SpawnSeq || packet.Details == null)
 			{
 				Logger.Debug($"[CarDetails] Update for loader {packet.CarLoaderID} (SpawnSeq {packet.SpawnSeq}) from client {clientId} dropped.");
+				return;
+			}
+			if (CarAwayRegistry.Blocks(packet.CarLoaderID, clientId, "details update"))
+			{
+				if (IsValid(packet.CarLoaderID, out var current))
+					Server.SendToClient(new CarDetailsUpdatePacket { CarLoaderID = packet.CarLoaderID, SpawnSeq = current.SpawnSeq, IsFull = true, SourceClientId = -1, Details = current }, clientId);
 				return;
 			}
 			var incoming = Clamp(packet.Details);
@@ -103,6 +110,7 @@ namespace CMS21_Together_Server.Data.Cars
 			if (incoming.Plates != null) stored.Plates = incoming.Plates;
 			if (incoming.Info != null) stored.Info = incoming.Info;
 			if (incoming.BonusParts != null) stored.BonusParts = incoming.BonusParts;
+			if (incoming.Dyno != null) stored.Dyno = incoming.Dyno;
 		}
 
 		private static ModCarDetails Clamp(ModCarDetails details)
@@ -144,8 +152,31 @@ namespace CMS21_Together_Server.Data.Cars
 				details.Plates.LicensePlateRearTex = Cut(details.Plates.LicensePlateRearTex);
 			}
 			if (details.BonusParts?.IDs != null) details.BonusParts.IDs = details.BonusParts.IDs.Take(MaxCosmetics).Select(Cut).ToArray();
+			if (details.Dyno != null) ClampDyno(details.Dyno);
 			return details;
 		}
+
+		private static void ClampDyno(ModDynoResult dyno)
+		{
+			dyno.MeasuredDragIndex = Math.Max(0, dyno.MeasuredDragIndex);
+			var engine = dyno.Engine;
+			if (engine == null) return;
+			engine.IdleRpm = Finite(engine.IdleRpm);
+			engine.IdleRpmTorque = Finite(engine.IdleRpmTorque);
+			engine.IdleRpmCurveBias = Finite(engine.IdleRpmCurveBias);
+			engine.PeakRpm = Finite(engine.PeakRpm);
+			engine.PeakRpmTorque = Finite(engine.PeakRpmTorque);
+			engine.PeakRpmCurveBias = Finite(engine.PeakRpmCurveBias);
+			engine.MaxRpm = Finite(engine.MaxRpm);
+			engine.Inertia = Finite(engine.Inertia);
+			engine.EngineFrictionTorque = Finite(engine.EngineFrictionTorque);
+			engine.EngineFrictionRotational = Finite(engine.EngineFrictionRotational);
+			engine.EngineFrictionViscous = Finite(engine.EngineFrictionViscous);
+			engine.LimiterTriggerRpm = Finite(engine.LimiterTriggerRpm);
+			engine.TuningValue = Finite(engine.TuningValue);
+		}
+
+		private static float Finite(float value) => float.IsNaN(value) || float.IsInfinity(value) ? 0f : value;
 
 		private static float Clamp01(float value) => float.IsNaN(value) ? 0f : Math.Max(0f, Math.Min(1f, value));
 
@@ -177,6 +208,37 @@ namespace CMS21_Together_Server.Data.Cars
 				Logger.Info($"[CarDetails] Loader {pair.Key} has no details snapshot; asking client {client}.");
 				Server.SendToClient(new CarDetailsRequestPacket { CarLoaderID = pair.Key, SpawnSeq = pair.Value.SpawnSeq }, client);
 			}
+		}
+
+		public static bool FoldTestDrive(int clientId, TestDriveResultPacket packet)
+		{
+			if (!CarAwayRegistry.IsOwner(packet.CarLoaderID, clientId, CarAwayKind.TestTrack, packet.SpawnSeq) || !IsValid(packet.CarLoaderID, out var stored))
+			{
+				Logger.Info($"[CarDetails] Test drive result for loader {packet.CarLoaderID} from client {clientId} not applied (no claim or no valid details).");
+				return false;
+			}
+			float delta = Math.Max(0f, Math.Min(MaxTestDriveKm, Finite(packet.MileageDeltaKm)));
+			var fold = new ModCarDetails { SpawnSeq = stored.SpawnSeq };
+			if (stored.Info != null)
+			{
+				stored.Info.Mileage += (int)Math.Round(delta);
+				fold.Info = stored.Info;
+			}
+			if (packet.Cosmetics != null && stored.BodyCosmetics != null)
+			{
+				fold.BodyCosmetics = new List<ModBodyCosmetics>();
+				foreach (var part in packet.Cosmetics.Take(MaxCosmetics))
+				{
+					var target = stored.BodyCosmetics.FirstOrDefault(p => p.PartIndex == part.PartIndex);
+					if (target == null) continue;
+					target.Dust = Clamp01(part.Dust);
+					target.WashFactor = Clamp01(part.WashFactor);
+					fold.BodyCosmetics.Add(target);
+				}
+			}
+			Logger.Info($"[CarDetails] Loader {packet.CarLoaderID}: test drive by client {clientId} folded (+{delta:0.#} km, {fold.BodyCosmetics?.Count ?? 0} parts).");
+			Server.SendToClients(new CarDetailsUpdatePacket { CarLoaderID = packet.CarLoaderID, SpawnSeq = stored.SpawnSeq, SourceClientId = -1, Details = fold });
+			return true;
 		}
 
 		public static int SendSnapshot(int clientId)

@@ -33,6 +33,7 @@ public static class ClientData
 		Logic.Car.Details.CarDetailsSync.Reset();
 		PartChangeTracker.Reset();
 		PartClaims.Reset();
+		Logic.Car.Away.CarAwaySync.Reset();
 		PartTransactions.Reset();
 	}
 

@@ -104,6 +104,8 @@ namespace CMS21Together
 			if (Input.GetKeyDown(PlayerSettings.SessionPanelKey)) MultiplayerMenuModel.ToggleSessionPanel();
 			if (PlayerSettings.DevHotkeys && Client.Instance.IsConnectionValid && Input.GetKeyDown(KeyCode.F6)) Logic.Car.Placement.DevCarSpawner.SpawnRandom();
 			if (Client.Instance.IsConnectionValid) Logic.Car.Details.CarDetailsSync.Update();
+			if (Client.Instance.IsConnectionValid) Logic.Car.Away.CarAwaySync.Update();
+			if (Client.Instance.IsConnectionValid) Logic.Car.Away.PathTestSync.Update();
 			ConnectionStatus.Update();
 			LocalServerHost.Update();
 
@@ -124,6 +126,7 @@ namespace CMS21Together
 		{
 			if (!isModInitialized) return;
 			if (Client.Instance.IsConnectionValid) NameTags.Draw();
+			if (Client.Instance.IsConnectionValid) Logic.Car.Away.AwayLabels.Draw();
 			ImguiView.Draw();
 		}
 
@@ -133,6 +136,8 @@ namespace CMS21Together
 			PlayerSettings.Initialize();
 			GuardSettings.Initialize();
 			Logic.Car.Details.CarDetailsSync.Initialize();
+			Logic.Car.Away.TestDriveSync.Initialize();
+			Logic.Car.Away.PathTestSync.Initialize();
 			SessionNotifications.Initialize();
 		}
 

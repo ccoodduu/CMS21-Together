@@ -8,6 +8,7 @@ using CMS21Together.Network;
 using CMS21Together.UI;
 using HarmonyLib;
 using UnityEngine;
+using CMS21Together.Logic.Car.Away;
 
 namespace CMS21Together.Logic.Car.Parts;
 
@@ -89,6 +90,7 @@ public static class EngineCraneHooks
 			ModNotify.ShowToast("This car is still loading for multiplayer.");
 			return false;
 		}
+		if (CarAwaySync.BlockIfLocked(loader, "engine crane")) return false;
 		if (PartClaims.HeldByOther(loader, keys, out _))
 		{
 			ModNotify.ShowToast("Another player is working on this engine.");
