@@ -1,5 +1,8 @@
 # Tasks
 
+> **Read first (2026-10-06):** `docs/spikes/outdoor-scenes.md` (static decompile). It corrects hooks in design.md that never fire (inlined builders, shared native bodies) and lists the runtime checks still needed.
+> Also `docs/spikes/test-drive.md`: examined parts after a test drive come from the garage's examine report after the return load, not from the track, so they are not sent before leaving (corrects D6).
+
 Part 1 = M1 (groups 1–4, needs only the row 7 contract, its groups 1–2). Groups 1–2 are the first slice (spawn fix + roster,
 fixes the idle late-join bug) and are mergeable on their own. Part 2 = M4 (groups 5–7).
 

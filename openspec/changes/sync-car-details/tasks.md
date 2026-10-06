@@ -1,5 +1,7 @@
 # Tasks
 
+> **Read first (2026-10-06):** `docs/spikes/car-details.md` (static decompile). It corrects hooks in design.md that never fire (inlined builders, shared native bodies) and lists the runtime checks still needed.
+
 Prerequisites: `session-persistence-and-rejoin` groups 1–2 (contract, `StateLock`, `SyncTracker`) and
 `sync-car-parts` are merged. Check design A1 against the merged `sync-car-parts` code first; add any missing
 hook there as a small separate commit.

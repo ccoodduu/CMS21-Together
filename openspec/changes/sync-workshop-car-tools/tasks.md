@@ -1,5 +1,7 @@
 # Tasks
 
+> **Read first (2026-10-06):** `docs/spikes/workshop-car-tools.md` (static decompile). It corrects hooks in design.md that never fire (inlined builders, shared native bodies) and lists the runtime checks still needed.
+
 Prerequisites: `sync-workshop-machines` (framework, harness `ToolsCommands.cs`, `Wait-HarnessDumpsEqual`),
 `sync-car-parts` and `sync-car-details` are merged. Group 10 also waits for ROADMAP row 13. Each tool group can be
 merged on its own once its scenario step passes.

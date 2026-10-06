@@ -1,5 +1,7 @@
 # Tasks
 
+> **Read first (2026-10-06):** `docs/spikes/workshop-machines.md` (static decompile). It corrects hooks in design.md that never fire (inlined builders, shared native bodies) and lists the runtime checks still needed.
+
 Order: spikes and dependency checks, shared foundation, then the slot machines, item processing and tool positions
 (groups 6–15, need only the inventory and `sync-car-parts`), then the two-instance verification. Each machine group is
 a small client file on the shared `ToolSync` base plus its harness steps and can be merged on its own once its

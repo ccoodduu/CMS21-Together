@@ -1,5 +1,7 @@
 # Tasks
 
+> **Read first (2026-10-06):** `docs/spikes/orders-and-jobs.md` (static decompile). It corrects hooks in design.md that never fire (inlined builders, shared native bodies) and lists the runtime checks still needed.
+
 Prerequisites (already merged when this change starts, ROADMAP M0–M2): `session-persistence-and-rejoin` groups 1–2
 (contract, `StateLock`, `Send-ServerCommand`/`Stop-TestServer`/`Start-TestServer`, `stats-add`, `to-menu`),
 `sync-players-and-scenes` part 1 (`PresenceRegistry`, `PresenceEvents`, `travel`, `Wait-HarnessDump`),

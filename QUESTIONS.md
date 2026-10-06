@@ -36,6 +36,12 @@ Answered ones move to the bottom with the answer.
   (headless or not, RAM, generation without a player, Steam). Then we decide together whether it replaces parts of
   row 16. Until then the plan stays: elected player generator (row 3), server logic later (row 16).
 
+- **How row 10 syncs money** (from `docs/spikes/economy-paths.md`, 2026-10-06): (A) one central hook on the game's
+  money function, where the server trusts the client's amount; (B) one request per feature, where the server computes
+  every price; (C) a mix: B where the server can compute the price (fixed fees, parking levels, skill reset), A with
+  range checks for values the client rolls (crate cards, drag prizes, job payout until row 3). Decide when row 10
+  starts; default: C.
+
 ## Answered
 
 Answered by the user on 2026-10-05:
