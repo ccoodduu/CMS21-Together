@@ -2,6 +2,24 @@
 
 Newest first. One entry per work session.
 
+## 2026-10-06 (13:05–13:40) — M2 rest: desync repair, manual resync, junkyard (branch `change/desync-detection-and-resync`)
+
+- Lane-1 regression of `main` (`20261006-130225`): all 21 scenarios PASSED, none flaky.
+- Row 14 part b: the server compares digests (world, inventory, car placement, one car per round) every 5 s with
+  every player in the garage, confirms a mismatch over two rounds with unchanged hashes, writes a field diff to
+  `Log/desync/` and resends that section; a repair that does not hold becomes persistent (F7 hint, 5 min pause).
+  Command `desync [check]`, config `desync_check_interval_seconds`, `desync_autofix`. `desync-autofix` passes
+  (car part and inventory item repaired). Not covered yet: the garage section and the warehouse (the client does not
+  read upgrade levels, and warehouse moves may not be synced live).
+- The placement digest found a real bug: a spawn request carried the car's place before the game had set it, so the
+  server and the other players disagreed on where the car stands. Fixed (request after load).
+- F7 also sends the full digest; the server logs which sections differed.
+- Junkyard trips (parts only) are allowed: inventory hooks send only from the garage, so parts picked up and left
+  behind never reach the server; buying sends them once. `junkyard-trip` passes. The travel fee still only changes
+  local money; the world digest puts it back (row 10).
+- Running: `desync-soak` (10 minutes of work on one car, no desync may be confirmed). Next: full regression of the
+  branch, merge to `main`, then the M2 milestone is complete except the user's playtest.
+
 ## 2026-10-06 (12:40–13:05) — row 2 merged; dev build 0.6.0-dev.611 with cars to play with
 
 - `main` = `ba27389`: rows 1 and 2, the economy fixes and the resync key. Zips
