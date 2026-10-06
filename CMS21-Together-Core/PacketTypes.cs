@@ -67,5 +67,16 @@ public enum PacketTypes
 	StateDigest,
 	StateDetailRequest,
 	StateDetail,
-	DesyncNotice
+	DesyncNotice,
+
+	JobsState,
+	OrderGeneratorRole,
+	OrderGenerated,
+	OrderAdded,
+	OrderAction,
+	OrderActionResult,
+	JobStarted,
+	JobProgress,
+	JobEndRequest,
+	JobRemoved
 }

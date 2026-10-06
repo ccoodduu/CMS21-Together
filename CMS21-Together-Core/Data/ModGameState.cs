@@ -12,6 +12,7 @@ public class ModGameState
 	public InventoryState InventoryState = new InventoryState();
 	public CarState CarState = new CarState();
 	public PlacementState PlacementState = new PlacementState();
+	public JobsState JobsState = new JobsState();
 	
 	[NonSerialized] public PlayerState PlayerState = new PlayerState();
 }

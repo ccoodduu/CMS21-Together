@@ -16,9 +16,9 @@ event) and `sync-car-placement-and-lifts` (`park`, `net-hold`).
 
 ## 2. Core: DTOs and packets
 
-- [ ] 2.1 Add `ModJob`, `ModJobTask`, `ModJobPart`, `ModMissionState` to `CMS21-Together-Core/Data/GameType/` with the fields of `Job`, `JobTask`, `JobPart` (Unity colours as `ModColor`, paint as `ModPaintType`, `bool[] jobType`); verify a BinaryFormatter and a Newtonsoft round trip keep every field (server debug command or small console check).
-- [ ] 2.2 Append `JobsState, OrderGeneratorRole, OrderGenerated, OrderAdded, OrderAction, OrderActionResult, JobStarted, JobProgress, JobEndRequest, JobRemoved` to the end of `PacketTypes` and add the packet classes in `Core/Network/Packets/JobPackets.cs` with enums `OrderActionType`, `JobRemovedReason`; verify `PacketRouter.Initialize` logs 10 more packets on client and server start.
-- [ ] 2.3 Add the `JobsState` class (orders with `RemainingSeconds`/`Status`/claim fields, active jobs with `CarLoaderId`/`OriginalSeconds`, `NextJobId`, `Missions`) and `ModGameState.JobsState`; verify build.
+- [x] 2.1 Add `ModJob`, `ModJobTask`, `ModJobPart`, `ModMissionState` to `CMS21-Together-Core/Data/GameType/` with the fields of `Job`, `JobTask`, `JobPart` (Unity colours as `ModColor`, paint as `ModPaintType`, `bool[] jobType`); verify a BinaryFormatter and a Newtonsoft round trip keep every field (server debug command or small console check).
+- [x] 2.2 Append `JobsState, OrderGeneratorRole, OrderGenerated, OrderAdded, OrderAction, OrderActionResult, JobStarted, JobProgress, JobEndRequest, JobRemoved` to the end of `PacketTypes` and add the packet classes in `Core/Network/Packets/JobPackets.cs` with enums `OrderActionType`, `JobRemovedReason`; verify `PacketRouter.Initialize` logs 10 more packets on client and server start.
+- [x] 2.3 Add the `JobsState` class (orders with `RemainingSeconds`/`Status`/claim fields, active jobs with `CarLoaderId`/`OriginalSeconds`, `NextJobId`, `Missions`) and `ModGameState.JobsState`; verify build.
 
 ## 3. Server
 
