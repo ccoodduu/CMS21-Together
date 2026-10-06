@@ -2,6 +2,20 @@
 
 Newest first. One entry per work session.
 
+## 2026-10-06 (15:10–15:40) — row 3 merged; row 4 car details (branch `change/sync-car-details`)
+
+- Lane-1 regression `20261006-144952` of the row 3 branch: all 25 scenarios PASSED. `main` = `635b22b` (row 3).
+- Row 4 (car details) first cut works: spawn snapshot after the part baseline, 1 Hz poll of fluids, wheels,
+  alignment and info, commit hooks for plates, the `car-details` snapshot for late joiners, server store with
+  per-entry merge, clamps and a request for missing snapshots. Scenario `car-details` passes (spawn snapshot, live
+  changes of fluids/alignment/mileage/dust/plate, late join). Writing a whole `LicensePlatesData` struct back from
+  the mod works (spike check 7).
+- Guard: wheel and headlamp alignment and fluid draining are allowed now. Draining also unblocks the engine crane
+  (row 1), which needs the oil drained first.
+- Not yet in row 4: ECU/carburettor tuning, window tint, per-part paint, bonus parts (their windows and modes stay
+  blocked), and the missing-snapshot request is not covered by a scenario.
+- Running: full lane-1 regression of the row 4 branch.
+
 ## 2026-10-06 (14:00–15:10) — M3 started: generator spike, row 3 orders and jobs (branch `change/sync-orders-and-jobs`)
 
 - Generator-client spike (your idea): a hidden headless instance (`-batchmode -nographics`, 15 fps) reaches the garage
