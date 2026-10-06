@@ -58,6 +58,8 @@ else {
     $part = Cmd $a tool-stand-part "EngineStand1 auto unmount"
     Write-Host "A unmounted $($part.key) ($($part.id))"
 }
+Cmd $a car-delete "0" | Out-Null
+Start-Sleep -Seconds 3
 Cmd $a tool-move "Welder CarLifter1" | Out-Null
 Start-Sleep -Seconds 3
 Cmd $a tool-balance-open | Out-Null

@@ -165,6 +165,8 @@ if (-not $standBuilt) {
     Check (@($d.inventory.groups | Where-Object { $_.ID -eq $engineId }).Count -eq $engineGroups + 1) "exactly one engine group came back"
 }
 
+Cmd $a car-delete "0" | Out-Null
+Start-Sleep -Seconds 3
 # Tool positions.
 foreach ($tool in "Welder", "Oilbin", "EngineCrane") {
     $moved = Cmd $a tool-move "$tool CarLifter1"
