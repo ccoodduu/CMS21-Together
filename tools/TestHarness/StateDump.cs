@@ -63,6 +63,8 @@ public static class StateDump
         dump["jobs"] = Jobs();
         dump["tools"] = Features.ToolsCommands.Dump();
         dump["toolPositions"] = Features.ToolsCommands.Positions();
+        dump["toolActionsSeen"] = Features.ToolsCommands.ActionsSeen();
+        dump["lifterButtonsEnabled"] = Features.ToolsCommands.LifterButtons();
         dump["players"] = PresenceManager.Roster.Where(p => p.Value.HasAvatar).ToDictionary(
             p => p.Key.ToString(),
             p => (object)Vec(p.Value.Avatar.transform.position));

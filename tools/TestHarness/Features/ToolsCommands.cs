@@ -10,6 +10,7 @@ using CMS21_Together_Core.Network;
 using CMS21_Together_Core.Network.Packets;
 using CMS21Together.Data;
 using CMS21Together.Logic.Tools;
+using CMS21Together.Logic.Tools.CarTools;
 using HarmonyLib;
 using MelonLoader;
 using UnityEngine;
@@ -437,6 +438,138 @@ public static class ToolsCommands
         }
         return result;
     }
+
+    private static CarLoader CarArg(string value)
+    {
+        var carLoader = CarLoaderPlaces.Get()?.GetCarLoaderByIndex(int.Parse(value));
+        if (carLoader == null || !carLoader.IsCarLoaded()) throw new ArgumentException($"no loaded car on loader {value}");
+        return carLoader;
+    }
+
+    private static void ConnectCrane(CarLoader carLoader)
+    {
+        var tools = carLoader.ToolsData;
+        tools.EngineCraneIsConnected = true;
+        carLoader.ToolsData = tools;
+    }
+
+    // sync-workshop-car-tools verbs. tool-use starts the tool's own DoWorkAnim (what the ask window's accept does, minus
+    // the fee), so the actor hooks and the commit point run as in the game.
+    [HarnessCommand("tool-use")]
+    private static object Use(string args)
+    {
+        var parts = Args(args);
+        if (parts.Length != 2) throw new ArgumentException("usage: tool-use <Welder|CarWash|InteriorDetailing|InteriorDetailingStationary|OilBin> <loader>");
+        var tool = ToolArg(parts[0]);
+        var carLoader = CarArg(parts[1]);
+        var tools = ToolsMoveManager.Get() ?? throw new ArgumentException("no workshop tools in this scene");
+        if (tool == ModToolId.OilBin)
+        {
+            float oil = carLoader.FluidsData.Oil?.Level ?? 0f;
+            carLoader.UseOilbin();
+            return new { tool = tool.ToString(), oil };
+        }
+        if (tool == ModToolId.InteriorDetailingStationary && !carLoader.IsInPlace(CarPlace.CarWash))
+            throw new ArgumentException("the stationary kit works on the car at the car wash");
+        GarageTool logic = tool switch
+        {
+            ModToolId.Welder => tools.WelderLogic,
+            ModToolId.CarWash => tools.CarWashLogic,
+            ModToolId.InteriorDetailing or ModToolId.InteriorDetailingStationary => tools.InteriorDetailingToolkitLogic,
+            _ => throw new ArgumentException($"{tool} is not a car tool"),
+        };
+        logic.StartCoroutine(logic.DoWorkAnim(carLoader));
+        return new { tool = tool.ToString(), effectTime = logic.effectTime };
+    }
+
+    [HarnessCommand("tool-engine-out")]
+    private static object EngineOut(string args)
+    {
+        var carLoader = CarArg((args ?? "").Trim());
+        var engine = carLoader.e_engine_h ?? throw new ArgumentException("the car has no engine");
+        var io = engine.GetComponent<InteractiveObject>();
+        var blockers = new List<string>();
+        foreach (var component in io.unMountPartsToUnmountGroup ?? new UnhollowerBaseLib.Il2CppReferenceArray<Component>(0))
+        {
+            var script = component?.TryCast<PartScript>();
+            if (script != null && !script.IsUnmounted) blockers.Add(script.name);
+        }
+        if (io.GetMountedItemsAmount() < 1) blockers.Add("empty engine");
+        if (!carLoader.EngineData.isElectric && (carLoader.FluidsData.Oil?.Level ?? 0f) > 0f) blockers.Add("engine oil");
+        ConnectCrane(carLoader);
+        carLoader.UseEngineCrane();
+        return new { engine = engine.name, blockers };
+    }
+
+    [HarnessCommand("tool-engine-in")]
+    private static object EngineIn(string args)
+    {
+        var parts = Args(args);
+        if (parts.Length != 2) throw new ArgumentException("usage: tool-engine-in <loader> <groupUid|swap>");
+        var carLoader = CarArg(parts[0]);
+        string current = carLoader.e_engine_h?.name ?? throw new ArgumentException("the car has no engine");
+        ConnectCrane(carLoader);
+        if (parts[1] != "swap")
+        {
+            var group = Inv.GetGroup(long.Parse(parts[1])) ?? throw new ArgumentException($"no group {parts[1]}");
+            NotificationCenter.Get().InsertEngineToCar(group);
+            return new { engine = group.ID, group.UID };
+        }
+
+        string other = null;
+        var options = carLoader.EngineParams?.Swapoptions;
+        for (int i = 0; options != null && i < options.Length && other == null; i++)
+            if (!string.IsNullOrEmpty(options[i]) && options[i] != current) other = options[i];
+        if (other == null) return new { engine = (string)null, UID = 0L, refused = false, swapOption = false };
+        var swap = new GroupItem(other) { ItemList = new Il2CppSystem.Collections.Generic.List<Item>(), IsNormalGroup = true };
+        Inv.AddGroup(swap);
+        NotificationCenter.Get().InsertEngineToCar(swap);
+        bool refused = Inv.GetGroup(swap.UID) != null && carLoader.e_engine_h?.name == current;
+        if (refused) Inv.DeleteGroup(swap.UID);
+        return new { engine = other, swap.UID, refused, swapOption = true };
+    }
+
+    [HarnessCommand("tool-paint-car")]
+    private static object PaintCar(string args)
+    {
+        var parts = Args(args);
+        if (parts.Length != 2) throw new ArgumentException("usage: tool-paint-car <loader> <r,g,b>");
+        var carLoader = CarArg(parts[0]);
+        var rgb = parts[1].Split(',').Select(v => float.Parse(v, System.Globalization.CultureInfo.InvariantCulture)).ToArray();
+        var paintshop = UnityEngine.Object.FindObjectOfType<CMS.Managers.PaintshopManager>() ?? throw new ArgumentException("no paint shop in this scene");
+        carLoader.SetCarColor(null, new Color(rgb[0], rgb[1], rgb[2], 1f));
+        paintshop.carLoader = carLoader;
+        paintshop.PaintshopType = CMS.UI.Logic.PaintshopType.Garage;
+        paintshop.SubmitColor(false);
+        return new { painted = true };
+    }
+
+    [HarnessCommand("tool-dyno")]
+    private static object Dyno(string args)
+    {
+        var carLoader = CarArg((args ?? "").Trim());
+        carLoader.MeasurePower();
+        return new { measured = carLoader.EngineData.measured, dragIndex = carLoader.MeasuredDragIndex };
+    }
+
+    public static object ActionsSeen() => CarToolActions.Seen.OrderBy(p => p.Key).ToDictionary(p => p.Key.ToString(), p => (object)p.Value);
+
+    public static object LifterButtons()
+    {
+        var garage = GarageLoader.Get();
+        var places = CarLoaderPlaces.Get();
+        if (garage == null || garage.carLifter == null || places == null) return null;
+        var result = new Dictionary<string, object>();
+        foreach (var lifter in garage.carLifter)
+        {
+            var car = lifter?.GetConnectedCarLoader();
+            if (car == null) continue;
+            result[places.GetCarLoaderId(car).ToString()] = Enabled(lifter.ButtonUp) && Enabled(lifter.ButtonDown);
+        }
+        return result;
+    }
+
+    private static bool Enabled(InteractiveObject button) => button != null && button.enabled && button.gameObject.activeSelf;
 
     public static object Positions()
     {
