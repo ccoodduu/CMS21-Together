@@ -38,6 +38,8 @@ function Sample($Process) {
     }
 }
 
+Assert-InstanceIsolated $name
+$realFingerprint = Get-RealProfileFingerprint
 $summary = @()
 try {
     foreach ($variant in $Variants) {
@@ -117,6 +119,7 @@ try {
     }
 }
 finally {
+    if ((Get-RealProfileFingerprint) -ne $realFingerprint) { Write-Host "WARNING: the real save folder or registry key changed during the spike" -ForegroundColor Red }
     $summary | ConvertTo-Json -Depth 4 | Set-Content -LiteralPath (Join-Path $runDir "summary.json") -Encoding utf8
     Write-Host "Run folder: $runDir"
     $gameMutex.ReleaseMutex()
