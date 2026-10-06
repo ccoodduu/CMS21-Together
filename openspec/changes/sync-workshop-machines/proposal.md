@@ -60,6 +60,6 @@ half, `sync-workshop-car-tools`, covers the tools that act on a car and builds o
   `Wait-HarnessDumpsEqual` in `HarnessClient.psm1` (built on `sync-players-and-scenes`' `Wait-HarnessDump`),
   scenarios `tools-slots`, `tools-race`, `tools-latejoin`.
 - Depends on `session-persistence-and-rejoin` task groups 1–2 (contract, state lock, sections, `SyncTracker`,
-  harness server commands), `sync-car-parts` (part keys, `PartTransaction`/`InventoryDelta` for a non-car root,
+  harness server commands), `sync-car-parts` (part keys, `PartTransactions`/`InventoryDelta` for a non-car root,
   idempotent ADD) and `sync-players-and-scenes` part 1 (`ClientScene.GarageBound`, `PresenceEvents`, `travel`,
   `Wait-HarnessDump`). It does not need `sync-car-details`, so it can land right after `sync-car-parts`.
