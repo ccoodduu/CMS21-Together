@@ -24,7 +24,5 @@ Save-HarnessScreenshot -Instance $b -RunDir $Ctx.RunDir -Label "garage"
 
 $differences = Compare-HarnessDumps $dumpA $dumpB
 $Ctx.Result.notes += "Remote players visible: $a=$($dumpA.remotePlayers), $b=$($dumpB.remotePlayers)"
-# Known until sync-players-and-scenes lands: the late joiner does not see an idle player.
-if ($dumpB.remotePlayers -lt 1) { $Ctx.Result.notes += "KNOWN ISSUE (sync-players-and-scenes): $b does not see idle $a" }
 if ($differences.Count -gt 0) { $Ctx.Result.notes += "Shared state differs in: $($differences -join ', ')" }
-$Ctx.Result.passed = ($differences.Count -eq 0 -and $dumpA.remotePlayers -ge 1)
+$Ctx.Result.passed = ($differences.Count -eq 0 -and $dumpA.remotePlayers -ge 1 -and $dumpB.remotePlayers -ge 1)

@@ -136,3 +136,9 @@ Applied: `Status.lastDisconnect { reason, message }` (row 8) replaces `session.l
 `ConnectPacketFactory`, `CompatibilityPolicy`, `ModInventory`, verbs, scenario, server command and config keys are
 registered in INTEGRATION.md; ROADMAP notes that the exporter lands with row 16. The milestone-split question stays
 open for the user.
+
+## User decision (2026-10-06) — to apply when the change starts
+
+DLC: do not refuse a client for a different DLC set. The server tracks the DLC set owned by every connected
+player; DLC content not owned by all (cars, parts, tools) is blocked from shared use (spawn, shared inventory,
+parking). Update the DLC requirement, design and tasks accordingly before implementing. Gameplay mods stay refused.

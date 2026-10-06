@@ -44,7 +44,12 @@ $apart = Get-Distance $localA $localB
 if ($apart -lt 0.8) { throw "Spawn positions only $([math]::Round($apart, 2)) m apart" }
 Assert-SeesAt $b "Ann" $localA
 Assert-SeesAt $a "Bob" $localB
+Send-HarnessCommand -Instance $b -Verb stand-before -Arguments "Ann 4" | Out-Null
+Start-Sleep -Seconds 1
 Save-HarnessScreenshot -Instance $b -RunDir $Ctx.RunDir -Label "latejoin"
+Start-Sleep -Seconds 1
+$tagDump = Send-HarnessCommand -Instance $b -Verb dump
+if (-not @($tagDump.roster.PSObject.Properties | Where-Object { $_.Value.name -eq "Ann" -and $_.Value.nameTag }).Count) { throw "B does not draw a name tag for Ann" }
 
 Send-HarnessCommand -Instance $b -Verb disconnect | Out-Null
 Wait-HarnessDump -Instance $a -TimeoutSec 5 -What "B gone from roster" -Condition {

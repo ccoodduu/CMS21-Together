@@ -14,7 +14,9 @@ public static class NameTags
 
 	public static bool IsDrawn(RemotePlayer player)
 	{
-		return TryGetScreenPoint(player, out _);
+		return TryGetScreenPoint(player, out Vector3 screen)
+		       && screen.x >= 0f && screen.x <= Screen.width
+		       && screen.y >= LabelHeight && screen.y <= Screen.height;
 	}
 
 	public static void Draw()
