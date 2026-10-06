@@ -2,6 +2,22 @@
 
 Newest first. One entry per work session.
 
+## 2026-10-06 (20:10–22:30) — row 5a merged; 5b, 14d and row 7 part 2 ready to test
+
+- `main` = `6859362`: row 5a (workshop machines: tire changer, wheel balancer with its lock, spring clamp, brake
+  lathe, battery charger, repair table, part paint, tool positions) merged after a single-lane regression
+  `20261006-212522` (all 40 PASSED).
+- Bug found on the way: the game's `ToolsMoveManager.MoveTo` does nothing when the place has no loaded car
+  (`CarLoader.root` is null). The scenarios had deleted the car first, so the welder never moved on either client and
+  the old check (A equals B) did not notice. Now a position is only sent for a place with a loaded car, the receiver
+  retries while its car there still loads (late join), `tool-move` reports whether the tool moved, and the scenarios
+  keep a car on `CarLifter1` (with the synced `car-move`; the harness `car-place` is local only).
+- The engine stand (groups 11/12) stays a hand check: the game's build coroutine throws a native exception when the
+  harness drives it, also offline. The scenarios note it and skip those steps.
+- Row 5b (`change/sync-workshop-car-tools`) now contains the new 5a and `main`; the `SYNC_TEST_DRIVE` guard on the dyno
+  map hook is gone. `tools-car-effects` is running. 14d (`change/bug-report`) and row 7 part 2
+  (`change/session-persistence-part2`) already contain `main` and wait for their test runs (one lane at a time).
+
 ## 2026-10-06 (15:40–) — row 4 continued; row 13 spike tooling
 
 - Row 4 (car details), new and built but not yet run in the game: window tint, per-part paint (colour, paint type,

@@ -22,7 +22,7 @@ Report problems with both players' `MelonLoader\Latest.log` and the server's `Lo
 3. Take parts off and put them back at the same time, also on the same part (one of you gets a message).
 4. Engine crane: drain the oil, take the engine out, put it back.
 5. Move cars between places and onto lifts, raise and lower lifts, park and unpark, swap parking slots.
-6. (Row 5a, once merged.) Tire changer, wheel balancer (only one player can balance at a time), spring clamp, brake
+6. Tire changer, wheel balancer (only one player can balance at a time), spring clamp, brake
    lathe, battery charger.
    **Hand check: the engine stand** (hang an engine on it, rotate it, take a part off, take the engine off). The harness
    cannot build an engine on the stand (the game's own build throws when driven from outside the UI, also offline).
