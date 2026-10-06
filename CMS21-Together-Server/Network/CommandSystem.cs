@@ -38,6 +38,7 @@ namespace CMS21_Together_Server.Network
 					Logger.Info("  help              - Show this help message");
 					Logger.Info("  exit / stop       - Stop the server");
 					Logger.Info("  save              - Save the session now");
+					Logger.Info("  compat            - Show game version, shared DLC, mod lists and last refusals");
 					Logger.Info("  kick <id>         - Kick a player by ID");
 					Logger.Info("  money add <val>   - Add money");
 					Logger.Info("  money set <val>   - Set money");
@@ -55,6 +56,12 @@ namespace CMS21_Together_Server.Network
 
 				case "save":
 					GameDataManager.RequestSave(true);
+					break;
+
+				case "compat":
+					Logger.Info("Compatibility:");
+					foreach (string line in CompatibilityPolicy.Describe())
+						Logger.Info($"  {line}");
 					break;
 
 				case "kick":

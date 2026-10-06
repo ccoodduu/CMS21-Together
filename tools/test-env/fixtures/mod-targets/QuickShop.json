@@ -1,0 +1,16 @@
+[
+  {
+    "Name": "QuickShop",
+    "Version": "1.04",
+    "Author": "RIDI",
+    "File": "QuickShop.dll",
+    "Assembly": "QuickShop",
+    "Targets": [
+      {
+        "Assembly": "Assembly-CSharp-firstpass",
+        "Type": "GameScript",
+        "Method": "Update"
+      }
+    ]
+  }
+]

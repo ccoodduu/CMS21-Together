@@ -91,6 +91,7 @@ namespace CMS21_Together_Server.Network.Transport
                     catch (Exception ex)
                     {
                         Logger.Error($"Error packet {packetId}: {ex.Message}");
+                        Server.RefuseUnreadableConnect(id, (PacketTypes)packetId);
                     }
                 }
 

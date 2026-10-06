@@ -1,0 +1,76 @@
+[
+  {
+    "Name": "TK Basics",
+    "Version": "0.5.2",
+    "Author": "TK3R",
+    "File": "TKBasics.dll",
+    "Assembly": "TKBasics",
+    "Targets": [
+      {
+        "Assembly": "Assembly-CSharp-firstpass",
+        "Type": "CMS.UI.Logic.Auction.AuctionCarItem",
+        "Method": "Setup"
+      },
+      {
+        "Assembly": "Assembly-CSharp-firstpass",
+        "Type": "CMS.UI.Logic.Shop.ShopPage",
+        "Method": "PrepareDescriptions"
+      },
+      {
+        "Assembly": "Assembly-CSharp-firstpass",
+        "Type": "CMS.UI.Logic.Tabs.CarInfo.EngineTabData",
+        "Method": "Activate"
+      },
+      {
+        "Assembly": "Assembly-CSharp-firstpass",
+        "Type": "CMS.UI.Logic.Tabs.CarInfo.MainTabData",
+        "Method": "Activate"
+      },
+      {
+        "Assembly": "Assembly-CSharp-firstpass",
+        "Type": "CMS.UI.Windows.Base.BaseInventory",
+        "Method": "DrawPage"
+      },
+      {
+        "Assembly": "Assembly-CSharp-firstpass",
+        "Type": "CMS.UI.Windows.Base.BaseInventory",
+        "Method": "RedrawCurrentPage"
+      },
+      {
+        "Assembly": "Assembly-CSharp-firstpass",
+        "Type": "CMS.UI.Windows.CarVersionWindow",
+        "Method": "DrawPage"
+      },
+      {
+        "Assembly": "Assembly-CSharp-firstpass",
+        "Type": "CMS.UI.Windows.InventoryWindow",
+        "Method": "OnCategoryChange"
+      },
+      {
+        "Assembly": "Assembly-CSharp-firstpass",
+        "Type": "CMS.UI.Windows.SalonSelectCarWindow",
+        "Method": "DrawPage"
+      },
+      {
+        "Assembly": "Assembly-CSharp-firstpass",
+        "Type": "InteractiveObject",
+        "Method": "Start"
+      },
+      {
+        "Assembly": "Assembly-CSharp-firstpass",
+        "Type": "Inventory",
+        "Method": "Add"
+      },
+      {
+        "Assembly": "Assembly-CSharp-firstpass",
+        "Type": "Inventory",
+        "Method": "GetBaseItem"
+      },
+      {
+        "Assembly": "Assembly-CSharp-firstpass",
+        "Type": "PartScript",
+        "Method": "Start"
+      }
+    ]
+  }
+]
