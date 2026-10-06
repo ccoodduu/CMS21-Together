@@ -13,7 +13,7 @@ Prerequisites (merged): `session-persistence-and-rejoin` groups 1–2 (contract,
 
 ## 1. Spike: runtime trace of the test track, test path and dyno (harness only, no behaviour change)
 
-- [ ] 1.1 **Partly done (2026-10-06):** trace, `testdrive-go/-drive/-finish/-partnames`; `pathtest-run`, `dyno-run`, `diag-examine` missing. Add `tools/TestHarness/Features/TestDriveCommands.cs` with native-only verbs: `testdrive-trace on|off|report`
+- [x] 1.1 **Done (2026-10-06):** trace, `testdrive-go/-drive/-finish/-partnames`, `dyno-run`, `pathtest-run` (prepare/end/exit/state), `diag-examine`. Add `tools/TestHarness/Features/TestDriveCommands.cs` with native-only verbs: `testdrive-trace on|off|report`
       (logging-only prefix/postfix with fire counters on `NotificationCenter.SelectSceneToLoad(string, SceneType, bool,
       bool)`, `SideCarsPanel.DriveAction`, `MapWindow.VerifyCarStateIfInterior`, `CarLoader.CloseCar`,
       `GarageLoader.Save`, `TrackManager.ReturnToGarage`, `PrepareCarPhysics.SaveMileage`, `TestTrackManager.DoneTest`,
@@ -47,7 +47,7 @@ Prerequisites (merged): `session-persistence-and-rejoin` groups 1–2 (contract,
       track with the right car and what the cancel leaves behind (map window, input mode, pie menu, `loadingScene`).
       Verify: design.md D2 names the replay call and the cancel cleanup, or switches to the UI-entry fallback from Risks
       (user asked first if the approach changes).
-- [ ] 1.4 Path test and dyno: `car-move` to `DiagnosticPath`, `pathtest-run` (full and `abort`), `car-move` to `Dyno`,
+- [ ] 1.4 **Partly done (2026-10-06):** `diag-trace`, results in design.md; path test exit, tuned car and job car on the dyno still to check by hand. Path test and dyno: `car-move` to `DiagnosticPath`, `pathtest-run` (full and `abort`), `car-move` to `Dyno`,
       `dyno-run measure` and `dyno-run cancel`, with the trace on. Record: `specialState` before/after; whether
       `SetCarPositionAfterLoad(true)` only moves the car (no input, camera or mode change); an early exit that examines
       nothing; `EngineData`/`MeasuredDragIndex` before, during (preview) and after both dyno runs; whether

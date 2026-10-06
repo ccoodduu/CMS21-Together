@@ -378,3 +378,22 @@ one connected client, `car_boltatlanta` on loader 0, guard `Enforce` with `Scene
   there (no `CharacterMotor` while driving).
 - Not covered yet: the path test, the dyno, `diag-examine` (the verbs are still to write) and the map entry
   (`SideCarsPanel.DriveAction`, `VerifyCarStateIfInterior`), which the harness skips by calling `SelectSceneToLoad`.
+
+Spike 1.4, `diag-trace` (run `20261006-154846_L1_diag-trace`, guard `LogOnly`, the same car moved with `car-move`):
+
+- **Placement:** `car-move 0 Dyno` and `car-move 0 DiagnosticPath` go through row 2 like any move (`-1 → 6`, `6 → 7`).
+- **Dyno:** `RunDyno` → `PrepareDyno` sets `EngineData.measured = true` at once (before any run), so `measured` alone
+  does not tell a measured car. Engine curve and `MeasuredDragIndex` (0) did not change for this untuned car, so the
+  backup/restore could not be seen. `HideAction` while the run is still going calls `CloseDyno` but leaves the mode on
+  `UI`; a start followed by `HideAction` (cancel) returns to `Garage` with `DynoMeasured = false`.
+  `DynoManager.job`/`haveJob` stayed empty (no job was active; a job car on the dyno is still unchecked).
+  Guard keys used: `Mode:Dyno`, `Window:Dyno`.
+- **Test path:** `Prepare` → mode `PathTest`; `EndAllTests` sets `specialState = 1` and `testIsComplete`, and at its
+  end one body part change goes out through row 1 (the car body, likely a door); entering and leaving again sends one
+  more. `ExitFromCar` started from the harness yields once and never reaches `GameScript.ExitFromInterior`, so the
+  mode stays `PathTest` and no examine report opens: the exit needs the real player flow. `SetCarPositionAfterLoad`
+  did not run. Guard keys used: `Mode:PathTest`, `Window:PathTest`.
+- **OBD:** `GetPartsToExamine(car, OBD)` + `Examine(true)` examined 8 parts, sent as one row 1 change
+  (`0 body, 8 mechanical`); no claim needed (D9 holds).
+- Still to check by hand: the path test exit and its report, a tuned car on the dyno (curve before, preview, after
+  measure and after cancel), and a job car on the dyno.

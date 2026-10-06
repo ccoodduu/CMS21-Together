@@ -123,6 +123,98 @@ public static class TestDriveCommands
         return new { physics.mileage };
     }
 
+    private static CarLoader LoadedCar(string index)
+    {
+        var carLoader = CarLoaderPlaces.Get()?.GetCarLoaderByIndex(int.Parse(index));
+        if (carLoader == null || !carLoader.IsCarLoaded()) throw new ArgumentException("no loaded car");
+        return carLoader;
+    }
+
+    private static Dictionary<string, object> CarState(CarLoader carLoader)
+    {
+        var engine = carLoader.EngineData;
+        return new Dictionary<string, object>
+        {
+            ["specialState"] = carLoader.specialState,
+            ["measuredDragIndex"] = carLoader.MeasuredDragIndex,
+            ["engine"] = $"peak {engine.peakRpm}/{engine.peakRpmTorque} max {engine.maxRpm} tuning {engine.tuningValue} measured {engine.measured}",
+            ["mode"] = GameMode.Get().GetCurrentMode().ToString(),
+        };
+    }
+
+    [HarnessCommand("dyno-run")]
+    private static object Dyno(string args)
+    {
+        var parts = (args ?? "").Split(new[] { ' ' }, StringSplitOptions.RemoveEmptyEntries);
+        if (parts.Length != 2) throw new ArgumentException("usage: dyno-run <loader> start|measure|close|state");
+        var carLoader = LoadedCar(parts[0]);
+        var manager = DynoManager.Get() ?? throw new InvalidOperationException("no DynoManager");
+        var window = UnityEngine.Object.FindObjectOfType<CMS.UI.Windows.DynoWindow>();
+        switch (parts[1])
+        {
+            case "start":
+                manager.CarLoader = carLoader;
+                manager.RunDyno();
+                break;
+            case "measure":
+                (window ?? throw new InvalidOperationException("no DynoWindow")).StartAction();
+                break;
+            case "close":
+                (window ?? throw new InvalidOperationException("no DynoWindow")).HideAction();
+                break;
+            case "state": break;
+            default: throw new ArgumentException("usage: dyno-run <loader> start|measure|close|state");
+        }
+        var state = CarState(carLoader);
+        state["dynoMeasured"] = manager.DynoMeasured;
+        state["haveJob"] = manager.haveJob;
+        state["job"] = manager.job == null ? "none" : manager.job.id.ToString();
+        return state;
+    }
+
+    [HarnessCommand("pathtest-run")]
+    private static object PathTest(string args)
+    {
+        var parts = (args ?? "").Split(new[] { ' ' }, StringSplitOptions.RemoveEmptyEntries);
+        if (parts.Length != 2) throw new ArgumentException("usage: pathtest-run <loader> prepare|end|exit|state");
+        var carLoader = LoadedCar(parts[0]);
+        var manager = PathTestManager.Get() ?? throw new InvalidOperationException("no PathTestManager");
+        switch (parts[1])
+        {
+            case "prepare":
+                manager.testIsComplete = false;
+                manager.carLoader = carLoader;
+                carLoader.specialState = 0;
+                manager.Prepare();
+                break;
+            case "end":
+                manager.StartCoroutine(manager.EndAllTests());
+                break;
+            case "exit":
+                manager.StartCoroutine(manager.ExitFromCar());
+                break;
+            case "state": break;
+            default: throw new ArgumentException("usage: pathtest-run <loader> prepare|end|exit|state");
+        }
+        var state = CarState(carLoader);
+        state["testIsComplete"] = manager.testIsComplete;
+        state["inProgress"] = manager.InProgress;
+        return state;
+    }
+
+    [HarnessCommand("diag-examine")]
+    private static object DiagExamine(string args)
+    {
+        var parts = (args ?? "").Split(new[] { ' ' }, StringSplitOptions.RemoveEmptyEntries);
+        if (parts.Length != 2) throw new ArgumentException("usage: diag-examine <loader> <ToolType>");
+        var carLoader = LoadedCar(parts[0]);
+        var tool = (ToolType)Enum.Parse(typeof(ToolType), parts[1]);
+        var toExamine = CarHelper.GetPartsToExamine(carLoader, tool);
+        int count = toExamine?.Count ?? 0;
+        for (int i = 0; i < count; i++) toExamine[i].Examine(true);
+        return new { tool = tool.ToString(), examined = count };
+    }
+
     [HarnessCommand("testdrive-partnames")]
     private static object PartNames(string args)
     {
