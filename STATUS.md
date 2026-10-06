@@ -2,6 +2,26 @@
 
 Newest first. One entry per work session.
 
+## 2026-10-06 (14:00–15:10) — M3 started: generator spike, row 3 orders and jobs (branch `change/sync-orders-and-jobs`)
+
+- Generator-client spike (your idea): a hidden headless instance (`-batchmode -nographics`, 15 fps) reaches the garage
+  in 14 s, uses 2.6 GB RAM and 5 % of one CPU core, and generates orders with no player. Numbers for all variants in
+  `docs/spikes/generator-client.md`. Your decision is in `QUESTIONS.md` (default: optional server feature later).
+- Row 3 (orders and jobs) works end to end in the harness:
+  - server: open → claimed → active → removed, elected order generator, expiry and claim timeout on the server,
+    lost job cars reopen the order, `jobs` save section and snapshot, `jobs` command;
+  - client: mirror and applier, only the generator generates, server-approved accept with a bypassed native re-run,
+    decline/expiry through the server, take detected in `selectedJobs`, payout/XP captured once at the end;
+  - scenarios `jobs` (generation, expiry, decline, accept race, customer car for both, payout once) and
+    `jobs-latejoin` (late join, refused unclaimed job car, claim release, server restart) pass;
+  - the runtime trace found that the game's own take calls `CancelJob`, and that tutorial missions are `MissionID 0`;
+    both are handled. Orders, the examination report and job checks are allowed by the guard now.
+- Limits: the vanilla end-of-job checks (bolts, body, fluids, other parts) need a really finished job, so the harness
+  ends jobs through `job-end-direct`; please check a real job in the playtest. `JobProgress` was dropped (nothing in
+  the game writes `JobPart.Found`). Steam stats of a finished job are not shared yet.
+- Running: full lane-1 regression of the row 3 branch; then merge into `main`. Next in M3: rows 4 (car details) and 13
+  (test drive), both with spike docs ready.
+
 ## 2026-10-06 (13:40–14:00) — M2 complete in code
 
 - `desync-soak`: 78 work steps in 10 minutes, 9 first-round mismatches absorbed, 0 confirmed desyncs.
