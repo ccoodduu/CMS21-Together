@@ -43,6 +43,8 @@ namespace CMS21_Together_Core.Network.Packets
         public bool IsJob;
         public int JobID;
         public int SpawnSeq;
+        public byte[] CarData;
+        public byte CarDataVersion;
     }
 
     [Serializable]
