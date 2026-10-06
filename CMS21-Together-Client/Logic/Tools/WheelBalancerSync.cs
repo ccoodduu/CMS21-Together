@@ -38,10 +38,18 @@ public sealed class WheelBalancerSync : ToolMachine
 
 	public override void OnClaimLost() => CloseWindow();
 
+	public static bool WindowOpen
+	{
+		get
+		{
+			var window = WindowManager.Instance?.GetWindowByID<WheelBalanceWindow>(WindowID.WheelBalance);
+			return window != null && window.isActive;
+		}
+	}
+
 	public static void CloseWindow()
 	{
-		var window = WindowManager.Instance?.GetWindowByID<WheelBalanceWindow>(WindowID.WheelBalance);
-		if (window != null && window.isActive) window.CancelAction();
+		if (WindowOpen) WindowManager.Instance.GetWindowByID<WheelBalanceWindow>(WindowID.WheelBalance).CancelAction();
 	}
 }
 
@@ -52,8 +60,10 @@ public static class WheelBalancerHooks
 
 	[HarmonyPatch(typeof(WheelBalancerLogic), nameof(WheelBalancerLogic.SetGroupOnWheelBalancer))]
 	[HarmonyPostfix]
-	private static void AfterPut()
+	private static void AfterPut(WheelBalancerLogic __instance, bool instant)
 	{
+		if (ToolSync.IsApplyingRemote(Tool) || !ToolSync.CanSend) return;
+		if (instant) __instance.SetCanceled(true);
 		var state = ToolSync.Machine(Tool).ReadLocal();
 		state.Balanced = false;
 		ToolSync.SendLocal(state);
@@ -65,11 +75,7 @@ public static class WheelBalancerHooks
 	{
 		ToolSync.TraceEvent("WheelBalancer minigame opens");
 		if (ToolSync.IsApplyingRemote(Tool) || !ToolSync.CanSend) return true;
-		if (ToolSync.HeldByOther(Tool, out int owner))
-		{
-			ToolSync.NotifyHeld(Tool, owner);
-			return false;
-		}
+		if (ToolSync.RefuseIfHeld(Tool)) return false;
 		ToolSync.Claim(Tool);
 		return true;
 	}
@@ -102,8 +108,7 @@ public static class WheelBalancerHooks
 
 	private static bool AllowUnlessHeld(ref bool __result)
 	{
-		if (!ToolSync.HeldByOther(Tool, out int owner)) return true;
-		ToolSync.NotifyHeld(Tool, owner);
+		if (!ToolSync.RefuseIfHeld(Tool)) return true;
 		__result = true;
 		return false;
 	}

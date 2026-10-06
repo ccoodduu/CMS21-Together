@@ -172,6 +172,13 @@ public static class ToolSync
 		return Client.Instance != null && Client.Instance.IsConnectionValid && owner != ToolClaimUpdatePacket.Released && owner != Client.Instance.ID;
 	}
 
+	public static bool RefuseIfHeld(ModToolId tool)
+	{
+		if (!HeldByOther(tool, out int owner)) return false;
+		NotifyHeld(tool, owner);
+		return true;
+	}
+
 	public static void NotifyHeld(ModToolId tool, int owner) => ModNotify.ShowToast($"{PlayerName(owner)} is using the {Label(tool)}.");
 
 	// Remote changes

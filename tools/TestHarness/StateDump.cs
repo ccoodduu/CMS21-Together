@@ -61,6 +61,8 @@ public static class StateDump
         dump["cars"] = Cars();
         dump["placement"] = Placement();
         dump["jobs"] = Jobs();
+        dump["tools"] = Features.ToolsCommands.Dump();
+        dump["toolPositions"] = Features.ToolsCommands.Positions();
         dump["players"] = PresenceManager.Roster.Where(p => p.Value.HasAvatar).ToDictionary(
             p => p.Key.ToString(),
             p => (object)Vec(p.Value.Avatar.transform.position));
@@ -107,7 +109,7 @@ public static class StateDump
         return new
         {
             items = items.OrderBy(i => i.ID).ThenBy(i => i.UID)
-                .Select(i => new { i.ID, i.UID, condition = Round(i.Condition) }).ToList(),
+                .Select(i => new { i.ID, i.UID, condition = Round(i.Condition), painted = i.IsPainted }).ToList(),
             groups = groups.OrderBy(g => g.ID).ThenBy(g => g.UID)
                 .Select(g => new { g.ID, g.UID, size = g.ItemList?.Count ?? 0 }).ToList(),
         };

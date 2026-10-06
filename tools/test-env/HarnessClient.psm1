@@ -61,6 +61,21 @@ function Wait-HarnessDump {
     throw "Timeout after $TimeoutSec s waiting for $Instance dump: $What (last: roster $($dump.roster | ConvertTo-Json -Compress -Depth 5), local $($dump.local | ConvertTo-Json -Compress))"
 }
 
+# Polls both dumps until the given sections are equal; throws with the names of the sections that still differ.
+function Wait-HarnessDumpsEqual {
+    param([string]$Left, [string]$Right, [string[]]$Sections, [int]$TimeoutSec = 30)
+    $differ = @()
+    $deadline = (Get-Date).AddSeconds($TimeoutSec)
+    while ((Get-Date) -lt $deadline) {
+        $a = Send-HarnessCommand -Instance $Left -Verb dump
+        $b = Send-HarnessCommand -Instance $Right -Verb dump
+        $differ = @(Compare-HarnessDumps -Left $a -Right $b -Sections $Sections)
+        if ($differ.Count -eq 0) { return $a }
+        Start-Sleep -Milliseconds 500
+    }
+    throw "Timeout after $TimeoutSec s waiting for equal dumps of $Left and $Right (differ: $($differ -join ', '))"
+}
+
 function Save-HarnessScreenshot {
     param([string]$Instance, [string]$RunDir, [string]$Label)
     Send-HarnessCommand -Instance $Instance -Verb screenshot -Arguments (Join-Path $RunDir "shot_${Label}_$Instance.png") | Out-Null
@@ -167,6 +182,6 @@ function Send-ServerCommand {
 }
 
 Export-ModuleMember -Function Get-HarnessDir, Get-HarnessStatus, Wait-HarnessStatus, Send-HarnessCommand,
-    Save-HarnessDump, Wait-HarnessDump, Save-HarnessScreenshot, Compare-HarnessDumps,
+    Save-HarnessDump, Wait-HarnessDump, Wait-HarnessDumpsEqual, Save-HarnessScreenshot, Compare-HarnessDumps,
     Initialize-TestServer, Connect-HarnessInstance, Get-ServerLogMark, Wait-ServerLog, Start-TestServer, Stop-TestServer,
     Send-ServerCommand
