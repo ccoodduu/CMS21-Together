@@ -2,6 +2,7 @@ using System;
 using CMS21_Together_Core.Data;
 using CMS21_Together_Core.Data.Enum;
 using CMS21_Together_Core.Network.Packets;
+using CMS21_Together_Server.Log;
 using CMS21_Together_Server.Network;
 using Newtonsoft.Json.Linq;
 
@@ -29,6 +30,7 @@ namespace CMS21_Together_Server.Data.Persistence.Sections
 			var state = data.ToObject<WorldState>();
 			state.updateGamemode = false;
 			GameDataManager.CurrentState.WorldState = state;
+			Logger.Info($"[World] Loaded: money {state.Money}, level {state.Level}, exp {state.Exp}, scraps {state.Scraps}, barns {state.Barns}, gamemode {state.Gamemode}.");
 		}
 
 		public void Reset()
@@ -40,7 +42,7 @@ namespace CMS21_Together_Server.Data.Persistence.Sections
 
 			GameDataManager.CurrentState.WorldState = new WorldState
 			{
-				Gamemode = Gamemode.Normal,
+				Gamemode = Program.Config?.NewSessionDifficulty ?? Gamemode.Normal,
 				Money = StartMoney,
 				Level = StartLevel,
 				Exp = Math.Min(480, maxExpInThisLevel - 1)

@@ -40,6 +40,7 @@ namespace CMS21Together
 			PacketRouter.Initialize(System.Reflection.Assembly.GetExecutingAssembly());
 			Client.Init();
 			JoinRequests.Initialize();
+			Logic.Economy.FeeHooks.InstallLambdaHooks();
 
 			Log.Info($"Together Mod {BuildInfo.FullVersion} initialized!");
 			isModInitialized = true;
@@ -101,11 +102,13 @@ namespace CMS21Together
 				if (!JoinService.Join(target, out string error)) Log.Warn($"[Join] {error}");
 			}
 			if (Client.Instance.IsConnectionValid && Input.GetKeyDown(PlayerSettings.ResyncKey)) ResyncController.Request();
+			if (Input.GetKeyDown(PlayerSettings.SessionPanelKey)) MultiplayerMenuModel.ToggleSessionPanel();
 			if (PlayerSettings.DevHotkeys && Client.Instance.IsConnectionValid && Input.GetKeyDown(KeyCode.F6)) Logic.Car.Placement.DevCarSpawner.SpawnRandom();
 			if (Client.Instance.IsConnectionValid) Logic.Car.Details.CarDetailsSync.Update();
 			if (Client.Instance.IsConnectionValid) Logic.Car.Away.CarAwaySync.Update();
 			if (Client.Instance.IsConnectionValid) Logic.Car.Away.PathTestSync.Update();
 			ConnectionStatus.Update();
+			LocalServerHost.Update();
 
 			if (Client.Instance.IsConnectionValid)
 				ClientData.Update();
@@ -136,12 +139,15 @@ namespace CMS21Together
 			Logic.Car.Details.CarDetailsSync.Initialize();
 			Logic.Car.Away.TestDriveSync.Initialize();
 			Logic.Car.Away.PathTestSync.Initialize();
+			SessionNotifications.Initialize();
+			SeatEngine.Initialize();
 		}
 
 		public override void OnApplicationQuit()
 		{
 			SessionGuard.End();
 			RichPresence.Clear();
+			LocalServerHost.StopOnQuit();
 		}
 	}
 }

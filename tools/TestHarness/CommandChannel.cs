@@ -53,9 +53,12 @@ public static class CommandChannel
             reply["error"] = ex.ToString();
         }
 
-        HarnessMod.Log.Msg($"[Harness] command {seq} {verb} {args} -> ok={reply["ok"]}");
+        HarnessMod.Log.Msg($"[Harness] command {seq} {verb} {Redact(args)} -> ok={reply["ok"]}");
         WriteJson(Path.Combine(HarnessMod.Dir, $"reply_{seq}.json"), reply);
     }
+
+    private static string Redact(string args) =>
+        System.Text.RegularExpressions.Regex.Replace(args ?? "", @"\b(password|adminKey)=\S*", "$1=<redacted>", System.Text.RegularExpressions.RegexOptions.IgnoreCase);
 
     public static void WriteJson(string path, object value)
     {

@@ -25,15 +25,20 @@ public static class WorldStatesPackets
 			difficultyManager.ActivateDifficultyLevel();
 		}
 		
-		Log.Info($"Received World State Sync :\nGamemode: {packet.Gamemode.ToString()}\nMoney: {packet.Money}\nLevel: {packet.Level}\n Exp:{packet.Exp}\n Scraps:{packet.Scraps}");
+		Log.Info($"Received World State Sync :\nGamemode: {packet.Gamemode.ToString()}\nMoney: {packet.Money}\nLevel: {packet.Level}\n Exp:{packet.Exp}\n Scraps:{packet.Scraps}\n Barns:{packet.Barns}");
 		
 		ClientData.IsServerUpdating = true;
 		GlobalData.PlayerMoney = packet.Money;
 		GlobalData.PlayerLevel = packet.Level - 1;
 		GlobalData.PlayerExp = packet.Exp;
 		GlobalData.PlayerScraps = packet.Scraps;
+		GlobalData.BarnsAmount = packet.Barns;
 		var wrapper = Singleton<GameManager>.Instance.GameDataManager?.CurrentProfileData?.globalDataWrapper;
-		if (wrapper != null) wrapper.PlayerScraps = packet.Scraps;
+		if (wrapper != null)
+		{
+			wrapper.PlayerScraps = packet.Scraps;
+			wrapper.BarnsAmount = packet.Barns;
+		}
 		ClientData.IsServerUpdating = false;
 		
 		var profile = Singleton<GameManager>.Instance.GameDataManager.CurrentProfileData;

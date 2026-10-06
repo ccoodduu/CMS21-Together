@@ -85,6 +85,9 @@ namespace CMS21_Together_Server
 			Logger.Info($"Settings: {Config.Describe()}");
 			Data.Reconciliation.ReconciliationService.IntervalSeconds = Config.DesyncCheckIntervalSeconds;
 			Data.Reconciliation.ReconciliationService.AutoFix = Config.DesyncAutofix;
+			Data.Economy.EconomyRules.TravelFees = Config.TravelFees;
+			Data.Economy.EconomyRules.MaxCarSalePrice = Config.MaxCarSalePrice;
+			Data.Economy.EconomyRules.MaxCarPurchasePrice = Config.MaxCarPurchasePrice;
 			Data.Presence.PresenceEvents.Left += Data.Reconciliation.ReconciliationService.OnLeft;
 			Data.Jobs.JobsService.Initialize();
 			Data.Cars.CarAwayRegistry.Initialize();

@@ -18,6 +18,7 @@ public static class CarPlacementSync
 	public static event Action<int> BeforeRemoteCarMove;
 
 	private static readonly HashSet<int> applying = new HashSet<int>();
+	private static readonly Dictionary<int, int> pendingPlaces = new Dictionary<int, int>();
 
 	private static bool Active => ClientScene.IsGarageReady && Client.Instance != null && Client.Instance.IsConnectionValid;
 
@@ -44,8 +45,23 @@ public static class CarPlacementSync
 	public static void OnPlaceChanged(CarPlaceChangedPacket packet)
 	{
 		var carLoader = CarLoaderPlaces.Get()?.GetCarLoaderByIndex(packet.CarLoaderID);
-		if (carLoader == null || string.IsNullOrEmpty(carLoader.carToLoad) || !carLoader.IsCarLoaded()) return;
+		if (carLoader == null || string.IsNullOrEmpty(carLoader.carToLoad)) return;
+		if (!carLoader.IsCarLoaded())
+		{
+			pendingPlaces[packet.CarLoaderID] = packet.Place;
+			Log.Info($"[Placement] Loader {packet.CarLoaderID}: place {packet.Place} kept until the car has loaded.");
+			return;
+		}
 		ApplyPlace(carLoader, packet.CarLoaderID, packet.Place);
+	}
+
+	public static void ForgetPendingPlace(int loader) => pendingPlaces.Remove(loader);
+
+	public static int TakePendingPlace(int loader, int place)
+	{
+		if (!pendingPlaces.TryGetValue(loader, out int pending)) return place;
+		pendingPlaces.Remove(loader);
+		return pending;
 	}
 
 	public static void ApplyPlace(CarLoader carLoader, int loader, int place)

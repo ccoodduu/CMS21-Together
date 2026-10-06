@@ -85,6 +85,12 @@ public static class GuardCommands
     private static void TryAction(string id, Dictionary<string, object> result)
     {
         if (id != "SellCar") throw new ArgumentException($"no test path for action {id}");
+        if (!FeatureGuard.WouldBlock(GuardKind.Action, id))
+        {
+            FeatureGuard.Decide(GuardKind.Action, id);
+            result["continued"] = "not run (allowed)";
+            return;
+        }
         var sale = new GameScript._SellCarCoroutine_d__135(0);
         result["continued"] = sale.MoveNext();
     }

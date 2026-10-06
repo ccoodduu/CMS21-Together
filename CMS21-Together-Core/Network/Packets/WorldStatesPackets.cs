@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Runtime.Serialization;
 using CMS21_Together_Core.Data.Enum;
 
 namespace CMS21_Together_Core.Network.Packets;
@@ -18,6 +19,7 @@ public class WorldState : INetworkData
 	public int Level;
 	public int Exp;
 	public int Scraps;
+	[OptionalField] public int Barns;
 }
 
 [Serializable]

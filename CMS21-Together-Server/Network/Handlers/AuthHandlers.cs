@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using CMS21_Together_Core;
+using CMS21_Together_Core.Data.Enum;
 using CMS21_Together_Core.Network;
 using CMS21_Together_Core.Network.Packets;
 using CMS21_Together_Server.Data;
@@ -18,9 +19,9 @@ namespace CMS21_Together_Server.Network.Handlers
 		[PacketHandler(PacketTypes.Heartbeat)]
 		public static void OnHeartbeat(long clientId, HeartbeatPacket packet)
 		{
-			Server.Clients[(int)clientId].LastHeartbeatTime = ServerTime.Time;
+			Server.Clients[(int)clientId].OnHeartbeatEcho(packet.sentTicks);
 		}
-		
+
 		[PacketHandler(PacketTypes.Connect)]
 		public static void OnConnected(long clientId, ConnectPacket packet)
 		{
@@ -28,16 +29,30 @@ namespace CMS21_Together_Server.Network.Handlers
 			Logger.Debug($"Received info: {packet.modVersion}, {packet.username}, {packet.playerID}");
 
 			if (!CompatibilityPolicy.Evaluate((int)clientId, packet)) return;
-			Server.Clients[(int)clientId].OnConnectedSuccessfully.Invoke();
-			SharedDlc.Add((int)clientId, packet.dlc);
-			Server.SendToClient(BuildServerInfo(), (int)clientId);
+			var client = Server.Clients[(int)clientId];
+			if (!PasswordAccepted(client, packet.password))
+			{
+				Server.Refuse(client.ID, DisconnectReason.WrongPassword, "");
+				return;
+			}
+			client.IsAdmin = !string.IsNullOrEmpty(Program.Config.AdminKey) && packet.adminKey == Program.Config.AdminKey;
+			client.OnConnectedSuccessfully.Invoke();
+			SharedDlc.Add(client.ID, packet.dlc);
+			Server.SendToClient(BuildServerInfo(client.ID), client.ID);
 
-			var record = PresenceRegistry.Add((int)clientId, packet.username);
-			Logger.Info($"Player {record.PlayerId} '{record.Username}' joined");
+			var record = PresenceRegistry.Add(client.ID, packet.username);
+			Logger.Info($"Player {record.PlayerId} '{record.Username}' joined{(client.IsAdmin ? " (admin)" : "")}");
 			Server.SendToClients(new PlayerPresencePacket { Record = record.Copy() }, record.PlayerId);
 		}
 
-		public static ServerInfoPacket BuildServerInfo() => new ServerInfoPacket
+		private static bool PasswordAccepted(Client client, string password)
+		{
+			if (string.IsNullOrEmpty(Program.Config.Password)) return true;
+			if (client.ConnectionType == NetworkType.Steam &&!Program.Config.PasswordSteam) return true;
+			return password == Program.Config.Password;
+		}
+
+		public static ServerInfoPacket BuildServerInfo(int clientId) => new ServerInfoPacket
 		{
 			ServerName = Program.Config.ServerName,
 			ModVersion = Program.MOD_VERSION,
@@ -46,14 +61,15 @@ namespace CMS21_Together_Server.Network.Handlers
 			SteamId = Program.Config.UseSteam ? SteamTransport.GetServerSteamID() : 0,
 			PublicAddress = Program.Config.PublicAddress,
 			Difficulty = GameDataManager.CurrentState.WorldState.Gamemode,
-			SharedDlc = SharedDlc.Shared.ToList()
+			SharedDlc = SharedDlc.Shared.ToList(),
+			PasswordRequired = !string.IsNullOrEmpty(Program.Config.Password),
+			IsAdmin = Server.Clients.TryGetValue(clientId, out var client) && client.IsAdmin
 		};
 
 		public static void BroadcastServerInfo()
 		{
-			var info = BuildServerInfo();
 			foreach (var client in Server.Clients.Values.Where(c => c.IsConnected && c.IsAccepted))
-				Server.SendToClient(info, client.ID);
+				Server.SendToClient(BuildServerInfo(client.ID), client.ID);
 		}
 
 		[PacketHandler(PacketTypes.AskForSync)]

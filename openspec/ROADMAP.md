@@ -6,11 +6,11 @@ by a friend from a release zip and joinable without typing IDs by hand.
 
 ## Status (2026-10-06)
 
-M0–M2 done; M3 done in code (rows 3, 4, 13 merged; regression `20261006-165221` green on two lanes). The M2 and M3
-playtests are the user's. M4 in progress on branches: row 5a (`change/sync-workshop-machines`), 5b
-(`change/sync-workshop-car-tools`), 6 part 2 seat/engine (`change/sync-players-and-scenes-part2`), 8 part 2
-(`change/hosting-and-join-ui-part2`), 10 drafted (`change/economy-audit`, decisions in QUESTIONS.md). Two test lanes
-run in parallel since the pagefile was raised (commit limit 64 GB).
+M0–M2 done; M3 done in code (rows 3, 4, 13 merged). M4: rows 6 part 2, 8 part 2 and 10 merged (2026-10-06 evening). The M2 and M3
+playtests are the user's. Still in M4: row 5a (`change/sync-workshop-machines`, all machines pass except the engine
+stand) and 5b (`change/sync-workshop-car-tools`, in code). Two test lanes can run in parallel since the pagefile was
+raised (commit limit 64 GB); until the user answers QUESTIONS.md, one lane at a time because of Claude Code's memory
+guard.
 
 ## Changes
 

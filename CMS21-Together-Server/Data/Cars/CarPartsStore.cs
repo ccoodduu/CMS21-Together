@@ -13,7 +13,8 @@ namespace CMS21_Together_Server.Data.Cars
 		Deleted,
 		Parked,
 		JobEnded,
-		SpawnerLeft
+		SpawnerLeft,
+		Sold
 	}
 
 	public static class CarPartsStore

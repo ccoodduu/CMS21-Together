@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using CMS21_Together_Core.Network.Packets;
 using CMS21Together.Logic.Car.Parts;
 using CMS21Together.Logic.Player;
@@ -13,9 +14,11 @@ public static class ClientData
 	public static bool IsInitialSyncFinished { get; set; }
 	public static bool IsServerUpdating { get; set; }
 	public static ServerInfoPacket ServerInfo { get; set; }
+	public static Dictionary<int, int> PlayerPings { get; set; } = new Dictionary<int, int>();
 
 	public static void Reset()
 	{
+		PlayerPings = new Dictionary<int, int>();
 		IsWorldStateSynced = false;
 		IsGarageStateSynced = false;
 		IsInventorySynced = false;
@@ -23,6 +26,7 @@ public static class ClientData
 		IsServerUpdating = false;
 		SyncTracker.Reset();
 		PresenceManager.Clear();
+		SeatEngine.Reset();
 		ClientScene.ClearPending();
 		CarPartsSync.Reset();
 		Logic.Car.Placement.ParkingSync.Reset();
@@ -32,6 +36,8 @@ public static class ClientData
 		PartClaims.Reset();
 		Logic.Car.Away.CarAwaySync.Reset();
 		PartTransactions.Reset();
+		Logic.Economy.EconomyScope.Reset();
+		Logic.Economy.EconomyRequests.Reset();
 		Logic.Tools.ToolSync.Reset();
 	}
 
@@ -40,5 +46,6 @@ public static class ClientData
 		if (!IsInitialSyncFinished) return;
 		
 		Movement.UpdateMovement();
+		SeatEngine.Update();
 	}
 }

@@ -20,5 +20,9 @@ namespace CMS21_Together_Server.Data
 		/// Total milliseconds since the server started
 		/// </summary>
 		public static long TotalMilliseconds => _stopwatch.ElapsedMilliseconds;
+
+		public static long Ticks => _stopwatch.ElapsedTicks;
+
+		public static double TicksToMs(long ticks) => ticks * 1000.0 / Stopwatch.Frequency;
 	}
 }

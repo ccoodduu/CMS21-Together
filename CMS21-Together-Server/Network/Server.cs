@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Net;
 using System.Net.Sockets;
 using CMS21_Together_Core;
@@ -179,7 +180,7 @@ namespace CMS21_Together_Server.Network
             }
         }
         
-        private static readonly List<int> pendingRefusals = new List<int>();
+        private static readonly Dictionary<int, DisconnectReason> pendingRefusals = new Dictionary<int, DisconnectReason>();
 
         // The slot is closed on the next tick so the refusal packet goes out first.
         public static void Refuse(int clientId, DisconnectReason reason, string message)
@@ -188,8 +189,20 @@ namespace CMS21_Together_Server.Network
             {
                 Logger.Info($"Refusing client {clientId}: {reason} ({message})");
                 SendToClient(new DisconnectPacket { playerID = clientId, reason = reason, message = message }, clientId);
-                if (!pendingRefusals.Contains(clientId)) pendingRefusals.Add(clientId);
+                if (!pendingRefusals.ContainsKey(clientId)) pendingRefusals[clientId] = reason;
             }
+        }
+
+        public static bool Kick(int playerId, string by)
+        {
+            if (!Clients.TryGetValue(playerId, out var client) || !client.IsConnected)
+            {
+                Logger.Warn($"Player ID {playerId} not found or not connected.");
+                return false;
+            }
+            Logger.Info($"Kicking player {playerId} ({by})...");
+            Refuse(playerId, DisconnectReason.Kicked, "You have been kicked by the server.");
+            return true;
         }
 
         private static void RefuseUnassigned(TcpClient socket, DisconnectReason reason, string message)
@@ -217,12 +230,12 @@ namespace CMS21_Together_Server.Network
         private static void ProcessRefusals()
         {
             if (pendingRefusals.Count == 0) return;
-            foreach (int clientId in pendingRefusals.ToArray())
+            foreach (var refusal in pendingRefusals.ToArray())
             {
-                var client = Clients[clientId];
+                var client = Clients[refusal.Key];
                 if (!client.IsConnected) continue;
                 if (client.ConnectionType == NetworkType.Steam) client.SteamConnection.Close();
-                client.Disconnect();
+                client.Disconnect(refusal.Value);
             }
             pendingRefusals.Clear();
         }
@@ -296,7 +309,24 @@ namespace CMS21_Together_Server.Network
                         client.Update();
                     }
                 }
+                BroadcastPings();
             }
+        }
+
+        private const float PingInterval = 3f;
+        private static float lastPingBroadcast;
+
+        private static void BroadcastPings()
+        {
+            if (Data.ServerTime.Time - lastPingBroadcast < PingInterval) return;
+            lastPingBroadcast = Data.ServerTime.Time;
+
+            var inSession = Clients.Values.Where(c => c.IsConnected && c.SyncState == SyncState.InSession).ToList();
+            if (inSession.Count == 0) return;
+
+            var packet = new PlayerPingsPacket();
+            foreach (var client in inSession) packet.Ms[client.ID] = (int)Math.Round(client.RttMs);
+            foreach (var client in inSession) SendToClient(packet, client.ID, false);
         }
     }
 }
