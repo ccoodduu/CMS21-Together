@@ -73,6 +73,10 @@ function Wait-HarnessDumpsEqual {
         if ($differ.Count -eq 0) { return $a }
         Start-Sleep -Milliseconds 500
     }
+    foreach ($section in $differ) {
+        Write-Host "  $section $Left`: $($a.$section | ConvertTo-Json -Depth 10 -Compress)"
+        Write-Host "  $section $Right`: $($b.$section | ConvertTo-Json -Depth 10 -Compress)"
+    }
     throw "Timeout after $TimeoutSec s waiting for equal dumps of $Left and $Right (differ: $($differ -join ', '))"
 }
 

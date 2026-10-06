@@ -420,7 +420,7 @@ public static class ToolsCommands
             var items = state.Group?.ItemList ?? (state.Item != null ? new List<ModItem> { state.Item } : new List<ModItem>());
             result[machine.Tool.ToString()] = new
             {
-                id = state.Item?.ID ?? state.Group?.ID,
+                id = state.Uid == 0 ? null : state.Item?.ID ?? state.Group?.ID,
                 uid = state.Uid,
                 items = stand != null
                     ? items.Select(i => i.ID).OrderBy(i => i, StringComparer.Ordinal).Cast<object>().ToList()
