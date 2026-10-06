@@ -102,15 +102,15 @@ be silently overwritten by, or race with, the results (upstream's bug class).
 
 ### D2. How a claim is taken: ask first for the track, optimistic in the garage
 
-- **Test track (ask first):** a prefix on `NotificationCenter.SelectSceneToLoad(string, SceneType, bool, bool)` (after
-  the guard, `__runOriginal`) with `sceneType == TestTrack` and connected: if the loader of `SelectedCarLoader` has no
-  granted claim of ours, return an empty enumerator (as the guard does), store the call's arguments, send
-  `CarAwayRequest { RequestId, CarLoaderID, SpawnSeq, Kind = TestTrack }`. On grant, re-run the stored call with
-  `NotificationCenter.m_instance.StartCoroutine(...)`; the prefix lets it through because the claim is now held. On
-  refusal or no answer within 5 s: an info message ("<name> is test-driving / working on this car"), `GlobalData.
-  SelectedCarLoader`/`TestToShow` cleared, input and pie menu restored the way a cancelled map selection leaves them
-  (spike 1.3 records what that is). The prefix runs before the coroutine body, so nothing (fade, `loadingScene`, input
-  lock, save) has happened yet.
+- **Test track (ask first):** a prefix on `NotificationCenter.<SelectSceneToLoad>d__34.MoveNext` with
+  `<>1__state == 0`, `sceneType == TestTrack` and connected (spike 1.3): if the loader of `SelectedCarLoader` has no
+  granted claim of ours, send `CarAwayRequest { RequestId, CarLoaderID, SpawnSeq, Kind = TestTrack }` once and hold the
+  coroutine (`__result = true`, skip the body) until the answer. On grant, let `MoveNext` run: the same coroutine
+  continues, no replay. On refusal or no answer within 5 s: `__result = false` ends the coroutine, an info message
+  ("<name> is test-driving / working on this car"), `GlobalData.SelectedCarLoader`/`TestToShow` cleared. Nothing in
+  the game has happened yet (fade, `loadingScene`, input lock, save). `SceneHooks` must fire `LeavingScene(Garage,
+  TestTrack)` only when the held call is let through (today it fires in the builder prefix, and a cancel would leave
+  `ClientScene.LocalScene = Loading`). What the map UI paths leave behind after a cancel is a hand check (spike 1.3).
 - **Dyno and test path (optimistic):** the client checks its mirror before the activity (a locked car refuses with a
   toast, D3) and sends the request when the activity starts (postfix on `DynoManager.RunDyno`, on
   `PathTestManager.Prepare`). A refusal only happens when two requests race; the client then aborts: dyno →
