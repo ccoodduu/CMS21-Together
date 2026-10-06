@@ -1,3 +1,4 @@
+using CMS21_Together_Core.Data;
 using UnityEngine;
 
 namespace CMS21Together.Logic.Player;
@@ -5,6 +6,7 @@ namespace CMS21Together.Logic.Player;
 public static class NameTags
 {
 	private const float HeadHeight = 2.0f;
+	private const float SeatedHeadHeight = 1.2f;
 	private const float MaxDistance = 25f;
 	private const float LabelWidth = 200f;
 	private const float LabelHeight = 24f;
@@ -39,9 +41,20 @@ public static class NameTags
 	{
 		screen = Vector3.zero;
 		var camera = Camera.main;
-		if (camera == null || !player.HasAvatar || !player.Avatar.gameObject.activeSelf) return false;
+		if (camera == null || !player.HasAvatar) return false;
 
-		Vector3 head = player.Avatar.transform.position + Vector3.up * HeadHeight;
+		Vector3 head;
+		if (player.Record.SeatCarLoaderId != PlayerPresenceRecord.NoCar)
+		{
+			var seat = PresenceManager.SeatHandle(player.Record);
+			if (seat == null) return false;
+			head = seat.position + Vector3.up * SeatedHeadHeight;
+		}
+		else
+		{
+			if (!player.Avatar.gameObject.activeSelf) return false;
+			head = player.Avatar.transform.position + Vector3.up * HeadHeight;
+		}
 		if (Vector3.Distance(camera.transform.position, head) > MaxDistance) return false;
 
 		screen = camera.WorldToScreenPoint(head);

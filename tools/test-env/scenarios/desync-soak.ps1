@@ -47,6 +47,9 @@ while ((Get-Date) -lt $end) {
         Send-HarnessCommand -Instance $who -Verb part-fast-mount -Arguments "0 $($unmount.key)" | Out-Null
     } catch { Write-Host "step $step on $who`: $($_.Exception.Message)" }
     Send-HarnessCommand -Instance $who -Verb stats-add -Arguments "1 5" | Out-Null
+    if ($step % 4 -eq 3) {
+        try { Send-HarnessCommand -Instance $a -Verb econ-fee -Arguments "spill 0" | Out-Null } catch { Write-Host "fee step $step`: $($_.Exception.Message)" }
+    }
     Start-Sleep -Seconds 4
     $step++
 }

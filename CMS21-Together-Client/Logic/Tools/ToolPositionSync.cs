@@ -1,3 +1,4 @@
+using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
@@ -9,8 +10,8 @@ using UnityEngine;
 
 namespace CMS21Together.Logic.Tools;
 
-// sync-workshop-machines D9. A position the local garage cannot take yet (CanMove false while a car is still being
-// placed) stays in the mirror and is retried.
+// sync-workshop-machines D9. A position the local garage cannot take yet stays in the mirror and is retried: CanMove is
+// false while a car is still being placed, and MoveTo does nothing while the place has no loaded car.
 [HarmonyPatch]
 public static class ToolPositionSync
 {
@@ -32,9 +33,21 @@ public static class ToolPositionSync
 	[HarmonyPrefix]
 	private static void BeforeMove(ToolsMoveManager __instance, IOSpecialType tool, CarPlace place)
 	{
-		if (applying || !Movable.Contains(tool) || !__instance.CanMove(tool, place)) return;
+		if (applying || !Movable.Contains(tool) || !PlaceHasCar(place) || !CanMoveOrUnknown(__instance, tool, place)) return;
 		waiting.Remove((int)tool);
 		ToolSync.SendPosition((int)tool, (int)place);
+	}
+
+	private static bool PlaceHasCar(CarPlace place)
+	{
+		var loader = CarLoaderPlaces.Get()?.GetCarLoaderForPlace(place);
+		return loader != null && loader.IsCarLoaded();
+	}
+
+	private static bool CanMoveOrUnknown(ToolsMoveManager manager, IOSpecialType tool, CarPlace place)
+	{
+		try { return manager.CanMove(tool, place); }
+		catch (Exception) { return true; }
 	}
 
 	[HarmonyPatch(typeof(ToolsMoveManager), nameof(ToolsMoveManager.SetOnDefaultPosition))]
@@ -70,11 +83,7 @@ public static class ToolPositionSync
 			{
 				if (!manager.IsOnDefaultPosition(tool)) manager.SetOnDefaultPosition(tool);
 			}
-			else if (manager.CanMove(tool, (CarPlace)place))
-			{
-				manager.MoveTo(tool, (CarPlace)place, false);
-			}
-			else
+			else if (!CanMoveOrUnknown(manager, tool, (CarPlace)place) || !MovedTo(manager, tool, (CarPlace)place))
 			{
 				Log.Debug($"[Tools] Tool {tool} cannot move to {(CarPlace)place} yet.");
 				waiting.Add(type);
@@ -92,6 +101,12 @@ public static class ToolPositionSync
 		}
 		waiting.Remove(type);
 		return true;
+	}
+
+	private static bool MovedTo(ToolsMoveManager manager, IOSpecialType tool, CarPlace place)
+	{
+		manager.MoveTo(tool, place, false);
+		return !manager.IsOnDefaultPosition(tool);
 	}
 
 	private static IEnumerator Retry()

@@ -5,6 +5,7 @@ using CMS21_Together_Core.Network;
 using CMS21_Together_Core.Network.Packets;
 using CMS21_Together_Server.Data;
 using CMS21_Together_Server.Data.Cars;
+using CMS21_Together_Server.Data.Economy;
 using CMS21_Together_Server.Data.Placement;
 using CMS21_Together_Server.Log;
 
@@ -33,6 +34,7 @@ namespace CMS21_Together_Server.Network.Handlers
 			ParkRefusal refusal = ParkRefusal.None;
 			if (request.Price != 0 || entry == null) refusal = ParkRefusal.Invalid;
 			else if (entry.Spawn.IsJob) refusal = ParkRefusal.JobCar;
+			else if (CarAwayRegistry.Blocks(request.CarLoaderID, client, "park")) refusal = ParkRefusal.Taken;
 			int slot = -1;
 			if (refusal == ParkRefusal.None && !ParkingService.TryAdd(request.Car, request.PreferredSlot, out slot)) refusal = ParkRefusal.ParkingFull;
 
@@ -62,7 +64,7 @@ namespace CMS21_Together_Server.Network.Handlers
 		{
 			var world = GameDataManager.CurrentState.WorldState;
 			ParkRefusal refusal = ParkRefusal.None;
-			if (request.Price < 0) refusal = ParkRefusal.Invalid;
+			if (request.Price < 0 || request.Price > EconomyRules.MaxCarPurchasePrice) refusal = ParkRefusal.Invalid;
 			else if (request.Price > world.Money) refusal = ParkRefusal.NoMoney;
 			int slot = -1;
 			if (refusal == ParkRefusal.None && !ParkingService.TryAdd(request.Car, request.PreferredSlot, out slot)) refusal = ParkRefusal.ParkingFull;
@@ -144,17 +146,20 @@ namespace CMS21_Together_Server.Network.Handlers
 		{
 			var lot = GameDataManager.CurrentState.PlacementState.Parking;
 			var world = GameDataManager.CurrentState.WorldState;
-			int fullPrice = lot.UnlockedLevels * BaseParkingLevelPrice;
-			bool priceOk = request.Price == fullPrice || request.Price == fullPrice / 2;
-			if (request.TargetLevels != lot.UnlockedLevels + 1 || request.TargetLevels > ParkingLayout.MaxLevels || !priceOk || world.Money < request.Price)
+			int price = lot.UnlockedLevels * BaseParkingLevelPrice;
+			if (EconomyRules.HasLevel(GameDataManager.CurrentState.GarageState.PlayerUpgradeLevels, EconomyRules.CheaperParkingSkill)) price /= 2;
+			if (request.Price != price)
+				Logger.Info($"[Parking] Client {clientId} asked {request.Price} for level {request.TargetLevels}; the server's price is {price}.");
+			if (request.TargetLevels != lot.UnlockedLevels + 1 || request.TargetLevels > ParkingLayout.MaxLevels || world.Money < price)
 			{
-				Logger.Info($"[Parking] Unlock of level {request.TargetLevels} for {request.Price} from client {clientId} refused (levels {lot.UnlockedLevels}, money {world.Money}).");
+				Logger.Info($"[Parking] Unlock of level {request.TargetLevels} for {price} from client {clientId} refused (levels {lot.UnlockedLevels}, money {world.Money}).");
 				ParkingService.SendState((int)clientId);
 				return;
 			}
 			lot.UnlockedLevels = request.TargetLevels;
-			world.Money -= request.Price;
-			Logger.Info($"[Parking] Level {request.TargetLevels} unlocked for {request.Price} by client {clientId}.");
+			world.Money -= price;
+			world.updateGamemode = false;
+			Logger.Info($"[Parking] Level {request.TargetLevels} unlocked for {price} by client {clientId}.");
 			Server.SendToClients(world);
 			ParkingService.SendState();
 		}

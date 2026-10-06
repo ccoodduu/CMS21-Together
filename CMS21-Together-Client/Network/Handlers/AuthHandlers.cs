@@ -19,7 +19,13 @@ public static class AuthHandler
 	{
 		if (!Client.Instance.IsConnectionValid)
 			Client.Instance.OnConnectionValidated.Invoke();
-		Client.Instance.Send(new HeartbeatPacket(), false);
+		Client.Instance.Send(new HeartbeatPacket { sentTicks = packet.sentTicks }, false);
+	}
+
+	[PacketHandler(PacketTypes.PlayerPings)]
+	public static void HandlePlayerPings(long senderId, PlayerPingsPacket packet)
+	{
+		ClientData.PlayerPings = packet.Ms ?? new Dictionary<int, int>();
 	}
 	
 	[PacketHandler(PacketTypes.Connect)]
@@ -70,7 +76,7 @@ public static class AuthHandler
 		}
 		else
 		{
-			PresenceManager.Remove(packet.playerID);
+			PresenceManager.Remove(packet.playerID, packet.reason);
 		}
 	}
 }

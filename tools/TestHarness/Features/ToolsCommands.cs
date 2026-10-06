@@ -32,7 +32,13 @@ public static class ToolsCommands
         PacketTypes.ToolPosition, PacketTypes.ToolClaimUpdate, PacketTypes.ToolPartChangeResult,
     };
 
+    private static readonly HashSet<PacketTypes> InventoryPackets = new HashSet<PacketTypes>
+    {
+        PacketTypes.InventoryItemAction, PacketTypes.InventoryGroupItemAction,
+    };
+
     private static bool holding;
+    private static bool holdingInventory;
     private static bool replaying;
     private static readonly List<(PacketTypes Id, object Data, long Sender)> held = new List<(PacketTypes, object, long)>();
 
@@ -118,6 +124,64 @@ public static class ToolsCommands
         return group;
     }
 
+    private static System.Collections.IEnumerator Drive(Il2CppSystem.Collections.IEnumerator routine)
+    {
+        var build = routine?.TryCast<EngineStandLogic._SetGroupOnEngineStand_d__8>();
+        while (routine != null)
+        {
+            int state = build?.__1__state ?? -99;
+            bool more;
+            try { more = routine.MoveNext(); }
+            catch (Exception e)
+            {
+                MelonLoader.MelonLogger.Warning($"[Harness] stand build failed in state {state}: {e.GetType().Name} {e.Message.Split('\n')[0]}");
+                yield break;
+            }
+            MelonLoader.MelonLogger.Msg($"[Harness] stand build state {state} -> {(more ? "running" : "done")}");
+            if (!more) yield break;
+            yield return null;
+        }
+    }
+
+    [HarnessCommand("tool-stand-unpatch")]
+    private static object StandUnpatch(string args)
+    {
+        var target = HarmonyLib.AccessTools.Method(typeof(EngineStandLogic._SetGroupOnEngineStand_d__8), "MoveNext");
+        var info = HarmonyLib.Harmony.GetPatchInfo(target);
+        var owners = info == null ? new List<string>() : info.Owners.ToList();
+        foreach (string owner in owners) new HarmonyLib.Harmony(owner).Unpatch(target, HarmonyLib.HarmonyPatchType.All, owner);
+        return new { removed = owners };
+    }
+
+    [HarnessCommand("tool-stand-reset")]
+    private static object StandReset(string args)
+    {
+        var stand = ToolsManager.Get()?.EngineStandLogic ?? throw new InvalidOperationException("no engine stand");
+        using (ToolSync.ApplyingRemote(ModToolId.EngineStand1)) stand.ClearEngineStand();
+        return "cleared locally";
+    }
+
+    [HarnessCommand("tool-stand-context")]
+    private static object StandContext(string args)
+    {
+        var game = GameScript.Get();
+        var hovered = game?.IOMouseOverCarLoader;
+        var stand = ToolsManager.Get()?.EngineStandLogic;
+        return new
+        {
+            camera = Camera.main != null,
+            hoveredCar = hovered == null ? null : hovered.carToLoad,
+            hoveredRootCuller = hovered != null && hovered.root != null && hovered.root.GetComponent<PartScriptCuller>() != null,
+            hoveredGameObject = game?.IOMouseOverGO == null ? null : game.IOMouseOverGO.name,
+            standCuller = stand?.PartScriptCuller != null,
+            standTransform = stand?.EngineStand != null,
+            loaderCullers = Enumerable.Range(0, CarLoaderPlaces.Get().GetCarLoadersCount())
+                .Select(i => CarLoaderPlaces.Get().GetCarLoaderByIndex(i))
+                .Where(c => c != null && c.IsCarLoaded())
+                .Select(c => $"{c.carToLoad}:{(c.root != null && c.root.GetComponent<PartScriptCuller>() != null)}").ToList(),
+        };
+    }
+
     [HarnessCommand("tool-put")]
     private static object Put(string args)
     {
@@ -152,7 +216,9 @@ public static class ToolsCommands
                 tools.SpringClampLogic.SetGroupOnSpringClamp(group, true, false);
                 break;
             case ModToolId.EngineStand1:
-                NotificationCenter.Get().ActionHangOn(group);
+                var stand = (EngineStandSync)ToolSync.Machine(tool);
+                Inv.DeleteGroup(uid);
+                MelonLoader.MelonCoroutines.Start(Drive(stand.Logic.SetGroupOnEngineStand(group, false)));
                 break;
             default:
                 throw new ArgumentException($"{tool} cannot be loaded from the harness");
@@ -303,8 +369,13 @@ public static class ToolsCommands
         var parts = Args(args);
         if (parts.Length != 2) throw new ArgumentException("usage: tool-stand-create <EngineStand1|EngineStand2> <engineId>");
         var stand = (EngineStandSync)Present(ToolArg(parts[0]));
-        stand.Logic.SetEngineOnEngineStand(new Item(parts[1]));
-        return "building";
+        GameInventory.Instance.GetEnginesToCreate(out var creatable);
+        var engines = new List<string>();
+        for (int i = 0; creatable != null && i < creatable.Count; i++) engines.Add(creatable[i]);
+        string id = parts[1] == "auto" ? engines.FirstOrDefault() : parts[1];
+        if (id == null) throw new InvalidOperationException("the game lists no engines to create");
+        stand.Logic.SetEngineOnEngineStand(new Item(id));
+        return new { building = id, creatable = engines.Count, listed = engines.Contains(id) };
     }
 
     [HarnessCommand("tool-stand-part")]
@@ -337,9 +408,8 @@ public static class ToolsCommands
             return new { tool = tool.ToString(), place = "default" };
         }
         var place = (CarPlace)Enum.Parse(typeof(CarPlace), parts[1], true);
-        if (!manager.CanMove(tool, place)) return new { tool = tool.ToString(), place = place.ToString(), moved = false };
         manager.MoveTo(tool, place, true);
-        return new { tool = tool.ToString(), place = place.ToString(), moved = true };
+        return new { tool = tool.ToString(), place = place.ToString(), moved = !manager.IsOnDefaultPosition(tool) };
     }
 
     [HarnessCommand("tool-repair")]
@@ -380,12 +450,15 @@ public static class ToolsCommands
     [HarnessCommand("tool-hold")]
     private static object Hold(string args)
     {
-        if ((args ?? "").Trim() == "on")
+        var parts = Args(args);
+        if (parts.FirstOrDefault() == "on")
         {
             holding = true;
-            return "holding tool packets";
+            holdingInventory = parts.Contains("inventory");
+            return holdingInventory ? "holding tool and inventory packets" : "holding tool packets";
         }
         holding = false;
+        holdingInventory = false;
         var replay = new List<(PacketTypes Id, object Data, long Sender)>(held);
         held.Clear();
         replaying = true;
@@ -404,7 +477,7 @@ public static class ToolsCommands
     [HarmonyPrefix]
     private static bool BeforeDispatch(PacketTypes id, object deserializedData, long senderId)
     {
-        if (!holding || replaying || !ToolPackets.Contains(id)) return true;
+        if (!holding || replaying || !(ToolPackets.Contains(id) || holdingInventory && InventoryPackets.Contains(id))) return true;
         held.Add((id, deserializedData, senderId));
         return false;
     }
@@ -421,7 +494,7 @@ public static class ToolsCommands
             var items = state.Group?.ItemList ?? (state.Item != null ? new List<ModItem> { state.Item } : new List<ModItem>());
             result[machine.Tool.ToString()] = new
             {
-                id = state.Item?.ID ?? state.Group?.ID,
+                id = state.Uid == 0 ? null : state.Item?.ID ?? state.Group?.ID,
                 uid = state.Uid,
                 items = stand != null
                     ? items.Select(i => i.ID).OrderBy(i => i, StringComparer.Ordinal).Cast<object>().ToList()

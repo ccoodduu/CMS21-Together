@@ -13,6 +13,7 @@ public static class CarLoading
 		carLoader.placeNo = spawn.PlaceNo;
 		carLoader.ConfigVersion = spawn.ConfigVersion;
 		carLoader.customerCar = spawn.IsJob;
+		CarPlacementSync.ForgetPendingPlace(loader);
 		CarSpawnHooks.Suppress(loader);
 		try
 		{
@@ -22,8 +23,9 @@ public static class CarLoading
 			while (!carLoader.IsCarLoaded()) yield return new WaitForEndOfFrame();
 			carLoader.PlaceAtPosition(true, true);
 			if (spawn.PlaceNo < 0) carLoader.placeNo = spawn.PlaceNo;
-			CarPlacementSync.ApplyPlace(carLoader, loader, spawn.PlaceNo);
+			CarPlacementSync.ApplyPlace(carLoader, loader, CarPlacementSync.TakePendingPlace(loader, spawn.PlaceNo));
 			if (spawn.IsJob) Jobs.JobsSync.MarkCustomerCar(loader, spawn.JobID);
+			if (spawn.SpecialState > 0) carLoader.specialState = spawn.SpecialState;
 		}
 		finally
 		{

@@ -5,6 +5,7 @@ using CMS21_Together_Core.Network.Packets;
 using CMS21Together.Data;
 using CMS21Together.Network;
 using HarmonyLib;
+using CMS21Together.Logic.Car.Away;
 
 namespace CMS21Together.Logic.Jobs;
 
@@ -99,11 +100,14 @@ public static class JobHooks
 
 	[HarmonyPatch(typeof(GameScript), nameof(GameScript.EndJob))]
 	[HarmonyPrefix]
-	private static void BeforeEndJob(Job job, CarLoader carLoader)
+	private static bool BeforeEndJob(Job job, CarLoader carLoader)
 	{
-		if (!Connected || job == null || carLoader == null) return;
+		if (!Connected || job == null || carLoader == null) return true;
+		int loader = CarLoaderPlaces.Get().GetCarLoaderId(carLoader);
+		if (loader >= 0 && CarAwaySync.BlockIfLocked(loader, "job end")) return false;
 		JobHelper.CheckJob(carLoader, ref job);
-		JobEndContext.Begin(job, CarLoaderPlaces.Get().GetCarLoaderId(carLoader));
+		JobEndContext.Begin(job, loader);
+		return true;
 	}
 
 	[HarmonyPatch(typeof(CMS.MainMenu.Windows.TutorialsWindow), "RunTutorialAction")]
@@ -114,8 +118,4 @@ public static class JobHooks
 		UIManager.Get()?.ShowInfoWindow("Tutorials are not available while playing together.");
 		return false;
 	}
-
-	[HarmonyPatch(typeof(GlobalData), nameof(GlobalData.AddPlayerMoney))]
-	[HarmonyPrefix]
-	private static void BeforeAddMoney(int money) => JobEndContext.CaptureMoney(money);
 }

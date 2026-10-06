@@ -10,9 +10,92 @@ Newest first. One entry per work session.
   paints a part and tunes the modules, so `car-details` covers them.
 - Row 4 task 4.7: new scenario `car-details-request`. A holds back its spawn snapshot (`cardetails-hold on`); the
   server must ask for it after 10 s and store the answer.
-- Row 13 (test drive and diagnostics): the trace and verbs for the spike (`testdrive-trace`, `testdrive-go`,
-  `testdrive-drive`, `testdrive-finish`) and the spike scenario `test-drive-trace` are committed, not yet run.
-- Running: full lane-1 regression of the row 4 branch (started before these changes).
+- Lane-1 regression `20261006-151624` of the row 4 branch: all 26 PASSED. After it, `car-details` (now with tint,
+  paint and tuning) and `car-details-request` passed. `main` fast-forwarded to row 4 (`48ad607`).
+- Row 13 (test drive and diagnostics), branch `change/sync-test-drive-and-diagnostics`: the runtime trace
+  (`test-drive-trace`) answers spike 1.2; results are in the change's design.md "Runtime trace results". In short:
+  the order the design assumed holds, the track car has the same part order, and `GlobalData.Load` keeps the three
+  globals. Today the driven kilometres are lost, because the garage reloads the car from the server snapshot.
+- Two bugs found by the trace and fixed on `main`: row 4's detail hooks and the presence update threw exceptions on
+  the test track.
+- Next: spike 1.3 (hold and replay the departure) and 1.4 (path test, dyno; their harness verbs are still to write).
+
+## 2026-10-06 (15:55–16:35) — row 13 implemented; handoff before a reboot (pagefile)
+
+- Row 13 spikes 1.1–1.4 done as far as the harness reaches (results in the change's design.md). D2 now holds the
+  departure coroutine in `MoveNext` instead of replaying it.
+- Row 13 groups 2–7 are in code on `change/sync-test-drive-and-diagnostics`: server `CarAwayRegistry`, enforcement,
+  test drive fold, dyno details section; client `CarAwaySync`, locks, labels, `TestDriveSync`, `DynoSync`,
+  `PathTestSync`; guard entries allowed. `test-drive` PASSED (claim, locks, +5 km on both, refusal, abort, fallback).
+- Not run yet: `diagnostics`, `test-drive-latejoin`, and the full regression (one was stopped for the reboot).
+- Pagefile raised to 32–48 GB (was 8–16 GB, needs the reboot). The game commits 8–10 GB per instance but uses
+  2–4.5 GB, so the commit limit, not RAM, kept the lanes taking turns.
+- Background agents (stopped by the reboot): row 5a code on `change/sync-workshop-machines`, row 10 OpenSpec draft on
+  `change/economy-audit`. Check what they pushed; their worktrees stay in `.claude/worktrees/`.
+- Next after the reboot, in order:
+  1. Check the commit limit is about 64 GB (`Win32_OperatingSystem.TotalVirtualMemorySize`).
+  2. `Run-Session.ps1`: hold the lane mutex only while the games start and load, and start a lane only when the
+     commit headroom (limit − committed) is at least about 22 GB; then run lanes 1 and 2 together (`Run-All -Lanes 1,2`).
+  3. Run `diagnostics` and `test-drive-latejoin`, fix, then the full regression; merge row 13 into `main` if green.
+  4. Continue M4: review and test row 5a's branch, then 5b, 6 part 2, 10, 8 part 2.
+
+## 2026-10-06 (16:30–) — after the reboot: two lanes in parallel, row 13 tested
+
+- The commit limit is 63.9 GB now. `Run-Session.ps1` holds the lane mutex only while the games start and waits for
+  22 GB commit headroom, so lanes 1 and 2 run at the same time: four games used 37 of 63.9 GB. `Run-All -Lanes 1,2`
+  halves the regression time.
+- After a reboot Steam must run (offline mode is fine); without it the games hang in the `init` scene.
+- `diagnostics` (lane 1) and `test-drive-latejoin` (lane 2) passed on the first run, in parallel. Row 13 is complete in
+  code; the net-hold race of 8.1, the away-label screenshot (4.3) and the hand checks of spikes 1.3/1.4 are open.
+- A run that is killed before its restore left a test car in lane 1's server save, and every later run restored that
+  dirty save (`car-baseline` failed twice). The clean save is back, and `Run-Session` now leaves a marker with its
+  backup path, so the next run on that lane restores an interrupted run's backup first.
+- `car-placement` failed once on lane 2 (B's car from parking never finished loading, so no unpark request) and
+  passed on the rerun; `ParkingSync` now logs that case.
+- Your answers are in QUESTIONS.md: travel fees follow a server rule (`travel_fees`, added to row 10's design), all
+  other questions take the defaults (generator client as opt-in, row 10 option C, …). Nothing is open.
+- Branches from the agents: `change/sync-workshop-machines` (row 5a, Core + server store, agent still working),
+  `change/economy-audit` (row 10 OpenSpec, complete), `change/sync-players-and-scenes-part2` (row 6 part 2 seat and
+  engine, in code, needs a game run).
+- Running: full regression of the row 13 branch on both lanes.
+
+## 2026-10-06 (17:10–18:15) — row 13 merged; M4 branches tested in the game
+
+- Row 13 merged into `main` after regression `20261006-165221` (30 scenarios on two lanes, green; one flaky run was a
+  stall of the server loop that timed out every client, fixed: heartbeat deadlines move by the stall).
+- Real bug found by row 5a's scenario and fixed on `main`: every client handed out item UIDs from its own profile's
+  counter, so two players (or one player after a rejoin) created items with the same UID. Each player now uses its
+  own UID range (player id × 10^12).
+- Agents wrote rows 5a, 5b, 6 part 2, 8 part 2 and 10; I merged `main` into each and tested them in the game:
+  - row 8 part 2 (host from the game, password, admin key, kick, ping, toasts): `session-admin` and
+    `host-from-game` passed on the first run;
+  - row 6 part 2 (seat and engine): `seat-engine` passes; the remote engine sound is now built like the game's own
+    (a decompile showed `EngineAudioController` is one global object, so a remote car gets its own sound prefab);
+  - row 5a (workshop machines): 44 checks of `tools-slots` pass (tire changer, balancer with its lock, spring clamp,
+    brake lathe, battery charger, rejoin); the engine stand step is fixed in the scenario, not re-run yet;
+  - rows 5b and 10 are in code, not run yet.
+- `integration/m4-seat-host` (rows 6 part 2 + 8 part 2 on `main`) builds; its full regression on both lanes was
+  stopped by Claude Code because free RAM ran critically low with four games. See QUESTIONS.md: until you answer,
+  I run one lane at a time and do not restart that regression myself.
+
+## 2026-10-06 (18:15–20:10) — rows 6 part 2, 8 part 2 and 10 merged; four fixes on `main`
+
+- `main` = `43fca9a`: rows 6 part 2 (seat and engine), 8 part 2 (host from the game, password, admin key, kick,
+  ping, toasts) and 10 (economy: every money, scrap and XP path through the server, travel fees by the server rule
+  `travel_fees`) merged after a single-lane regression `20261006-184911` (36 of 37; the one failure was the job car's
+  place, fixed below and re-run: `economy-trades`, `jobs`, `jobs-latejoin`, `car-placement`, `car-live`, `car-race`,
+  `car-baseline` pass).
+- Fixes found by the new scenarios, all on `main`:
+  - items synced through the inventory keep valid mount (bolt) data and groups keep their size (an engine could be
+    built at scale 0 or throw on the engine stand);
+  - a job car's place reaches the other players (the game places it after loading, and a move that arrives while
+    the other player's copy still loads is now kept until it has loaded);
+  - the spawner's part revision follows its own baseline uploads;
+  - the spill fine depends on the part (an oil pan costs 100), so the server accepts a bounded range.
+- Still open in M4: row 5a (workshop machines: everything passes except the engine stand, whose build coroutine
+  throws a native exception in the harness; a probe that logs each build step is ready) and row 5b (car tools, in
+  code on `change/sync-workshop-car-tools`, not run yet). Several row 10 steps (paint, tint, welder, interior,
+  repair, auction, barn) are skipped until rows 5a/5b open those windows in the guard.
 
 ## 2026-10-06 (15:10–15:40) — row 3 merged; row 4 car details (branch `change/sync-car-details`)
 

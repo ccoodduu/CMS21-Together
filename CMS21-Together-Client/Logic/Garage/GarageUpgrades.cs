@@ -3,6 +3,7 @@ using CMS.UI.Logic.Upgrades;
 using CMS21_Together_Core.Data;
 using CMS21_Together_Core.Logging;
 using CMS21_Together_Core.Network.Packets;
+using CMS21Together.Logic.Economy;
 using CMS21Together.Data;
 using CMS21Together.Network;
 using HarmonyLib;
@@ -15,6 +16,7 @@ namespace CMS21Together.Logic.Garage;
 public static class GarageUpgrades
 {
 	public static bool IsSyncing = false;
+	private const int SkillResetCostPerPoint = 1000;
 	
 	[HarmonyPatch(typeof(GarageAndToolsTab), nameof(GarageAndToolsTab.UnlockCurrentSelectedSkillAction))]
 	[HarmonyPrefix]
@@ -67,6 +69,22 @@ public static class GarageUpgrades
 	}
 	
 	
+	[HarmonyPatch(typeof(SkillsTab), nameof(SkillsTab.ResetSkillsAction))]
+	[HarmonyPrefix]
+	public static bool ResetSkillsHook(SkillsTab __instance)
+	{
+		if (!Client.Instance.IsConnected || IsSyncing) return true;
+		if (!__instance.CanReset(out CMS.UI.Logic.ResetUpgradeLockReason _)) return true;
+
+		int points = __instance.pointsToReset;
+		Log.Info($"[Client] Requesting a skill reset ({points} points).");
+		EconomyRequests.Send(new EconomyRequestPacket { Reason = EconomyReason.SkillReset, Money = -SkillResetCostPerPoint * points, Arg = points }, result =>
+		{
+			if (!result.Accepted) TradeHooks.ShowRefusal(result);
+		});
+		return false;
+	}
+
 	public static IEnumerator SyncUpgrades(GarageState packet, GarageAndToolsTab tools, int snapshotId)
 	{
 		yield return new WaitForEndOfFrame();
@@ -133,6 +151,7 @@ public static class GarageUpgrades
 		var skillsTab = Object.FindObjectOfType<SkillsTab>();
 		if (skillsTab != null && skillsTab.isActiveAndEnabled)
 		{
+			skillsTab.PrepareItems();
 			skillsTab.Invoke(nameof(SkillsTab.RefreshGUI), 0f);
 		}
 

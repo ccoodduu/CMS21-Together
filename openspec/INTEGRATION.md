@@ -21,6 +21,7 @@ part 2. "Owner" defines it; "Users" only call or subscribe.
 | `CarSpawnResponse` + `CarData`, `CarDataVersion` (+ `Place`) | S→C | 2 | 1's snapshot spawn info carries them |
 | `JobsState`, `OrderGeneratorRole`, `OrderGenerated`, `OrderAdded`, `OrderAction`, `OrderActionResult`, `JobStarted`, `JobProgress`, `JobEndRequest`, `JobRemoved` (+ `IsCompleted`) | both | 3 | `CarSpawnRequest.IsJob/JobID` validated |
 | `CarDetailsUpdate`, `CarDetailsRequest` | both | 4 | 3 and 5b trigger them only through 4's client API |
+| `CarAwayRequest`, `CarAwayUpdate`, `CarAwayRelease`, `TestDriveResult`, `TestDriveResultAck`; `CarSpawnResponse.SpecialState`; details section `Dyno` (`CarDetailSection.Dyno = 512`) | both | 13 | 1, 2, 3, 4 refuse edits of a car away for someone else (server `CarAwayRegistry.Blocks`) |
 | `ToolSlotUpdate`, `ToolSlotRejected`, `ToolSlotProperty`, `ToolPartChange`, `ToolPosition`, `ToolsState`, `ToolClaim`, `ToolClaimUpdate` | both | 5a | — |
 | `ToolAction` | C→S→others | 5b | relay only |
 | `ItemActionType.Update` | both | 5a | UID-idempotent ADD is 1's |
@@ -54,6 +55,8 @@ row 8's client enum `JoinFailure` and never travel.
 | server | `ISaveSection`, `ISnapshotProvider`, `[SessionSection]`, `SyncOrder` | 7 | 1, 2, 3, 4, 5a, 6 |
 | client | `SyncTracker.Applied(key)`, `InSnapshot`; `ClientData.IsInitialSyncFinished` | 7 | all snapshot handlers |
 | client | `ClientScene.LocalScene`, `IsGarageReady` (true from start of `CustomLoad`), `GarageBound(apply, mirrorOnly)`, `LeavingScene(from, to)` | 6 | 1, 2, 4, 5a, 5b (gate); 3 (`IsGarageReady`); 13 (`LeavingScene`) |
+| server | `CarAwayRegistry.Blocks(loader, client, what)`, `IsOwner`, `OwnerOf`, `SendActive`; `CarDetailsStore.FoldTestDrive` | 13 | 1 (claims, part changes, delete), 2 (move, lift, park), 3 (job end), 4 (details updates) |
+| client | `CarAwaySync.LockedForMe`, `BlockIfLocked`, `Request`, `Release`, event `Released`; `DynoSync.Commit(carLoader)`, `IsOpenOn`; `TestDriveSync.HoldDeparture` (called from `SceneHooks`) | 13 | 1 (`PartClaims`, crane), 2 (move, lift), 3 (job end), 4 (poll skip), 5b (`MeasurePower`) |
 | server | `PresenceRegistry.InScene(scene)`, `PresenceEvents.SceneChanged/Left` | 6 | 1 (claims), 3 (generator, order claims), 5a (balancer), 13 |
 | client | `PresenceManager.EnsureNotSeatedIn(loader)` | 6 | subscribed to 2's `BeforeRemoteCarMove`, called by `CarSpawnDelete` |
 | server | `CarPartsStore.RegisterSpawn(record, clientId)`, `ClearLoader(loader, reason)`; events `SpawnRegistered`, `LoaderCleared(loader, removedRecord, reason ∈ Deleted, Parked, JobEnded, SpawnerLeft)` | 1 | 2 (unpark, park, lift reset, return to parking on `SpawnerLeft`), 3 (job spawn/claim release/job end; reopen on `SpawnerLeft`) |
@@ -169,10 +172,11 @@ Verbs are globally unique (`Commands.Discover` throws on a duplicate). Existing:
 | Owner | Verbs |
 |---|---|
 | 7 | `stats-add`, `to-menu` (g1); `player-key`, `send-early-stats`, `profile-pref` (later groups) |
-| 6 | `travel`, `scene-list`, `teleport`, `set-name`, `leave-mark`, `sit`, `stand`, `engine`, `buy-car-here`, `junk-buy` |
+| 6 | `travel`, `scene-list`, `teleport`, `set-name`, `leave-mark`, `sit`, `stand`, `engine`, `seat-trace` (spike), `buy-car-here`, `junk-buy` |
 | 1 | `car-spawn`, `car-delete`, `car-loaded`, `car-list`, `car-ready`, `car-baseline`, `car-hold-snapshot`, `car-dlc-cars`, `car-request`, `part-state`, `part-keys`, `part-unmount`, `part-fast-unmount`, `part-fast-mount`, `part-action-unmount`, `part-claim`, `part-corrupt`, `part-hold-remote`, `crane-out`, `crane-in` |
 | 2 | `lift`, `lifters`, `car-move`, `car-place`, `placement`, `net-hold`, `park`, `unpark`, `park-swap`, `parking`, `parking-unlock`, `park-incoming`, `dev-spawn`, `placement-trace` and `parking-probe` (spike) |
 | 3 | `jobs-trace`, `orders-generate`, `orders-mission`, `orders-autogen`, `orders-list`, `order-slots`, `orders-accept`, `orders-decline`, `orders-reload`, `job-examine`, `job-check`, `job-finish`, `tutorial-run`, `job-spawn-unclaimed`, `job-end-dup` |
+| 13 | `testdrive-trace`, `testdrive-go`, `testdrive-drive`, `testdrive-finish`, `testdrive-partnames`, `testdrive-hold`, `testdrive-skip-result`, `dyno-run`, `pathtest-run`, `diag-examine`, `away-try`; dump section `away`, car field `specialState`; scenarios `test-drive`, `test-drive-latejoin`, `diagnostics` (spikes: `test-drive-trace`, `diag-trace`, `departure-hold`) |
 | 4 | `cardetails-probe`, `cardetails-roundtrip`, `cardetails-ui`, `cardetails-fluid`, `-wheel`, `-alignment`, `-headlamp`, `-gearbox`, `-tune`, `-paint`, `-tint`, `-wash`, `-plate`, `-mileage`, `-lights`, `-bonus`, `-randomize`, `-hold` |
 | 5a | `tool-list`, `tool-trace` (5b adds hooks to it), `give-item`, `give-group`, `tool-put`, `tool-take`, `tool-hold`, `tool-local-put`, `tool-mount`, `tool-balance`, `tool-balance-open`, `tool-balance-cancel`, `tool-charger`, `tool-angle`, `tool-stand-part`, `tool-move`, `tool-repair`, `tool-paint-part` |
 | 5b | `tool-engine-out`, `tool-engine-in`, `tool-paint-car`, `tool-use`, `tool-dyno` |
@@ -197,7 +201,7 @@ Verbs are globally unique (`Commands.Discover` throws on a duplicate). Existing:
 | server commands `password`, `serverinfo` (8); `compat` (9); `desync`, `bugreport` (14); existing `kick`, `stop` (`kick` moves to `Server.Refuse`) | as listed |
 
 Scenarios (unique): 7 `server-restart`, `profile-safety`, `rejoin`, `latejoin`, `persistence-restart`,
-`duplicate-identity`; 6 `presence-latejoin`, `scenes`, `presence`, `purchases`; 1 `car-parts`, `car-parts-latejoin`;
+`duplicate-identity`; 6 `presence-latejoin`, `scenes`, `seat-engine`, `seat-engine-trace` (spike), `presence`, `purchases`; 1 `car-parts`, `car-parts-latejoin`;
 2 `car-placement`, `car-placement-latejoin`, `car-parking-full`; 3 `jobs-trace`, `jobs`, `jobs-latejoin`,
 `jobs-restart`; 4 `car-details`, `car-details-latejoin`; 5a `tools-slots`, `tools-race`, `tools-latejoin`;
 5b `tools-car-effects`; 8 `join-ui`, `join-coldstart`, `host-from-game`, `session-admin`; 9 `compat-refusal`;
@@ -252,8 +256,8 @@ sees (hidden, kept parked, or a guard message); rows that land before this is de
 
 ## Not resolved here (recommendations)
 
-1. **Row 13 is not drafted**, but rows 6 (`LeavingScene`), 5b (dyno trigger) and 4 (dyno non-goal) depend on it.
-   Recommendation: draft row 13 before M3 starts; until then 5b's group 10 stays parked.
+1. ~~Row 13 is not drafted~~ — merged 2026-10-06: the away claim, test drive fold, dyno details section and test path
+   `specialState` are on `main`; 5b's dyno trigger calls `DynoSync.Commit`.
 2. **Steam stats for non-finishers** depend on row 3's trace finding a callable game entry point for the job's
    stats/achievements. Recommendation: if none exists, accept "finisher only" as a known gap rather than calling
    Steamworks directly (the harness instances share one Steam account and cannot verify it).

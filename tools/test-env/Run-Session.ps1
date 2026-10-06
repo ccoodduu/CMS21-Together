@@ -13,7 +13,8 @@ param(
     [string]$Window = "960x540",
     [switch]$Sound,
     [switch]$KeepRunning,
-    [int]$MinFreeMemoryGb = 12
+    [int]$MinCommitHeadroomGb = 22,
+    [int]$MinFreeMemoryGb = 6
 )
 
 $ErrorActionPreference = "Stop"
@@ -34,16 +35,31 @@ if (-not (Test-Path -LiteralPath $scenarioFile)) { throw "Unknown scenario: $Sce
 $launchFile = Join-Path $PSScriptRoot "scenarios\$Scenario.launch.psd1"
 $launchArgs = if (Test-Path -LiteralPath $launchFile) { Import-PowerShellDataFile -LiteralPath $launchFile } else { $null }
 
-# Two game instances use most of the PC's 32 GB; two lanes at once ran it out of memory and hung clients.
-# Lanes therefore take turns with the game: the mutex is held for the whole run.
+# Each game instance commits 8-10 GB (mostly Direct3D) but touches only 2-4 GB, so the Windows commit limit, not RAM,
+# decides how many lanes fit. A lane takes the launch mutex, waits for enough commit headroom, starts its games and
+# releases the mutex once they reach the main menu, so the next lane measures the headroom with them loaded.
 $gameMutex = New-Object System.Threading.Mutex($false, "Global\CMS21TogetherGameLane")
+$holdingMutex = $false
+function Exit-LaunchLock {
+    if ($script:holdingMutex) { $script:holdingMutex = $false; $gameMutex.ReleaseMutex() }
+}
+function Get-MemoryHeadroom {
+    $os = Get-CimInstance Win32_OperatingSystem
+    [pscustomobject]@{ CommitGb = $os.FreeVirtualMemory / 1MB; FreeGb = $os.FreePhysicalMemory / 1MB }
+}
 try {
-    if (-not $gameMutex.WaitOne([TimeSpan]::FromMinutes(30))) { throw "Another lane has been running the game for 30 minutes; giving up." }
+    if (-not $gameMutex.WaitOne([TimeSpan]::FromMinutes(30))) { throw "Another lane has been starting its games for 30 minutes; giving up." }
 } catch [System.Threading.AbandonedMutexException] { }
-$freeGb = (Get-CimInstance Win32_OperatingSystem).FreePhysicalMemory / 1MB
-if ($freeGb -lt $MinFreeMemoryGb) {
-    $gameMutex.ReleaseMutex()
-    throw ("Only {0:N1} GB RAM free (need {1} GB for two game instances); not starting." -f $freeGb, $MinFreeMemoryGb)
+$holdingMutex = $true
+$memoryDeadline = (Get-Date).AddMinutes(30)
+while ($true) {
+    $headroom = Get-MemoryHeadroom
+    if ($headroom.CommitGb -ge $MinCommitHeadroomGb -and $headroom.FreeGb -ge $MinFreeMemoryGb) { break }
+    if ((Get-Date) -gt $memoryDeadline) {
+        Exit-LaunchLock
+        throw ("Only {0:N1} GB commit and {1:N1} GB RAM free for 30 minutes (need {2} and {3}); not starting." -f $headroom.CommitGb, $headroom.FreeGb, $MinCommitHeadroomGb, $MinFreeMemoryGb)
+    }
+    Start-Sleep -Seconds 5
 }
 if (Get-LaneGameProcesses $laneInfo) { throw "A game instance of lane $Lane is already running; refusing to start a test run." }
 foreach ($name in $Instances) { Assert-InstanceIsolated $name }
@@ -53,10 +69,23 @@ New-Item -ItemType Directory -Force -Path $runDir | Out-Null
 
 $serverSaves = Join-Path $serverDir "Saves"
 $serverConfig = Join-Path $serverDir "server_config.ini"
+$runMarker = Join-Path $serverDir "harness_run_in_progress.txt"
+if (Test-Path -LiteralPath $runMarker) {
+    $interrupted = (Get-Content -LiteralPath $runMarker -Raw).Trim()
+    if (Test-Path -LiteralPath (Join-Path $interrupted "Server\server_config.ini")) {
+        if (Test-Path -LiteralPath $serverSaves) { Remove-Item -LiteralPath $serverSaves -Recurse -Force }
+        $interruptedSaves = Join-Path $interrupted "Server\Saves"
+        if (Test-Path -LiteralPath $interruptedSaves) { Copy-Item -LiteralPath $interruptedSaves -Destination $serverSaves -Recurse }
+        Copy-Item -LiteralPath (Join-Path $interrupted "Server\server_config.ini") -Destination $serverConfig -Force
+        Write-Host "Restored the server state an interrupted run left behind (backup $interrupted)"
+    }
+    Remove-Item -LiteralPath $runMarker -Force
+}
 $backupDir = Join-Path $runDir "_backup"
 New-Item -ItemType Directory -Force -Path (Join-Path $backupDir "Server") | Out-Null
 if (Test-Path -LiteralPath $serverSaves) { Copy-Item -LiteralPath $serverSaves -Destination (Join-Path $backupDir "Server\Saves") -Recurse }
 Copy-Item -LiteralPath $serverConfig -Destination (Join-Path $backupDir "Server\server_config.ini")
+Set-Content -LiteralPath $runMarker -Value $backupDir -Encoding utf8
 Initialize-TestServer -ServerDir $serverDir -CommandFile (Join-Path $runDir "server_commands.txt") -ConnectAddress $laneInfo.ConnectAddress
 
 function Restore-ServerState {
@@ -118,6 +147,11 @@ try {
         if (@($Instances | Where-Object { Get-HarnessStatus $_ }).Count -eq $Instances.Count) { break }
         Start-Sleep -Seconds 2
     }
+    $menuDeadline = (Get-Date).AddSeconds(180)
+    while ((Get-Date) -lt $menuDeadline -and @($Instances | Where-Object { $s = Get-HarnessStatus $_; $s -and $s.scene -eq "Menu" -and $s.playable }).Count -lt $Instances.Count) {
+        Start-Sleep -Seconds 2
+    }
+    Exit-LaunchLock
 
     $ctx = [pscustomobject]@{ RunDir = $runDir; Instances = $Instances; Result = $result; ServerDir = $serverDir; Lane = $laneInfo }
     & $scenarioFile -Ctx $ctx
@@ -150,7 +184,7 @@ finally {
     }
     if (Test-Path -LiteralPath $serverSaves) { Copy-Item -LiteralPath $serverSaves -Destination (Join-Path $runDir "server_saves_after") -Recurse }
 
-    if (-not $KeepRunning) { Restore-ServerState } else { Write-Host "KeepRunning: server saves backup in $backupDir" }
+    if (-not $KeepRunning) { Restore-ServerState; Remove-Item -LiteralPath $runMarker -Force -ErrorAction SilentlyContinue } else { Write-Host "KeepRunning: server saves backup in $backupDir" }
 
     foreach ($name in $Instances) {
         $clientLog = Join-Path $runDir "client_$name.log"
@@ -171,5 +205,5 @@ finally {
     Write-Host ("RESULT L{0} {1}: {2}" -f $Lane, $Scenario, $(if ($result.passed) { "PASSED" } else { "FAILED" }))
     $result.notes | ForEach-Object { Write-Host "  $_" }
     Write-Host "Run folder: $runDir"
-    $gameMutex.ReleaseMutex()
+    Exit-LaunchLock
 }

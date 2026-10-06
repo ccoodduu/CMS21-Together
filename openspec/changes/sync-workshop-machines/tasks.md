@@ -30,7 +30,7 @@
 >   so flipping them needs that scenario changed too); the DLC rule from INTEGRATION.md ("DLC content on shared
 >   machines outside `SharedDlc`") has no code yet.
 > - Harness item IDs are guesses until the first run: wheel `rim_3` + `tire_standard` (WheelData 15/195/65/35), shock
->   absorber `amortyzatorPrzod_1` + `sprezynnaPrzod_1` + `czapkaAmorPrzod_1`, engine `engine_r4`, disc
+>   absorber `amortyzatorPrzod_1` + `sprezynnaPrzod_1` + `czapkaAmorPrzod_1`, engine `engine_v8_stary`, disc
 >   `tarczaHamulcowa_1`, battery `akumulator`.
 
 Order: spikes and dependency checks, shared foundation, then the slot machines, item processing and tool positions

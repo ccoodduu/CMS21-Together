@@ -3,17 +3,17 @@
 Open questions that block a decision. Each has the default we work with until answered.
 Answered ones move to the bottom with the answer.
 
-## Open — new (2026-10-06, row 2)
+## Open — new (2026-10-06 evening)
 
-1. **Moving a car onto an occupied place.** In the game, moving a car onto a place where another car stands swaps the
-   two cars. The design said the server refuses a move onto an occupied place, which would make that swap fail
-   whenever you are connected. Options: (a) a swap request, so the server swaps both cars in one change; (b) refuse it
-   and show "the place is taken" (simpler, but a vanilla feature stops working). **Default: (a).**
-2. **Removing an unloadable car from parking.** When a parked car cannot load (its config or DLC is missing), the game
-   asks "remove it from parking?" and deletes it. Default: blocked while connected, with a message, because it only
-   happens when players have different DLC or mods.
+1. **Two lanes and Claude Code's memory guard.** At about 18:00 Claude Code stopped the full regression on both lanes
+   (four games) because the PC ran critically low on free RAM, and it tells me not to restart that run on my own.
+   The games commit memory fine now (64 GB limit), but four of them leave little free physical RAM. Options: (a) I
+   stay on one lane at a time (safe, regressions take about 40 min); (b) you start Claude Code with
+   `CLAUDE_CODE_DISABLE_BG_SHELL_PRESSURE_REAP=1` so it does not stop runs under memory pressure, and I keep two lanes
+   but only start the second when at least 10 GB RAM is free. **Default: (a)** until you answer. The stopped run was the
+   regression of `integration/m4-seat-host` (rows 6 part 2 and 8 part 2); please restart it or tell me to.
 
-## Open — smaller, defaults probably fine
+## Accepted defaults (user, 2026-10-06)
 
 - Remote players see only the finished part state, not the bolt animation, while a part is reserved.
 - When two players edit the same car-detail section at once, the last write wins.
@@ -31,22 +31,26 @@ Answered ones move to the bottom with the answer.
 
 ## Decide later
 
-- **Server-hosted generator client — measured, needs your decision** (your idea; spike results in
-  `docs/spikes/generator-client.md`, 2026-10-06): a hidden game instance runs headless (`-batchmode -nographics`,
-  15 fps) at 2.6 GB RAM and 5 % of one CPU core, reaches the garage in 14 s and generates orders on its own with no
-  player. It needs the game and a logged-in Steam on the server PC (same account as a player works on one PC; another
-  PC with the same account is untested). Options: (a) add it as an optional server feature that becomes the order
-  generator when present (row 3 already elects a generator, so it slots in as the top candidate); (b) also use it for
-  junkyard/barn layouts later (row 15, not measured yet); (c) keep only the elected player generator.
-  **Default: (a), built after row 3 works with players, as an opt-in `generator_client = true` in the server config.**
-
-- **How row 10 syncs money** (from `docs/spikes/economy-paths.md`, 2026-10-06): (A) one central hook on the game's
-  money function, where the server trusts the client's amount; (B) one request per feature, where the server computes
-  every price; (C) a mix: B where the server can compute the price (fixed fees, parking levels, skill reset), A with
-  range checks for values the client rolls (crate cards, drag prizes, job payout until row 3). Decide when row 10
-  starts; default: C.
+Nothing open.
 
 ## Answered
+
+Answered by the user on 2026-10-06 ("4. server rule, andre questions default"):
+
+1. **Moving a car onto an occupied place:** a swap request; the server swaps both cars in one change.
+2. **Removing an unloadable car from parking:** blocked while connected, with a message.
+3. **Money or scrap changes no game feature claims:** dropped and logged; the scenarios' counter must stay 0.
+4. **Travel fees:** one server rule (server config), not each player's own game setting.
+5. **Fees charged after the fact** can take money down to 0 and are never refused, as in the game.
+6. **Selling a car** is refused while another player works on it, while it is away, or if it is a job car.
+7. **Prices the game computes on the client** are trusted within bounds until row 16.
+8. **The barn count** is shared.
+9. **Skill reset:** any player can reset the shared skills; the others get a message.
+10. **The drag strip** and the map's "measure power" stay blocked.
+11. **Server-hosted generator client:** (a), an opt-in `generator_client = true` server feature that becomes the order
+    generator, built after row 3 works with players.
+12. **How row 10 syncs money:** C, the mix (server-computed where it can, range-checked client values otherwise).
+13. The "smaller, defaults probably fine" list stands as written.
 
 Answered by the user on 2026-10-05:
 

@@ -42,7 +42,7 @@ namespace CMS21_Together_Server.Network
 				string line = raw.Trim();
 				if (line.Length == 0) continue;
 				if (!line.StartsWith("/")) line = "/" + line;
-				Logger.Info($"[CommandFile] {line}");
+				Logger.Info($"[CommandFile] {CommandSystem.Redact(line)}");
 				CommandSystem.Execute(line);
 			}
 		}

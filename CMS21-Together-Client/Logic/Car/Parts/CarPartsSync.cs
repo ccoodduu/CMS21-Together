@@ -92,6 +92,7 @@ public static class CarPartsSync
 		ownBaselinePending.Add(packet.CarLoaderID);
 		var sync = Get(packet.CarLoaderID);
 		sync.SpawnSeq = packet.SpawnSeq;
+		sync.Revision = 0;
 		sync.State = LoaderSyncState.Loading;
 		Details.CarDetailsSync.OnCarLoading(sync.Loader);
 		sync.Registry = null;
@@ -143,6 +144,7 @@ public static class CarPartsSync
 
 		SendSnapshot(loader, sync.SpawnSeq, carLoader.EngineParams?.EngineSwap, body, sub);
 		Remember(sync, body, sub);
+		sync.Revision++;
 		ownBaselinePending.Remove(loader);
 		sync.State = LoaderSyncState.Ready;
 		Log.Info($"[Parts] Loader {loader}: baseline sent ({body.Count} body, {sub.Count} mechanical, SpawnSeq {sync.SpawnSeq}).");

@@ -71,6 +71,10 @@ namespace CMS21Together.Data
                 IsBalanced = item.WheelData.IsBalanced
             };
 
+            var plate = item.LPData;
+            if (!object.ReferenceEquals(plate, null) && (!string.IsNullOrEmpty(plate.Name) || !string.IsNullOrEmpty(plate.Custom)))
+                modItem.LPData = new ModLPData { Name = plate.Name, Custom = plate.Custom };
+
             if (!object.ReferenceEquals(item.MountObjectData, null))
             {
                 modItem.MountObjectData = new ModMountObjectData
@@ -93,6 +97,7 @@ namespace CMS21Together.Data
                 ID = groupItem.ID,
                 IsNormalGroup = groupItem.IsNormalGroup,
                 ItemList = new List<ModItem>(),
+                Size = groupItem.Size,
                 UID = groupItem.UID
             };
 
@@ -167,15 +172,14 @@ namespace CMS21Together.Data
             }
             item.WheelData = wheelData;
 
-            if (modItem.MountObjectData != null)
-            {
-                item.MountObjectData = new MountObjectData
-                {
-                    ParentPath = modItem.MountObjectData.ParentPath,
-                    Condition = modItem.MountObjectData.Condition,
-                    IsStuck = modItem.MountObjectData.IsStuck
-                };
-            }
+            if (modItem.LPData != null && (modItem.LPData.Name != null || modItem.LPData.Custom != null))
+                item.LPData = new LPData { Name = modItem.LPData.Name, Custom = modItem.LPData.Custom };
+
+                        var mount = modItem.MountObjectData;
+            float[] condition = mount?.Condition ?? new float[0];
+            bool[] stuck = mount?.IsStuck ?? new bool[0];
+            if (stuck.Length != condition.Length) System.Array.Resize(ref stuck, condition.Length);
+            item.MountObjectData = new MountObjectData { ParentPath = mount?.ParentPath ?? "", Condition = condition, IsStuck = stuck };
 
             return item;
         }
@@ -207,6 +211,7 @@ namespace CMS21Together.Data
                 ItemList = new Il2CppSystem.Collections.Generic.List<Item>(),
                 UID = modGroupItem.UID
             };
+            if (modGroupItem.Size > 0f) groupItem.Size = modGroupItem.Size;
 
             if (modGroupItem.ItemList != null)
             {

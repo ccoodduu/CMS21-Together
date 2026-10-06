@@ -263,6 +263,7 @@ public static class LoaderAddition
 			yield break;
 		}
 		Log.Success("Game synced successfully.");
+		UidRange.Apply();
 		SpawnPlacement.PlaceLocalPlayer();
 		PresenceManager.PublishLocal();
 		Movement.ForceSend();
@@ -271,6 +272,7 @@ public static class LoaderAddition
 		SceneLoader.BlockProgress = false; // needed to end loading
 		NotificationCenter.IsGameReady = true; // needed to end loading
 		CameraManager.Get().ChangeCamera(CameraState.FPS);
+		yield return Car.Away.TestDriveSync.AfterReturnSync();
 		yield return new WaitForSeconds(2f);
 		screenFader.FadeTo(2f, 1f, 0f, false, true);
 		bool canOpenPieMenu = true;
@@ -280,6 +282,10 @@ public static class LoaderAddition
 			GameScript.Get().SetCurrentExamineType(ToolType.TestDrive);
 			using (FeatureGuard.Bypass()) WindowManager.Instance.Show(WindowID.ExamineReport, false);
 			canOpenPieMenu = false;
+		}
+		else
+		{
+			Car.Away.TestDriveSync.ReleaseAfterReturn();
 		}
 		if (dlcErrorWindow.ShouldShow())
 		{

@@ -75,7 +75,17 @@ namespace CMS21_Together_Server.Network.Handlers
 			return totalPointsEarned - totalPointsSpent;
 		}
 
-		private static int CalculateSpentPoints(Dictionary<string, bool[]> playerSkills)
+		public static void ResetPointSkills()
+		{
+			var garageState = GameDataManager.CurrentState.GarageState;
+			foreach (var levels in garageState.PlayerUpgradeLevels.Values)
+				for (int i = 0; levels != null && i < levels.Length; i++) levels[i] = false;
+			garageState.AvailablePoints = ComputeAvailablePoints(GameDataManager.CurrentState.WorldState, garageState);
+			Logger.Info($"[Server] Point skills reset, available points {garageState.AvailablePoints}.");
+			Server.SendToClients(garageState);
+		}
+
+		public static int CalculateSpentPoints(Dictionary<string, bool[]> playerSkills)
 		{
 			int spent = 0;
 			foreach (var skill in playerSkills)
