@@ -92,30 +92,30 @@ Prerequisites (merged): `session-persistence-and-rejoin` groups 1–2 (contract,
 
 ## 4. Client: away mirror and locks
 
-- [ ] 4.1 `Logic/Car/Away/CarAwaySync.cs`: mirror from `CarAwayUpdate` (snapshot and live, applied at once, cleared by
+- [x] 4.1 **Done (2026-10-06):** `test-drive` compares `away` on A and B. `Logic/Car/Away/CarAwaySync.cs`: mirror from `CarAwayUpdate` (snapshot and live, applied at once, cleared by
       `ClientData.Reset` before the snapshot refills it), `Request(loader, kind, onGranted, onRefused)` with `RequestId`
       and a 5 s timeout, `Release(loader, specialState)`, `LockedForMe(loader, out owner, out kind)`. Verify: harness dump
       section `away` (7.1) equals on A and B after a grant and a release.
-- [ ] 4.2 Lock checks per D3 in `PartClaims.AllowAction`/`AfterCanTakeOffCarPart`, `EngineCraneHooks`, row 2's car
+- [x] 4.2 **Done (2026-10-06):** B's unmount and move blocked locally in `test-drive` (`away-try`); park is left to the server's `Taken` refusal. Lock checks per D3 in `PartClaims.AllowAction`/`AfterCanTakeOffCarPart`, `EngineCraneHooks`, row 2's car
       move/lift/park hooks, row 3's job-end hook, and the dyno/path/track starts; row 4's poll skips locked loaders; toast
       names the owner and the activity. Verify: with A holding a claim, B's `part-unmount`, `car-move`, `park` and
       `job-finish` on that car are blocked locally (`PartClaims.LastBlocked` / log) and send nothing.
-- [ ] 4.3 Away label above claimed cars ("<name> — test drive / test path / dyno") drawn next to row 6's `NameTags`
+- [ ] 4.3 **In code (2026-10-06):** `AwayLabels`; screenshot check open. Away label above claimed cars ("<name> — test drive / test path / dyno") drawn next to row 6's `NameTags`
       within its distance limit. Verify: `screenshot` on B shows the label while A holds a claim and not after release.
 
 ## 5. Client: test track round trip and the mileage fix
 
-- [ ] 5.1 `Logic/Car/Away/TestDriveSync.cs` departure: prefix (after the guard, `__runOriginal`) on
+- [x] 5.1 **Done (2026-10-06):** departure held in `MoveNext` (spike 1.3); `test-drive` covers grant and the `InUse` refusal; single-player not re-checked. `Logic/Car/Away/TestDriveSync.cs` departure: prefix (after the guard, `__runOriginal`) on
       `SelectSceneToLoad(string, SceneType, bool, bool)` for `TestTrack` → hold, `Request(TestTrack)`, replay on grant
       (call from 1.3), cancel cleanup and message on refusal/timeout; on `LeavingScene(Garage, TestTrack)` flush the
       loader's pending part and detail changes (add `CarDetailsSync.FlushNow(loader)` if missing). Gated on connected.
       Verify: `testdrive-go` reaches the track with the claim granted; with B holding a part claim on the car A stays in
       the garage with a message and no fade; a single-player (not connected) test drive still works.
-- [ ] 5.2 Results on `LeavingScene(TestTrack, Garage)`: `TestDriveResult` with `NewMileage` and the track car's
+- [x] 5.2 **Done (2026-10-06):** `test-drive` (+5 km on both, server fold before the return sync). Results on `LeavingScene(TestTrack, Garage)`: `TestDriveResult` with `NewMileage` and the track car's
       cosmetics (D4, index check from 1.2); `TestDriveResultAck` handler zeroes `NewMileage` when applied. Verify: after
       `testdrive-drive 5000` + `testdrive-finish all`, the server log shows the result before A's `AskForSync` and A's
       log shows `NewMileage` 0 after the ack.
-- [ ] 5.3 `LoaderAddition.CustomLoad` per D5 and D6: after the sync, apply a leftover `NewMileage` to the
+- [x] 5.3 **Done (2026-10-06):** `test-drive` fallback (+2 km on both without a result). `LoaderAddition.CustomLoad` per D5 and D6: after the sync, apply a leftover `NewMileage` to the
       `SelectedCarLoader` car once it is `Ready` (20 s), then `NewMileage = 0`; wait for that car to be `Ready` before
       the ExamineReport block; clear `NewMileage` on disconnect. Postfix on `ExamineReportWindow.GetExaminedParts`
       (and the no-report end of `CustomLoad`) releases the claim after the part tracker flushed. Verify: with
@@ -139,7 +139,7 @@ Prerequisites (merged): `session-persistence-and-rejoin` groups 1–2 (contract,
 
 ## 7. Harness
 
-- [ ] 7.1 Add to `TestDriveCommands.cs`: `testdrive-skip-result on|off` (the next `TestDriveResult` is not sent, for
+- [ ] 7.1 **Partly (2026-10-06):** `testdrive-skip-result`, `away-try`, dump `away` and `specialState`; `dyno` field with 6.1. Add to `TestDriveCommands.cs`: `testdrive-skip-result on|off` (the next `TestDriveResult` is not sent, for
       the D5 fallback); `StateDump` section `away` (`loader`, `kind`, `owner`, `mine`) and fields `dyno` (engine fields,
       `measuredDragIndex`) and `specialState` per car in the existing car dump; add `away` to the sections
       `Compare-HarnessDumps` knows. Verify: each verb and section answers in a `-KeepRunning` session and the `connect`
@@ -147,7 +147,7 @@ Prerequisites (merged): `session-persistence-and-rejoin` groups 1–2 (contract,
 
 ## 8. Integration: harness scenarios in two instances (guard on `Enforce`)
 
-- [ ] 8.1 Scenario `tools/test-env/scenarios/test-drive.ps1`: both connect; A `car-spawn`s a car, A and B unmount and
+- [ ] 8.1 **Partly (2026-10-06):** `test-drive` passes (claim, locks, +5 km, refusal, abort, fallback); the `net-hold` race is missing. Scenario `tools/test-env/scenarios/test-drive.ps1`: both connect; A `car-spawn`s a car, A and B unmount and
       remount different parts and change a fluid; A `testdrive-go` → B's `away` shows A/`TestTrack`; B `part-unmount`,
       `car-move`, `park` on it → blocked, B's dumps unchanged; A `testdrive-drive 5000`, `testdrive-finish all` →
       A back in the garage, report ran; compare `cars`, `cardetails`, `away`: mileage +5 on both, examined flags of

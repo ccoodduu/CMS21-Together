@@ -76,7 +76,7 @@ Check ($start -eq (Mileage $b)) "same mileage before the drive ($start)"
 
 # Drive with the result.
 Send-HarnessCommand -Instance $a -Verb testdrive-go -Arguments "0" | Out-Null
-$away = Wait-Away $b 1
+$away = @(Wait-Away $b 1)
 Check ($away.Count -eq 1 -and $away[0].owner -eq $idA -and $away[0].kind -eq "TestTrack") "B sees A's test drive claim (A is $idA; $($away | ConvertTo-Json -Compress))"
 $onTrack = Wait-Track $a
 Check $onTrack "A reached the test track"
@@ -91,7 +91,7 @@ if ($onTrack) {
     Wait-InGarage $a 180
 }
 Wait-Mileage ($start + 5) "after the drive"
-Check ((Wait-Away $a 0).Count -eq 0 -and (Wait-Away $b 0).Count -eq 0) "the claim is released on both"
+Check (@(Wait-Away $a 0).Count -eq 0 -and @(Wait-Away $b 0).Count -eq 0) "the claim is released on both"
 $differ = Compare-HarnessDumps -Left (Send-HarnessCommand -Instance $a -Verb dump) -Right (Send-HarnessCommand -Instance $b -Verb dump) -Sections cars, away
 Check ($differ.Count -eq 0) "A and B have the same cars and away sections (differ: $($differ -join ', '))"
 
@@ -117,7 +117,7 @@ Send-HarnessCommand -Instance $a -Verb testdrive-skip-result -Arguments "on" | O
 $before = Mileage $a
 Check (Drive 2000 "all") "A reached the test track (no result)"
 Wait-Mileage ($before + 2) "after the drive without a result"
-Check ((Wait-Away $b 0).Count -eq 0) "the claim is released after the fallback"
+Check (@(Wait-Away $b 0).Count -eq 0) "the claim is released after the fallback"
 
 $Ctx.Result.notes += $failures
 $Ctx.Result.passed = ($failures.Count -eq 0)
