@@ -386,7 +386,7 @@ These override D4–D8 and D13 where they differ; the `jobs-trace` scenario (tas
   `CheckJob` first. The commit point is the real `CancelJob(job.id)` inside `d__139` right after the payout. One hook on
   `SteamAchievements.IncrementStat` sees every stat; other clients award the same stats through
   `PlatformManager.IncrementStat` (seven job achievements, listed in the spike).
-- Tutorial (D13): order slots are locked only inside the Tutorial scene; the tutorial mission is `IsMission && id == 0`
+- Tutorial (D13): order slots are locked only inside the Tutorial scene; the tutorial mission is `IsMission && MissionID == 0` (runtime: a fresh profile generates "mission 0" on load)
   (or `GenerateMission(_, forTutorial: true)`).
 
 ### Packets
@@ -473,3 +473,25 @@ Deferrable unknowns (answered by task 1, do not change the approach):
   connected).
 - Which game calls set the Steam stats/achievements of a finished job (D8, `JobStatsAwarder`).
 - Which native step sets each mission field (D14).
+
+## Runtime trace results (task 1.3, 2026-10-06, `jobs-trace` runs `20261006-143200` and `-143446`)
+
+- Every hook in D15 fires under Unhollower, including the coroutine `MoveNext` patches; `AcceptOrderAction` and
+  `DeclineOrderAction` fire when called with `currentJob` set.
+- Take of a job: `AcceptOrderAction` → `<TakeJob>d__19` states 0–7 → `LoadCar(car)` (with `orderConnection` and
+  `customerCar` already set) → `PrepareJob(loader, job)` → **`CancelJob(job.id)`** (the take removes the order itself)
+  → `GlobalData.AddJob(-1)`. About 1 s from accept to `PrepareJob` on the test PC. The client's `CancelJob` prefix must
+  therefore allow the own pending take (fixed).
+- Take of a mission: `<TakeMission>d__22`, no `PrepareJob`, no `CancelJob`; `AddJob(-1)` and an `OrderGenerator.Save`.
+- Decline: `DeclineOrderAction` → `CancelJob(id)`.
+- Expiry happens inside `OrderGenerator.Update` (`timeToEnd` counts down in the job's timer, but nothing removes the
+  order while `Update` is skipped), so non-generators and the generator never need a local expiry: the server's
+  `JobRemoved{Expired}` drives it.
+- The tutorial mission is the mission with `MissionID == 0`; a fresh profile generates it when the garage loads.
+- End: `GameScript.EndJob` → `<EndJobCoroutine>d__139`. The coroutine first invokes `OnEndJob` if anything subscribes
+  (then it pays nothing), then refuses with an info window when bolts or the body are missing, oil or a fluid is low,
+  or other parts got worse than `otherPartsCondition`; only then it pays and calls `CancelJob(job.id)`. An incomplete
+  harness job therefore ends nowhere. The `jobs` scenario drives the end through `job-end-direct` (begin context,
+  `AddPlayerMoney`, `AddPlayerExp`, `CancelJob`), which exercises the capture and the server; the vanilla checks are
+  part of the user's playtest.
+- No Steam stat or achievement call was seen in these runs (no job was completed through the vanilla checks).

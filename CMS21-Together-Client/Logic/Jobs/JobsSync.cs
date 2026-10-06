@@ -24,7 +24,6 @@ public static class JobsSync
 
 	private static JobsState mirror;
 	private static int applyDepth;
-	private static bool generatorLoaded;
 
 	public static bool IsGenerator { get; private set; }
 	public static bool IsApplying => applyDepth > 0;
@@ -33,18 +32,16 @@ public static class JobsSync
 
 	private static OrderGenerator Generator => Singleton<GameManager>.Instance?.OrderGenerator;
 
-	private static bool CanApply => ClientScene.IsGarageReady && generatorLoaded && Generator != null;
+	private static bool CanApply => ClientScene.IsGarageReady && Generator != null;
 
 	public static void Reset()
 	{
 		mirror = null;
-		generatorLoaded = false;
 		PendingTake = -1;
 	}
 
 	public static void OnGeneratorLoaded()
 	{
-		generatorLoaded = true;
 		if (mirror != null && Client.Instance.IsConnectionValid) ApplyFull();
 	}
 

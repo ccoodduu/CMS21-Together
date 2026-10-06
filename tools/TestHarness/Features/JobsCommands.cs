@@ -148,6 +148,18 @@ public static class JobsCommands
         return new { job.id, wanted = wanted.Count, repaired, wantedIds = wanted.Take(8).ToList(), carParts = sample };
     }
 
+    [HarnessCommand("job-end-direct")]
+    private static object JobEndDirect(string args)
+    {
+        var (job, carLoader) = ActiveJob(args);
+        job.IsCompleted = true;
+        CMS21Together.Logic.Jobs.JobEndContext.Begin(job, CarLoaderPlaces.Get().GetCarLoaderId(carLoader));
+        GlobalData.AddPlayerMoney(1234);
+        GlobalData.AddPlayerExp(50, false);
+        Generator.CancelJob(job.id);
+        return new { job.id, payout = 1234, xp = 50 };
+    }
+
     [HarnessCommand("job-check")]
     private static object JobCheck(string args)
     {

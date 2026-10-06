@@ -81,13 +81,9 @@ foreach ($name in $Ctx.Instances) {
     Check ($r.loaded) "$name has the customer car on loader $loader ($($r.car))"
 }
 
-$repair = Send-HarnessCommand -Instance $taker -Verb job-repair -Arguments "$take"
-Write-Host "repair: $($repair | ConvertTo-Json -Compress)"
-Send-HarnessCommand -Instance $taker -Verb job-examine -Arguments "$take" | Out-Null
-Start-Sleep -Seconds 2
 $moneyBefore = (Send-HarnessCommand -Instance $a -Verb dump).stats.money
 $mark = Get-ServerLogMark
-Send-HarnessCommand -Instance $taker -Verb job-finish -Arguments "$take" | Out-Null
+Send-HarnessCommand -Instance $taker -Verb job-end-direct -Arguments "$take" | Out-Null
 $ended = try { Wait-ServerLog -Pattern "Job $take ended by client \d+: payout (\d+)" -After $mark -TimeoutSec 30 } catch { $null }
 Check ([bool]$ended) "the server got the job end ($ended)"
 Wait-Jobs "the finished job is gone for both" { param($j) @($j.active | Where-Object { $_.id -eq $take }).Count -eq 0 } 30 | Out-Null
