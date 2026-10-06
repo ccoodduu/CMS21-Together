@@ -180,6 +180,23 @@ namespace CMS21Together.Data
             return item;
         }
 
+        public static void CopyInto(ModItem source, Item target)
+        {
+            var fresh = source.ToGameItem();
+            target.Condition = fresh.Condition;
+            target.Dent = fresh.Dent;
+            target.IsExamined = fresh.IsExamined;
+            target.IsPainted = fresh.IsPainted;
+            target.PaintType = fresh.PaintType;
+            target.PaintData = fresh.PaintData;
+            target.Quality = fresh.Quality;
+            target.WashFactor = fresh.WashFactor;
+            target.RepairAmount = source.RepairAmount;
+            target.WheelData = fresh.WheelData;
+            if (source.Color != null) target.Color = fresh.Color;
+            if (source.TintColor != null) target.TintColor = fresh.TintColor;
+        }
+
         public static GroupItem ToGameGroupItem(this ModGroupItem modGroupItem)
         {
             if (modGroupItem == null) return null;

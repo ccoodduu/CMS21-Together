@@ -1,8 +1,10 @@
 using System;
+using System.Linq;
 using CMS21_Together_Core;
 using CMS21_Together_Core.Network;
 using CMS21_Together_Core.Network.Packets;
 using CMS21_Together_Server.Data;
+using CMS21_Together_Server.Log;
 
 namespace CMS21_Together_Server.Network.Handlers
 {
@@ -14,6 +16,11 @@ namespace CMS21_Together_Server.Network.Handlers
             var state = GameDataManager.CurrentState;
             if (packet.Action == ItemActionType.Add)
             {
+                if (state.InventoryState.InventoryItems.Any(i => i.UID == packet.Item.UID))
+                {
+                    Logger.Debug($"[Inventory] ADD of item {packet.Item.UID} from client {clientId} ignored, already present.");
+                    return;
+                }
                 state.InventoryState.InventoryItems.Add(packet.Item);
                 Server.SendToClients(packet, (int)clientId);
             }
@@ -25,6 +32,17 @@ namespace CMS21_Together_Server.Network.Handlers
                     Server.SendToClients(packet, (int)clientId);
                 }
             }
+            else if (packet.Action == ItemActionType.Update)
+            {
+                int index = state.InventoryState.InventoryItems.FindIndex(i => i.UID == packet.Item.UID);
+                if (index < 0)
+                {
+                    Logger.Info($"[Inventory] Update of item {packet.Item.UID} from client {clientId} ignored, not in the inventory.");
+                    return;
+                }
+                state.InventoryState.InventoryItems[index] = packet.Item;
+                Server.SendToClients(packet, (int)clientId);
+            }
         }
 
         [PacketHandler(PacketTypes.InventoryGroupItemAction)]
@@ -33,6 +51,11 @@ namespace CMS21_Together_Server.Network.Handlers
             var state = GameDataManager.CurrentState;
             if (packet.Action == ItemActionType.Add)
             {
+                if (state.InventoryState.InventoryGroupItems.Any(g => g.UID == packet.GroupItem.UID))
+                {
+                    Logger.Debug($"[Inventory] ADD of group {packet.GroupItem.UID} from client {clientId} ignored, already present.");
+                    return;
+                }
                 state.InventoryState.InventoryGroupItems.Add(packet.GroupItem);
                 Server.SendToClients(packet, (int)clientId);
             }

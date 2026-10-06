@@ -128,15 +128,23 @@ namespace CMS21Together.Network.Handlers
             IgnoreInventoryHooks = true;
             try
             {
+                var inventory = Singleton<GameManager>.Instance.Inventory;
                 if (packet.Action == ItemActionType.Add)
                 {
-                    Singleton<GameManager>.Instance.Inventory.Add(packet.Item.ToGameItem());
+                    if (inventory.GetItem(packet.Item.UID) == null)
+                        inventory.Add(packet.Item.ToGameItem());
                 }
                 else if (packet.Action == ItemActionType.Remove)
                 {
-                    var item = Singleton<GameManager>.Instance.Inventory.GetItem(packet.Item.UID);
+                    var item = inventory.GetItem(packet.Item.UID);
                     if (item != null)
-                        Singleton<GameManager>.Instance.Inventory.Delete(item);
+                        inventory.Delete(item);
+                }
+                else if (packet.Action == ItemActionType.Update)
+                {
+                    var item = inventory.GetItem(packet.Item.UID);
+                    if (item != null) ItemConverter.CopyInto(packet.Item, item);
+                    else Log.Debug($"[InventoryHandlers] Update of item {packet.Item.UID} ignored, not in the inventory.");
                 }
             }
             finally
@@ -155,7 +163,8 @@ namespace CMS21Together.Network.Handlers
             {
                 if (packet.Action == ItemActionType.Add)
                 {
-                    Singleton<GameManager>.Instance.Inventory.AddGroup(packet.GroupItem.ToGameGroupItem());
+                    if (Singleton<GameManager>.Instance.Inventory.GetGroup(packet.GroupItem.UID) == null)
+                        Singleton<GameManager>.Instance.Inventory.AddGroup(packet.GroupItem.ToGameGroupItem());
                 }
                 else if (packet.Action == ItemActionType.Remove)
                 {

@@ -45,6 +45,7 @@ namespace CMS21_Together_Server.Network
 					Logger.Info("  placement         - Show lifts, car places and parking slots");
 					Logger.Info("  jobs              - Show orders, active jobs and the order generator");
 					Logger.Info("  cardetails <id>   - Show the stored details of a loader");
+					Logger.Info("  tools             - Show the workshop machines, tool positions and claims");
 					Logger.Info("  desync [check]    - Show recent desync repairs; check compares every player now");
 					Logger.Info("  kick <id>         - Kick a player by ID");
 					Logger.Info("  money add <val>   - Add money");
@@ -95,6 +96,12 @@ namespace CMS21_Together_Server.Network
 				case "jobs":
 					Logger.Info("Jobs:");
 					foreach (string line in Data.Jobs.JobsService.Describe())
+						Logger.Info($"  {line}");
+					break;
+
+				case "tools":
+					Logger.Info("Tools:");
+					foreach (string line in Data.Tools.ToolsStore.Describe())
 						Logger.Info($"  {line}");
 					break;
 
