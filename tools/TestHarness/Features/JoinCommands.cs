@@ -1,6 +1,8 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Text.RegularExpressions;
+using CMS21_Together_Core.Data.Enum;
 using CMS21_Together_Core.Network.Packets;
 using CMS21Together.Data;
 using CMS21Together.Network;
@@ -35,11 +37,12 @@ public static class JoinCommands
     {
         var options = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
         var plain = new List<string>();
-        foreach (string token in (args ?? "").Split(new[] { ' ' }, StringSplitOptions.RemoveEmptyEntries))
+        foreach (Match token in Regex.Matches(args ?? "", @"(?:[^\s""]+|""[^""]*"")+"))
         {
-            int eq = token.IndexOf('=');
-            if (eq > 0) options[token.Substring(0, eq)] = token.Substring(eq + 1);
-            else plain.Add(token);
+            string text = token.Value;
+            int eq = text.IndexOf('=');
+            if (eq > 0 && text[0] != '"') options[text.Substring(0, eq)] = text.Substring(eq + 1).Replace("\"", "");
+            else plain.Add(text.Replace("\"", ""));
         }
         rest = string.Join(" ", plain);
         return options;
@@ -86,6 +89,9 @@ public static class JoinCommands
             case "open join":
                 MultiplayerMenuModel.OpenJoinPanel();
                 break;
+            case "open host":
+                MultiplayerMenuModel.OpenHostPanel();
+                break;
             case "close":
                 MultiplayerMenuModel.Close();
                 break;
@@ -93,10 +99,54 @@ public static class JoinCommands
                 MultiplayerMenuModel.AcknowledgeMessage();
                 break;
             default:
-                throw new ArgumentException("usage: mp-ui open join|close|ok");
+                throw new ArgumentException("usage: mp-ui open join|open host|close|ok");
         }
         return Session();
     }
+
+    [HarnessCommand("mp-host")]
+    private static object Host(string args)
+    {
+        var options = ParseOptions(args, out string action);
+        switch (action.ToLowerInvariant())
+        {
+            case "start":
+                var settings = new HostSettings();
+                if (options.TryGetValue("port", out string port)) settings.Port = int.Parse(port);
+                if (options.TryGetValue("maxPlayers", out string maxPlayers)) settings.MaxPlayers = int.Parse(maxPlayers);
+                if (options.TryGetValue("password", out string password)) settings.Password = password;
+                if (options.TryGetValue("steam", out string steam)) settings.UseSteam = bool.Parse(steam);
+                if (options.TryGetValue("difficulty", out string difficulty)) settings.Difficulty = (Gamemode)Enum.Parse(typeof(Gamemode), difficulty, true);
+                if (options.TryGetValue("new", out string startOver)) settings.StartOver = bool.Parse(startOver);
+                options.TryGetValue("serverPath", out string serverPath);
+                if (!LocalServerHost.Start(settings, out string error, serverPath)) throw new InvalidOperationException(error);
+                break;
+            case "stop":
+                LocalServerHost.Stop();
+                break;
+            case "stop-leftover":
+                options.TryGetValue("serverPath", out string leftoverPath);
+                LocalServerHost.StopLeftover(leftoverPath);
+                break;
+            case "status":
+                break;
+            default:
+                throw new ArgumentException("usage: mp-host start [serverPath=..] [port=..] [difficulty=..] [password=..] [maxPlayers=..] [steam=..] [new=true] | stop | stop-leftover [serverPath=..] | status");
+        }
+        return HostStatus();
+    }
+
+    public static Dictionary<string, object> HostStatus() => new Dictionary<string, object>
+    {
+        ["state"] = LocalServerHost.State.ToString(),
+        ["message"] = LocalServerHost.Message,
+        ["logTail"] = LocalServerHost.LogTail,
+        ["port"] = LocalServerHost.Port,
+        ["serverPath"] = LocalServerHost.RunningServerPath ?? LocalServerHost.ServerPath,
+        ["hasSave"] = LocalServerHost.HasSave(LocalServerHost.RunningServerPath ?? LocalServerHost.ServerPath),
+        ["leftoverRunning"] = LocalServerHost.LeftoverRunning,
+        ["adminKeySet"] = LocalServerHost.AdminKey != null,
+    };
 
     private static string GameDifficulty()
     {
@@ -135,7 +185,8 @@ public static class JoinCommands
             ["gameDifficulty"] = GameDifficulty(),
             ["pings"] = ClientData.PlayerPings.ToDictionary(p => p.Key.ToString(), p => (object)p.Value),
             ["toasts"] = ModNotify.History.Select(t => t.Text).ToList(),
-            ["panel"] = MultiplayerMenuModel.JoinPanelOpen ? "join" : "none",
+            ["panel"] = MultiplayerMenuModel.Panel.ToString().ToLowerInvariant(),
+            ["host"] = HostStatus(),
             ["panelError"] = MultiplayerMenuModel.PanelError,
             ["pendingConfirmation"] = JoinService.PendingConfirmation?.ToString(),
         };

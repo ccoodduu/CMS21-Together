@@ -40,7 +40,7 @@ public static class JoinService
 		CurrentTarget = target;
 		if (password != null) passwords[target.ToString()] = password;
 		CurrentPassword = RememberedPassword(target);
-		CurrentAdminKey = adminKey ?? PlayerSettings.AdminKey;
+		CurrentAdminKey = adminKey ?? LocalServerHost.AdminKeyFor(target) ?? PlayerSettings.AdminKey;
 		bool steam = target.Kind == JoinTargetKind.Steam;
 		ConnectionStatus.Begin(steam ? SteamHandshakeTimeout : DirectHandshakeTimeout);
 		Log.Info($"[Join] Joining {target}");
@@ -97,6 +97,11 @@ public static class JoinService
 		if (!leaveAndJoin || target == null) return;
 
 		QueuedJoin = target;
+		Leave();
+	}
+
+	public static void Leave()
+	{
 		if (Client.Instance.IsConnected) Client.Instance.Disconnect();
 		ConnectionStatus.Set(JoinStatus.Idle);
 		if (SceneManager.GetActiveScene().name != "Menu" && NotificationCenter.m_instance != null)

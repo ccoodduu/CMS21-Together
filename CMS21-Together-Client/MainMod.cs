@@ -104,6 +104,7 @@ namespace CMS21Together
 			if (PlayerSettings.DevHotkeys && Client.Instance.IsConnectionValid && Input.GetKeyDown(KeyCode.F6)) Logic.Car.Placement.DevCarSpawner.SpawnRandom();
 			if (Client.Instance.IsConnectionValid) Logic.Car.Details.CarDetailsSync.Update();
 			ConnectionStatus.Update();
+			LocalServerHost.Update();
 
 			if (Client.Instance.IsConnectionValid)
 				ClientData.Update();
@@ -137,6 +138,7 @@ namespace CMS21Together
 		{
 			SessionGuard.End();
 			RichPresence.Clear();
+			LocalServerHost.StopOnQuit();
 		}
 	}
 }

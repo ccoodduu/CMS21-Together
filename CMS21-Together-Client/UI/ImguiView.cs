@@ -1,3 +1,4 @@
+using CMS21_Together_Core.Data.Enum;
 using CMS21Together.Data;
 using CMS21Together.Session;
 using UnityEngine;
@@ -15,6 +16,7 @@ public static class ImguiView
 	private static GUIStyle titleStyle;
 	private static GUIStyle errorStyle;
 	private static GUIStyle boxStyle;
+	private static GUIStyle smallStyle;
 
 	public static void Draw()
 	{
@@ -25,10 +27,11 @@ public static class ImguiView
 		{
 			if (GUI.Button(new Rect(Screen.width - 170f - Margin, Margin, 170f, 36f), "Multiplayer"))
 			{
-				if (MultiplayerMenuModel.JoinPanelOpen) MultiplayerMenuModel.Close();
+				if (MultiplayerMenuModel.Panel != MenuPanel.None) MultiplayerMenuModel.Close();
 				else MultiplayerMenuModel.OpenJoinPanel();
 			}
 			if (MultiplayerMenuModel.JoinPanelOpen) DrawJoinPanel();
+			else if (MultiplayerMenuModel.HostPanelOpen) DrawHostPanel();
 			if (ConnectionStatus.MessagePending) DrawMessage("Multiplayer", ConnectionStatus.Message, MultiplayerMenuModel.AcknowledgeMessage);
 			else if (ModNotify.Messages.Count > 0)
 			{
@@ -52,10 +55,11 @@ public static class ImguiView
 
 	private static void DrawJoinPanel()
 	{
-		var area = new Rect(Screen.width - PanelWidth - Margin, Margin + 44f, PanelWidth, PanelHeight);
+		var area = new Rect(Screen.width - PanelWidth - Margin, Margin + 44f, PanelWidth, PanelHeight + TabsHeight);
 		GUI.Box(area, "", boxStyle);
 		float x = area.x + 12f, y = area.y + 10f, w = area.width - 24f;
 
+		y = DrawTabs(x, y, w);
 		GUI.Label(new Rect(x, y, w, 26f), "Join a server", titleStyle);
 		y += 32f;
 		GUI.Label(new Rect(x, y, w, 20f), "Address (IP or IP:port) or Steam server ID", labelStyle);
@@ -74,6 +78,127 @@ public static class ImguiView
 		y += 38f;
 		if (!string.IsNullOrEmpty(MultiplayerMenuModel.PanelError))
 			GUI.Label(new Rect(x, y, w, 40f), MultiplayerMenuModel.PanelError, errorStyle);
+	}
+
+	private const float TabsHeight = 38f;
+
+	private static float DrawTabs(float x, float y, float w)
+	{
+		float half = (w - 8f) / 2f;
+		string join = MultiplayerMenuModel.JoinPanelOpen ? "> Join <" : "Join";
+		string host = MultiplayerMenuModel.HostPanelOpen ? "> Host <" : "Host";
+		if (GUI.Button(new Rect(x, y, half, 28f), join) && !MultiplayerMenuModel.JoinPanelOpen) MultiplayerMenuModel.OpenJoinPanel();
+		if (GUI.Button(new Rect(x + half + 8f, y, half, 28f), host) && !MultiplayerMenuModel.HostPanelOpen) MultiplayerMenuModel.OpenHostPanel();
+		return y + TabsHeight;
+	}
+
+	private static float hostPanelHeight = 420f;
+
+	private static void DrawHostPanel()
+	{
+		var area = new Rect(Screen.width - PanelWidth - Margin, Margin + 44f, PanelWidth, hostPanelHeight);
+		GUI.Box(area, "", boxStyle);
+		float x = area.x + 12f, y = area.y + 10f, w = area.width - 24f;
+
+		y = DrawTabs(x, y, w);
+		GUI.Label(new Rect(x, y, w, 26f), "Host a session", titleStyle);
+		y += 32f;
+		GUI.Label(new Rect(x, y, w, 36f), $"Server: {LocalServerHost.ServerPath}", smallStyle);
+		y += 40f;
+
+		var state = LocalServerHost.State;
+		if (state == HostState.Starting || state == HostState.Running || state == HostState.Stopping)
+		{
+			GUI.Label(new Rect(x, y, w, 40f), LocalServerHost.Message, labelStyle);
+			y += 44f;
+			if (state == HostState.Running)
+			{
+				if (GUI.Button(new Rect(x, y, 120f, 32f), "Join")) MultiplayerMenuModel.HostRejoin();
+				if (GUI.Button(new Rect(x + 130f, y, 120f, 32f), "Stop")) MultiplayerMenuModel.HostStop();
+			}
+			else if (state == HostState.Starting && GUI.Button(new Rect(x, y, 120f, 32f), "Cancel"))
+			{
+				MultiplayerMenuModel.HostStop();
+			}
+			if (GUI.Button(new Rect(x + 260f, y, 120f, 32f), "Close")) MultiplayerMenuModel.Close();
+			y += 40f;
+		}
+		else
+		{
+			y = DrawHostSettings(x, y, w);
+		}
+
+		if (!string.IsNullOrEmpty(MultiplayerMenuModel.PanelError))
+		{
+			GUI.Label(new Rect(x, y, w, 40f), MultiplayerMenuModel.PanelError, errorStyle);
+			y += 44f;
+		}
+		if (state == HostState.Failed && LocalServerHost.LogTail.Count > 0)
+		{
+			float tailHeight = LocalServerHost.LogTail.Count * 15f + 8f;
+			GUI.Box(new Rect(x, y, w, tailHeight), "", boxStyle);
+			GUI.Label(new Rect(x + 4f, y + 4f, w - 8f, tailHeight - 8f), string.Join("\n", LocalServerHost.LogTail), smallStyle);
+			y += tailHeight + 6f;
+		}
+		hostPanelHeight = y - area.y + 6f;
+	}
+
+	private static float DrawHostSettings(float x, float y, float w)
+	{
+		if (LocalServerHost.State == HostState.Failed || LocalServerHost.State == HostState.Idle && LocalServerHost.Message.Length > 0)
+		{
+			GUI.Label(new Rect(x, y, w, 40f), LocalServerHost.Message, LocalServerHost.State == HostState.Failed ? errorStyle : labelStyle);
+			y += 44f;
+		}
+
+		if (MultiplayerMenuModel.StartOverPending)
+		{
+			GUI.Label(new Rect(x, y, w, 60f), "Start a new session? The saved session is moved to Saves_old_<date> in the server folder, not deleted.", labelStyle);
+			y += 64f;
+			if (GUI.Button(new Rect(x, y, 120f, 32f), "Start over")) MultiplayerMenuModel.AnswerStartOver(true);
+			if (GUI.Button(new Rect(x + 130f, y, 120f, 32f), "Keep it")) MultiplayerMenuModel.AnswerStartOver(false);
+			return y + 40f;
+		}
+
+		if (MultiplayerMenuModel.HostHasSave && !MultiplayerMenuModel.StartOver)
+		{
+			GUI.Label(new Rect(x, y, w - 130f, 32f), "Continue the saved session", labelStyle);
+			if (GUI.Button(new Rect(x + w - 120f, y, 120f, 32f), "Start over")) MultiplayerMenuModel.RequestStartOver();
+			y += 40f;
+		}
+		else
+		{
+			GUI.Label(new Rect(x, y, w, 22f), MultiplayerMenuModel.StartOver ? "New session (the old one is kept aside)" : "New session", labelStyle);
+			y += 24f;
+			float bw = (w - 16f) / 3f;
+			var choices = new[] { Gamemode.Easy, Gamemode.Normal, Gamemode.Expert };
+			for (int i = 0; i < choices.Length; i++)
+			{
+				string text = choices[i] == MultiplayerMenuModel.HostDifficulty ? $"> {choices[i]} <" : choices[i].ToString();
+				if (GUI.Button(new Rect(x + i * (bw + 8f), y, bw, 30f), text)) MultiplayerMenuModel.SetHostDifficulty(choices[i]);
+			}
+			y += 38f;
+		}
+
+		float half = (w - 8f) / 2f;
+		GUI.Label(new Rect(x, y, half, 20f), "Port", labelStyle);
+		GUI.Label(new Rect(x + half + 8f, y, half, 20f), "Max players", labelStyle);
+		y += 22f;
+		MultiplayerMenuModel.HostPortText = GUI.TextField(new Rect(x, y, half, 26f), MultiplayerMenuModel.HostPortText ?? "");
+		MultiplayerMenuModel.HostMaxPlayersText = GUI.TextField(new Rect(x + half + 8f, y, half, 26f), MultiplayerMenuModel.HostMaxPlayersText ?? "");
+		y += 34f;
+		GUI.Label(new Rect(x, y, w, 20f), "Password for IP joins (empty = none)", labelStyle);
+		y += 22f;
+		MultiplayerMenuModel.HostPasswordText = GUI.TextField(new Rect(x, y, w, 26f), MultiplayerMenuModel.HostPasswordText ?? "");
+		y += 34f;
+		if (GUI.Button(new Rect(x, y, w, 30f), MultiplayerMenuModel.HostSteam ? "Steam joins: on" : "Steam joins: off"))
+			MultiplayerMenuModel.HostSteam = !MultiplayerMenuModel.HostSteam;
+		y += 38f;
+
+		if (GUI.Button(new Rect(x, y, 120f, 32f), "Start")) MultiplayerMenuModel.HostStart();
+		if (LocalServerHost.LeftoverRunning && GUI.Button(new Rect(x + 130f, y, 120f, 32f), "Stop it")) MultiplayerMenuModel.HostStopLeftover();
+		if (GUI.Button(new Rect(x + 260f, y, 120f, 32f), "Close")) MultiplayerMenuModel.Close();
+		return y + 40f;
 	}
 
 	private static void DrawStatusOverlay()
@@ -144,6 +269,7 @@ public static class ImguiView
 		labelStyle = new GUIStyle(GUI.skin.label) { fontSize = 14, wordWrap = true, alignment = TextAnchor.MiddleLeft };
 		labelStyle.normal.textColor = Color.white;
 		titleStyle = new GUIStyle(labelStyle) { fontSize = 17, fontStyle = FontStyle.Bold, alignment = TextAnchor.MiddleCenter };
+		smallStyle = new GUIStyle(labelStyle) { fontSize = 11, alignment = TextAnchor.UpperLeft };
 		errorStyle = new GUIStyle(labelStyle);
 		errorStyle.normal.textColor = new Color(1f, 0.45f, 0.4f);
 		var background = new Texture2D(1, 1);
