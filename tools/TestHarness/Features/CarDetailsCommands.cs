@@ -53,4 +53,11 @@ public static class CarDetailsCommands
         CarDetailsSync.MarkDirty(carLoader, CarDetailSection.BodyCosmetics | CarDetailSection.Plates);
         return new { mileage = details.Info.Mileage, plate = details.Plates.LicensePlateNumberFront, tinted };
     }
+
+    [HarnessCommand("cardetails-hold")]
+    private static object Hold(string args)
+    {
+        CarDetailsSync.HoldSpawnSnapshots = (args ?? "").Trim() == "on";
+        return new { held = CarDetailsSync.HoldSpawnSnapshots };
+    }
 }

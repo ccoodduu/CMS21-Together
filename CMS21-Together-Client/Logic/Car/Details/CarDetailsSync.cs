@@ -57,6 +57,8 @@ public static class CarDetailsSync
 		latestSeq.Clear();
 	}
 
+	public static bool HoldSpawnSnapshots { get; set; }
+
 	public static bool IsApplying(int loader) => applying.Contains(loader);
 
 	public static void OnCarLoading(int loader)
@@ -76,7 +78,7 @@ public static class CarDetailsSync
 
 	private static void OnBaselineUploaded(int loader)
 	{
-		if (!Active) return;
+		if (!Active || HoldSpawnSnapshots) return;
 		SendFull(loader);
 	}
 
