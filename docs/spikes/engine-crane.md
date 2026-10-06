@@ -260,3 +260,18 @@ Related, outside the crane:
    This confirms or refutes the key shift.
 5. Check that Harmony patches on the `_d__NN.MoveNext` nested types fire under MelonLoader 0.5.7 / Unhollower.
 6. Check that a write to `CarLoader.EngineParams.EngineSwap` from managed code persists, using the whole-struct write-back.
+
+## Runtime results (2026-10-06, `car-crane` on `car_boltatlanta`)
+
+- `NotificationCenter.ActionUnMountGroup(e_engine_h's InteractiveObject)` called directly (the harness skips
+  `d__37`'s oil/attachment checks) unmounts 108 engine parts and adds one `engine_v8_stary` group. The `AddGroup`
+  hook stays silent, as the decompile said; `EngineCraneHooks` captures the group in the postfix.
+- The crane is "connected" to a car through `CarLoader.ToolsData.EngineCraneIsConnected`
+  (`ToolsMoveManager.GetConnectedCarLoader` only checks that flag; `MoveTo` is the visual move and needs a
+  `groundPosition` that harness-spawned cars do not have). With the flag set, `InsertEngineToCar(group)` mounts every
+  part again and calls `DeleteGroup(group.UID)`.
+- Confirmed: putting the engine back sets `IsExamined` from the group items, which were built before the delayed
+  `Examine(true)`, so every engine part ends **not examined**. The server's OR-merge keeps them examined and now returns
+  the merged records in the accepted `CarPartsChangeResult`, so the sender matches.
+- Not traced yet: hooks on the `_d__NN.MoveNext` types (not needed: the transaction commits on `MarkDirty` after the
+  postfix/`DeleteGroup`), and the swap key shift (swaps are refused while connected).
