@@ -91,5 +91,8 @@ public enum PacketTypes
 	PlayerPings,
 	KickRequest,
 	EconomyRequest,
-	EconomyResult
+	EconomyResult,
+	BugReportRequest,
+	BugReportCollect,
+	BugReportResult
 }
