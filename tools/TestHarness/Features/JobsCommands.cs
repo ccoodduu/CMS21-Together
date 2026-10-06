@@ -90,7 +90,8 @@ public static class JobsCommands
     {
         var job = FindJob(int.Parse((args ?? "").Trim()));
         WindowManager.Instance.Show(WindowID.Orders, false);
-        var window = UnityEngine.Object.FindObjectOfType<OrdersWindow>();
+        var windows = Resources.FindObjectsOfTypeAll(UnhollowerRuntimeLib.Il2CppType.Of<OrdersWindow>());
+        var window = windows != null && windows.Length > 0 ? windows[0].Cast<OrdersWindow>() : null;
         if (window == null) throw new InvalidOperationException("the orders window did not open");
         window.currentJob = job;
         if (accept) window.AcceptOrderAction();
@@ -117,6 +118,31 @@ public static class JobsCommands
             examined++;
         }
         return new { job.id, examined };
+    }
+
+    [HarnessCommand("job-repair")]
+    private static object JobRepair(string args)
+    {
+        var (job, carLoader) = ActiveJob(args);
+        var wanted = new HashSet<string>();
+        for (int i = 0; job.jobTasks != null && i < job.jobTasks.Length; i++)
+            for (int p = 0; job.jobTasks[i].Parts != null && p < job.jobTasks[i].Parts.Count; p++)
+                wanted.Add(job.jobTasks[i].Parts[p].ID);
+        int repaired = 0;
+        foreach (var part in carLoader.GetComponentsInChildren<PartScript>(true))
+        {
+            if (!wanted.Contains(part.id) && !wanted.Contains(part.tunedID)) continue;
+            part.SetCondition(1f, true);
+            repaired++;
+        }
+        for (int i = 0; carLoader.carParts != null && i < carLoader.carParts.Count; i++)
+        {
+            var body = carLoader.carParts[i];
+            if (!wanted.Contains(body.name)) continue;
+            body.Condition = 1f;
+            repaired++;
+        }
+        return new { job.id, wanted = wanted.Count, repaired };
     }
 
     [HarnessCommand("job-check")]

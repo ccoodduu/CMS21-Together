@@ -27,9 +27,9 @@ $list = Send-HarnessCommand -Instance $a -Verb orders-list
 Step "orders" $list
 Report "generated"
 
-$jobs = @($list.jobs)
-if ($jobs.Count -ge 3) {
-    Try-Step "decline" "orders-decline" "$($jobs[2].id)"
+$jobs = @($list.jobs | Where-Object { -not $_.IsMission -and $_.timeToEnd -gt 30 })
+if ($jobs.Count -ge 2) {
+    Try-Step "decline" "orders-decline" "$($jobs[0].id)"
     Report "declined"
     Start-Sleep -Seconds 30
     Step "orders-after-expiry" (Send-HarnessCommand -Instance $a -Verb orders-list)
@@ -38,9 +38,10 @@ if ($jobs.Count -ge 3) {
     $take = $jobs[1].id
     Try-Step "accept" "orders-accept" "$take"
     Start-Sleep -Seconds 15
-    Step "cars-after-accept" (Send-HarnessCommand -Instance $a -Verb car-list)
+    Step "cars-after-accept" (Send-HarnessCommand -Instance $a -Verb placement)
     Report "accepted"
     Try-Step "examine" "job-examine" "$take"
+    Try-Step "repair" "job-repair" "$take"
     Start-Sleep -Seconds 2
     Try-Step "check" "job-check" "$take"
     Report "checked"
@@ -48,10 +49,10 @@ if ($jobs.Count -ge 3) {
     Try-Step "finish" "job-finish" "$take"
     Start-Sleep -Seconds 10
     Step "money" @{ before = $moneyBefore; after = (Send-HarnessCommand -Instance $a -Verb dump).stats.money }
-    Step "cars-after-finish" (Send-HarnessCommand -Instance $a -Verb car-list)
+    Step "cars-after-finish" (Send-HarnessCommand -Instance $a -Verb placement)
     Report "finished"
 } else {
-    $Ctx.Result.notes += "fewer than three orders were generated"
+    $Ctx.Result.notes += "fewer than two regular orders"
 }
 
 Try-Step "mission" "orders-mission" "1"
