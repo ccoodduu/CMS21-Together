@@ -364,6 +364,31 @@ generator (`GenerateMission` capture, D1), not declinable (`CanDelete` false), n
 `JobStarted`, `JobRemoved { Ended }` and `JobsState`; receivers set the three `GlobalData` fields. The game's own
 rules (`GlobalData.CanRegenerateMission`, `GetMissionID`) then pick the next mission on the generator.
 
+### D15. Corrections from the static spike (2026-10-06, `docs/spikes/orders-and-jobs.md`)
+
+These override D4–D8 and D13 where they differ; the `jobs-trace` scenario (task 1.3) confirms them at runtime.
+- Hooks that never fire: `OrderGenerator.TakeJob`/`TakeMission` (builders inlined; use `<TakeJob>d__19.MoveNext` /
+  `<TakeMission>d__22.MoveNext` or the accept action), `GameScript.EndJobCoroutine` (use `EndJob` or
+  `<EndJobCoroutine>d__139.MoveNext`), `CarLoader.SetCustomerCar` (inlined; `customerCar`/`orderConnection` are set
+  before `LoadCar`, so the `LoadCar` hook reads the job id and no `PendingTake` lookup is needed).
+  `OrderGenerator.Start` and `Prepare` share one native body: never patch either.
+- Generation: first order after 10 s, then one per 30 s while open orders are below a level-based cap (2–8), all from
+  the global `UnityEngine.Random`. The car pool follows the generating client's installed DLCs, so the generator
+  must only offer DLC cars in the shared DLC set (row 9).
+- Open orders have no parts list: `PrepareJob` builds it at take time from the taker's upgrades, so `JobStarted` must
+  carry the job after `PrepareJob`. Missions never call `PrepareJob`; their start is the `<TakeMission>d__22` step
+  that adds to `selectedJobs` (or an `OnTakeMission` subscription).
+- Expiry runs a per-job timer in scaled game seconds (it stops while paused) and removes the order through a real
+  `CancelJob` call, so the D6 prefix sees it.
+- Progress: `Done` and `moneySpent` are recomputed from car state; nothing was found that writes `JobPart.Found`, so
+  `JobProgress` is dropped unless the trace finds a writer (D7).
+- Payout: `EndJob` pays the totals of the last `CheckJob`, which only the orders UI runs; the `EndJob` prefix runs
+  `CheckJob` first. The commit point is the real `CancelJob(job.id)` inside `d__139` right after the payout. One hook on
+  `SteamAchievements.IncrementStat` sees every stat; other clients award the same stats through
+  `PlatformManager.IncrementStat` (seven job achievements, listed in the spike).
+- Tutorial (D13): order slots are locked only inside the Tutorial scene; the tutorial mission is `IsMission && id == 0`
+  (or `GenerateMission(_, forTutorial: true)`).
+
 ### Packets
 
 Appended to `PacketTypes` (end of the enum, so existing values keep their numbers):
