@@ -11,7 +11,8 @@ public enum GuardKind
 	Window,
 	Pie,
 	Mode,
-	Scene
+	Scene,
+	Action
 }
 
 public enum GuardDecision

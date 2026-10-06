@@ -101,5 +101,15 @@ Check ($extraA -eq 1 -and $extraB -eq 1) "after the rejection each client has ex
 $diff = Compare-HarnessDumps $dumpA $dumpB -Sections @("inventory")
 Check ($diff.Count -eq 0) "inventories are equal after the rejection"
 
+$moneyBefore = $dumpA.stats.money
+$sale = Send-HarnessCommand -Instance $a -Verb sell-item
+$deadline = (Get-Date).AddSeconds(10)
+do {
+    Start-Sleep -Milliseconds 500
+    $moneyA = (Send-HarnessCommand -Instance $a -Verb dump).stats.money
+} while ($moneyA -eq $moneyBefore -and (Get-Date) -lt $deadline)
+$moneyB = (Send-HarnessCommand -Instance $b -Verb dump).stats.money
+Check ($moneyA -eq $moneyBefore + $sale.expected -and $moneyB -eq $moneyA) "selling $($sale.id) pays the game's price $($sale.expected) on both ($moneyBefore -> A $moneyA, B $moneyB)"
+
 $Ctx.Result.notes += $failures
 $Ctx.Result.passed = ($failures.Count -eq 0)

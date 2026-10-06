@@ -1,5 +1,6 @@
 using System;
 using CMS21_Together_Core;
+using CMS21_Together_Core.Data.Enum;
 using CMS21_Together_Core.Network;
 using CMS21_Together_Core.Network.Packets;
 using CMS21_Together_Server.Data;
@@ -27,6 +28,7 @@ public static class StatsHandlers
         if (packet.ExpDelta > 0 && packet.ExpDelta < 10000) // basic validation
         {
             int exp = packet.ExpDelta;
+            if (state.Gamemode == Gamemode.Expert) exp *= 2;
             while (exp > 0)
             {
                 int diffToNextLvl = GetDiffToNextLvl(state.Level - 1); // RealPlayerLevel is PlayerLevel + 1. So if Level is 1, PlayerLevel is 0.

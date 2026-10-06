@@ -9,6 +9,8 @@ namespace CMS21_Together_Server.Network.Handlers
 {
     public static class ShopHandlers
     {
+        private const float SellPriceFactor = 0.5f;
+
         [PacketHandler(PacketTypes.ShopAction)]
         public static void HandleShopAction(long clientId, ShopActionPacket packet)
         {
@@ -65,7 +67,7 @@ namespace CMS21_Together_Server.Network.Handlers
                 var item = state.InventoryState.InventoryItems.FirstOrDefault(i => i.UID == packet.ItemUID);
                 if (item != null)
                 {
-                    int price = PricingCalculator.GetPrice(item);
+                    int price = PricingCalculator.GetPrice(item, SellPriceFactor);
                     state.InventoryState.InventoryItems.Remove(item);
                     state.WorldState.Money += price;
                     
@@ -77,7 +79,7 @@ namespace CMS21_Together_Server.Network.Handlers
                     var groupItem = state.InventoryState.InventoryGroupItems.FirstOrDefault(i => i.UID == packet.ItemUID);
                     if (groupItem != null)
                     {
-                        int price = PricingCalculator.GetPrice(groupItem);
+                        int price = (int)(PricingCalculator.GetPrice(groupItem) * SellPriceFactor);
                         state.InventoryState.InventoryGroupItems.Remove(groupItem);
                         state.WorldState.Money += price;
                         
@@ -95,7 +97,7 @@ namespace CMS21_Together_Server.Network.Handlers
                     var item = state.InventoryState.InventoryItems[i];
                     if (item.Condition <= packet.SellCondition)
                     {
-                        totalEarned += PricingCalculator.GetPrice(item);
+                        totalEarned += PricingCalculator.GetPrice(item, SellPriceFactor);
                         state.InventoryState.InventoryItems.RemoveAt(i);
                         
                         Server.SendToClients(new InventoryItemActionPacket 
@@ -121,7 +123,7 @@ namespace CMS21_Together_Server.Network.Handlers
                     
                     if (allBelow)
                     {
-                        totalEarned += PricingCalculator.GetPrice(groupItem);
+                        totalEarned += (int)(PricingCalculator.GetPrice(groupItem) * SellPriceFactor);
                         state.InventoryState.InventoryGroupItems.RemoveAt(i);
                         
                         Server.SendToClients(new InventoryGroupItemActionPacket 

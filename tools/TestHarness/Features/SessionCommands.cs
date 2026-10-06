@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using CMS21_Together_Core.Network.Packets;
 using CMS21Together.Network;
 
@@ -6,6 +7,17 @@ namespace TogetherTestHarness.Features;
 
 public static class SessionCommands
 {
+    [HarnessCommand("sell-item")]
+    private static object SellItem(string args)
+    {
+        var items = Singleton<GameManager>.Instance.Inventory.GetItems();
+        if (items == null || items.Count == 0) throw new InvalidOperationException("the inventory has no single items");
+        var item = items[0];
+        int expected = Helper.GetPrice(item, 0.5f);
+        NotificationCenter.Get().SellItem(item, false, true);
+        return new Dictionary<string, object> { ["id"] = item.ID, ["uid"] = item.UID, ["expected"] = expected };
+    }
+
     [HarnessCommand("stats-add")]
     private static object StatsAdd(string args)
     {

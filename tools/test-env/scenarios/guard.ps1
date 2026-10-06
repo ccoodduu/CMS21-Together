@@ -52,6 +52,7 @@ Save-HarnessScreenshot -Instance $a -RunDir $Ctx.RunDir -Label "pie_tirechanger"
 Send-HarnessCommand -Instance $a -Verb guard-try -Arguments "Window:PieMenu" | Out-Null
 Start-Sleep -Seconds 2
 
+Try-Guard $a "Action:SellCar" "blocked" | Out-Null
 Try-Guard $a "Scene:Junkyard" "blocked" | Out-Null
 Start-Sleep -Seconds 2
 Try-Guard $a "Scene:Junkyard" "blocked" "void" | Out-Null

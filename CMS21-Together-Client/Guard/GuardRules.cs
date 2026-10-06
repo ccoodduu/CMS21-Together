@@ -34,6 +34,7 @@ public static class GuardRules
 	{
 		Allow(GuardKind.Scene, "Menu", Base, "Main menu"),
 		Allow(GuardKind.Scene, "Garage", Base, "Garage"),
+		Planned(GuardKind.Action, "SellCar", "row 6 part 2", "Selling cars"),
 		Planned(GuardKind.Scene, "Junkyard", "row 1 (M2)", "Travel to the junkyard"),
 		Planned(GuardKind.Scene, "Barn", "row 6 part 2", "Travel to a barn"),
 		Planned(GuardKind.Scene, "Auction", "row 6 part 2", "Travel to the auction"),

@@ -35,6 +35,16 @@ public static class GuardHooks
 		return false;
 	}
 
+	[HarmonyPatch(typeof(GameScript._SellCarCoroutine_d__135), nameof(GameScript._SellCarCoroutine_d__135.MoveNext))]
+	[HarmonyPrefix]
+	[HarmonyPriority(Priority.First)]
+	private static bool BeforeSellCar(GameScript._SellCarCoroutine_d__135 __instance, ref bool __result)
+	{
+		if (__instance.__1__state != 0 || FeatureGuard.Decide(GuardKind.Action, "SellCar") == GuardDecision.Allow) return true;
+		__result = false;
+		return false;
+	}
+
 	[HarmonyPatch(typeof(PieMenuController), nameof(PieMenuController.PrepareIcons))]
 	[HarmonyPostfix]
 	private static void LockPieOptions(PieMenuController __instance, Il2CppStringArray iconsToLoad)

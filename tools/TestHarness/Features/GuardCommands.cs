@@ -70,6 +70,9 @@ public static class GuardCommands
             case GuardKind.Pie:
                 TryPie(id, result);
                 break;
+            case GuardKind.Action:
+                TryAction(id, result);
+                break;
         }
 
         result["result"] = !FeatureGuard.RecentDecisions.TryGetValue(key, out var decision) ? "not reached"
@@ -77,6 +80,13 @@ public static class GuardCommands
         result["message"] = GuardNotice.LastText;
         result["gameMode"] = GameMode.Get()?.GetCurrentMode().ToString();
         return result;
+    }
+
+    private static void TryAction(string id, Dictionary<string, object> result)
+    {
+        if (id != "SellCar") throw new ArgumentException($"no test path for action {id}");
+        var sale = new GameScript._SellCarCoroutine_d__135(0);
+        result["continued"] = sale.MoveNext();
     }
 
     private static void TryWindow(string id, bool keep, Dictionary<string, object> result)

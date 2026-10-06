@@ -32,6 +32,8 @@ public static class WorldStatesPackets
 		GlobalData.PlayerLevel = packet.Level - 1;
 		GlobalData.PlayerExp = packet.Exp;
 		GlobalData.PlayerScraps = packet.Scraps;
+		var wrapper = Singleton<GameManager>.Instance.GameDataManager?.CurrentProfileData?.globalDataWrapper;
+		if (wrapper != null) wrapper.PlayerScraps = packet.Scraps;
 		ClientData.IsServerUpdating = false;
 		
 		var profile = Singleton<GameManager>.Instance.GameDataManager.CurrentProfileData;
