@@ -72,6 +72,8 @@ public static class PartTransactions
 	public static void OpenForBody(int loader, int index, CarPart part) =>
 		Open(loader, new[] { PartKeys.Body(index) }, new[] { part.GetIDWithTuned(), part.name });
 
+	public static bool HasOpen(int loader) => open.Any(t => t.Loader == loader) || committed.Count > 0;
+
 	public static bool SuppressAdd(string itemId)
 	{
 		var tx = Match(itemId);

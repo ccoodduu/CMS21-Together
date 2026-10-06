@@ -39,6 +39,8 @@ public static class PartChangeTracker
 		}
 	}
 
+	public static bool IsPending(int loader) => dirty.Contains(loader) || mechanicalDirty.Contains(loader);
+
 	public static List<string> TakeSentKeys(int txId)
 	{
 		if (!sentKeys.TryGetValue(txId, out var keys)) return new List<string>();

@@ -274,6 +274,7 @@ namespace CMS21_Together_Server.Network
             {
                 ProcessRefusals();
                 Data.Cars.CarClaims.Expire(Data.ServerTime.Time);
+                Data.Reconciliation.ReconciliationService.Tick(Data.ServerTime.Time);
                 foreach (var client in Clients.Values)
                 {
                     if (client.IsConnected)

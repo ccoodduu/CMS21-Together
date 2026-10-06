@@ -18,6 +18,8 @@ namespace CMS21_Together_Server.Data
 		public int Port { get; private set; } = NetworkConstants.DEFAULT_PORT;
 		public int AutosaveIntervalSeconds { get; private set; } = 300;
 		public int BackupCount { get; private set; } = 5;
+		public int DesyncCheckIntervalSeconds { get; private set; } = 5;
+		public bool DesyncAutofix { get; private set; } = true;
 		public string ServerName { get; private set; } = "CMS21 Together Server";
 		public string PublicAddress { get; private set; } = string.Empty;
 		public string GameVersion { get; private set; } = "auto";
@@ -111,6 +113,12 @@ namespace CMS21_Together_Server.Data
 					sw.WriteLine("# Number of rotating backups of the save in Saves/backups");
 					sw.WriteLine("backup_count = 5");
 					sw.WriteLine("");
+					sw.WriteLine("# Seconds between state comparisons with each player (desync detection)");
+					sw.WriteLine("desync_check_interval_seconds = 5");
+					sw.WriteLine("");
+					sw.WriteLine("# Resend a section automatically when a player's state is confirmed out of sync");
+					sw.WriteLine("desync_autofix = True");
+					sw.WriteLine("");
 					foreach (var lines in CompatibilityKeyLines)
 					{
 						sw.WriteLine(lines[1]);
@@ -172,6 +180,12 @@ namespace CMS21_Together_Server.Data
 							break;
 						case "autosave_interval_seconds":
 							if (int.TryParse(value, out int autosave) && autosave >= 0) config.AutosaveIntervalSeconds = autosave;
+							break;
+						case "desync_check_interval_seconds":
+							if (int.TryParse(value, out int desyncInterval) && desyncInterval > 0) config.DesyncCheckIntervalSeconds = desyncInterval;
+							break;
+						case "desync_autofix":
+							if (bool.TryParse(value, out bool autofix)) config.DesyncAutofix = autofix;
 							break;
 						case "server_name":
 							config.ServerName = value.Replace("\"", "");
