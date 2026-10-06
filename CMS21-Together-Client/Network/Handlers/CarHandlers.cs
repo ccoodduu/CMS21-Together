@@ -20,6 +20,7 @@ namespace CMS21Together.Network.Handlers
             ClientScene.GarageBound(() =>
             {
                 CarPartsSync.OnRemoteSpawn(packet);
+                Logic.Car.Placement.ParkingSync.OnRemoteSpawn(packet.CarLoaderID);
                 MelonCoroutines.Start(ProcessCarSpawnResponse(packet));
             });
         }
@@ -104,6 +105,7 @@ namespace CMS21Together.Network.Handlers
         public static void HandleCarSpawnAck(long clientId, CarSpawnAckPacket packet)
         {
             CarPartsSync.OnSpawnAck(packet);
+            Logic.Car.Placement.ParkingSync.OnSpawnAck(packet.CarLoaderID);
         }
 
         [PacketHandler(PacketTypes.CarPartsSnapshot)]
@@ -126,6 +128,7 @@ namespace CMS21Together.Network.Handlers
 
             CarLoader carLoader = CarLoaderPlaces.Get().GetCarLoaderByIndex(packet.CarLoaderID);
             if (carLoader == null || string.IsNullOrEmpty(carLoader.carToLoad)) yield break;
+            if (Logic.Car.Placement.ParkingSync.KeepAfterRejection(packet.CarLoaderID)) yield break;
 
             CarSpawnHooks.Suppress(packet.CarLoaderID);
             try

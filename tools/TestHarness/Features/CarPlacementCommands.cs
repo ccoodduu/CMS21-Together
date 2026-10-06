@@ -78,6 +78,36 @@ public static class CarPlacementCommands
         return "unparking";
     }
 
+    [HarnessCommand("park-swap")]
+    private static object ParkSwap(string args)
+    {
+        var parts = (args ?? "").Split(new[] { ' ' }, StringSplitOptions.RemoveEmptyEntries);
+        if (parts.Length != 2) throw new ArgumentException("usage: park-swap <from> <to>");
+        CMS.Managers.ParkingCarPlaceManager.MoveCar(int.Parse(parts[0]), int.Parse(parts[1]));
+        return "swapped";
+    }
+
+    [HarnessCommand("parking-unlock")]
+    private static object ParkingUnlock(string args)
+    {
+        int levels = GlobalData.UnlockedParkingLevels;
+        var request = new CMS21_Together_Core.Network.Packets.ParkingLevelUnlockRequestPacket { TargetLevels = levels + 1, Price = levels * 50000 };
+        CMS21Together.Network.Client.Instance.Send(request);
+        return new { target = request.TargetLevels, price = request.Price };
+    }
+
+    [HarnessCommand("park-incoming")]
+    private static object ParkIncoming(string args)
+    {
+        var parts = (args ?? "").Split(new[] { ' ' }, StringSplitOptions.RemoveEmptyEntries);
+        if (parts.Length != 2) throw new ArgumentException("usage: park-incoming <slot with a car> <price>");
+        var data = Singleton<GameManager>.Instance.GameDataManager.LoadCarInParking(int.Parse(parts[0]));
+        if (data == null || data.IsDefault()) throw new ArgumentException($"slot {parts[0]} is empty");
+        var request = new CMS21_Together_Core.Network.Packets.CarParkRequestPacket { RequestId = 9000, Car = NewCarDataCodec.ToParkedCar(data), Price = int.Parse(parts[1]) };
+        CMS21Together.Network.Client.Instance.Send(request);
+        return "sent";
+    }
+
     [HarnessCommand("parking")]
     private static object Parking(string args)
     {

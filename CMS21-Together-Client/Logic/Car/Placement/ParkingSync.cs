@@ -30,6 +30,8 @@ public static class ParkingSync
 
 	private static readonly Dictionary<int, Guid> mirror = new Dictionary<int, Guid>();
 	private static readonly HashSet<int> parking = new HashSet<int>();
+	private static readonly HashSet<int> pendingUnpark = new HashSet<int>();
+	private static readonly HashSet<int> overriddenUnpark = new HashSet<int>();
 	private static int nextRequestId = 1;
 	private static bool applying;
 
@@ -43,6 +45,8 @@ public static class ParkingSync
 	{
 		mirror.Clear();
 		parking.Clear();
+		pendingUnpark.Clear();
+		overriddenUnpark.Clear();
 	}
 
 	[HarmonyPatch(typeof(CarLoader), nameof(CarLoader.SaveCarToFile), typeof(int), typeof(bool))]
@@ -86,6 +90,7 @@ public static class ParkingSync
 		CarSpawnHooks.Release(loader);
 		if (!carLoader.IsCarLoaded()) yield break;
 		mirror.TryGetValue(slot, out var id);
+		pendingUnpark.Add(loader);
 		Log.Info($"[Parking] Loader {loader}: unparking slot {slot} ({carLoader.carToLoad}) to place {carLoader.GetPlaceNo()}.");
 		Client.Instance.Send(new CarUnparkRequestPacket
 		{
@@ -123,6 +128,21 @@ public static class ParkingSync
 		if (Client.Instance == null || !Client.Instance.IsConnectionValid) return true;
 		ModNotify.ShowToast("Take the car out from the parking menu in the garage while playing together.");
 		return false;
+	}
+
+	public static void OnSpawnAck(int loader) => pendingUnpark.Remove(loader);
+
+	public static void OnRemoteSpawn(int loader)
+	{
+		if (pendingUnpark.Remove(loader)) overriddenUnpark.Add(loader);
+	}
+
+	// Two players taking the same car onto the same loader: the winner's spawn reaches the loser before the loser's
+	// refusal, so the refusal must not delete the car that is now on that loader.
+	public static bool KeepAfterRejection(int loader)
+	{
+		pendingUnpark.Remove(loader);
+		return overriddenUnpark.Remove(loader);
 	}
 
 	public static void OnParkResult(CarParkResultPacket result)
