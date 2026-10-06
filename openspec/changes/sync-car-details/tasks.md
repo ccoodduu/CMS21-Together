@@ -31,32 +31,32 @@ hook there as a small separate commit.
 
 ## 2. Core
 
-- [ ] 2.1 `CMS21-Together-Core/Data/GameType/ModCarDetails.cs` with the D2 types (`[Serializable]`, public
+- [x] 2.1 `CMS21-Together-Core/Data/GameType/ModCarDetails.cs` with the D2 types (`[Serializable]`, public
   fields); fill `ModGearboxData` and `ModLPData`. Verify: `dotnet build CMS21-Together.sln` succeeds,
   existing `ModItem.GearboxData`/`LPData` uses still compile.
-- [ ] 2.2 Append `CarDetailsUpdate`, `CarDetailsRequest` to `PacketTypes`; add both packets (D3) to
+- [x] 2.2 Append `CarDetailsUpdate`, `CarDetailsRequest` to `PacketTypes`; add both packets (D3) to
   `Network/Packets/CarPackets.cs`; add `Dictionary<int, ModCarDetails> Details` to `CarState` and bump the `cars` save section
   from v2 to v3 with a no-op `Migrate(data, 2)` step. Verify: server and client start, `PacketRouter` logs both types, and the
   test server's existing save loads with empty `Details`.
 
 ## 3. Server
 
-- [ ] 3.1 `Network/Handlers/CarDetailsHandlers.cs`: `CarDetailsUpdate` handler per D8 (loader + `SpawnSeq`
+- [x] 3.1 `Network/Handlers/CarDetailsHandlers.cs`: `CarDetailsUpdate` handler per D8 (loader + `SpawnSeq` **Done (2026-10-06):** `CarDetailsStore`, `CarDetailsSnapshot`, `cardetails` command; verified by `car-details`.
   check, clamp, caps, stamp `SourceClientId`, merge sections and keyed entries, `IsFull` replaces) and
   broadcast to all synced clients including the sender. Add console command `cardetails <loader>` (one-line
   JSON of the record) to `CommandSystem.cs`. Verify: `Send-ServerCommand "cardetails 0"` on a server with no
   car logs `no car`, and with a hand-sent update from 4.3 logs the record.
-- [ ] 3.2 `Data/Persistence/CarDetailsSnapshot.cs` (`[SessionSection]`, `ISnapshotProvider` key `car-details`,
+- [x] 3.2 `Data/Persistence/CarDetailsSnapshot.cs` (`[SessionSection]`, `ISnapshotProvider` key `car-details`, **Done (2026-10-06):** `CarDetailsStore`, `CarDetailsSnapshot`, `cardetails` command; verified by `car-details`.
   order 150): drop stale records (D8); send `IsFull`, `SourceClientId=-1` per valid record and return the
   count. Verify: the server log lists `car-details` after `cars` on a join, and `SyncEnd.Items` has its count.
 
 ## 4. Client
 
-- [ ] 4.1 `Logic/Car/CarDetailsReader.cs` (`Read(CarLoader, CarDetailSection, partIndices)`) and
+- [x] 4.1 `Logic/Car/CarDetailsReader.cs` (`Read(CarLoader, CarDetailSection, partIndices)`) and **Done (2026-10-06):** `Logic/Car/Details/CarDetailsIO` (reader + applier; ECU/carb modules, tint, per-part paint and bonus parts not applied yet).
   `CarDetailsApplier.cs` (D4 setters, D10 order, try/catch per section, unknown keys skipped with a debug
   log). Verify: harness `cardetails-roundtrip <loader>` reads, changes every section, applies the original
   back, reads again and replies `equal`.
-- [ ] 4.2 `Logic/Car/CarDetailsSync.cs`: `lastKnown`, per-section `ClientSeq`, "awaiting snapshot" set,
+- [x] 4.2 `Logic/Car/CarDetailsSync.cs`: `lastKnown`, per-section `ClientSeq`, "awaiting snapshot" set, **Done (2026-10-06):** `CarDetailsSync` (signatures per section instead of per-entry lastKnown).
   `MarkDirty`/`FlushNow`, `OnUpdate` flusher (0.5 s debounce, 5e-4 epsilon, changed entries only), 1 Hz poll
   for Fluids/Wheels/Info, D4 skip rules (including no send before `SyncAck`). Verify with 4.3.
 - [ ] 4.3 Harness setters in `CarDetailsCommands.cs`, each through the game setters and then `MarkDirty`:
@@ -70,11 +70,11 @@ hook there as a small separate commit.
   `sync-orders-and-jobs` does after `PrepareJob`), `-hold <on|off>` (stop sending spawn snapshots, for 4.7).
   Verify: each changes the local `details` dump; `cardetails-fluid` on one connected client logs exactly one
   `CarDetailsUpdate`.
-- [ ] 4.4 `Network/Handlers/CarDetailsHandlers.cs`: per-loader queue merging sections/entries, apply when
+- [x] 4.4 `Network/Handlers/CarDetailsHandlers.cs`: per-loader queue merging sections/entries, apply when **Done (2026-10-06):** verified by `car-details` (spawn snapshot, late join).
   `CarPartsSync.IsReady`, own-echo rule (D9), `lastKnown` before and after apply, drop on delete/`SpawnSeq`
   change or outside the garage, `SyncTracker.Applied("car-details")` for snapshot packets, answer
   `CarDetailsRequest`. Verify: two-client run; B's log shows the apply and B sends no `CarDetailsUpdate` back.
-- [ ] 4.5 Spawn snapshot (D7): on `CarPartsSync.BaselineUploaded`, send `IsFull` and clear "awaiting
+- [x] 4.5 Spawn snapshot (D7): on `CarPartsSync.BaselineUploaded`, send `IsFull` and clear "awaiting **Done (2026-10-06):** verified by `car-details` (spawn snapshot, late join).
   snapshot". Verify: after `car-spawn` + `cardetails-randomize` on A, B's `details` equals A's.
 - [ ] 4.6 `Logic/Hook/CarDetailsHooks.cs`: the D4 postfixes, including `SwitchCarLights`, `SwapBonusPart` and `TakeOffBonusPart` (they only call `MarkDirty`, resolving the car
   through the window's `carLoader` / `tintManager.carLoader` field), and the `LocalPartsCommitted`
@@ -90,7 +90,7 @@ hook there as a small separate commit.
 
 ## 5. Two-instance scenarios (feature done when both pass)
 
-- [ ] 5.1 `tools/test-env/scenarios/car-details.ps1`: A and B connect; A `car-spawn 0` + `cardetails-randomize 0`;
+- [ ] 5.1 `tools/test-env/scenarios/car-details.ps1`: A and B connect; A `car-spawn 0` + `cardetails-randomize 0`; **Partly done (2026-10-06):** `car-details` covers spawn snapshot, live fluids/alignment/mileage/dust/plate changes and late join.
   wait until both `car-ready 0`, then 5 s; compare (spawn values shared). A runs every 4.3 setter; wait 3 s;
   compare. A `cardetails-alignment` while B `cardetails-fluid` (brake); A `cardetails-fluid` (oil) while B
   `cardetails-fluid` (coolant); wait 3 s; compare and assert all four values are present. A
