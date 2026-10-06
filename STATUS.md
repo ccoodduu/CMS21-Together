@@ -59,6 +59,25 @@ Newest first. One entry per work session.
   engine, in code, needs a game run).
 - Running: full regression of the row 13 branch on both lanes.
 
+## 2026-10-06 (17:10–18:15) — row 13 merged; M4 branches tested in the game
+
+- Row 13 merged into `main` after regression `20261006-165221` (30 scenarios on two lanes, green; one flaky run was a
+  stall of the server loop that timed out every client, fixed: heartbeat deadlines move by the stall).
+- Real bug found by row 5a's scenario and fixed on `main`: every client handed out item UIDs from its own profile's
+  counter, so two players (or one player after a rejoin) created items with the same UID. Each player now uses its
+  own UID range (player id × 10^12).
+- Agents wrote rows 5a, 5b, 6 part 2, 8 part 2 and 10; I merged `main` into each and tested them in the game:
+  - row 8 part 2 (host from the game, password, admin key, kick, ping, toasts): `session-admin` and
+    `host-from-game` passed on the first run;
+  - row 6 part 2 (seat and engine): `seat-engine` passes; the remote engine sound is now built like the game's own
+    (a decompile showed `EngineAudioController` is one global object, so a remote car gets its own sound prefab);
+  - row 5a (workshop machines): 44 checks of `tools-slots` pass (tire changer, balancer with its lock, spring clamp,
+    brake lathe, battery charger, rejoin); the engine stand step is fixed in the scenario, not re-run yet;
+  - rows 5b and 10 are in code, not run yet.
+- `integration/m4-seat-host` (rows 6 part 2 + 8 part 2 on `main`) builds; its full regression on both lanes was
+  stopped by Claude Code because free RAM ran critically low with four games. See QUESTIONS.md: until you answer,
+  I run one lane at a time and do not restart that regression myself.
+
 ## 2026-10-06 (15:10–15:40) — row 3 merged; row 4 car details (branch `change/sync-car-details`)
 
 - Lane-1 regression `20261006-144952` of the row 3 branch: all 25 scenarios PASSED. `main` = `635b22b` (row 3).
