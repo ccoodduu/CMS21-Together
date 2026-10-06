@@ -151,7 +151,9 @@ public static class ToolsCommands
                 tools.SpringClampLogic.SetGroupOnSpringClamp(group, true, false);
                 break;
             case ModToolId.EngineStand1:
-                NotificationCenter.Get().ActionHangOn(group);
+                var stand = (EngineStandSync)ToolSync.Machine(tool);
+                Inv.DeleteGroup(uid);
+                stand.Logic.StartCoroutine(stand.Logic.SetGroupOnEngineStand(group, false));
                 break;
             default:
                 throw new ArgumentException($"{tool} cannot be loaded from the harness");
