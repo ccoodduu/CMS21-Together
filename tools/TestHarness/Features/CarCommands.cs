@@ -178,6 +178,22 @@ public static class CarCommands
         return new Dictionary<string, object> { ["key"] = key, ["id"] = script.id };
     }
 
+    [HarnessCommand("part-corrupt")]
+    private static object PartCorrupt(string args)
+    {
+        int loader = int.Parse((args ?? "").Trim());
+        var carLoader = Loader(args);
+        var registry = PartRegistry.Build(carLoader);
+        string key = registry.SubKeys.First(k => !registry.Sub(k).IsUnmounted && registry.Sub(k).GetUnmountWith().Count == 0 && !registry.Sub(k).IsBlocked());
+        using (ApplyingRemote.Scope(loader))
+            registry.Sub(key).HideBySavegame(false, carLoader);
+        return new Dictionary<string, object> { ["key"] = key };
+    }
+
+    [HarnessCommand("resync")]
+    private static object Resync(string args) =>
+        CMS21Together.Session.ResyncController.Request((args ?? "").Trim() == "force") ?? "reloading";
+
     [HarnessCommand("part-fast-mount")]
     private static object PartFastMount(string args)
     {

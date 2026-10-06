@@ -100,6 +100,7 @@ namespace CMS21Together
 				string target = string.IsNullOrWhiteSpace(PlayerSettings.LastJoinTarget) ? "127.0.0.1" : PlayerSettings.LastJoinTarget;
 				if (!JoinService.Join(target, out string error)) Log.Warn($"[Join] {error}");
 			}
+			if (Client.Instance.IsConnectionValid && Input.GetKeyDown(PlayerSettings.ResyncKey)) ResyncController.Request();
 			ConnectionStatus.Update();
 
 			if (Client.Instance.IsConnectionValid)

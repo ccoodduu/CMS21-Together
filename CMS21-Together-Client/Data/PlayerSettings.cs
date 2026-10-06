@@ -10,6 +10,7 @@ public static class PlayerSettings
 	private static MelonPreferences_Entry<string> lastJoinTarget;
 	private static MelonPreferences_Entry<bool> devHotkeys;
 	private static MelonPreferences_Entry<bool> advertisePresence;
+	private static MelonPreferences_Entry<string> resyncHotkey;
 
 	public static string NameOverride { get; set; }
 
@@ -20,6 +21,7 @@ public static class PlayerSettings
 		lastJoinTarget = category.CreateEntry("LastJoinTarget", "", description: "Last server joined (IP:port or Steam server ID).");
 		devHotkeys = category.CreateEntry("DevHotkeys", false, description: "F5 joins the last server (developer shortcut).");
 		advertisePresence = category.CreateEntry("AdvertisePresence", true, description: "Show the server in Steam rich presence so friends can join.");
+		resyncHotkey = category.CreateEntry("ResyncHotkey", "F7", description: "Key that reloads the garage from the server when something looks out of sync.");
 	}
 
 	public static string PlayerName
@@ -52,4 +54,7 @@ public static class PlayerSettings
 	public static bool DevHotkeys => devHotkeys != null && devHotkeys.Value;
 
 	public static bool AdvertisePresence => advertisePresence == null || advertisePresence.Value;
+
+	public static UnityEngine.KeyCode ResyncKey =>
+		System.Enum.TryParse(resyncHotkey?.Value, true, out UnityEngine.KeyCode key) ? key : UnityEngine.KeyCode.F7;
 }

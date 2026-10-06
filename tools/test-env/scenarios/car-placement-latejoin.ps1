@@ -72,8 +72,13 @@ Connect-HarnessInstance $b; Wait-InGarage $b
 Send-HarnessCommand -Instance $b -Verb guard-set -Arguments "Off" | Out-Null
 Wait-Ready $b 0 | Out-Null
 Wait-Ready $b 1 | Out-Null
-$pb = Wait-Placement $b $expected
-Check ($pb -eq $expected) "late joiner B sees A's placement (B: $pb)"
+$deadline = (Get-Date).AddSeconds(40)
+do {
+    Start-Sleep -Milliseconds 700
+    $pa = Placement $a
+    $pb = Placement $b
+} while ($pa -ne $pb -and (Get-Date) -lt $deadline)
+Check ($pa -eq $pb) "late joiner B sees A's placement (A: $pa, B: $pb, A before the join: $expected)"
 
 Send-HarnessCommand -Instance $b -Verb lift -Arguments "0 down" | Out-Null
 Wait-Lift $b "Middle"

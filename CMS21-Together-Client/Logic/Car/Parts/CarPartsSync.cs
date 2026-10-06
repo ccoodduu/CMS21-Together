@@ -64,6 +64,7 @@ public static class CarPartsSync
 
 	public static void Reset()
 	{
+		ownBaselinePending.Clear();
 		loaders.Clear();
 		incoming.Clear();
 	}
@@ -82,8 +83,13 @@ public static class CarPartsSync
 
 	public static int SpawnSeq(int loader) => loaders.TryGetValue(loader, out var sync) ? sync.SpawnSeq : 0;
 
+	private static readonly HashSet<int> ownBaselinePending = new HashSet<int>();
+
+	public static bool HasOwnBaselinePending => ownBaselinePending.Count > 0;
+
 	public static void OnSpawnAck(CarSpawnAckPacket packet)
 	{
+		ownBaselinePending.Add(packet.CarLoaderID);
 		var sync = Get(packet.CarLoaderID);
 		sync.SpawnSeq = packet.SpawnSeq;
 		sync.State = LoaderSyncState.Loading;
@@ -102,6 +108,7 @@ public static class CarPartsSync
 
 	public static void OnCarDeleted(int loader)
 	{
+		ownBaselinePending.Remove(loader);
 		loaders.Remove(loader);
 	}
 
@@ -134,6 +141,7 @@ public static class CarPartsSync
 
 		SendSnapshot(loader, sync.SpawnSeq, carLoader.EngineParams?.EngineSwap, body, sub);
 		Remember(sync, body, sub);
+		ownBaselinePending.Remove(loader);
 		sync.State = LoaderSyncState.Ready;
 		Log.Info($"[Parts] Loader {loader}: baseline sent ({body.Count} body, {sub.Count} mechanical, SpawnSeq {sync.SpawnSeq}).");
 		BaselineUploaded?.Invoke(loader);
