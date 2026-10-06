@@ -7,6 +7,8 @@ namespace CMS21Together.Logic.Car
 {
     public static class CarSpawnManager
     {
+        private const float PlaceSettleSeconds = 5f;
+
         public static IEnumerator RequestCarSpawn(string carToLoad, CarLoader carLoader)
         {
             int carLoaderID = CarLoaderPlaces.Get().GetCarLoaderId(carLoader);
@@ -28,7 +30,12 @@ namespace CMS21Together.Logic.Car
            
             Client.Instance.Send(request);
             Log.Info($"[CarSpawnManager] Requested spawn for {carToLoad} on Loader {carLoaderID}");
-            yield break;
+
+            deadline = UnityEngine.Time.realtimeSinceStartup + PlaceSettleSeconds;
+            while (carLoader.placeNo == request.PlaceNo && carLoader.carToLoad == carToLoad && UnityEngine.Time.realtimeSinceStartup < deadline) yield return null;
+            if (carLoader.carToLoad != carToLoad || carLoader.placeNo == request.PlaceNo) yield break;
+            Log.Info($"[CarSpawnManager] Loader {carLoaderID}: the game placed {carToLoad} at {carLoader.placeNo} after the spawn request.");
+            Client.Instance.Send(new CarPlaceChangeRequestPacket { CarLoaderID = carLoaderID, FromPlace = request.PlaceNo, ToPlace = carLoader.placeNo });
         }
 
         public static IEnumerator RequestCarDelete(CarLoader carLoader)
