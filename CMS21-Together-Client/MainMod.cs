@@ -131,6 +131,7 @@ namespace CMS21Together
 			PlayerSettings.Initialize();
 			GuardSettings.Initialize();
 			Logic.Car.Details.CarDetailsSync.Initialize();
+			SeatEngine.Initialize();
 		}
 
 		public override void OnApplicationQuit()

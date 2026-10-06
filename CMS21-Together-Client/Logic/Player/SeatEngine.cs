@@ -1,8 +1,10 @@
 using CMS21_Together_Core.Data;
 using CMS21_Together_Core.Logging;
 using CMS21Together.Data;
+using CMS21Together.Logic.Car.Placement;
 using CMS21Together.Network;
 using HarmonyLib;
+using MelonLoader;
 using UnityEngine;
 
 namespace CMS21Together.Logic.Player;
@@ -20,6 +22,7 @@ public static class SeatEngine
 	private static bool pendingLeft;
 	private static float pendingSince;
 	private static float nextPoll;
+	private static bool subscribed;
 
 	public static int SeatCarLoaderId { get; private set; } = PlayerPresenceRecord.NoCar;
 	public static bool SeatLeft { get; private set; }
@@ -41,6 +44,13 @@ public static class SeatEngine
 	}
 
 	private static bool Active => ClientScene.IsGarageReady && Client.Instance != null && Client.Instance.IsConnectionValid && ClientData.IsInitialSyncFinished;
+
+	public static void Initialize()
+	{
+		if (subscribed) return;
+		subscribed = true;
+		CarPlacementSync.BeforeRemoteCarMove += loader => MelonCoroutines.Start(PresenceManager.EnsureNotSeatedIn(loader));
+	}
 
 	public static void Reset()
 	{

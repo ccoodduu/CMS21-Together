@@ -142,7 +142,11 @@ public static class PresenceManager
 	{
 		float deadline = Time.realtimeSinceStartup + 5f;
 		while (SeatEngine.PendingCarLoaderId == carLoaderId && Time.realtimeSinceStartup < deadline) yield return null;
-		if (SeatEngine.SeatCarLoaderId != carLoaderId) yield break;
+		if (SeatEngine.SeatCarLoaderId != carLoaderId)
+		{
+			if (SeatEngine.EngineCarLoaderId == carLoaderId) Singleton<GameManager>.Instance?.EngineAudioController?.EngineStop();
+			yield break;
+		}
 
 		var game = GameScript.Get();
 		if (game == null) yield break;
