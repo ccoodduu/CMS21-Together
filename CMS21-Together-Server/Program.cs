@@ -47,6 +47,12 @@ namespace CMS21_Together_Server
 				return;
 			}
 
+			if (Array.IndexOf(args, "--check-digest") >= 0)
+			{
+				Environment.Exit(Data.Reconciliation.DigestCheck.Run());
+				return;
+			}
+
 			string checkModsPath = GetArgument(args, "--check-mods");
 			if (checkModsPath != null)
 			{

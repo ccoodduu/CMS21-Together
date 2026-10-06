@@ -61,5 +61,11 @@ public enum PacketTypes
 	ParkingState,
 	ParkingLevelUnlockRequest,
 	ParkingResyncRequest,
-	CarParkResult
+	CarParkResult,
+
+	StateDigestRequest,
+	StateDigest,
+	StateDetailRequest,
+	StateDetail,
+	DesyncNotice
 }
