@@ -32,6 +32,7 @@ public static class StateDump
             ["joinStatus"] = ConnectionStatus.State.ToString(),
             ["lastDisconnect"] = Features.JoinCommands.LastDisconnect(),
             ["remotePlayers"] = PresenceManager.VisibleAvatarCount,
+            ["isOrderGenerator"] = CMS21Together.Logic.Jobs.JobsSync.IsGenerator,
         };
     }
 
@@ -59,6 +60,7 @@ public static class StateDump
         dump["inventory"] = Inventory();
         dump["cars"] = Cars();
         dump["placement"] = Placement();
+        dump["jobs"] = Jobs();
         dump["players"] = PresenceManager.Roster.Where(p => p.Value.HasAvatar).ToDictionary(
             p => p.Key.ToString(),
             p => (object)Vec(p.Value.Avatar.transform.position));
@@ -167,6 +169,19 @@ public static class StateDump
             cars.Add(car);
         }
         return cars;
+    }
+
+    private static object Jobs()
+    {
+        var generator = Singleton<GameManager>.Instance?.OrderGenerator;
+        if (generator == null) return null;
+        var orders = new List<(int Id, object Row)>();
+        for (int i = 0; generator.jobs != null && i < generator.jobs.Count; i++)
+            orders.Add((generator.jobs[i].id, new { generator.jobs[i].id, generator.jobs[i].carFile, generator.jobs[i].IsMission }));
+        var active = new List<object>();
+        for (int i = 0; generator.selectedJobs != null && i < generator.selectedJobs.Count; i++)
+            active.Add(new { generator.selectedJobs[i].id, generator.selectedJobs[i].carFile, generator.selectedJobs[i].carLoaderID });
+        return new { openCount = GlobalData.Jobs, orders = orders.OrderBy(o => o.Id).Select(o => o.Row).ToList(), active };
     }
 
     private static object Placement()
