@@ -2,6 +2,33 @@
 
 Newest first. One entry per work session.
 
+## 2026-10-06 (11:00) — M1 done: dev build 0.6.0-dev.561
+
+- All M1 rows merged to `main` (`58ad6e2`): presence/names/scenes (row 6 part 1), join menu with readable failures and
+  Steam join (row 8 part 1), mod/version/DLC checks (row 9 part 1), release zips (row 12 part 1), feature guard
+  (row 14a). Regressions: lane 1 `20261006-102833` (all M1 scenarios green), lane 2 `20261006-103205` from the merged
+  tree (green; `join-coldstart` flaky because of a test-setup bug fixed during the run).
+- Zips: `tools\release\out\CMS21-Together-0.6.0-dev.561-client.zip` and `-server.zip` (main checkout, not in git).
+  Install and join: `docs/try-it.md` (also inside the zip).
+
+### What to try (M1 playtest checklist)
+
+1. Host: run `TogetherServer\CMS21_Together_Server.exe` (from the client zip). For friends over the internet: forward
+   TCP+UDP 7777, or set `use_steam = True` and join with the Steam server ID / Steam "Join Game".
+2. Everyone: install the client zip into a game install **without gameplay mods** (QoLmod, TK, LvxBetterCarSpawns,
+   QuickShop are refused; LoadOptimizer is fine). Set your name in the Multiplayer panel.
+3. Join from the main menu (Multiplayer → address → Join). Try a wrong address and see the message.
+4. Walk around the garage together: names over heads, a late joiner sees players standing still.
+5. Shared money/XP/scrap: buy something in the shop, upgrade the garage, open the warehouse together.
+6. Travel to the junkyard alone, come back: the garage is reloaded from the server.
+7. Try things that are not shared yet (orders, disassembly mode, tire changer): the game refuses them with
+   "... is not supported in multiplayer yet".
+8. Leave and rejoin; close the server with `/stop` and start it again: money, level, inventory are kept.
+9. Report: `MelonLoader\Latest.log` and the server's `Log\Latest.txt`, with what you did.
+
+Known gaps in M1: working on cars is blocked (M2 is in progress on `change/sync-car-parts`); no shared junkyard;
+the Steam join with a real friend is untested (needs you and a friend).
+
 ## 2026-10-06 (09:50–10:35) — mod-compatibility part 1 (row 9, agent, branch `change/mod-compatibility`)
 
 - DLC decision applied first: a different DLC set never refuses; the server tracks the shared DLC set (intersection
