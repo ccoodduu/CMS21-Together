@@ -25,8 +25,9 @@ Newest first. One entry per work session.
 
 ### What to try (row 1 playtest, on top of the M1 checklist)
 
-1. Both players in the garage. One buys or gets a car onto a garage place (moving cars between places, lifts and
-   parking is row 2 and still blocked).
+1. Not playable yet: while connected there is no way to get a car into the garage (orders are row 3, taking a car
+   out of parking is row 2, both still blocked). This checklist applies once row 2 lands; until then row 1 is only
+   tested by the harness scenarios.
 2. Unmount and mount mechanical parts and body parts (doors, hood) at the same time on the same car: the other player
    sees the change within a second, the part's item lands in the shared inventory once.
 3. Try the same part at the same moment: one of you gets "… is working on this part" or the part goes back.
