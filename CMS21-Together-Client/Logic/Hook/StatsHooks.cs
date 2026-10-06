@@ -17,6 +17,8 @@ namespace CMS21Together.Logic.Hook
                 return true;
             }
 
+            if (Logic.Jobs.JobEndContext.CaptureExp(exp)) return true;
+
             if (exp > 0)
             {
                 Client.Instance.Send(new StatsActionPacket { ExpDelta = exp, ScrapsDelta = 0 });
