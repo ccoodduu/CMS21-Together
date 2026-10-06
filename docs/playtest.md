@@ -27,8 +27,7 @@ Report problems with both players' `MelonLoader\Latest.log` and the server's `Lo
    **Hand check: the engine stand** (hang an engine on it, rotate it, take a part off, take the engine off). The harness
    cannot build an engine on the stand (the game's own build throws when driven from outside the UI, also offline).
 7. Fluids, wheels and alignment, plates, paint shop and window tint; with row 5b (once merged) also car wash, interior
-   detailing and welder: the other
-   player sees the result. Fees are charged once, by the server.
+   detailing and welder: the other player sees the result. Fees are charged once, by the server.
 8. Sell a car, open crates, scrap parts, buy plates, reset skills: money, scrap and XP stay the same for everyone.
 
 ## Test drive and diagnostics
