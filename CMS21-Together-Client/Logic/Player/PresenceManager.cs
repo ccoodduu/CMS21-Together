@@ -123,7 +123,7 @@ public static class PresenceManager
 		{
 			PlayerId = Client.Instance.ID,
 			Scene = ClientScene.LocalScene,
-			LastMovement = ClientScene.LocalScene == GameScene.Loading ? null : Movement.CaptureLocal()
+			LastMovement = ClientScene.LocalScene == GameScene.Loading || !HasLocalMotor ? null : Movement.CaptureLocal()
 		};
 	}
 
