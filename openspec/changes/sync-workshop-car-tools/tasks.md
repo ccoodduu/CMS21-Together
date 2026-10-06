@@ -104,8 +104,7 @@ merged on its own once its scenario step passes.
 ## 10. Dyno (waits for ROADMAP row 13, which stores dyno results)
 
 - [ ] 10.1 **In code (2026-10-06):** needs a game run and row 13. Postfix `CarLoader.MeasurePower()` → row 13's `DynoSync.Commit`
-      (`Logic/Tools/CarTools/DynoMeasureHooks.cs`, compiled only with `SYNC_TEST_DRIVE` until this branch is rebased
-      onto row 13; then remove the `#if`). It covers the map's "measure power" only; the garage dyno run is row 13's
+      (`Logic/Tools/CarTools/DynoMeasureHooks.cs`; the `SYNC_TEST_DRIVE` guard is gone since row 13 is merged in). It covers the map's "measure power" only; the garage dyno run is row 13's
       `CloseDyno` hook. No remote dyno run. Done when the client builds.
 - [ ] 10.2 **In code (2026-10-06):** needs a game run and row 13. Add `tool-dyno <loader>` (calls `MeasurePower()`). Step: equal dyno fields in
       `cardetails-show` (row 13's `Dyno` section). Done when the step passes.

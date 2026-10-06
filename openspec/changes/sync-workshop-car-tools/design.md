@@ -117,7 +117,7 @@ The code follows `docs/spikes/workshop-car-tools.md` where it corrects D1. Names
 - The paint/tint "wash first" answer (`CarLoader.EnableDust`/`SetWashFactor` with `part == null`) marks `BodyCosmetics`.
 - Engine crane: postfixes with `__runOriginal` on `ActionUnMountGroup` and `InsertEngineToCar`; row 1's
   `EngineCraneHooks` owns the transaction and refuses swaps.
-- Dyno: `CarLoader.MeasurePower` postfix → row 13's `DynoSync.Commit`, behind `#if SYNC_TEST_DRIVE` until rebased.
+- Dyno: `CarLoader.MeasurePower` postfix → row 13's `DynoSync.Commit`.
 - Interior detailing: stationary when the car stands at `CarPlace.CarWash`.
 - Remote effect: `GarageTool.particles.Play()` + `SoundManager.PlaySFX(sfx, car root)`, stopped after `effectTime` +
   0.5 s; paint: `PaintshopManager.particleSystem` + `CarPaint`. Skipped while the same tool runs locally. Oil drain and
