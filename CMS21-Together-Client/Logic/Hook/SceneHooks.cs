@@ -14,9 +14,9 @@ namespace CMS21Together.Logic.Hook
 		[HarmonyPatch(typeof(NotificationCenter), nameof(NotificationCenter.SelectSceneToLoad),
 			typeof(string), typeof(SceneType), typeof(bool), typeof(bool))]
 		[HarmonyPrefix]
-		public static void SelectSceneToLoadPrefix(string newSceneName, SceneType sceneType, bool useFader, bool saveGame)
+		public static void SelectSceneToLoadPrefix(string newSceneName, SceneType sceneType, bool useFader, bool saveGame, bool __runOriginal)
 		{
-			if (Client.Instance == null || !Client.Instance.IsConnected) return;
+			if (!__runOriginal || Client.Instance == null || !Client.Instance.IsConnected) return;
 
 			if (newSceneName == "Menu")
 			{

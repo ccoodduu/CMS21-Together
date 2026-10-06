@@ -4,6 +4,7 @@ using CMS21_Together_Core.Data.Enum;
 using CMS21_Together_Core.Logging;
 using CMS21_Together_Core.Network;
 using CMS21Together.Data;
+using CMS21Together.Guard;
 using CMS21Together.Logic.Player;
 using CMS21Together.Logging;
 using CMS21Together.Managers;
@@ -123,6 +124,7 @@ namespace CMS21Together
 		{
 			ModConsole.Initialize();
 			PlayerSettings.Initialize();
+			GuardSettings.Initialize();
 		}
 
 		public override void OnApplicationQuit()
