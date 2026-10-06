@@ -136,6 +136,16 @@ public static class ToolsCommands
         }
     }
 
+    [HarnessCommand("tool-stand-unpatch")]
+    private static object StandUnpatch(string args)
+    {
+        var target = HarmonyLib.AccessTools.Method(typeof(EngineStandLogic._SetGroupOnEngineStand_d__8), "MoveNext");
+        var info = HarmonyLib.Harmony.GetPatchInfo(target);
+        var owners = info == null ? new List<string>() : info.Owners.ToList();
+        foreach (string owner in owners) new HarmonyLib.Harmony(owner).Unpatch(target, HarmonyLib.HarmonyPatchType.All, owner);
+        return new { removed = owners };
+    }
+
     [HarnessCommand("tool-stand-context")]
     private static object StandContext(string args)
     {

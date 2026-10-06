@@ -15,6 +15,8 @@ do { Start-Sleep -Milliseconds 700; $r = Send-HarnessCommand -Instance $a -Verb 
 $crane = Send-HarnessCommand -Instance $a -Verb crane-out -Arguments "0"
 Write-Host "crane : $($crane | ConvertTo-Json -Compress)"
 Start-Sleep -Seconds 2
+if ($env:STAND_PROBE_OFFLINE) { Write-Host "disconnect : $(Send-HarnessCommand -Instance $a -Verb disconnect)"; Start-Sleep -Seconds 2 }
+Write-Host "unpatch : $(Send-HarnessCommand -Instance $a -Verb tool-stand-unpatch | ConvertTo-Json -Compress)"
 Write-Host "context : $(Send-HarnessCommand -Instance $a -Verb tool-stand-context | ConvertTo-Json -Compress)"
 Write-Host "put : $(Send-HarnessCommand -Instance $a -Verb tool-put -Arguments "EngineStand1 $($crane.group)" | ConvertTo-Json -Compress)"
 foreach ($i in 1..8) {
