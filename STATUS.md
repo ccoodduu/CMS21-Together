@@ -2,6 +2,14 @@
 
 Newest first. One entry per work session.
 
+## 2026-10-06 (13:40–14:00) — M2 complete in code
+
+- `desync-soak`: 78 work steps in 10 minutes, 9 first-round mismatches absorbed, 0 confirmed desyncs.
+- Lane-1 regression `20261006-133757` of the row 14 branch: all 23 scenarios PASSED (incl. `desync-autofix`,
+  `junkyard-trip`, `resync-key`). `main` fast-forwarded to `e81ae48`: M2 (rows 1, 2, 14 b+c, junkyard trips,
+  latency injection `net-delay`) is complete in code; the M2 playtest is yours (checklist in the 12:40 entry).
+- Running: the generator-client spike (`tools	est-envRun-GeneratorSpike.ps1`); then row 3.
+
 ## 2026-10-06 (13:05–13:40) — M2 rest: desync repair, manual resync, junkyard (branch `change/desync-detection-and-resync`)
 
 - Lane-1 regression of `main` (`20261006-130225`): all 21 scenarios PASSED, none flaky.
