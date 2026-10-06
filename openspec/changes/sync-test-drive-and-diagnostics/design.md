@@ -349,3 +349,32 @@ Deferrable unknowns (answered by the spikes in tasks.md, they do not change the 
 keeps the three globals; whether `CloseCar(true)` changes synced part state; the track car's part order; whether the
 `SelectSceneToLoad` replay leaves the UI clean; the path-test abort and `SetCarPositionAfterLoad` side effects;
 `DynoManager.job/haveJob`; the windows/modes the track flow needs from the guard.
+
+## Runtime trace results
+
+Spike 1.2, `test-drive-trace` on lane 1 (2026-10-06, run `20261006-154452_L1_test-drive-trace` and the two before it),
+one connected client, `car_boltatlanta` on loader 0, guard `Enforce` with `Scene:TestTrack` allowed.
+
+- **Departure:** `LeavingScene(Garage, TestTrack)` → `SelectSceneToLoad(Test_track_1, TestTrack, true, true)` →
+  `CloseCar(true)` → `GarageLoader.Save(false)` (into the session's profile slot). `CloseCar(true)` sends no part or
+  detail change: nothing between it and the track load in the client log.
+- **On the track:** the track car is loaded from that save. Its `carParts` order equals the garage car's (27 names,
+  same order), so D4's cosmetics can be read by index. Loading it calls `PartScript.Examine(true)` once per examined
+  part (52); there is no `CarLoaderPlaces` on the track, so row 1's hooks stay quiet. The guard reports
+  `Mode:CarDrive` (D11 needs that entry).
+- **Return, all tests done:** the last `DoneTest` calls `TestTrackManager.ReturnToGarage` itself →
+  `PrepareCarPhysics.SaveMileage(false)` (sets `GlobalData.NewMileage`: 5000 m → 5) → `LeavingScene(TestTrack, Garage)`
+  → `SelectSceneToLoad(garage, Garage, true, true)`. D4's order holds: the result can be read in `LeavingScene`
+  with the track still loaded.
+- **Return, aborted:** the pause menu's `ReturnToGarage` → `SaveMileage` → `LeavingScene`; `TestToShow` is cleared
+  (`''`), so no examine report opens.
+- **`GlobalData.Load` on return keeps** `NewMileage`, `SelectedCarLoader` and `TestToShow`.
+- **The mileage is lost today:** after both returns the car's `Info.Mileage` is still 0, because the garage loads
+  the car from the server snapshot. `NewMileage` is never reset either, so it is still 5 at the next departure
+  (the loop D5 fixes).
+- **Examine report:** `GetExaminedParts` runs once after the snapshot car is `Ready`; its 52 examine calls reach the
+  server as one row 1 change (`0 body, 52 mechanical`).
+- Bugs found and fixed on `main`: row 4's detail hooks threw on the track (no `CarLoaderPlaces`), and presence threw
+  there (no `CharacterMotor` while driving).
+- Not covered yet: the path test, the dyno, `diag-examine` (the verbs are still to write) and the map entry
+  (`SideCarsPanel.DriveAction`, `VerifyCarStateIfInterior`), which the harness skips by calling `SelectSceneToLoad`.

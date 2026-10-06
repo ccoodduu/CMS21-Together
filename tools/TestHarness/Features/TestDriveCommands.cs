@@ -123,12 +123,26 @@ public static class TestDriveCommands
         return new { physics.mileage };
     }
 
+    [HarnessCommand("testdrive-partnames")]
+    private static object PartNames(string args)
+    {
+        var places = CarLoaderPlaces.Get();
+        var carLoader = places != null
+            ? places.GetCarLoaderByIndex(int.Parse((args ?? "0").Trim()))
+            : UnityEngine.Object.FindObjectOfType<CarLoader>();
+        if (carLoader == null || carLoader.carParts == null) throw new InvalidOperationException("no car");
+        var names = new List<string>();
+        for (int i = 0; i < carLoader.carParts.Count; i++) names.Add(carLoader.carParts[i].name);
+        return new { onTrack = places == null, count = names.Count, names = string.Join(",", names) };
+    }
+
     [HarnessCommand("testdrive-finish")]
     private static object Finish(string args)
     {
         var manager = UnityEngine.Object.FindObjectOfType<TestTrackManager>() ?? throw new InvalidOperationException("no TestTrackManager (not on the track)");
         if ((args ?? "").Trim() == "all")
             for (int i = 0; manager.ListOfTestOnTestTrack != null && i < manager.ListOfTestOnTestTrack.Count; i++) manager.DoneTest(i);
+        if (CMS21Together.Data.ClientScene.LocalScene == CMS21_Together_Core.Data.Enum.GameScene.Loading) return "returned by the last test";
         manager.ReturnToGarage();
         return "returning";
     }
