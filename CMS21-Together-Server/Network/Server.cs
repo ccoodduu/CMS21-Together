@@ -148,6 +148,19 @@ namespace CMS21_Together_Server.Network
             }
         }
 
+        public static void Dispatch(int clientId, PacketTypes id, object data)
+        {
+            lock (Data.GameDataManager.StateLock)
+            {
+                if (PacketRouter.RequiresSync(id) && Clients.TryGetValue(clientId, out var client) && client.SyncState != SyncState.InSession)
+                {
+                    Logger.Warn($"Client[{clientId}] is not in session ({client.SyncState}): dropped {id}.");
+                    return;
+                }
+                PacketRouter.Dispatch(id, data, clientId);
+            }
+        }
+
         public static void SendToClients<T>(T packetData, int exceptClient=-1, bool reliable = true) where T : INetworkData
         {
             foreach (Client client in Clients.Values)

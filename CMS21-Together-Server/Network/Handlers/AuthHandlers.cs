@@ -17,12 +17,14 @@ namespace CMS21_Together_Server.Network.Handlers
 		private static int lastSnapshotId;
 
 		[PacketHandler(PacketTypes.Heartbeat)]
+		[AllowBeforeSync]
 		public static void OnHeartbeat(long clientId, HeartbeatPacket packet)
 		{
 			Server.Clients[(int)clientId].OnHeartbeatEcho(packet.sentTicks);
 		}
 
 		[PacketHandler(PacketTypes.Connect)]
+		[AllowBeforeSync]
 		public static void OnConnected(long clientId, ConnectPacket packet)
 		{
 			Logger.Debug($"Reiceved Connection callback from {packet.username}");
@@ -90,6 +92,7 @@ namespace CMS21_Together_Server.Network.Handlers
 		}
 
 		[PacketHandler(PacketTypes.AskForSync)]
+		[AllowBeforeSync]
 		public static void OnAskForSync(long clientId, AskForSync packet)
 		{
 			lock (GameDataManager.StateLock)
@@ -112,6 +115,7 @@ namespace CMS21_Together_Server.Network.Handlers
 		}
 
 		[PacketHandler(PacketTypes.SyncAck)]
+		[AllowBeforeSync]
 		public static void OnSyncAck(long clientId, SyncAck packet)
 		{
 			var client = Server.Clients[(int)clientId];

@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using CMS21_Together_Core.Network.Packets;
+using CMS21Together.Data;
 using CMS21Together.Network;
 using CMS21Together.Persistence;
 
@@ -40,13 +41,28 @@ public static class SessionCommands
     [HarnessCommand("stats-add")]
     private static object StatsAdd(string args)
     {
+        var packet = ParseStats(args, "stats-add");
+        Client.Instance.Send(packet);
+        return $"sent scrap {packet.ScrapsDelta}, exp {packet.ExpDelta}";
+    }
+
+    [HarnessCommand("send-early-stats")]
+    private static object SendEarlyStats(string args)
+    {
+        var packet = ParseStats(args, "send-early-stats");
+        if (ClientData.IsInitialSyncFinished) throw new InvalidOperationException("the join already finished; send this while the garage is loading");
+
+        Client.Instance.Send(packet);
+        return $"sent scrap {packet.ScrapsDelta}, exp {packet.ExpDelta} before the sync ack (snapshot {SyncTracker.CurrentSnapshotId})";
+    }
+
+    private static StatsActionPacket ParseStats(string args, string verb)
+    {
         var parts = (args ?? "").Split(new[] { ' ' }, StringSplitOptions.RemoveEmptyEntries);
         if (parts.Length != 2 || !int.TryParse(parts[0], out int scrap) || !int.TryParse(parts[1], out int exp))
-            throw new ArgumentException("usage: stats-add <scrap> <exp>");
+            throw new ArgumentException($"usage: {verb} <scrap> <exp>");
         if (Client.Instance == null || !Client.Instance.IsConnected) throw new InvalidOperationException("not connected");
-
-        Client.Instance.Send(new StatsActionPacket { ScrapsDelta = scrap, ExpDelta = exp });
-        return $"sent scrap {scrap}, exp {exp}";
+        return new StatsActionPacket { ScrapsDelta = scrap, ExpDelta = exp };
     }
 
     [HarnessCommand("player-key")]

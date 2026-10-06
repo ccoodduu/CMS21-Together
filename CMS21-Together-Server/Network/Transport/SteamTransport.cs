@@ -7,7 +7,6 @@ using CMS21_Together_Core;
 using CMS21_Together_Core.Data.Enum;
 using CMS21_Together_Core.Network;
 using CMS21_Together_Core.Network.Packets;
-using CMS21_Together_Server.Data;
 using CMS21_Together_Server.Log;
 using Steamworks;
 using Steamworks.Data;
@@ -179,10 +178,7 @@ namespace CMS21_Together_Server.Network.Transport
                     try 
                     {
                         object packetData = packet.Read<object>();
-                        lock (GameDataManager.StateLock)
-                        {
-                            PacketRouter.Dispatch((PacketTypes)packetId, packetData, id);
-                        }
+                        Server.Dispatch(id, (PacketTypes)packetId, packetData);
                     }
                     catch (Exception ex)
                     {

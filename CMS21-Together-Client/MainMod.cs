@@ -108,6 +108,7 @@ namespace CMS21Together
 			if (Client.Instance.IsConnectionValid) Logic.Car.Away.CarAwaySync.Update();
 			if (Client.Instance.IsConnectionValid) Logic.Car.Away.PathTestSync.Update();
 			ConnectionStatus.Update();
+			ServerWatchdog.Update();
 			LocalServerHost.Update();
 
 			if (Client.Instance.IsConnectionValid)

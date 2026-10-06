@@ -39,9 +39,9 @@ two-instance scenario. **Rest (last): groups 3–7**, after rows 1–6.
 
 ## 5. Join hardening and server loss
 
-- [ ] 5.1 Server drops packets without `[AllowBeforeSync]` from clients not `InSession` (D9); harness `send-early-stats`; verify a dropped-packet warning and no state change.
-- [ ] 5.2 Client: every send path that checks `ClientData.IsServerUpdating` also checks `IsInitialSyncFinished`; verify no dropped-packet warnings in the server log during `connect`.
-- [ ] 5.3 Client server-loss detection (D10) and reason messages; verify with `Stop-TestServer` that a client in the garage reaches the menu within 12 s.
+- [ ] 5.1 Server drops packets without `[AllowBeforeSync]` from clients not `InSession` (D9); harness `send-early-stats`; verify a dropped-packet warning and no state change. **In code (2026-10-06):** needs a game run
+- [ ] 5.2 Client: every send path that checks `ClientData.IsServerUpdating` also checks `IsInitialSyncFinished`; verify no dropped-packet warnings in the server log during `connect`. **In code (2026-10-06):** needs a game run
+- [ ] 5.3 Client server-loss detection (D10) and reason messages; verify with `Stop-TestServer` that a client in the garage reaches the menu within 12 s. **In code (2026-10-06):** needs a game run
 
 ## 6. Client save safety
 

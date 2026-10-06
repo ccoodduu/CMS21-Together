@@ -5,6 +5,7 @@ using CMS21_Together_Core;
 using CMS21_Together_Core.Logging;
 using CMS21_Together_Core.Network;
 using CMS21Together.Managers;
+using CMS21Together.Session;
 
 namespace CMS21Together.Network.Transport;
 
@@ -46,6 +47,7 @@ public class ClientUDP
         {
             byte[] _data = socket.EndReceive(_result, ref endPoint);
             socket.BeginReceive(ReceiveCallback, null);
+            ServerWatchdog.MarkReceived();
 
             if (_data.Length < 4) return;
             

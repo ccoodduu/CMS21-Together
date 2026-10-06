@@ -61,6 +61,13 @@ and every count is met, and only then sets `ClientData.IsInitialSyncFinished`.
 - Do not add "synced" flags or a provider-specific end packet. Count items instead.
 - Do not send from `OnAskForSync`; add a provider.
 
+## Packets before the ack
+
+`Server.Dispatch` drops (with a warning) every packet from a client that is not `InSession` unless its handler has
+`[AllowBeforeSync]` (design D9). Only mark handlers that do not change shared state or that the join itself needs
+(heartbeat, connect, sync, movement, presence, resync requests). On the client, a send path triggered by game events
+checks `ClientData.IsInitialSyncFinished` so snapshot application is never echoed.
+
 ## Versions
 
 Bump `Version` and add a `Migrate` step when you rename, remove or reshape a field. Adding a field needs no bump
