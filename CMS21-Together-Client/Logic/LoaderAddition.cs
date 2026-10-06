@@ -263,6 +263,7 @@ public static class LoaderAddition
 			yield break;
 		}
 		Log.Success("Game synced successfully.");
+		UidRange.Apply();
 		SpawnPlacement.PlaceLocalPlayer();
 		PresenceManager.PublishLocal();
 		Movement.ForceSend();
