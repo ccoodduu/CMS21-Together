@@ -2,6 +2,31 @@
 
 Newest first. One entry per work session.
 
+## 2026-10-06 (12:40–13:05) — row 2 merged; dev build 0.6.0-dev.611 with cars to play with
+
+- `main` = `ba27389`: rows 1 and 2, the economy fixes and the resync key. Zips
+  `tools\release\out\CMS21-Together-0.6.0-dev.611-client.zip` / `-server.zip`; `release-smoke` PASSED.
+- Since the last entry: `car-parking-full` passes; economy fixes (sell price ×0.5, Expert XP ×2, scraps into the
+  profile, car sale from `CarInfo` blocked while connected) checked in `car-race` and `guard`; F7 resync
+  (`resync-key` passes; the digest part of row 14 is not built yet); F6 developer shortcut spawns a test car.
+- The lane-1 regression `20261006-123223` ran before those fixes: everything passed except `car-race` and `guard`,
+  which used verbs that were not deployed yet; both pass since. A full regression of `ba27389` is next.
+
+### What to try (cars, on top of the M1 checklist)
+
+1. In both clients' `UserData\MelonPreferences.cfg`, under `[CMS21Together]`, set `DevHotkeys = true`. In the garage,
+   F6 spawns a random base-game car on a free place (there is no other car source yet: orders are row 3, buying cars
+   is row 6).
+2. Take parts off and put them back together, also on the same car at the same time; body parts (doors, hood) too.
+   The item lands in the shared inventory once.
+3. Move cars between places and onto a lift with the pie menu; raise and lower the lift from both clients.
+4. Park a car (pie menu "move to parking"), take it out from the parking menu on the other client, swap two slots.
+5. Leave and rejoin, restart the server: cars, parts, lifts and parking come back.
+6. If something looks wrong, press F7: the garage reloads from the server.
+7. Not yet: engine crane (needs oil draining, row 4), orders, buying cars, junkyard.
+8. Report with both `MelonLoader\Latest.log` files and the server's `Log\Latest.txt`; server commands `cars` and
+   `placement` print what the server has.
+
 ## 2026-10-06 (11:50–12:40) — eight research spikes; row 2 (lifts, places, parking) nearly done
 
 - Eight parallel agents wrote static spikes into `docs/spikes/` (no game, no code): `orders-and-jobs`, `car-details`,
