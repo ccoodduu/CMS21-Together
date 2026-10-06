@@ -31,10 +31,14 @@ Answered ones move to the bottom with the answer.
 
 ## Decide later
 
-- **Server-hosted generator client** (your idea, 2026-10-06): the server runs a hidden game instance that generates
-  orders, car damage, junkyard layouts and prices with the game's own code. A spike measures it at the start of M3
-  (headless or not, RAM, generation without a player, Steam). Then we decide together whether it replaces parts of
-  row 16. Until then the plan stays: elected player generator (row 3), server logic later (row 16).
+- **Server-hosted generator client — measured, needs your decision** (your idea; spike results in
+  `docs/spikes/generator-client.md`, 2026-10-06): a hidden game instance runs headless (`-batchmode -nographics`,
+  15 fps) at 2.6 GB RAM and 5 % of one CPU core, reaches the garage in 14 s and generates orders on its own with no
+  player. It needs the game and a logged-in Steam on the server PC (same account as a player works on one PC; another
+  PC with the same account is untested). Options: (a) add it as an optional server feature that becomes the order
+  generator when present (row 3 already elects a generator, so it slots in as the top candidate); (b) also use it for
+  junkyard/barn layouts later (row 15, not measured yet); (c) keep only the elected player generator.
+  **Default: (a), built after row 3 works with players, as an opt-in `generator_client = true` in the server config.**
 
 - **How row 10 syncs money** (from `docs/spikes/economy-paths.md`, 2026-10-06): (A) one central hook on the game's
   money function, where the server trusts the client's amount; (B) one request per feature, where the server computes
