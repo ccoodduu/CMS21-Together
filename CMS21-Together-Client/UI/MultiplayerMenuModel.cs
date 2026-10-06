@@ -45,7 +45,7 @@ public static class MultiplayerMenuModel
 	public static string HostPortText { get; set; } = MainMod.PORT.ToString();
 	public static string HostMaxPlayersText { get; set; } = MainMod.MAX_PLAYER.ToString();
 	public static string HostPasswordText { get; set; } = "";
-	public static bool HostSteam { get; set; } = true;
+	public static bool HostSteam { get; set; } = MainMod.IsSteamAvailable;
 	public static Gamemode HostDifficulty { get; private set; } = Gamemode.Normal;
 	public static bool StartOver { get; private set; }
 	public static bool StartOverPending { get; private set; }
@@ -91,7 +91,6 @@ public static class MultiplayerMenuModel
 
 	public static void OpenHostPanel()
 	{
-		HostSteam = MainMod.IsSteamAvailable;
 		StartOver = false;
 		StartOverPending = false;
 		PanelError = "";
