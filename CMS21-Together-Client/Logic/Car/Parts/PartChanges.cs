@@ -11,6 +11,7 @@ public static class PartChanges
 {
 	public static void OnRemoteChange(CarPartsChangePacket change)
 	{
+		PartTransactions.AbortFor(change.CarLoaderID, change.BodyParts.Select(r => r.Key).Concat(change.SubParts.Select(r => r.Key)));
 		ApplyInventory(change.InventoryDelta);
 		change.InventoryDelta = null;
 		var sync = CarPartsSync.Get(change.CarLoaderID);

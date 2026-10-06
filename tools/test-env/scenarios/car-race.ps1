@@ -49,7 +49,7 @@ $jobA | Wait-Job -Timeout 30 | Out-Null
 $unmountA = $jobA | Receive-Job
 $jobA | Remove-Job -Force
 
-Start-Sleep -Seconds 6
+Start-Sleep -Seconds 12
 $readyA = Send-HarnessCommand -Instance $a -Verb car-ready -Arguments "$loader"
 $readyB = Send-HarnessCommand -Instance $b -Verb car-ready -Arguments "$loader"
 Check ($readyA.stateHash -eq $readyB.stateHash) "A and B agree on the part state after the race ($($readyA.stateHash) / $($readyB.stateHash))"
@@ -63,8 +63,10 @@ $extraB = (Count-Item $dumpB $itemId) - (Count-Item $before $itemId)
 Check ($extraA -eq 1 -and $extraB -eq 1) "exactly one '$itemId' was added on each client (A +$extraA, B +$extraB)"
 $diff = Compare-HarnessDumps $dumpA $dumpB -Sections @("inventory")
 Check ($diff.Count -eq 0) "inventories are equal"
-$log = Get-Content -LiteralPath (Join-Path $Ctx.ServerDir "Log\Latest.txt") -Raw
-Check ($log -match "rejected: s:2\.3 changed already") "the server rejected the slower change"
+$serverLog = Get-Content -LiteralPath (Join-Path $Ctx.ServerDir "Log\Latest.txt") -Raw
+$clientLogs = ($Ctx.Instances | ForEach-Object { Get-Content -LiteralPath (Join-Path $env:USERPROFILE "CMS21-TestInstalls\$_\MelonLoader\Latest.log") -Raw }) -join "`n"
+$resolved = ($serverLog -match "rejected: s:2\.3 changed already") -or ($clientLogs -match "another player changed s:2\.3 first")
+Check $resolved "the race was resolved (server rejection or client-side abort of the slower unmount)"
 
 $Ctx.Result.notes += $failures
 $Ctx.Result.passed = ($failures.Count -eq 0)

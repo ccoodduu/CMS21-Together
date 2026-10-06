@@ -158,8 +158,8 @@ public static class PartTransactions
 		foreach (var tx in open.Where(t => t.Loader == loader && t.AbortedUntil == 0f && t.Keys.Overlaps(keySet)).ToList())
 		{
 			tx.AbortedUntil = Time.realtimeSinceStartup + AbortedSwallowSeconds;
-			if (tx.Delta.IsEmpty) continue;
 			Log.Info($"[Parts] Loader {loader}: another player changed {string.Join(",", tx.Keys.Intersect(keySet))} first; undoing the local inventory change.");
+			if (tx.Delta.IsEmpty) continue;
 			Revert(tx.Delta, tx.RemovedItems.Keys.Concat(tx.RemovedGroups.Keys), tx.RemovedItems, tx.RemovedGroups);
 		}
 	}
