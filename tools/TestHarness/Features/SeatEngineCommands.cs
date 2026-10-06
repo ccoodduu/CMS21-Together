@@ -163,4 +163,16 @@ public static class SeatEngineCommands
             ["engine"] = engine,
         };
     }
+
+    [HarnessCommand("audio-clips")]
+    private static object AudioClips(string args)
+    {
+        string filter = (args ?? "").Trim().ToLowerInvariant();
+        var clips = UnityEngine.Resources.FindObjectsOfTypeAll(UnhollowerRuntimeLib.Il2CppType.Of<UnityEngine.AudioClip>());
+        var found = new List<string>();
+        for (int i = 0; clips != null && i < clips.Length; i++)
+            if (clips[i].name.ToLowerInvariant().Contains(filter)) found.Add(clips[i].name);
+        var sounds = UnityEngine.Resources.FindObjectsOfTypeAll(UnhollowerRuntimeLib.Il2CppType.Of<RealisticEngineSound>());
+        return new { count = found.Count, names = found.Distinct().OrderBy(n => n).Take(80).ToList(), engineSounds = sounds?.Length ?? 0 };
+    }
 }

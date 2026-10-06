@@ -85,7 +85,7 @@ public static class StateDump
         {
             playerId = e.PlayerId,
             carLoaderId = e.CarLoaderId,
-            audioPlaying = e.IsAlive && e.Source.isPlaying,
+            audioPlaying = e.IsPlaying,
         }).ToList();
         return dump;
     }
