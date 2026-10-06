@@ -101,8 +101,9 @@ try {
             "--harness.name=$name", "--harness.window=$Window"
         )
         if (-not $Sound) { $arguments += "--harness.mute" }
-        if ($launchArgs -and $launchArgs.ContainsKey($name)) {
-            $arguments += @($launchArgs[$name] | ForEach-Object { $_.Replace("{port}", "$($laneInfo.Port)") })
+        $role = @("A", "B")[[array]::IndexOf($Instances, $name)]
+        if ($launchArgs -and $launchArgs.ContainsKey($role)) {
+            $arguments += @($launchArgs[$role] | ForEach-Object { $_.Replace("{port}", "$($laneInfo.Port)") })
         }
         Start-Process -FilePath (Join-Path $dir "$gameProcess.exe") -WorkingDirectory $dir -ArgumentList $arguments | Out-Null
         Write-Host "Started instance $name"
