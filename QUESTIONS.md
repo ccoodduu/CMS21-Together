@@ -13,6 +13,22 @@ Answered ones move to the bottom with the answer.
    asks "remove it from parking?" and deletes it. Default: blocked while connected, with a message, because it only
    happens when players have different DLC or mods.
 
+## Open — new (2026-10-06, row 10 economy draft on `change/economy-audit`)
+
+3. **Money or scrap changes that no game feature claims** (an unknown path): drop them and log them, or let them run
+   locally as today. **Default: drop and log** (a counter in the scenarios must stay 0).
+4. **Travel fees** follow each player's own "travel costs money" game setting, or one server rule. **Default: the
+   player's own setting.**
+5. **Fees charged after the fact** (spill fine, washes, welder …) can take money down to 0 and are never refused for
+   lack of money, as in the game. **Default: yes.**
+6. **Selling a car** is refused while another player works on it, while it is away (test drive, dyno, path), or if it
+   is a job car. **Default: yes.**
+7. **Prices the game computes on the client** (car sale and purchase, welder, interior detailing, repair, plates,
+   crate cards) are trusted within bounds until row 16 moves them to the server. **Default: yes.**
+8. **One shared barn count** (today barn maps and barn trips change it on one client only). **Default: shared.**
+9. **Skill reset:** any player can reset the shared skills, the others get a message. **Default: yes.**
+10. **The drag strip** (and the map's "measure power") stays blocked. **Default: yes.**
+
 ## Open — smaller, defaults probably fine
 
 - Remote players see only the finished part state, not the bolt animation, while a part is reserved.
