@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using System.Linq;
 using CMS21_Together_Core.Logging;
 using CMS21_Together_Core.Network.Packets;
 using CMS21Together.Data;
@@ -71,6 +72,7 @@ public static class PartChanges
 	{
 		var carLoader = CarLoaderPlaces.Get()?.GetCarLoaderByIndex(sync.Loader);
 		if (carLoader == null || sync.Registry == null) return;
+		PartTransactions.AbortFor(sync.Loader, body.Select(r => r.Key).Concat(sub.Select(r => r.Key)));
 
 		int failed = 0;
 		using (ApplyingRemote.Scope(sync.Loader))

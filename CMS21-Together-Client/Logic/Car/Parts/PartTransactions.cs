@@ -16,6 +16,7 @@ namespace CMS21Together.Logic.Car.Parts;
 public static class PartTransactions
 {
 	private const float IdleFlushSeconds = 10f;
+	private const float AbortedSwallowSeconds = 5f;
 
 	private class Transaction
 	{
@@ -26,6 +27,7 @@ public static class PartTransactions
 		public readonly Dictionary<long, ModItem> RemovedItems = new Dictionary<long, ModItem>();
 		public readonly Dictionary<long, ModGroupItem> RemovedGroups = new Dictionary<long, ModGroupItem>();
 		public float LastActivity;
+		public float AbortedUntil;
 	}
 
 	private static readonly List<Transaction> open = new List<Transaction>();
@@ -69,6 +71,12 @@ public static class PartTransactions
 
 	public static void OpenForBody(int loader, int index, CarPart part) =>
 		Open(loader, new[] { PartKeys.Body(index) }, new[] { part.GetIDWithTuned(), part.name });
+
+	public static bool SuppressAdd(string itemId)
+	{
+		var tx = Match(itemId);
+		return tx != null && tx.AbortedUntil > Time.realtimeSinceStartup;
+	}
 
 	public static bool CaptureAdd(ModItem item)
 	{
@@ -122,7 +130,7 @@ public static class PartTransactions
 		var delta = new InventoryDelta();
 		var items = new Dictionary<long, ModItem>();
 		var groups = new Dictionary<long, ModGroupItem>();
-		foreach (var tx in open.Where(t => t.Loader == loader && t.Keys.Overlaps(keys)).ToList())
+		foreach (var tx in open.Where(t => t.Loader == loader && t.AbortedUntil == 0f && t.Keys.Overlaps(keys)).ToList())
 		{
 			delta.AddedItems.AddRange(tx.Delta.AddedItems);
 			delta.AddedGroups.AddRange(tx.Delta.AddedGroups);
@@ -141,23 +149,38 @@ public static class PartTransactions
 		if (!committed.TryGetValue(result.TxId, out var removed)) return;
 		committed.Remove(result.TxId);
 		if (result.Accepted) return;
-		var sentDelta = removed.Delta;
+		Revert(removed.Delta, result.RestoreUids, removed.Items, removed.Groups);
+	}
 
+	public static void AbortFor(int loader, IEnumerable<string> keys)
+	{
+		var keySet = new HashSet<string>(keys);
+		foreach (var tx in open.Where(t => t.Loader == loader && t.AbortedUntil == 0f && t.Keys.Overlaps(keySet)).ToList())
+		{
+			tx.AbortedUntil = Time.realtimeSinceStartup + AbortedSwallowSeconds;
+			if (tx.Delta.IsEmpty) continue;
+			Log.Info($"[Parts] Loader {loader}: another player changed {string.Join(",", tx.Keys.Intersect(keySet))} first; undoing the local inventory change.");
+			Revert(tx.Delta, tx.RemovedItems.Keys.Concat(tx.RemovedGroups.Keys), tx.RemovedItems, tx.RemovedGroups);
+		}
+	}
+
+	private static void Revert(InventoryDelta delta, IEnumerable<long> restoreUids, Dictionary<long, ModItem> removedItems, Dictionary<long, ModGroupItem> removedGroups)
+	{
 		var inventory = Singleton<GameManager>.Instance.Inventory;
 		bool previous = InventoryHandlers.IgnoreInventoryHooks;
 		InventoryHandlers.IgnoreInventoryHooks = true;
 		try
 		{
-			foreach (var item in sentDelta.AddedItems)
+			foreach (var item in delta.AddedItems)
 			{
 				var local = inventory.GetItem(item.UID);
 				if (local != null) inventory.Delete(local);
 			}
-			foreach (var group in sentDelta.AddedGroups) inventory.DeleteGroup(group.UID);
-			foreach (long uid in result.RestoreUids)
+			foreach (var group in delta.AddedGroups) inventory.DeleteGroup(group.UID);
+			foreach (long uid in restoreUids)
 			{
-				if (removed.Items.TryGetValue(uid, out var item)) inventory.Add(item.ToGameItem());
-				else if (removed.Groups.TryGetValue(uid, out var group)) inventory.AddGroup(group.ToGameGroupItem());
+				if (removedItems.TryGetValue(uid, out var item)) inventory.Add(item.ToGameItem());
+				else if (removedGroups.TryGetValue(uid, out var group)) inventory.AddGroup(group.ToGameGroupItem());
 			}
 		}
 		finally
@@ -170,9 +193,11 @@ public static class PartTransactions
 	public static void FlushIdle()
 	{
 		float now = Time.realtimeSinceStartup;
+		foreach (var tx in open.Where(t => t.AbortedUntil > 0f && t.AbortedUntil < now).ToList()) open.Remove(tx);
 		foreach (var tx in open.Where(t => now - t.LastActivity > IdleFlushSeconds).ToList())
 		{
 			open.Remove(tx);
+			if (tx.AbortedUntil > 0f) continue;
 			if (tx.Delta.IsEmpty) continue;
 			Log.Debug($"[Parts] Loader {tx.Loader}: transaction for {string.Join(",", tx.Keys)} never committed; sending its inventory changes on their own.");
 			foreach (var item in tx.Delta.AddedItems) Client.Instance.Send(new InventoryItemActionPacket { Action = ItemActionType.Add, Item = item });

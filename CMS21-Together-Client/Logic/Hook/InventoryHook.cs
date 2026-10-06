@@ -15,6 +15,7 @@ namespace CMS21Together.Logic.Hook
         [HarmonyPrefix]
         public static bool AddItemPrefix(Item item, bool showPopup)
         {
+            if (Client.Instance.IsConnected && !InventoryHandlers.IgnoreInventoryHooks && PartTransactions.SuppressAdd(item.ID)) return false;
             if (Client.Instance.IsConnected && !InventoryHandlers.IgnoreInventoryHooks && !PartTransactions.CaptureAdd(item.ToModItem()))
             {
                 var packet = new InventoryItemActionPacket
