@@ -75,6 +75,17 @@ Start-Sleep -Seconds 4
 $diff = Compare-HarnessDumps (Send-HarnessCommand -Instance $a -Verb dump) (Send-HarnessCommand -Instance $b -Verb dump) -Sections @("inventory")
 Check ($diff.Count -eq 0) "B's inventory matches A's after the repair"
 
+$mark = Get-ServerLogMark
+Send-HarnessCommand -Instance $b -Verb digest-hold -Arguments "world on" | Out-Null
+$persistent = Try-ServerLog "\[Desync\] world for client \d+ is persistent" $mark 90
+Check ([bool]$persistent) "a repair that does not hold becomes persistent ($persistent)"
+Start-Sleep -Seconds 2
+$clientLogB = Get-Content -LiteralPath (Join-Path $env:USERPROFILE "CMS21-TestInstalls\$b\MelonLoader\Latest.log") -Raw
+Check ($clientLogB -match "\[Desync\] world\s+is out of sync \(persistent: True\)") "B got the persistent notice"
+$resends = @((Get-Content -LiteralPath (Join-Path $Ctx.ServerDir "Log\Latest.txt") | Select-Object -Skip $mark) | Where-Object { $_ -match "\[Desync\] world .*resending" })
+Check ($resends.Count -eq 1) "the world section was resent once before the backoff ($($resends.Count))"
+Send-HarnessCommand -Instance $b -Verb digest-hold -Arguments "world off" | Out-Null
+
 $records = @(Get-ChildItem -LiteralPath (Join-Path $Ctx.ServerDir "Log\desync") -Filter "*.json" -ErrorAction SilentlyContinue)
 Check ($records.Count -ge 2) "diff records were written ($($records.Count))"
 if ($records.Count -gt 0) { Copy-Item -LiteralPath $records.FullName -Destination $Ctx.RunDir }
