@@ -147,7 +147,9 @@ public static class JobsSync
 				PendingTake = -1;
 				var missions = job.IsMission ? Missions() : null;
 				Log.Info($"[Jobs] Job {jobId} started on loader {job.carLoaderID}.");
-				Client.Instance.Send(new JobStartedPacket { JobId = jobId, CarLoaderId = job.carLoaderID, Job = ModJobConverter.ToMod(job), Missions = missions });
+				var started = new JobStartedPacket { JobId = jobId, CarLoaderId = job.carLoaderID, Job = ModJobConverter.ToMod(job), Missions = missions };
+				OnJobStarted(started);
+				Client.Instance.Send(started);
 				yield return new WaitForSeconds(0.5f);
 				CarPartsSync.UploadBaseline(job.carLoaderID);
 				yield break;

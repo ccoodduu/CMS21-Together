@@ -80,7 +80,7 @@ public static class JobHooks
 	[HarmonyPrefix]
 	private static bool BeforeCancel(OrderGenerator __instance, int id)
 	{
-		if (!Connected || JobsSync.IsApplying) return true;
+		if (!Connected || JobsSync.IsApplying || id == JobsSync.PendingTake) return true;
 		if (JobEndContext.IsCommit(id))
 		{
 			Job ended = null;

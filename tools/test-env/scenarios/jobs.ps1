@@ -81,6 +81,10 @@ foreach ($name in $Ctx.Instances) {
     Check ($r.loaded) "$name has the customer car on loader $loader ($($r.car))"
 }
 
+$repair = Send-HarnessCommand -Instance $taker -Verb job-repair -Arguments "$take"
+Write-Host "repair: $($repair | ConvertTo-Json -Compress)"
+Send-HarnessCommand -Instance $taker -Verb job-examine -Arguments "$take" | Out-Null
+Start-Sleep -Seconds 2
 $moneyBefore = (Send-HarnessCommand -Instance $a -Verb dump).stats.money
 $mark = Get-ServerLogMark
 Send-HarnessCommand -Instance $taker -Verb job-finish -Arguments "$take" | Out-Null

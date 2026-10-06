@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using CMS.UI;
 using CMS.UI.Logic;
 using CMS.UI.Windows;
@@ -131,7 +132,7 @@ public static class JobsCommands
         int repaired = 0;
         foreach (var part in carLoader.GetComponentsInChildren<PartScript>(true))
         {
-            if (!wanted.Contains(part.id) && !wanted.Contains(part.tunedID)) continue;
+            if (!wanted.Contains(part.id) && !wanted.Contains(part.tunedID) && !wanted.Contains(part.gameObject.name)) continue;
             part.SetCondition(1f, true);
             repaired++;
         }
@@ -142,7 +143,9 @@ public static class JobsCommands
             body.Condition = 1f;
             repaired++;
         }
-        return new { job.id, wanted = wanted.Count, repaired };
+        var sample = new List<string>();
+        foreach (var part in carLoader.GetComponentsInChildren<PartScript>(true)) if (sample.Count < 8) sample.Add($"{part.id}/{part.gameObject.name}");
+        return new { job.id, wanted = wanted.Count, repaired, wantedIds = wanted.Take(8).ToList(), carParts = sample };
     }
 
     [HarnessCommand("job-check")]
