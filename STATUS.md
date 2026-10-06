@@ -39,6 +39,26 @@ Newest first. One entry per work session.
   3. Run `diagnostics` and `test-drive-latejoin`, fix, then the full regression; merge row 13 into `main` if green.
   4. Continue M4: review and test row 5a's branch, then 5b, 6 part 2, 10, 8 part 2.
 
+## 2026-10-06 (16:30–) — after the reboot: two lanes in parallel, row 13 tested
+
+- The commit limit is 63.9 GB now. `Run-Session.ps1` holds the lane mutex only while the games start and waits for
+  22 GB commit headroom, so lanes 1 and 2 run at the same time: four games used 37 of 63.9 GB. `Run-All -Lanes 1,2`
+  halves the regression time.
+- After a reboot Steam must run (offline mode is fine); without it the games hang in the `init` scene.
+- `diagnostics` (lane 1) and `test-drive-latejoin` (lane 2) passed on the first run, in parallel. Row 13 is complete in
+  code; the net-hold race of 8.1, the away-label screenshot (4.3) and the hand checks of spikes 1.3/1.4 are open.
+- A run that is killed before its restore left a test car in lane 1's server save, and every later run restored that
+  dirty save (`car-baseline` failed twice). The clean save is back, and `Run-Session` now leaves a marker with its
+  backup path, so the next run on that lane restores an interrupted run's backup first.
+- `car-placement` failed once on lane 2 (B's car from parking never finished loading, so no unpark request) and
+  passed on the rerun; `ParkingSync` now logs that case.
+- Your answers are in QUESTIONS.md: travel fees follow a server rule (`travel_fees`, added to row 10's design), all
+  other questions take the defaults (generator client as opt-in, row 10 option C, …). Nothing is open.
+- Branches from the agents: `change/sync-workshop-machines` (row 5a, Core + server store, agent still working),
+  `change/economy-audit` (row 10 OpenSpec, complete), `change/sync-players-and-scenes-part2` (row 6 part 2 seat and
+  engine, in code, needs a game run).
+- Running: full regression of the row 13 branch on both lanes.
+
 ## 2026-10-06 (15:10–15:40) — row 3 merged; row 4 car details (branch `change/sync-car-details`)
 
 - Lane-1 regression `20261006-144952` of the row 3 branch: all 25 scenarios PASSED. `main` = `635b22b` (row 3).
