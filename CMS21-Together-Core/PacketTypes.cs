@@ -87,5 +87,8 @@ public enum PacketTypes
 	CarAwayUpdate,
 	CarAwayRelease,
 	TestDriveResult,
-	TestDriveResultAck
+	TestDriveResultAck,
+
+	EconomyRequest,
+	EconomyResult
 }
