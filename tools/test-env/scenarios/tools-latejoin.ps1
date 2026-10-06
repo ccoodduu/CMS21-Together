@@ -44,7 +44,7 @@ $balanced = (Cmd $a give-group "wheel").UID
 Cmd $a tool-put "WheelBalancer $balanced" | Out-Null
 Cmd $a tool-balance | Out-Null
 Cmd $a tool-stand-create "EngineStand1 engine_v8_stary" | Out-Null
-Start-Sleep -Seconds 5
+try { Wait-HarnessDump -Instance $a -TimeoutSec 60 -What "engine built on A's stand" -Condition { param($x) $x.tools.EngineStand1.uid -ne 0 } | Out-Null } catch { }
 Cmd $a tool-angle "EngineStand1 90" | Out-Null
 $part = Cmd $a tool-stand-part "EngineStand1 auto unmount"
 Write-Host "A unmounted $($part.key) ($($part.id))"

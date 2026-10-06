@@ -95,6 +95,7 @@ Cmd $loser tool-take "WheelBalancer" | Out-Null
 Wait-Same "balancer emptied" | Out-Null
 
 Cmd $a tool-stand-create "EngineStand1 engine_v8_stary" | Out-Null
+try { Wait-HarnessDump -Instance $a -TimeoutSec 60 -What "engine built on A's stand" -Condition { param($x) $x.tools.EngineStand1.uid -ne 0 } | Out-Null } catch { }
 Wait-Same "engine on the stand" 60 | Out-Null
 $engines = @((Cmd $a dump).inventory.groups | Where-Object { $_.ID -eq "engine_v8_stary" }).Count
 Hold "on"
