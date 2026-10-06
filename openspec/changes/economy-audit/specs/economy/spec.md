@@ -5,9 +5,6 @@
 Makes every change to the shared money, scrap, experience, level, skills and barn count server-authoritative, so all
 players always see the same values and no game path can change them on one machine only.
 
-TODO (draft cut short by a reboot): add requirements for scrap per condition, quality upgrade, license plates and
-persistence of the barn count; review scenario wording.
-
 ## ADDED Requirements
 
 ### Requirement: Every economy change goes through the server
@@ -61,6 +58,39 @@ Scrapping an item SHALL remove it from the shared inventory and add the scrap th
 - **WHEN** player A scraps a part from the inventory
 - **THEN** the part is gone for both players and the shared scrap rises by the same amount for both
 
+#### Scenario: Scrap a part that is already gone
+- **WHEN** player A scraps a part that player B sold a moment earlier
+- **THEN** the server refuses the scrap, no scrap is added, and the part is gone for both players
+
+### Requirement: Scrap per condition
+Scrapping every inventory part at or below a condition SHALL remove the same parts from the shared inventory for every player and add the scrap the server computes for them, once.
+
+#### Scenario: Scrap worn parts
+- **WHEN** player A scraps all parts at or below 30 % condition
+- **THEN** those parts are gone for A and B, parts above 30 % stay, and the shared scrap rises by the same amount for both
+
+### Requirement: Quality upgrade
+Upgrading an item's quality with scrap SHALL cost the scrap the server computes for the target quality, once, and SHALL change the item's quality for every player. The server SHALL refuse the upgrade when the shared scrap is too low.
+
+#### Scenario: Upgrade an item
+- **WHEN** player A upgrades a part from quality 0 to quality 1
+- **THEN** the part has quality 1 in A's and B's inventory and the shared scrap drops by the upgrade cost once
+
+#### Scenario: Not enough scrap
+- **WHEN** player A tries an upgrade that costs more scrap than the shared scrap
+- **THEN** the upgrade is refused with a message, the part keeps its quality and no scrap is taken
+
+### Requirement: License plates
+Buying license plates SHALL add the plates, with their custom text, to the shared inventory for every player and take the price from the shared money once. The server SHALL refuse the purchase when the shared money is too low.
+
+#### Scenario: Buy plates with a custom text
+- **WHEN** player A buys two license plates with the text "TEST"
+- **THEN** both plates with that text are in A's and B's inventory and the shared money drops by the price once
+
+#### Scenario: Not enough money
+- **WHEN** player A buys license plates that cost more than the shared money
+- **THEN** no plate is added for anyone and no money is taken
+
 ### Requirement: Crates keep money and level equal (upstream #94)
 Opening a crate SHALL pay the picked card once into the shared money, scrap or experience, within the card's range, and only once per crate.
 
@@ -75,9 +105,28 @@ The number of available barns SHALL be shared: using a barn map SHALL add one ba
 - **WHEN** player A uses a barn map from the shared inventory
 - **THEN** the map is gone and the barn count is one higher for both players
 
+#### Scenario: Barn trip
+- **WHEN** player B travels to a barn from the map
+- **THEN** the barn count is one lower for both players, and the travel fee, if B's game charged one, is taken once
+
+#### Scenario: Barn count after a restart
+- **WHEN** the barn count is 2, the server saves, restarts and the players reconnect
+- **THEN** the barn count is 2 for every player
+
 ### Requirement: Late join
 A player who joins SHALL get the server's money, scrap, experience, level, skills and barn count.
 
 #### Scenario: Late join after trades
 - **WHEN** player A sells a car, resets the skills and uses a barn map, and player B joins afterwards
 - **THEN** B's money, skills and barn count equal A's
+
+### Requirement: Features available while connected
+While connected, opening crates, scrapping, scrap per condition, buying license plates and selling cars SHALL be usable with the multiplayer guard enforcing. The drag strip SHALL stay blocked.
+
+#### Scenario: Crate window allowed
+- **WHEN** a connected player with the guard enforcing opens a crate from the inventory
+- **THEN** the crate window opens and is not blocked by the guard
+
+#### Scenario: Drag strip stays blocked
+- **WHEN** a connected player tries to travel to the drag strip
+- **THEN** the guard blocks it with its "not supported in multiplayer yet" message

@@ -87,8 +87,9 @@ for A or B):
   (`Barns`, profile wrapper); `GuardRules`.
 - Harness: `tools/TestHarness/Features/EconomyCommands.cs` (`econ-trace`, `econ-map-travel`, `econ-skill-reset`,
   `econ-sell-car`, `econ-scrap`, `econ-scrap-condition`, `econ-scrap-upgrade`, `econ-license`, `econ-crate`,
-  `econ-barn-map`, `econ-fee`, `econ-unattributed`, `econ-ledger`), dump section `economy` and `stats.barns`;
-  scenarios `economy-trace.ps1`, `economy-fees.ps1`, `economy-trades.ps1`, `economy-latejoin.ps1`.
+  `econ-crate-close`, `econ-barn-map`, `econ-fee`, `econ-unattributed`, `econ-ledger`), dump sections `economy`,
+  `skills` and `stats.barns`; server commands `economy`, `gamemode`; scenarios `economy-trace.ps1`,
+  `economy-fees.ps1`, `economy-trades.ps1`, `economy-latejoin.ps1`.
 - Depends on (merged): rows 7 (contract, `StateLock`, `world` section), 1 (`ClearLoader`, `CarClaims`, delete
   broadcast), 2 (`ParkingService.TryRemove`, `ParkingHandlers`), 3 (`JobEndContext`), 4 (tint hooks), 5a (repair
   table, `ItemActionType.Update`), 5b (paint, welder, interior detailing), 6 part 2 (barn/auction/salon scenes,
