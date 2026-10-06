@@ -27,27 +27,33 @@ namespace CMS21_Together_Server.Network.Handlers
 			Logger.Debug($"Reiceved Connection callback from {packet.username}");
 			Logger.Debug($"Received info: {packet.modVersion}, {packet.username}, {packet.playerID}");
 
-			if (packet.modVersion != Program.MOD_VERSION)
-			{
-				Server.Refuse((int)clientId, DisconnectReason.VersionMismatch,
-					$"This server runs Together {Program.MOD_VERSION}; you have {packet.modVersion}.");
-				return;
-			}
+			if (!CompatibilityPolicy.Evaluate((int)clientId, packet)) return;
 			Server.Clients[(int)clientId].OnConnectedSuccessfully.Invoke();
-			Server.SendToClient(new ServerInfoPacket
-			{
-				ServerName = Program.Config.ServerName,
-				ModVersion = Program.MOD_VERSION,
-				Port = Program.Config.Port,
-				MaxPlayers = Program.Config.MaxPlayers,
-				SteamId = Program.Config.UseSteam ? SteamTransport.GetServerSteamID() : 0,
-				PublicAddress = Program.Config.PublicAddress,
-				Difficulty = GameDataManager.CurrentState.WorldState.Gamemode
-			}, (int)clientId);
+			SharedDlc.Add((int)clientId, packet.dlc);
+			Server.SendToClient(BuildServerInfo(), (int)clientId);
 
 			var record = PresenceRegistry.Add((int)clientId, packet.username);
 			Logger.Info($"Player {record.PlayerId} '{record.Username}' joined");
 			Server.SendToClients(new PlayerPresencePacket { Record = record.Copy() }, record.PlayerId);
+		}
+
+		public static ServerInfoPacket BuildServerInfo() => new ServerInfoPacket
+		{
+			ServerName = Program.Config.ServerName,
+			ModVersion = Program.MOD_VERSION,
+			Port = Program.Config.Port,
+			MaxPlayers = Program.Config.MaxPlayers,
+			SteamId = Program.Config.UseSteam ? SteamTransport.GetServerSteamID() : 0,
+			PublicAddress = Program.Config.PublicAddress,
+			Difficulty = GameDataManager.CurrentState.WorldState.Gamemode,
+			SharedDlc = SharedDlc.Shared.ToList()
+		};
+
+		public static void BroadcastServerInfo()
+		{
+			var info = BuildServerInfo();
+			foreach (var client in Server.Clients.Values.Where(c => c.IsConnected && c.IsAccepted))
+				Server.SendToClient(info, client.ID);
 		}
 
 		[PacketHandler(PacketTypes.AskForSync)]

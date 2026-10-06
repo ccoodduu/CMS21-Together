@@ -5,6 +5,8 @@ using CMS21_Together_Core;
 using CMS21_Together_Core.Network;
 using CMS21_Together_Server.Data;
 using CMS21_Together_Server.Data.Persistence;
+using CMS21_Together_Server.Data.Presence;
+using CMS21_Together_Server.Network.Handlers;
 using CMS21_Together_Server.Log;
 using CMS21_Together_Server.Network;
 
@@ -45,6 +47,13 @@ namespace CMS21_Together_Server
 				return;
 			}
 
+			string checkModsPath = GetArgument(args, "--check-mods");
+			if (checkModsPath != null)
+			{
+				Environment.Exit(ModCheck.Run(checkModsPath));
+				return;
+			}
+
 			Terminal.Gui.Application.Init();
 			
 			Terminal.Gui.Colors.Base.Normal = Terminal.Gui.Application.Driver.MakeAttribute(Terminal.Gui.Color.White, Terminal.Gui.Color.Black);
@@ -72,7 +81,11 @@ namespace CMS21_Together_Server
 				Exit();
 				return;
 			}
-			
+
+			CompatibilityPolicy.Initialize(Config);
+			SharedDlc.Changed += _ => AuthHandler.BroadcastServerInfo();
+			PresenceEvents.Left += SharedDlc.Remove;
+
 			try
 			{
 				GameDataManager.BackupCount = Config.BackupCount;
