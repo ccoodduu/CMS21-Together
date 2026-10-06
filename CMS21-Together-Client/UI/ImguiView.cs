@@ -37,6 +37,15 @@ public static class ImguiView
 			}
 		}
 
+		if (JoinService.PendingConfirmation != null)
+		{
+			FreeCursor();
+			DrawConfirm($"Leave this session and join {JoinService.PendingConfirmation}?");
+		}
+		else
+		{
+			RestoreCursor();
+		}
 		if (ConnectionStatus.IsBusy) DrawStatusOverlay();
 		DrawToasts();
 	}
@@ -89,6 +98,32 @@ public static class ImguiView
 		GUI.Label(new Rect(rect.x + 12f, rect.y + 10f, rect.width - 24f, 28f), title, titleStyle);
 		GUI.Label(new Rect(rect.x + 12f, rect.y + 44f, rect.width - 24f, 80f), text, labelStyle);
 		if (GUI.Button(new Rect(rect.x + (rect.width - 100f) / 2f, rect.y + rect.height - 44f, 100f, 32f), "OK")) onOk();
+	}
+
+	private static (CursorLockMode Lock, bool Visible)? savedCursor;
+
+	private static void FreeCursor()
+	{
+		savedCursor ??= (Cursor.lockState, Cursor.visible);
+		Cursor.lockState = CursorLockMode.None;
+		Cursor.visible = true;
+	}
+
+	private static void RestoreCursor()
+	{
+		if (savedCursor == null) return;
+		Cursor.lockState = savedCursor.Value.Lock;
+		Cursor.visible = savedCursor.Value.Visible;
+		savedCursor = null;
+	}
+
+	private static void DrawConfirm(string text)
+	{
+		var rect = new Rect((Screen.width - 480f) / 2f, (Screen.height - 160f) / 2f, 480f, 160f);
+		GUI.Box(rect, "", boxStyle);
+		GUI.Label(new Rect(rect.x + 12f, rect.y + 12f, rect.width - 24f, 70f), text, labelStyle);
+		if (GUI.Button(new Rect(rect.x + rect.width / 2f - 110f, rect.y + rect.height - 44f, 100f, 32f), "Join")) JoinService.Answer(true);
+		if (GUI.Button(new Rect(rect.x + rect.width / 2f + 10f, rect.y + rect.height - 44f, 100f, 32f), "Stay")) JoinService.Answer(false);
 	}
 
 	private static void DrawToasts()

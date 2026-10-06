@@ -16,6 +16,28 @@ public static class JoinCommands
         return $"joining {JoinService.CurrentTarget}";
     }
 
+    [HarnessCommand("mp-presence")]
+    private static object Presence(string args)
+    {
+        var (joinString, reason) = RichPresence.Build(ClientData.ServerInfo, JoinService.CurrentTarget);
+        return new Dictionary<string, object> { ["joinString"] = joinString, ["reason"] = reason, ["published"] = RichPresence.JoinString, ["status"] = RichPresence.StatusText };
+    }
+
+    [HarnessCommand("mp-join-string")]
+    private static object JoinString(string args)
+    {
+        if (!JoinService.HandleJoinString(args?.Trim(), out string error)) throw new ArgumentException(error);
+        return JoinService.PendingConfirmation != null ? "waiting for confirmation" : "joining";
+    }
+
+    [HarnessCommand("mp-answer")]
+    private static object Answer(string args)
+    {
+        bool yes = string.Equals(args?.Trim(), "yes", StringComparison.OrdinalIgnoreCase);
+        JoinService.Answer(yes);
+        return yes ? "leaving and joining" : "staying";
+    }
+
     [HarnessCommand("mp-status")]
     private static object Status(string args) => Session();
 
@@ -74,6 +96,7 @@ public static class JoinCommands
             ["toasts"] = ModNotify.History.Select(t => t.Text).ToList(),
             ["panel"] = MultiplayerMenuModel.JoinPanelOpen ? "join" : "none",
             ["panelError"] = MultiplayerMenuModel.PanelError,
+            ["pendingConfirmation"] = JoinService.PendingConfirmation?.ToString(),
         };
     }
 }

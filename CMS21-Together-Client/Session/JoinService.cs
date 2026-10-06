@@ -52,9 +52,57 @@ public static class JoinService
 		return true;
 	}
 
+	public static JoinTarget PendingConfirmation { get; private set; }
+	public static JoinTarget QueuedJoin { get; private set; }
+
 	public static void OnInSession()
 	{
 		if (CurrentTarget != null) PlayerSettings.LastJoinTarget = CurrentTarget.ToString();
+		RichPresence.Publish();
+	}
+
+	public static bool HandleJoinString(string joinString, out string error)
+	{
+		if (!JoinTarget.TryParse(joinString, MainMod.PORT, out var target, out error)) return false;
+
+		if (ConnectionStatus.IsBusy || ConnectionStatus.State == JoinStatus.InSession || Client.Instance.IsConnected)
+		{
+			PendingConfirmation = target;
+			Log.Info($"[Join] Join request for {target} while in a session, waiting for confirmation.");
+			return true;
+		}
+		if (SceneManager.GetActiveScene().name != "Menu")
+		{
+			QueuedJoin = target;
+			return true;
+		}
+		return Join(target, out error);
+	}
+
+	public static void Answer(bool leaveAndJoin)
+	{
+		var target = PendingConfirmation;
+		PendingConfirmation = null;
+		if (!leaveAndJoin || target == null) return;
+
+		QueuedJoin = target;
+		if (Client.Instance.IsConnected) Client.Instance.Disconnect();
+		ConnectionStatus.Set(JoinStatus.Idle);
+		if (SceneManager.GetActiveScene().name != "Menu" && NotificationCenter.m_instance != null)
+		{
+			var center = NotificationCenter.m_instance;
+			center.StartCoroutine(center.SelectSceneToLoad("Menu", SceneType.Menu, true, false));
+		}
+	}
+
+	public static void QueueJoin(JoinTarget target) => QueuedJoin = target;
+
+	public static void OnMenuReady()
+	{
+		var target = QueuedJoin;
+		QueuedJoin = null;
+		if (target == null) return;
+		if (!Join(target, out string error)) Log.Warn($"[Join] Queued join to {target} failed: {error}");
 	}
 
 	public static void OnTransportClosed()

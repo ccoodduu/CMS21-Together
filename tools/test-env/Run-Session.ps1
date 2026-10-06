@@ -31,6 +31,8 @@ $serverDir = $laneInfo.ServerDir
 
 $scenarioFile = Join-Path $PSScriptRoot "scenarios\$Scenario.ps1"
 if (-not (Test-Path -LiteralPath $scenarioFile)) { throw "Unknown scenario: $Scenario" }
+$launchFile = Join-Path $PSScriptRoot "scenarios\$Scenario.launch.psd1"
+$launchArgs = if (Test-Path -LiteralPath $launchFile) { Import-PowerShellDataFile -LiteralPath $launchFile } else { $null }
 
 # Two game instances use most of the PC's 32 GB; two lanes at once ran it out of memory and hung clients.
 # Lanes therefore take turns with the game: the mutex is held for the whole run.
@@ -99,6 +101,9 @@ try {
             "--harness.name=$name", "--harness.window=$Window"
         )
         if (-not $Sound) { $arguments += "--harness.mute" }
+        if ($launchArgs -and $launchArgs.ContainsKey($name)) {
+            $arguments += @($launchArgs[$name] | ForEach-Object { $_.Replace("{port}", "$($laneInfo.Port)") })
+        }
         Start-Process -FilePath (Join-Path $dir "$gameProcess.exe") -WorkingDirectory $dir -ArgumentList $arguments | Out-Null
         Write-Host "Started instance $name"
     }

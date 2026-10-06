@@ -7,6 +7,7 @@ using CMS21_Together_Core.Network.Packets;
 using CMS21Together.Data;
 using CMS21Together.Managers;
 using CMS21Together.Network;
+using CMS21Together.Session;
 using UnityEngine;
 
 namespace CMS21Together.Logic.Player;
@@ -56,6 +57,7 @@ public static class PresenceManager
 			player = new RemotePlayer();
 			Roster[record.PlayerId] = player;
 			Log.Info($"[Presence] Player {record.PlayerId} '{record.Username}' joined ({record.Scene}).");
+			RichPresence.Publish();
 		}
 		player.Record = record;
 		if (player.HasAvatar && record.LastMovement != null) ApplyMovement(player.Avatar, record.LastMovement);
@@ -78,6 +80,7 @@ public static class PresenceManager
 		DestroyAvatar(player);
 		Roster.Remove(playerId);
 		Log.Info($"[Presence] Player {playerId} left.");
+		RichPresence.Publish();
 	}
 
 	public static void Clear()

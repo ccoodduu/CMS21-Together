@@ -25,12 +25,21 @@ example `0.6.0-dev.540`). Host and players must all use the same zip: the server
 Run `TogetherServer\CMS21_Together_Server.exe` from the game folder (or unzip
 `CMS21-Together-<version>-server.zip` on another PC and run `CMS21_Together_Server.exe` there). The first start
 creates `server_config.ini` next to it. The shared garage is saved in `Saves\server_save.json` in the server
-folder. Type `stop` in the server window to shut it down with a final save.
+folder. Type `/stop` in the server window to shut it down with a final save.
 
 ## Join
 
-In this build you join a server on the same PC: wait for the main menu and press **F5** (connects to `127.0.0.1`,
-port 7777). Joining from another PC (Steam "Join Game", typing an address) comes with the join menu in a later build.
+In the main menu, click **Multiplayer** (top right), type the address and press **Join**:
+
+- Same PC as the server: `127.0.0.1`.
+- Another PC: the host's IP address, for example `192.168.1.20` on the same network, or the host's public IP with
+  port 7777 forwarded on the host's router (`IP:port` if the server uses another port).
+- Steam: when the server runs with `use_steam = True`, its 17-digit Steam server ID (in the server window) works as
+  the address. Players in a session show **Join Game** in the Steam friends list, which also works with the game
+  closed.
+
+If a join fails, the menu says why (server not reachable, other mod version, server full, kicked, server stopped).
+The address is remembered for next time.
 
 ## What works
 
@@ -38,10 +47,11 @@ port 7777). Joining from another PC (Steam "Join Game", typing an address) comes
 - Shared money, XP, level, scrap and skills; shop, warehouse and inventory; garage upgrades.
 - Seeing each other walk around, with name tags; spawning and deleting cars in the garage.
 
-## Not yet (expect things to go out of sync)
+## Not yet
 
 Working on cars (parts, fluids, wheels, paint), lifts and parking, orders and jobs, workshop machines, and trips to
-the junkyard, barn or auction. This build does not block them yet, so leave them alone while connected.
+the junkyard, barn or auction are not shared yet. While connected, the game refuses them with "... is not supported
+in multiplayer yet", so the garages cannot drift apart.
 
 ## Logs for a bug report
 

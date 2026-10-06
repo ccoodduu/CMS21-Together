@@ -60,6 +60,7 @@ public static class ConnectionStatus
 		if (State == state) return;
 		if (State == JoinStatus.InSession && state == JoinStatus.Syncing) return;
 		if ((State == JoinStatus.Failed || State == JoinStatus.Disconnected) && state != JoinStatus.Idle && state != JoinStatus.Connecting) return;
+		if (State == JoinStatus.InSession) RichPresence.Clear();
 		State = state;
 		Log.Info($"[Join] {state}");
 	}
@@ -69,6 +70,7 @@ public static class ConnectionStatus
 		if (State == JoinStatus.Failed || State == JoinStatus.Disconnected || State == JoinStatus.Idle) return false;
 
 		bool inSession = State == JoinStatus.InSession;
+		if (inSession) RichPresence.Clear();
 		Failure = failure;
 		ServerReason = serverReason;
 		Message = ConnectionMessages.For(failure, serverReason, message);

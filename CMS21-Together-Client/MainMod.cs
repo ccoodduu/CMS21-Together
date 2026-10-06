@@ -39,6 +39,7 @@ namespace CMS21Together
 
 			PacketRouter.Initialize(System.Reflection.Assembly.GetExecutingAssembly());
 			Client.Init();
+			JoinRequests.Initialize();
 
 			Log.Info($"Together Mod {BuildInfo.FullVersion} initialized!");
 			isModInitialized = true;
@@ -86,6 +87,7 @@ namespace CMS21Together
 		public override void OnSceneWasInitialized(int buildindex, string sceneName)
 		{
 			SceneReady.OnSceneInitialized(sceneName);
+			if (sceneName == "Menu") JoinRequests.OnMenuInitialized();
 		}
 
 		public override void OnUpdate()
@@ -130,6 +132,7 @@ namespace CMS21Together
 		public override void OnApplicationQuit()
 		{
 			SessionGuard.End();
+			RichPresence.Clear();
 		}
 	}
 }

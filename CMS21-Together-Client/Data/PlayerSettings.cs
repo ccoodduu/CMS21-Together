@@ -9,6 +9,7 @@ public static class PlayerSettings
 	private static MelonPreferences_Entry<string> playerName;
 	private static MelonPreferences_Entry<string> lastJoinTarget;
 	private static MelonPreferences_Entry<bool> devHotkeys;
+	private static MelonPreferences_Entry<bool> advertisePresence;
 
 	public static string NameOverride { get; set; }
 
@@ -18,6 +19,7 @@ public static class PlayerSettings
 		playerName = category.CreateEntry("PlayerName", "", description: "Name shown to other players. Empty = Steam name.");
 		lastJoinTarget = category.CreateEntry("LastJoinTarget", "", description: "Last server joined (IP:port or Steam server ID).");
 		devHotkeys = category.CreateEntry("DevHotkeys", false, description: "F5 joins the last server (developer shortcut).");
+		advertisePresence = category.CreateEntry("AdvertisePresence", true, description: "Show the server in Steam rich presence so friends can join.");
 	}
 
 	public static string PlayerName
@@ -48,4 +50,6 @@ public static class PlayerSettings
 	}
 
 	public static bool DevHotkeys => devHotkeys != null && devHotkeys.Value;
+
+	public static bool AdvertisePresence => advertisePresence == null || advertisePresence.Value;
 }
