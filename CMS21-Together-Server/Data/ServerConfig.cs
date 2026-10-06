@@ -26,6 +26,9 @@ namespace CMS21_Together_Server.Data
 		public List<string> ModsRequired { get; private set; } = new List<string>();
 		public List<string> ModsIgnored { get; private set; } = new List<string>();
 		public List<string> ModsGameplay { get; private set; } = new List<string>();
+		public bool TravelFees { get; private set; } = true;
+		public int MaxCarSalePrice { get; private set; } = 5000000;
+		public int MaxCarPurchasePrice { get; private set; } = 5000000;
 
 		private static readonly string[][] CompatibilityKeyLines =
 		{
@@ -33,6 +36,13 @@ namespace CMS21_Together_Server.Data
 			new[] { "mods_required", "# Gameplay mods every client must have and may use, comma separated: Name or Name@Version", "mods_required =" },
 			new[] { "mods_ignored", "# Mods treated as visual (allowed) whatever the mod check finds, comma separated", "mods_ignored =" },
 			new[] { "mods_gameplay", "# Mods treated as gameplay (refused unless required) whatever the mod check finds, comma separated", "mods_gameplay =" },
+		};
+
+		private static readonly string[][] EconomyKeyLines =
+		{
+			new[] { "travel_fees", "# Charge the travel fee for trips to the auction, junkyard and barns, for every player (True/False)", "travel_fees = True" },
+			new[] { "max_car_sale_price", "# Highest price a player may sell a car for", "max_car_sale_price = 5000000" },
+			new[] { "max_car_purchase_price", "# Highest price a player may pay for a car", "max_car_purchase_price = 5000000" },
 		};
 
 		public void ApplyArguments(string[] args)
@@ -63,7 +73,7 @@ namespace CMS21_Together_Server.Data
 
 		public string Describe() =>
 			$"name '{ServerName}', port {Port}, max players {MaxPlayers}, steam {UseSteam}, public address '{PublicAddress}', autosave {AutosaveIntervalSeconds}s, backups {BackupCount}, " +
-			$"game version {GameVersion}, mods required [{string.Join(", ", ModsRequired)}], ignored [{string.Join(", ", ModsIgnored)}], gameplay [{string.Join(", ", ModsGameplay)}]";
+			$"travel fees {TravelFees}, max car sale {MaxCarSalePrice}, max car purchase {MaxCarPurchasePrice}, game version {GameVersion}, mods required [{string.Join(", ", ModsRequired)}], ignored [{string.Join(", ", ModsIgnored)}], gameplay [{string.Join(", ", ModsGameplay)}]";
 
 		public static ServerConfig LoadOrCreate()
 		{
@@ -119,7 +129,7 @@ namespace CMS21_Together_Server.Data
 					sw.WriteLine("# Resend a section automatically when a player's state is confirmed out of sync");
 					sw.WriteLine("desync_autofix = True");
 					sw.WriteLine("");
-					foreach (var lines in CompatibilityKeyLines)
+					foreach (var lines in CompatibilityKeyLines.Concat(EconomyKeyLines))
 					{
 						sw.WriteLine(lines[1]);
 						sw.WriteLine(lines[2]);
@@ -206,6 +216,15 @@ namespace CMS21_Together_Server.Data
 						case "mods_ignored":
 							config.ModsIgnored = ParseList(value);
 							break;
+						case "travel_fees":
+							if (bool.TryParse(value, out bool travelFees)) config.TravelFees = travelFees;
+							break;
+						case "max_car_sale_price":
+							if (int.TryParse(value, out int maxSale) && maxSale > 0) config.MaxCarSalePrice = maxSale;
+							break;
+						case "max_car_purchase_price":
+							if (int.TryParse(value, out int maxPurchase) && maxPurchase > 0) config.MaxCarPurchasePrice = maxPurchase;
+							break;
 						case "mods_gameplay":
 							config.ModsGameplay = ParseList(value);
 							break;
@@ -228,7 +247,7 @@ namespace CMS21_Together_Server.Data
 
 		private static void AppendMissingKeys(string path, HashSet<string> seenKeys)
 		{
-			var missing = CompatibilityKeyLines.Where(k => !seenKeys.Contains(k[0])).ToList();
+			var missing = CompatibilityKeyLines.Concat(EconomyKeyLines).Where(k => !seenKeys.Contains(k[0])).ToList();
 			if (missing.Count == 0) return;
 
 			var lines = new List<string>();

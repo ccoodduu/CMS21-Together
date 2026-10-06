@@ -3,6 +3,7 @@ using CMS21_Together_Core;
 using CMS21_Together_Core.Network;
 using CMS21_Together_Core.Network.Packets;
 using CMS21_Together_Server.Data;
+using CMS21_Together_Server.Data.Economy;
 
 namespace CMS21_Together_Server.Network.Handlers
 {
@@ -16,6 +17,7 @@ namespace CMS21_Together_Server.Network.Handlers
             {
                 state.InventoryState.InventoryItems.Add(packet.Item);
                 Server.SendToClients(packet, (int)clientId);
+                EconomyService.OnInventoryAdded(packet.Item);
             }
             else if (packet.Action == ItemActionType.Remove)
             {
@@ -23,6 +25,7 @@ namespace CMS21_Together_Server.Network.Handlers
                 if (removed)
                 {
                     Server.SendToClients(packet, (int)clientId);
+                    EconomyService.OnInventoryRemoved((int)clientId, packet.Item);
                 }
             }
         }

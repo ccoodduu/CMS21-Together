@@ -47,6 +47,10 @@ namespace CMS21_Together_Server.Network
 					Logger.Info("  cardetails <id>   - Show the stored details of a loader");
 					Logger.Info("  away              - Show cars on the test track, test path or dyno");
 					Logger.Info("  desync [check]    - Show recent desync repairs; check compares every player now");
+					Logger.Info("  economy [n]       - Show the last n economy requests and a count per reason");
+					Logger.Info("  economy cases     - Show opened cases that can still be looted");
+					Logger.Info("  economy reasons   - Show the count per reason");
+					Logger.Info("  gamemode <name>   - Set the difficulty (Normal, Expert, Sandbox, Easy) for everyone");
 					Logger.Info("  kick <id>         - Kick a player by ID");
 					Logger.Info("  money add <val>   - Add money");
 					Logger.Info("  money set <val>   - Set money");
@@ -93,6 +97,33 @@ namespace CMS21_Together_Server.Network
 					Logger.Info("Away:");
 					foreach (string line in CarAwayRegistry.Describe(Data.ServerTime.Time))
 						Logger.Info(line);
+					break;
+
+				case "economy":
+					string economyArg = args.Length > 1 ? args[1].ToLower() : "";
+					Logger.Info("Economy:");
+					var economyLines = economyArg == "cases" ? Data.Economy.EconomyService.DescribeCases()
+						: economyArg == "reasons" ? Data.Economy.EconomyService.DescribeReasons()
+						: Data.Economy.EconomyService.Describe(int.TryParse(economyArg, out int economyCount) && economyCount > 0 ? economyCount : 10);
+					foreach (string line in economyLines)
+						Logger.Info(line);
+					break;
+
+				case "gamemode":
+					if (args.Length > 1 && Enum.TryParse(args[1], true, out CMS21_Together_Core.Data.Enum.Gamemode gamemode))
+					{
+						var ws = GameDataManager.CurrentState?.WorldState;
+						if (ws == null) { Logger.Warn("World State is not loaded yet."); break; }
+						ws.Gamemode = gamemode;
+						Logger.Success($"Gamemode is now {ws.Gamemode}");
+						ws.updateGamemode = true;
+						try { BroadcastWorldState(); }
+						finally { ws.updateGamemode = false; }
+					}
+					else
+					{
+						Logger.Warn("Usage: gamemode Normal|Expert|Sandbox|Easy");
+					}
 					break;
 
 				case "cardetails":
