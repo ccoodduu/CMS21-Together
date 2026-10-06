@@ -85,7 +85,7 @@ Prerequisites: `session-persistence-and-rejoin` groups 1–2, `sync-players-and-
       `give-group <wheel|engine|shock>` (through `Inventory.Add`/`AddGroup` with hooks on), `tool-put <tool> <uid>`
       and `tool-take <tool>` (inventory call plus the logic method, in the order 1.3 recorded), `tool-hold on|off`
       (buffers incoming tool packets before the mirror, to force races deterministically), `tool-local-put <tool> <id>`
-      (hooks off; simulates the local save) and `tool-resync` (sends `AskForSync`). `sync-workshop-car-tools` adds
+      (hooks off; simulates the local save); the resync uses row 14's `resync force` (garage reload + full snapshot), no own verb. `sync-workshop-car-tools` adds
       its verbs to the same file. Done when each command answers from `Send-HarnessCommand`.
 - [ ] 5.2 Extend `StateDump.Full()` with `tools` (per `ModToolId`: occupant ID and UID, sorted item UIDs, `mounting`,
       `active`, angle rounded to 1°, `balanced` per wheel item, unmounted part keys for the stands, `claimedBy`) and
@@ -145,7 +145,7 @@ Prerequisites: `session-persistence-and-rejoin` groups 1–2, `sync-players-and-
       `BatteryChargerActivate(bool)` (postfix → `ToolSlotProperty(Active)`). Remote: set item, activate, neutral clear.
       Done when the client builds.
 - [ ] 10.2 Add `tool-charger <on|off>`. `tools-slots` steps: put, switch on, B takes → equal. `tools-latejoin` step:
-      after B joined, B `tool-local-put BatteryCharger <battery id>` then `tool-resync` → B's charger empty and
+      after B joined, B `tool-local-put BatteryCharger <battery id>` then `resync force` (row 14) → B's charger empty and
       `inventory` equal to A's. Done when the steps pass.
 
 ## 11. Engine stand 1

@@ -74,7 +74,7 @@ local `CharacterController` disabled so it does not block its own slot) is free 
 
 ### D2. Display name
 `ConnectPacket.username` (field exists, no schema change) is filled at both send sites from a MelonPreferences
-entry `Together.PlayerName`; empty → Steam persona name when `MainMod.IsSteamAvailable`, else empty (the server
+entry `CMS21Together.PlayerName`; empty → Steam persona name when `MainMod.IsSteamAvailable`, else empty (the server
 then uses `Player<id>`). The server sanitises and de-duplicates (spec) and stores it in the presence record.
 Row 7 persists it per identity.
 

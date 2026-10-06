@@ -33,18 +33,19 @@ Size: S ≈ 1–2 sessions, M ≈ 3–5, L ≈ 6–10, XL > 10 (one session = on
 | 5b | `sync-workshop-car-tools` | Engine crane (out/in effect, engine swap trigger), car paint, car wash, interior detailing, oil bin, welder, dyno trigger | 1, 4, 5a | M |
 | 6 | `sync-players-and-scenes` | Spawn positions, name tags, player in car seat, engine running/sound, scene tracking (who is where), visibility per scene, travel to junkyard/barn/auction/dealer and how purchases there flow into shared inventory/parking | 2 (purchases only) | L |
 | 7 | `session-persistence-and-rejoin` | Server save format + versioning for all state above, autosave, identifying a returning player (per-player data), rejoin/late join end-to-end, client-side save safety (the client must never overwrite the player's own profiles) | — (contract first, rest last) | L |
+| 8 | `hosting-and-join-ui` | Part 1 (M1): join by IP/Steam ID or Steam rich presence (Join Game, invites, cold start), one connection status with readable failure/disconnect messages, player name field, `ServerInfo`, refusals that reach the client (`Server.Refuse`). Part 2 (M4): host from the game (bundled `TogetherServer\`), new-session difficulty, DirectIP password, admin key and kick, session panel with ping, join/leave toasts, Steam friends panel | 7 (contract, group 3), 6 part 1; part 2: 12 part 1 | L (≈ 11: part 1 M ≈ 5–6, part 2 M ≈ 5) |
+| 9 | `mod-compatibility` | Part 1 (M1): handshake checks — mod version + protocol hash, game version, DLC set, gameplay mods (Harmony patch-target classifier, server lists), one `ConnectPacket` send path, refusal reasons. Part 2: game-data exporter for `Database/*.json` (with row 16, M3 at the latest), classifier tuning on real mod lists (M6) | 7 (group 3), 8 part 1 | M (part 1 ≈ 4–5, exporter S, tuning S) |
+| 12 | `release-and-docs` | Part 1 (M1): one version source (`BuildInfo`), `Build-Release.ps1` (client zip with `TogetherServer\`, server zip, manifest), `docs/try-it.md`, `release-smoke`. Part 2 (M6): install/hosting guides, changelog + version policy, offline `Collect-Logs.ps1` in the shared bug-report layout | 8 part 1, 9; part 2: 14 (d) | S + S (part 1 ≈ 2, part 2 ≈ 2–3) |
+| 14 | `desync-detection-and-resync` | (b) Continuous state reconciliation: per-section/per-car digests compared by the server, automatic resend of a confirmed mismatch, diff log — M2. (c) Resync key F7 (garage reload = late-join snapshot) — M2. (d) One-key bug report F8 (client + server + other clients, shared layout and redaction) — M5 | 14a, 1, 2; (d): 7 | L (≈ 6–7: b M ≈ 4, c S ≈ 1, d S ≈ 1–2) |
+| 14a | `multiplayer-guard` | Default-deny guard while connected (windows, pie options, game modes, scenes on an allow-list that each row grows in its merge commit; "not supported in multiplayer yet" message; player override) and the single-player assumption audit (pause, time scale, camera modes, autosave, modal windows) — M1. Split from row 14 | 7 (groups 1–2, 6), 8 group 1 (`ModNotify`) | M (≈ 4–5, one with the user) |
 
 ### Not yet drafted — needed for a finished product
 
 | # | Change | Owns | Size |
 |---|--------|------|------|
-| 8 | `hosting-and-join-ui` | In-game multiplayer menu: host (start/stop the local dedicated server from the game), join by IP, join via Steam (friends list / invite / rich presence instead of a server ID), connection status and error messages, player name setting, version-mismatch message, new-session settings (difficulty), server password for DirectIP, in-game player list (name, scene, ping), join/leave notifications, kick. Today there is no UI at all: F5 = connect to 127.0.0.1, F6 = Steam to a hardcoded dev server ID. | L |
-| 9 | `mod-compatibility` | Handshake checks: mod version, **game version** and **DLC set** (nobody in the group owns DLC; refuse on mismatch). Mod check covers only mods that change gameplay: server-configured required/ignored lists plus a heuristic on each mod's Harmony patch targets (gameplay classes like `Inventory`, `CarLoader`, `GlobalData` vs UI/rendering); visual-only mods are ignored. The group plays without gameplay mods for now, so modded items/parts (TK Aftermarket, `RegisterModItem`) and QoLmod support are post-1.0. A game-data exporter for the server's `Database/*.json` (none exists in the repo; shared with row 16). | M |
 | 10 | `economy-audit` | Every money/scrap/XP path is server-authoritative: travel fees, selling cars, auction bids, barn/junkyard purchases, parking levels, paint/wash/welder costs, opening crates (upstream #94: money/level desync after crates). Rows 2/3/6 cover some; this row closes the rest (known gap from row 6: travel fees and car sales are undone by the next `WorldState`). | M |
 | 11 | `multiplayer-soak-and-scale` | Harness with 3–4 instances, long scripted sessions (soak), bandwidth/CPU check, late-join time with a full garage + parking, disconnect storms. (Artificial latency/packet loss moves to M2, see below.) | M |
-| 12 | `release-and-docs` | Release packaging (client zip: Mods/UserLibs; server zip), install + hosting guide (incl. moving a server save to another host), changelog, version bump policy, log collection for bug reports. | S (+S for the M1 dev build) |
 | 13 | `sync-test-drive-and-diagnostics` | A car taken to the test track or test path (and dyno runs in the garage): the car is claimed by the driver while away, others see it as away and cannot edit it, and the results (examined/discovered parts, mileage, dyno measurements `EngineData.measured`) reach the server before the returning client applies the garage snapshot. Upstream's most reported car bug (#18, #83, #85, #95: repairs and job progress reset after a test drive). | M |
-| 14 | `desync-detection-and-resync` | (a) Default-deny guard: while connected, only game windows, minigames and scenes on an allow-list (grown as rows land) can be opened; everything else shows "not supported in multiplayer yet" (one hook on the game's window/scene opening, instead of a list of known unsynced actions), plus an audit of single-player assumptions (pause menus, time scale, camera modes like x-ray/inspection, autosave, modal windows) — M1. (b) Continuous state reconciliation (safety net for missed hooks and inlined methods): clients send per-car and per-section state hashes every few seconds, the server compares with its own state and automatically reloads a mismatching car/section from the server, logging the diff — M2. (c) Manual resync key/button that reruns the late-join snapshot. (d) One-key bug-report bundle (client + server logs, dump). | M |
 | 15 | `shared-outdoor-scenes` | Junkyard, barn and auction shared by everyone in them (user wants to scavenge together). Car selection runs on the server by adapting LvxBetterCarSpawns (LvxMagick; decompiled reference in `CMS21-TestInstalls\reference\LvxBetterCarSpawns-decompiled`): vehicle candidates per location, weighted selection, spawn history, all spawn points filled; clients load exactly the server's cars. Loose parts/items: the first visitor's generated layout is stored by the server and replayed to later visitors. Picking up parts and buying cars go through the server; remote players visible in the barn too. Needs the author's permission/credit before adapted code is published (user decides when to ask). Planned after M4. | L |
 | 16 | `server-game-logic` | The game gets no more updates, so game logic moves to the server: prices/fees (feeds row 10), job payout/XP and order generation (replaces row 3's elected generator), random damage/colour of spawned cars (replaces row 1's spawner roll). Built from native code read with Cpp2IL/Il2CppDumper + Ghidra and game data exported to `Database/*.json` (shared exporter with row 9). Rows 1 and 3 keep their client-computed approach as the interim until this row lands. | L |
 | 17 | `remote-visual-feedback` | Make it feel shared, not just consistent: visual-only replay of other players' actions (bolts turning, part moving off/on, tool in hand), simple work animations on the remote avatar, then driving sync (a car driven in the garage area / test drive visible to others). Polish after M4. | M (+L for driving) |
@@ -63,7 +64,7 @@ definition of done (Working rules) holds. Rows listed as "part N" are split by t
 | M | Name — what you can try | Rows |
 |---|--------------------------|------|
 | M0 | **Foundations** (no playtest) — harness infra, regression runner, sync contract, client save safety, atomic save + backups | 7 (groups 1, 2, 3, 6) |
-| M1 | **Friends connect and see each other** — host + 1–2 friends join over Steam from a dev zip, walk around with name tags, see each other after a late join, shop/warehouse/garage upgrades with shared money; working on cars (and travel, until row 1 restores garage cars on return) is blocked by the guard; nobody's own saves are touched | 6 part 1 (spawn, roster, names, scene tracking + away/return), 8 part 1 (join without hardcoded ID, status/errors), 9 part 1 (mod + game version + DLC + mod list check), 12 part 1 (dev build zip), 14 (a) |
+| M1 | **Friends connect and see each other** — host + 1–2 friends join over Steam from a dev zip, walk around with name tags, see each other after a late join, shop/warehouse/garage upgrades with shared money; working on cars (and travel, until row 1 restores garage cars on return) is blocked by the guard; nobody's own saves are touched | 6 part 1 (spawn, roster, names, scene tracking + away/return), 8 part 1 (join without hardcoded ID, status/errors), 9 part 1 (mod + game version + DLC + mod list check), 12 part 1 (dev build zip), 14a (guard) |
 | M2 | **Work on one car together** — take a car from the parking onto a lift, strip and rebuild it together, travel to the junkyard (parts only) and come back to the same garage, restart the server, the car is still there; resync key fixes a broken car | 1, 2, 14 (b, c), harness latency/loss injection |
 | M3 | **Run jobs together** — accept an order, diagnose (examine, test drive, test path), replace parts, fluids and tires, hand it back, payout shared; a late joiner mid-job sees the job | 3, 4, 13 |
 | M4 | **The full workshop** — every tool, junkyard/barn/auction trips with car purchases landing in the shared parking, consistent money; host and join from the in-game menu | 5a, 5b, 6 part 2 (seat/engine, purchases outside), 10, 8 part 2 |
@@ -73,7 +74,8 @@ definition of done (Working rules) holds. Rows listed as "part N" are split by t
 
 Row 16 is split over milestones: prices/fees and job payout/XP land with M3 (rows 3 and 10 use them); order
 generation and spawn damage land in M3 if the decompile spike shows they are reasonable, otherwise in M4 and row 3
-ships with its interim elected generator.
+ships with its interim elected generator. Row 9's game-data exporter (its task group 6) lands when row 16 starts, M3 at the
+latest; only row 9's classifier tuning (group 7) is M6.
 
 ### Implementation order
 
@@ -82,7 +84,7 @@ ships with its interim elected generator.
    change plugs into it; then group 6 (client save safety) and group 3 (atomic save, backups), because
    friends play from M1. Groups 4, 5, 7 (identity, join hardening, end-to-end scenarios) belong to M5.
 2. M1: `sync-players-and-scenes` spawn fix + presence roster (fixes the idle late-join bug), names, scene
-   tracking; `hosting-and-join-ui` part 1; `mod-compatibility` part 1; guard; dev zip.
+   tracking; `hosting-and-join-ui` part 1; `mod-compatibility` part 1; `multiplayer-guard` (14a); dev zip (`release-and-docs` part 1).
 3. M2: `sync-car-parts` → `sync-car-placement-and-lifts`; resync key + checksums.
 4. M3: `sync-orders-and-jobs` → `sync-car-details` → `sync-test-drive-and-diagnostics` (or 4 before 3 if
    row 3's trace spike stalls; M3 needs both, because job completion checks fluids and wheels).
@@ -151,7 +153,21 @@ Final contracts after the integration pass (2026-10-06); the full matrix is in `
 - Harness: verbs are globally unique (`Commands.Discover` throws on duplicates); each helper has one owner — row 7:
   `Send-ServerCommand`, `Wait-ServerLog`, `Stop-/Start-TestServer`, `to-menu`, `stats-add`; row 6: `teleport`,
   `travel`, `Wait-HarnessDump`; row 1: `car-spawn`, `car-ready`, `car-hold`; row 2: `net-hold`, `park`; row 5a:
-  `tool-hold`, `Wait-HarnessDumpsEqual`.
+  `tool-hold`, `Wait-HarnessDumpsEqual`; row 8: `Start-TestServer -Arguments`, `*.launch.psd1`,
+  `Status.lastDisconnect`; row 12: the `# run-all: skip` marker (`release-smoke` is not in `Run-All`); row 14:
+  `resync [force]` (later rows use it instead of an in-place `AskForSync`).
+- Guard (row 14a): default deny while connected; a row adds its `GuardRules` entries in its merge commit and its
+  scenario runs with the guard on `Enforce` (`guard-allow` for features not yet allowed). Other prefixes of this mod
+  on a guarded method take `__runOriginal` (row 6's `SceneHooks`).
+- Handshake and refusals (M1): `DisconnectReason` is append-only — 7's base set, then 8's `ServerFull`,
+  `WrongPassword`, then 9's `GameVersionMismatch`, `DlcMismatch`, `ModMismatch`; every refusal goes through row 8's
+  `Server.Refuse` and is shown by row 8's `ConnectionStatus`/`ConnectionMessages`; the client builds its
+  `ConnectPacket` only in row 9's `ConnectPacketFactory`; versions come from row 12's `BuildInfo`.
+- Client preferences live in MelonPreferences category `CMS21Together` (guard: `CMS21Together_Guard`); hotkeys F7
+  resync, F8 bug report (row 14), F9 session panel (row 8), F5 only as an opt-in dev key.
+- Bug reports: one layout and redaction rule for row 14 (d)'s in-game bundles and row 12's `Collect-Logs.ps1`
+  (INTEGRATION.md); secrets are `token`/`password`/`secret`/`key` entries (not `*Hotkey*`), `player.json` and
+  `players[].Key`; the server writes logs to `Log\`.
 
 Boundaries: a change only syncs what its row owns. When it needs something owned by another change,
 it says so in its design as an assumption/dependency instead of implementing it.
@@ -167,7 +183,7 @@ it says so in its design as an assumption/dependency instead of implementing it.
 - **Commits**: one conventional commit per finished task group; check off `tasks.md` items in the same commit.
 - **Change too big?** If a change will not fit its size estimate by more than ~50 %, or a task group fails
   three sessions in a row: merge the task groups that already pass (unfinished behaviour stays blocked by the
-  row 14 guard or a config flag defaulting to off), split the rest into a follow-up change (`<name>-2`), add it
+  row 14a guard or a config flag defaulting to off), split the rest into a follow-up change (`<name>-2`), add it
   to this roadmap and note it in `STATUS.md`. Do not switch design approach without the user (QUESTIONS.md).
 - **Questions**: design questions that need the user go to `QUESTIONS.md` with a default; park the task and take
   the next one.
@@ -177,13 +193,14 @@ it says so in its design as an assumption/dependency instead of implementing it.
 - **Game version**: CMS21 gets no more updates (CMS 2026 replaces it); record the game version once in `STATUS.md`.
   If an update appears anyway: rerun the regression and regenerate the server database before anything else.
 - **Draft ahead.** While a milestone is being implemented, draft the next milestone's undrafted rows (M1 needs 8
-  part 1, 9 part 1, 12 part 1, 14 (a)) with the same draft → review → integration pass; never start a row whose
+  part 1, 9 part 1, 12 part 1, 14a — all drafted and integrated 2026-10-06) with the same draft → review → integration pass; never start a row whose
   change is not drafted and reviewed.
 - **Unattended-run safety.** `Run-Session.ps1` must abort (not wait) when Steam shows the "KickingOtherSession"
   prompt (the user forgot offline mode on another device) — port the check from LoadOptimizer's `testrun.sh`
   (M0 task). If the regression run is red and two attempts to fix it fail, stop feature work, log it in
   `STATUS.md` and send a push notification. Never leave game or server processes running at the end of a session.
-- **Milestone definition of done**: all rows of the milestone merged; full regression green; a dev zip built;
+- **Milestone definition of done**: all rows of the milestone merged; full regression green; a dev zip built with `tools/release/Build-Release.ps1`
+  and `release-smoke` green on it, `docs/try-it.md` updated;
   a short "what to try" checklist for the user in `STATUS.md`; known gaps listed. The user's playtest with
   friends closes the milestone; bugs found go to `QUESTIONS.md` under a "Playtest findings" heading (or a
   `BUGS.md` if they outgrow it) and are fixed before the next milestone's rows start.

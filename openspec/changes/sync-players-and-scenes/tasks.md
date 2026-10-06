@@ -26,7 +26,7 @@ fixes the idle late-join bug) and are mergeable on their own. Part 2 = M4 (group
 ## 3. Names and name tags
 
 - [ ] 3.1 Server: sanitise and de-duplicate `username` in `OnConnected` (trim 24, empty → `Player<id>`, ` (2)` suffix among connected players), store in the record; verify server log `player 2 'Bob (2)' joined` with two clients named Bob
-- [ ] 3.2 Client: MelonPreferences entry `Together.PlayerName` (default Steam persona name if `MainMod.IsSteamAvailable`), sent in `ConnectPacket.username` from `AuthHandler.HandleConnect` and `ClientSteam`; harness `set-name <name>` (before connect); verify the server log shows the configured name
+- [ ] 3.2 Client: MelonPreferences entry `CMS21Together.PlayerName` (default Steam persona name if `MainMod.IsSteamAvailable`), sent in `ConnectPacket.username` from `AuthHandler.HandleConnect` and `ClientSteam`; harness `set-name <name>` (before connect); verify the server log shows the configured name
 - [ ] 3.3 `Logic/Player/NameTag.cs` (`[RegisterTypeInIl2Cpp]`, `TextMesh` with a dark offset copy for contrast, above the head bone, faces `Camera.main`), attached by `Reconcile`; extend `presence-latejoin.ps1` with names `Ann`/`Bob` and a screenshot; verify `roster.nameTag` and that `Bob` is readable in the screenshot
 
 ## 4. Scene tracking, visibility, away/return

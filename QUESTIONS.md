@@ -3,6 +3,30 @@
 Open questions that block a decision. Each has the default we work with until answered.
 Answered ones move to the bottom with the answer.
 
+## Open — from the M1 drafts (2026-10-06), defaults in use
+
+Most important first:
+
+1. **Your main install has five gameplay mods** (QoLmod, both TK mods, LvxBetterCarSpawns, QuickShop), so
+   `mod-compatibility` would refuse it. Default: play multiplayer from an install without them (visual mods
+   like LoadOptimizer are fine).
+2. Mods the heuristic classes as "unknown" are refused. Default: yes.
+3. The game version and DLC set are pinned from the first client that joins a new server. Default: yes.
+4. Desync auto-repair (the server reloads a mismatching car/section) is on by default. Default: yes.
+5. The pause menu does not pause the game while connected. Default: yes.
+6. Photo mode, map and the main gate are allowed in M1 if the audit shows they change no shared state. Default: yes.
+7. A server password applies to DirectIP joins only (Steam joins go through friends/invites). Default: yes.
+8. The server ships inside the client zip (`TogetherServer\`), so one download can host. Default: yes.
+9. A server hosted from the game keeps running when the host leaves the session. Default: yes.
+10. Admin = whoever has the server's admin key; the only admin action is kick. Default: yes.
+11. Steam rich presence shows the join string, so friends can join from the friends list. Default: yes.
+12. Hosting UI: spike IMGUI first; clone the game's UI only if IMGUI fails. Default: yes.
+13. Every client writes its own bug-report bundle; the server bundle includes a save copy without player keys. Default: yes.
+14. Version `0.6.0` for the M1 dev build, `1.0.0` for M6; `.pdb` files are shipped; GitHub releases only when you
+    ask (outward communication). Default: yes.
+15. Docs in English; the short `TRY-IT` for friends could be Danish. Default: English.
+16. Row 9's game-data exporter moves into row 16 (`server-game-logic`), its heuristic tuning into a follow-up. Default: yes.
+
 ## Open — smaller, defaults probably fine
 
 - Remote players see only the finished part state, not the bolt animation, while a part is reserved.
