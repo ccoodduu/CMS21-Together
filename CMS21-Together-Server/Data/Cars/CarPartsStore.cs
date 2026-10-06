@@ -58,6 +58,7 @@ namespace CMS21_Together_Server.Data.Cars
 		public static void StoreBaseline(CarLoaderEntry entry, string engineSwap, IEnumerable<CarBodyPartUpdatePacket> body, IEnumerable<CarSubPartUpdatePacket> sub)
 		{
 			entry.Revision = entry.HasBaseline ? entry.Revision + 1 : 1;
+			entry.FromParking = null;
 			entry.HasBaseline = true;
 			entry.EngineSwap = engineSwap;
 			entry.BodyParts.Clear();

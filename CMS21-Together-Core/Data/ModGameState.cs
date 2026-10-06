@@ -45,6 +45,7 @@ public class CarLoaderEntry
 	public int Revision;
 	public bool HasBaseline;
 	public string EngineSwap;
+	public ParkedCar FromParking;
 
 	[JsonIgnore] public int SpawnedBy = NoClient;
 
