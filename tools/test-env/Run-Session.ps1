@@ -13,7 +13,8 @@ param(
     [string]$Window = "960x540",
     [switch]$Sound,
     [switch]$KeepRunning,
-    [int]$MinFreeMemoryGb = 12
+    [int]$MinCommitHeadroomGb = 22,
+    [int]$MinFreeMemoryGb = 6
 )
 
 $ErrorActionPreference = "Stop"
@@ -34,16 +35,31 @@ if (-not (Test-Path -LiteralPath $scenarioFile)) { throw "Unknown scenario: $Sce
 $launchFile = Join-Path $PSScriptRoot "scenarios\$Scenario.launch.psd1"
 $launchArgs = if (Test-Path -LiteralPath $launchFile) { Import-PowerShellDataFile -LiteralPath $launchFile } else { $null }
 
-# Two game instances use most of the PC's 32 GB; two lanes at once ran it out of memory and hung clients.
-# Lanes therefore take turns with the game: the mutex is held for the whole run.
+# Each game instance commits 8-10 GB (mostly Direct3D) but touches only 2-4 GB, so the Windows commit limit, not RAM,
+# decides how many lanes fit. A lane takes the launch mutex, waits for enough commit headroom, starts its games and
+# releases the mutex once they reach the main menu, so the next lane measures the headroom with them loaded.
 $gameMutex = New-Object System.Threading.Mutex($false, "Global\CMS21TogetherGameLane")
+$holdingMutex = $false
+function Exit-LaunchLock {
+    if ($script:holdingMutex) { $script:holdingMutex = $false; $gameMutex.ReleaseMutex() }
+}
+function Get-MemoryHeadroom {
+    $os = Get-CimInstance Win32_OperatingSystem
+    [pscustomobject]@{ CommitGb = $os.FreeVirtualMemory / 1MB; FreeGb = $os.FreePhysicalMemory / 1MB }
+}
 try {
-    if (-not $gameMutex.WaitOne([TimeSpan]::FromMinutes(30))) { throw "Another lane has been running the game for 30 minutes; giving up." }
+    if (-not $gameMutex.WaitOne([TimeSpan]::FromMinutes(30))) { throw "Another lane has been starting its games for 30 minutes; giving up." }
 } catch [System.Threading.AbandonedMutexException] { }
-$freeGb = (Get-CimInstance Win32_OperatingSystem).FreePhysicalMemory / 1MB
-if ($freeGb -lt $MinFreeMemoryGb) {
-    $gameMutex.ReleaseMutex()
-    throw ("Only {0:N1} GB RAM free (need {1} GB for two game instances); not starting." -f $freeGb, $MinFreeMemoryGb)
+$holdingMutex = $true
+$memoryDeadline = (Get-Date).AddMinutes(30)
+while ($true) {
+    $headroom = Get-MemoryHeadroom
+    if ($headroom.CommitGb -ge $MinCommitHeadroomGb -and $headroom.FreeGb -ge $MinFreeMemoryGb) { break }
+    if ((Get-Date) -gt $memoryDeadline) {
+        Exit-LaunchLock
+        throw ("Only {0:N1} GB commit and {1:N1} GB RAM free for 30 minutes (need {2} and {3}); not starting." -f $headroom.CommitGb, $headroom.FreeGb, $MinCommitHeadroomGb, $MinFreeMemoryGb)
+    }
+    Start-Sleep -Seconds 5
 }
 if (Get-LaneGameProcesses $laneInfo) { throw "A game instance of lane $Lane is already running; refusing to start a test run." }
 foreach ($name in $Instances) { Assert-InstanceIsolated $name }
@@ -118,6 +134,11 @@ try {
         if (@($Instances | Where-Object { Get-HarnessStatus $_ }).Count -eq $Instances.Count) { break }
         Start-Sleep -Seconds 2
     }
+    $menuDeadline = (Get-Date).AddSeconds(180)
+    while ((Get-Date) -lt $menuDeadline -and @($Instances | Where-Object { $s = Get-HarnessStatus $_; $s -and $s.scene -eq "Menu" -and $s.playable }).Count -lt $Instances.Count) {
+        Start-Sleep -Seconds 2
+    }
+    Exit-LaunchLock
 
     $ctx = [pscustomobject]@{ RunDir = $runDir; Instances = $Instances; Result = $result; ServerDir = $serverDir; Lane = $laneInfo }
     & $scenarioFile -Ctx $ctx
@@ -171,5 +192,5 @@ finally {
     Write-Host ("RESULT L{0} {1}: {2}" -f $Lane, $Scenario, $(if ($result.passed) { "PASSED" } else { "FAILED" }))
     $result.notes | ForEach-Object { Write-Host "  $_" }
     Write-Host "Run folder: $runDir"
-    $gameMutex.ReleaseMutex()
+    Exit-LaunchLock
 }
