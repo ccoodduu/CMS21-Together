@@ -2,6 +2,18 @@
 
 Newest first. One entry per work session.
 
+## 2026-10-06 (09:50–10:35) — mod-compatibility part 1 (row 9, agent, branch `change/mod-compatibility`)
+
+- DLC decision applied first: a different DLC set never refuses; the server tracks the shared DLC set (intersection
+  of connected players), logs it, shows it in `compat` and sends `ServerInfo.SharedDlc`; rows 1, 2, 5a block DLC
+  content outside it (INTEGRATION.md "DLC content"). `DlcMismatch` and the `dlc` config key dropped.
+- Groups 1–5 done: protocol hash + client welcome check, one `ConnectPacket` send path (`ConnectPacketFactory`),
+  game version pinned from the first client (or configured / `meta.json`), mod classifier (fixtures of 8 real mods
+  pass `--check-mods`), `CompatibilityPolicy`, `/compat`, harness `compat-report`/`compat-override`.
+- Runs: `20261006-101337_L2_compat-refusal` PASSED; regression `20261006-101633_regression` PASSED on lane 2.
+- Open (review.md Implementation notes): DLC product ids are not unique (11 × "-1"; proposed: use the
+  `GetDLCs()` index, as `PartProperty.DLC`/`IsDLCInstalled` do — needs the user); Steam send path verified by code only.
+
 ## 2026-10-06 (09:00–09:45) — scenes, join UI, guard; two real bugs
 
 - **Bug: sessions ran on the player's own profile 0.** The game reads the selected profile from PlayerPrefs on
