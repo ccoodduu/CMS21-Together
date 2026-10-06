@@ -44,7 +44,7 @@ public static class PartApplier
 		var script = registry.Sub(record.Key);
 		if (script == null || script.id != record.PartId)
 		{
-			Log.Warn($"[Parts] {carLoader.carToLoad}: part {record.Key} '{record.PartId}' does not resolve (found '{script?.id}').");
+			Log.Warn($"[Parts] {carLoader?.carToLoad ?? "engine stand"}: part {record.Key} '{record.PartId}' does not resolve (found '{script?.id}').");
 			return false;
 		}
 

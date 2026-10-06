@@ -2,6 +2,7 @@ using System;
 using CMS21_Together_Core.Network.Packets;
 using CMS21Together.Data;
 using CMS21Together.Logic.Car.Parts;
+using CMS21Together.Logic.Tools;
 using CMS21Together.Network;
 using CMS21Together.Network.Handlers;
 using HarmonyLib;
@@ -15,6 +16,7 @@ namespace CMS21Together.Logic.Hook
         [HarmonyPrefix]
         public static bool AddItemPrefix(Item item, bool showPopup)
         {
+            if (ToolSync.BlockInventoryCall(item.UID, "Add", item.ID)) return false;
             if (!ClientScene.IsGarageReady) return true;
             if (Client.Instance.IsConnected && !InventoryHandlers.IgnoreInventoryHooks && PartTransactions.SuppressAdd(item.ID)) return false;
             if (Client.Instance.IsConnected && !InventoryHandlers.IgnoreInventoryHooks && !PartTransactions.CaptureAdd(item.ToModItem()))
@@ -33,6 +35,7 @@ namespace CMS21Together.Logic.Hook
         [HarmonyPrefix]
         public static bool DeleteItemPrefix(Item item)
         {
+            if (ToolSync.BlockInventoryCall(item.UID, "Delete", item.ID)) return false;
             if (!ClientScene.IsGarageReady) return true;
             if (Client.Instance.IsConnected && !InventoryHandlers.IgnoreInventoryHooks && !PartTransactions.CaptureDelete(item.ToModItem()))
             {
@@ -50,6 +53,7 @@ namespace CMS21Together.Logic.Hook
         [HarmonyPrefix]
         public static bool AddGroupItemPrefix(GroupItem group)
         {
+            if (ToolSync.BlockInventoryCall(group.UID, "AddGroup", group.ID)) return false;
             if (!ClientScene.IsGarageReady) return true;
             if (Client.Instance.IsConnected && !InventoryHandlers.IgnoreInventoryHooks && !PartTransactions.CaptureAddGroup(group.ToModGroupItem()))
             {
@@ -67,6 +71,7 @@ namespace CMS21Together.Logic.Hook
         [HarmonyPrefix]
         public static bool DeleteGroupItemPrefix(long UId)
         {
+            if (ToolSync.BlockInventoryCall(UId, "DeleteGroup", null)) return false;
             if (!ClientScene.IsGarageReady) return true;
             bool tracked = Client.Instance.IsConnected && !InventoryHandlers.IgnoreInventoryHooks;
             var existing = tracked ? EngineCraneHooks.TakeInsertedGroup(UId) ?? Singleton<GameManager>.Instance.Inventory.GetGroup(UId).ToModGroupItem() : null;

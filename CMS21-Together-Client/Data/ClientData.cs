@@ -31,6 +31,7 @@ public static class ClientData
 		PartChangeTracker.Reset();
 		PartClaims.Reset();
 		PartTransactions.Reset();
+		Logic.Tools.ToolSync.Reset();
 	}
 
 	public static void Update()
