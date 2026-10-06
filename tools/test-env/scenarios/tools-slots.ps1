@@ -148,7 +148,7 @@ try { Wait-HarnessDump -Instance $a -TimeoutSec 60 -What "engine built on A's st
 Start-Sleep -Seconds 5; $standBuilt = (Tool (Cmd $b dump) "EngineStand1").uid -ne 0
 if (-not $standBuilt) {
     $note = "engine stand steps skipped: the game's build coroutine throws when the harness drives it (also disconnected); hand check"
-    Write-Host "NOTE: $note"; $Ctx.Result.notes += $note
+    Write-Host "NOTE: $note"; $Ctx.Result.notes += $note; Cmd $a tool-stand-reset | Out-Null
 } else {
     $d = Wait-Same "engine on the stand" 60
     Check ((Tool $d "EngineStand1").uid -ne 0) "an engine is on engine stand 1"

@@ -152,6 +152,14 @@ public static class ToolsCommands
         return new { removed = owners };
     }
 
+    [HarnessCommand("tool-stand-reset")]
+    private static object StandReset(string args)
+    {
+        var stand = ToolsManager.Get()?.EngineStandLogic ?? throw new InvalidOperationException("no engine stand");
+        using (ToolSync.ApplyingRemote(ModToolId.EngineStand1)) stand.ClearEngineStand();
+        return "cleared locally";
+    }
+
     [HarnessCommand("tool-stand-context")]
     private static object StandContext(string args)
     {
