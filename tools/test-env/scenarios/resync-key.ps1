@@ -39,8 +39,11 @@ $corrupt = Send-HarnessCommand -Instance $b -Verb part-corrupt -Arguments "0"
 $corruptB = Send-HarnessCommand -Instance $b -Verb car-ready -Arguments "0"
 Check ($corruptB.stateHash -ne $readyA.stateHash) "B's car differs after the local corruption of $($corrupt.key)"
 
+$mark = Get-ServerLogMark
 $result = Send-HarnessCommand -Instance $b -Verb resync
 Check ($result -eq "reloading") "B's resync starts ($result)"
+$manual = try { Wait-ServerLog -Pattern "manual resync by .*differing at that moment: .*cars:0" -After $mark -TimeoutSec 10 } catch { $null }
+Check ([bool]$manual) "the server logs the manual resync with the differing car ($manual)"
 Start-Sleep -Seconds 3
 Wait-InGarage $b
 $readyB = Wait-Ready $b

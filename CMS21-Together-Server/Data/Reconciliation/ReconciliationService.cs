@@ -72,6 +72,14 @@ namespace CMS21_Together_Server.Data.Reconciliation
 
 		public static void OnDigest(int clientId, StateDigestPacket digest, float now)
 		{
+			if (digest.Trigger == DigestTrigger.ManualResync)
+			{
+				var differing = digest.Entries.Where(e => !e.NotReady && Project(e.Key, e.SubKey)?.Hash() is ulong hash && hash != e.Hash).Select(e => Id(e.Key, e.SubKey)).ToList();
+				string line = $"[Desync] manual resync by {PresenceRegistry.Get(clientId)?.Username ?? $"player {clientId}"}; differing at that moment: {(differing.Count == 0 ? "none" : string.Join(", ", differing))}.";
+				Logger.Info(line);
+				Remember(line);
+				return;
+			}
 			if (!rounds.TryGetValue(clientId, out var round) || digest.Seq != round.OutstandingSeq) return;
 			round.OutstandingSeq = -1;
 			bool verbose = round.Verbose;

@@ -31,6 +31,19 @@ public static class ClientDigests
 		Client.Instance.Send(answer);
 	}
 
+	public static StateDigestPacket FullDigest(DigestTrigger trigger)
+	{
+		var digest = new StateDigestPacket { Seq = -1, Trigger = trigger };
+		var keys = new List<(string Key, string SubKey)> { (DigestMappers.WorldKey, ""), (DigestMappers.InventoryKey, ""), (DigestMappers.PlacementKey, "") };
+		keys.AddRange(CarPartsSync.All.Where(s => s.Registry != null).Select(s => (DigestMappers.CarsKey, s.Loader.ToString())));
+		foreach (var (key, subKey) in keys)
+		{
+			var projection = Project(key, subKey);
+			digest.Entries.Add(new DigestEntry { Key = key, SubKey = subKey, NotReady = projection == null, Hash = projection == null ? 0 : HashOf(key, projection) });
+		}
+		return digest;
+	}
+
 	public static void OnDetailRequest(StateDetailRequestPacket request)
 	{
 		Client.Instance.Send(new StateDetailPacket { Key = request.Key, SubKey = request.SubKey, Projection = Project(request.Key, request.SubKey) ?? new Projection() });

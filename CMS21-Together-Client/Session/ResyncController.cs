@@ -27,6 +27,7 @@ public static class ResyncController
 		}
 
 		lastResync = Time.realtimeSinceStartup;
+		Client.Instance.Send(Logic.Reconciliation.ClientDigests.FullDigest(CMS21_Together_Core.Network.Packets.DigestTrigger.ManualResync));
 		Log.Info("[Resync] Reloading the garage from the server.");
 		ModNotify.ShowToast("Resyncing: reloading the garage from the server…");
 		var center = NotificationCenter.m_instance;
