@@ -8,7 +8,7 @@ namespace CMS21_Together_Core.Network.Packets
     {
         public Guid Id;
         public string CarToLoad;
-        public long UId;
+        public string UId;
         public int SaveVersion;
         public byte[] Data;
     }
