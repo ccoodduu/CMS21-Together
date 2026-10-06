@@ -163,6 +163,13 @@ Hotkeys (unique; row 14a's trace task 1.1 checks that the game binds none of F7â
   (case-insensitive) becomes `<redacted>`, except names containing `Hotkey`; covers `GSLT_Token`, `password`,
   `admin_key`, `CMS21Together.AdminKey`. `player.json` is never included; every `save.json` drops `players[].Key`;
   `players.json` holds no identity keys.
+- As written in code (Core `Diagnostics/Redaction`, `BugReportBundle`; the collector matches it): entry names use `/`;
+  a redacted value keeps its quotes (`GSLT_Token = "<redacted>"`, `password = <redacted>`), an empty value stays empty;
+  every known secret value of 4+ characters (config secrets, preference `AdminKey`, join passwords, `player.json`
+  values) is also replaced by `<redacted>` in every text of the zip; `save.json` drops every secret-named field of the
+  `players` section; files that cannot be read are listed in `<root>\errors.txt`; `state\<key>.json` holds
+  `{hash, rows["Id|Field=Value"]}` (cars: one per loader id, `"not ready"` when the client cannot project it). The
+  zip is written as `<id>.zip.tmp` and renamed, so an existing `<id>.zip` is complete.
 
 ## Harness
 
@@ -184,7 +191,7 @@ Verbs are globally unique (`Commands.Discover` throws on a duplicate). Existing:
 | 9 | `compat-report`, `compat-override` (no mod-version key: `mp-fake-version` covers it), `db-export` (part 2) |
 | 12 | `build-info` |
 | 14a | `guard-trace` (spike only), `guard-set`, `guard-allow`, `guard-try`, `guard-log`, `guard-rules` |
-| 14 | `digest-show`, `inv-corrupt`, `digest-hold`, `resync [force]` (5a uses it instead of its former `tool-resync`), `bug-report` |
+| 14 | `digest-show`, `inv-corrupt`, `digest-hold`, `resync [force]` (5a uses it instead of its former `tool-resync`), `bug-report [list]` |
 
 | PowerShell helper / server command | Owner (first to land) |
 |---|---|
