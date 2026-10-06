@@ -31,7 +31,13 @@ public static class ToolsCommands
         PacketTypes.ToolPosition, PacketTypes.ToolClaimUpdate, PacketTypes.ToolPartChangeResult,
     };
 
+    private static readonly HashSet<PacketTypes> InventoryPackets = new HashSet<PacketTypes>
+    {
+        PacketTypes.InventoryItemAction, PacketTypes.InventoryGroupItemAction,
+    };
+
     private static bool holding;
+    private static bool holdingInventory;
     private static bool replaying;
     private static readonly List<(PacketTypes Id, object Data, long Sender)> held = new List<(PacketTypes, object, long)>();
 
@@ -436,12 +442,15 @@ public static class ToolsCommands
     [HarnessCommand("tool-hold")]
     private static object Hold(string args)
     {
-        if ((args ?? "").Trim() == "on")
+        var parts = Args(args);
+        if (parts.FirstOrDefault() == "on")
         {
             holding = true;
-            return "holding tool packets";
+            holdingInventory = parts.Contains("inventory");
+            return holdingInventory ? "holding tool and inventory packets" : "holding tool packets";
         }
         holding = false;
+        holdingInventory = false;
         var replay = new List<(PacketTypes Id, object Data, long Sender)>(held);
         held.Clear();
         replaying = true;
@@ -460,7 +469,7 @@ public static class ToolsCommands
     [HarmonyPrefix]
     private static bool BeforeDispatch(PacketTypes id, object deserializedData, long senderId)
     {
-        if (!holding || replaying || !ToolPackets.Contains(id)) return true;
+        if (!holding || replaying || !(ToolPackets.Contains(id) || holdingInventory && InventoryPackets.Contains(id))) return true;
         held.Add((id, deserializedData, senderId));
         return false;
     }

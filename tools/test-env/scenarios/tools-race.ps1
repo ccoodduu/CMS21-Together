@@ -1,6 +1,7 @@
-# sync-workshop-machines races, made deterministic with tool-hold (incoming tool packets are buffered, so both players
-# act on a stale view): two puts on the tire changer, two takes, the same wheel on two machines, two balancer
-# minigames, and two take-offs of the same engine. The server decides; no item is lost or duplicated.
+# sync-workshop-machines races, made deterministic with tool-hold (incoming tool packets, and for the shared wheel also
+# inventory packets, are buffered, so both players act on a stale view): two puts on the tire changer, two takes, the
+# same wheel on two machines, two balancer minigames, and two take-offs of the same engine. The server decides; no item
+# is lost or duplicated.
 param($Ctx)
 
 $a, $b = $Ctx.Instances
@@ -78,7 +79,7 @@ for ($round = 1; $round -le 5; $round++) {
 
 $w = (Cmd $a give-group "wheel").UID
 Wait-Same "shared wheel given" | Out-Null
-Hold "on"
+Hold "on inventory"
 Cmd $a tool-put "TireChanger $w" | Out-Null
 Cmd $b tool-put "WheelBalancer $w" | Out-Null
 Start-Sleep -Seconds 1
