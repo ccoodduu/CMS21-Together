@@ -191,3 +191,24 @@ Local sources: `%USERPROFILE%\CMS21-TestInstalls\native\out\il2cppdumper\dump.cs
 `JunkyardGenerator$$Start/Update`, `ShedManager$$Start/Update`, the `<Generate>` coroutines,
 `PCPlatform.<Init>`, `SteamDLC$$Init`. Also `tools/test-env/Setup-TestInstalls.ps1`, `TestLanes.psm1`,
 `Run-Session.ps1` and `tools/TestHarness/HarnessMod.cs`.
+
+## Runtime results (2026-10-06, `tools/test-env/Run-GeneratorSpike.ps1`, runs `20261006-140903` and `-142655`)
+
+One instance alone, offline, loaded into the garage from the menu, then 4 minutes idle with the harness reading the
+order list (`gen-probe`). Same PC as the test lanes, same Steam account (no `KickingOtherSession`).
+
+| Variant | To the garage | Peak commit | Idle working set | Idle commit | Idle CPU (one core = 100 %) | Orders after 4 min | Graphics |
+|---|---|---|---|---|---|---|---|
+| normal (960x540) | 18 s | 8.7 GB | 2.2 GB | 8.6 GB | 117 % | 7 | D3D11 |
+| `-batchmode -nographics` | 20 s | 2.7 GB | 2.6 GB | 2.6 GB | 157 % | 8 | Null |
+| `-batchmode -nographics` + 15 fps (`lowfx`) | 14 s | 2.7 GB | 2.6 GB | 2.6 GB | **5 %** | 7 | Null |
+| `-batchmode` | 14 s | 9.7 GB | 3.9 GB | 9.7 GB | 164 % | 7 | D3D11 |
+| 320x180, cameras off, 15 fps | 14 s | 9.6 GB | 3.9 GB | 9.5 GB | 12 % | 8 | D3D11 |
+
+- Headless works: HDRP switches itself off on the null device, the garage loads, and `OrderGenerator.Update` produces
+  orders with no player and no camera. The 8–9 GB loading commit disappears without a graphics device.
+- An uncapped headless player spins a core; `Application.targetFrameRate = 15` brings it to 5 %.
+- Against the decision rule (≤ ~1.5 GB working set, ≤ ~10 % CPU): CPU passes, working set is 2.6 GB (over the target,
+  but a third of a normal instance's commit).
+- Not measured yet: step 5 (a taken job's damage roll headless), step 6 (junkyard/barn generation headless), step 7c
+  (Steam on another PC, needs the user).
