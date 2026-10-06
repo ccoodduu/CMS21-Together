@@ -111,7 +111,7 @@ public static class CarDetailsIO
 	private static Dictionary<string, PartModule> Modules(CarLoader carLoader)
 	{
 		var result = new Dictionary<string, PartModule>();
-		int loader = CarLoaderPlaces.Get().GetCarLoaderId(carLoader);
+		int loader = CarLoaderPlaces.Get()?.GetCarLoaderId(carLoader) ?? -1;
 		var registry = loader < 0 ? null : CarPartsSync.Get(loader).Registry;
 		var root = carLoader.GetRoot();
 		if (registry == null || root == null) return result;

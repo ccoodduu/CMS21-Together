@@ -69,8 +69,9 @@ public static class CarDetailsSync
 
 	public static void MarkDirty(CarLoader carLoader, CarDetailSection sections)
 	{
-		if (carLoader == null) return;
-		int loader = CarLoaderPlaces.Get().GetCarLoaderId(carLoader);
+		var places = CarLoaderPlaces.Get();
+		if (carLoader == null || places == null) return;
+		int loader = places.GetCarLoaderId(carLoader);
 		if (loader < 0 || applying.Contains(loader)) return;
 		dirty[loader] = (dirty.TryGetValue(loader, out var current) ? current : CarDetailSection.None) | sections;
 		dirtySince[loader] = Time.realtimeSinceStartup;
