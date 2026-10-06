@@ -48,5 +48,18 @@ public enum PacketTypes
 	CarPartClaimUpdate,
 	CarPartsSnapshot,
 	CarPartsResyncRequest,
-	CarSpawnAck
+	CarSpawnAck,
+
+	LifterActionRequest,
+	LifterState,
+	CarPlaceChangeRequest,
+	CarPlaceChanged,
+	CarParkRequest,
+	CarUnparkRequest,
+	ParkingMoveRequest,
+	ParkingSlotUpdate,
+	ParkingState,
+	ParkingLevelUnlockRequest,
+	ParkingResyncRequest,
+	CarParkResult
 }

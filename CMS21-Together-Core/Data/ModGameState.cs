@@ -11,8 +11,21 @@ public class ModGameState
 	public GarageState GarageState = new GarageState();
 	public InventoryState InventoryState = new InventoryState();
 	public CarState CarState = new CarState();
+	public PlacementState PlacementState = new PlacementState();
 	
 	[NonSerialized] public PlayerState PlayerState = new PlayerState();
+}
+
+public class PlacementState
+{
+	public Dictionary<int, int> Lifters = new Dictionary<int, int>();
+	public ParkingLot Parking = new ParkingLot();
+}
+
+public class ParkingLot
+{
+	public int UnlockedLevels;
+	public Dictionary<int, ParkedCar> Slots = new Dictionary<int, ParkedCar>();
 }
 
 public class CarState
