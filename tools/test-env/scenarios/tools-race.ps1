@@ -94,7 +94,13 @@ Wait-HarnessDump -Instance $loser -TimeoutSec 15 -What "claim released" -Conditi
 Cmd $loser tool-take "WheelBalancer" | Out-Null
 Wait-Same "balancer emptied" | Out-Null
 
-$engineId = (Cmd $a tool-stand-create "EngineStand1 auto").building
+Cmd $a car-spawn "0 car_boltatlanta 0" | Out-Null
+$deadline = (Get-Date).AddSeconds(90)
+do { Start-Sleep -Milliseconds 700; $ready = Cmd $a car-ready "0" } while (-not ($ready.state -eq "Ready" -and $ready.loaded) -and (Get-Date) -lt $deadline)
+$crane = Cmd $a crane-out "0"
+$engineId = $crane.engine
+Start-Sleep -Seconds 2
+Cmd $a tool-put "EngineStand1 $($crane.group)" | Out-Null
 try { Wait-HarnessDump -Instance $a -TimeoutSec 60 -What "engine built on A's stand" -Condition { param($x) $x.tools.EngineStand1.uid -ne 0 } | Out-Null } catch { }
 Wait-Same "engine on the stand" 60 | Out-Null
 $engines = @((Cmd $a dump).inventory.groups | Where-Object { $_.ID -eq $engineId }).Count

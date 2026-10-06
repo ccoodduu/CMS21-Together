@@ -43,7 +43,13 @@ Cmd $a tool-put "TireChanger $wheel" | Out-Null
 $balanced = (Cmd $a give-group "wheel").UID
 Cmd $a tool-put "WheelBalancer $balanced" | Out-Null
 Cmd $a tool-balance | Out-Null
-$engineId = (Cmd $a tool-stand-create "EngineStand1 auto").building
+Cmd $a car-spawn "0 car_boltatlanta 0" | Out-Null
+$deadline = (Get-Date).AddSeconds(90)
+do { Start-Sleep -Milliseconds 700; $ready = Cmd $a car-ready "0" } while (-not ($ready.state -eq "Ready" -and $ready.loaded) -and (Get-Date) -lt $deadline)
+$crane = Cmd $a crane-out "0"
+$engineId = $crane.engine
+Start-Sleep -Seconds 2
+Cmd $a tool-put "EngineStand1 $($crane.group)" | Out-Null
 try { Wait-HarnessDump -Instance $a -TimeoutSec 60 -What "engine built on A's stand" -Condition { param($x) $x.tools.EngineStand1.uid -ne 0 } | Out-Null } catch { }
 Cmd $a tool-angle "EngineStand1 90" | Out-Null
 $part = Cmd $a tool-stand-part "EngineStand1 auto unmount"

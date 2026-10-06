@@ -137,7 +137,13 @@ $d = Wait-Same "B took the battery"
 Check ((ItemCount $d $battery) -eq 1) "the battery is back once"
 
 # Engine stand: build an engine, rotate, unmount one part, B takes it off.
-$engineId = (Cmd $a tool-stand-create "EngineStand1 auto").building
+Cmd $a car-spawn "0 car_boltatlanta 0" | Out-Null
+$deadline = (Get-Date).AddSeconds(90)
+do { Start-Sleep -Milliseconds 700; $ready = Cmd $a car-ready "0" } while (-not ($ready.state -eq "Ready" -and $ready.loaded) -and (Get-Date) -lt $deadline)
+$crane = Cmd $a crane-out "0"
+$engineId = $crane.engine
+Start-Sleep -Seconds 2
+Cmd $a tool-put "EngineStand1 $($crane.group)" | Out-Null
 try { Wait-HarnessDump -Instance $a -TimeoutSec 60 -What "engine built on A's stand" -Condition { param($x) (Tool $x "EngineStand1").uid -ne 0 } | Out-Null } catch { }
 $d = Wait-Same "engine on the stand" 60
 Check ((Tool $d "EngineStand1").uid -ne 0) "an engine is on engine stand 1"
