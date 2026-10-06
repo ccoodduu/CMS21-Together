@@ -6,6 +6,7 @@ using CMS21Together.Data;
 using CMS21Together.Logic.Car.Parts;
 using CMS21Together.Network;
 using HarmonyLib;
+using CMS21Together.Logic.Car.Away;
 
 namespace CMS21Together.Logic.Car.Placement;
 
@@ -22,16 +23,22 @@ public static class CarPlacementSync
 
 	[HarmonyPatch(typeof(NotificationCenter._ChangeCarPos_d__20), nameof(NotificationCenter._ChangeCarPos_d__20.MoveNext))]
 	[HarmonyPrefix]
-	private static void BeforeChangeCarPosStep(NotificationCenter._ChangeCarPos_d__20 __instance)
+	private static bool BeforeChangeCarPosStep(NotificationCenter._ChangeCarPos_d__20 __instance, ref bool __result)
 	{
-		if (!Active || __instance.__1__state != 0 || __instance.carLoader == null) return;
+		if (!Active || __instance.__1__state != 0 || __instance.carLoader == null) return true;
 		int loader = CarLoaderPlaces.Get().GetCarLoaderId(__instance.carLoader);
-		if (loader < 0 || applying.Contains(loader) || !CarPartsSync.IsReady(loader)) return;
+		if (loader < 0 || applying.Contains(loader) || !CarPartsSync.IsReady(loader)) return true;
 		int from = __instance.carLoader.GetPlaceNo();
 		int to = (int)__instance.pos;
-		if (from == to) return;
+		if (from == to) return true;
+		if (CarAwaySync.BlockIfLocked(loader, "move"))
+		{
+			__result = false;
+			return false;
+		}
 		Log.Info($"[Placement] Loader {loader}: moving {from} -> {to}.");
 		Client.Instance.Send(new CarPlaceChangeRequestPacket { CarLoaderID = loader, FromPlace = from, ToPlace = to });
+		return true;
 	}
 
 	public static void OnPlaceChanged(CarPlaceChangedPacket packet)

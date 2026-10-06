@@ -6,6 +6,7 @@ using CMS21Together.Logic.Player;
 using CMS21Together.Network;
 using CMS21Together.UI;
 using HarmonyLib;
+using CMS21Together.Logic.Car.Away;
 
 namespace CMS21Together.Logic.Car.Parts;
 
@@ -99,6 +100,11 @@ public static class PartClaims
 			Block("This car is still loading for multiplayer.", keys);
 			return false;
 		}
+		if (CarAwaySync.BlockIfLocked(loader, "part edit"))
+		{
+			LastBlocked = keys.FirstOrDefault();
+			return false;
+		}
 		if (HeldByOther(loader, keys, out int owner))
 		{
 			string name = PresenceManager.Roster.TryGetValue(owner, out var player) ? player.Record.Username : $"Player {owner}";
@@ -144,7 +150,7 @@ public static class PartClaims
 	private static void AfterCanTakeOffCarPart(CarLoader __instance, string name, ref bool __result)
 	{
 		if (!__result || !Active || !TryResolve(__instance, name, out int loader, out var keys)) return;
-		if (!CarPartsSync.IsReady(loader) || HeldByOther(loader, keys, out _)) __result = false;
+		if (!CarPartsSync.IsReady(loader) || HeldByOther(loader, keys, out _) || CarAwaySync.LockedForMe(loader, out _, out _)) __result = false;
 	}
 
 	[HarmonyPatch(typeof(PartScript), nameof(PartScript.UndoMounting))]

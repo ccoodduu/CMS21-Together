@@ -271,6 +271,36 @@ public static class TestDriveCommands
         return new { tool = tool.ToString(), examined = count };
     }
 
+    [HarnessCommand("testdrive-skip-result")]
+    private static object SkipResult(string args)
+    {
+        CMS21Together.Logic.Car.Away.TestDriveSync.SkipNextResult = (args ?? "").Trim() == "on";
+        return new { skip = CMS21Together.Logic.Car.Away.TestDriveSync.SkipNextResult, newMileage = GlobalData.NewMileage };
+    }
+
+    [HarnessCommand("away-try")]
+    private static object AwayTry(string args)
+    {
+        var parts = (args ?? "").Split(new[] { ' ' }, StringSplitOptions.RemoveEmptyEntries);
+        if (parts.Length != 3) throw new ArgumentException("usage: away-try <loader> unmount <key>|move <CarPlace>");
+        var carLoader = LoadedCar(parts[0]);
+        CMS21Together.Logic.Car.Away.CarAwaySync.LastBlocked = null;
+        switch (parts[1])
+        {
+            case "unmount":
+                var script = CMS21Together.Logic.Car.Parts.PartRegistry.Build(carLoader).Sub(parts[2]) ?? throw new ArgumentException($"no part {parts[2]}");
+                script.ActionUnMount();
+                break;
+            case "move":
+                var center = NotificationCenter.Get();
+                center.StartCoroutine(center.ChangeCarPos(carLoader, (CarPlace)Enum.Parse(typeof(CarPlace), parts[2]), false));
+                break;
+            default: throw new ArgumentException("usage: away-try <loader> unmount <key>|move <CarPlace>");
+        }
+        string blocked = CMS21Together.Logic.Car.Away.CarAwaySync.LastBlocked;
+        return new { blocked = blocked != null, what = blocked };
+    }
+
     [HarnessCommand("testdrive-partnames")]
     private static object PartNames(string args)
     {

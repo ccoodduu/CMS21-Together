@@ -61,6 +61,8 @@ public static class CarDetailsSync
 
 	public static bool IsApplying(int loader) => applying.Contains(loader);
 
+	public static bool IsDirty(int loader) => dirty.ContainsKey(loader);
+
 	public static void OnCarLoading(int loader)
 	{
 		awaiting.Add(loader);
@@ -110,7 +112,7 @@ public static class CarDetailsSync
 		{
 			nextPoll = now + PollSeconds;
 			foreach (var sync in CarPartsSync.All.Where(s => s.State == LoaderSyncState.Ready).ToList())
-				if (!awaiting.Contains(sync.Loader) && !applying.Contains(sync.Loader) && lastKnown.ContainsKey(sync.Loader))
+				if (!awaiting.Contains(sync.Loader) && !applying.Contains(sync.Loader) && lastKnown.ContainsKey(sync.Loader) && !Away.CarAwaySync.LockedForMe(sync.Loader, out _, out _))
 					MarkDirty(CarLoaderPlaces.Get().GetCarLoaderByIndex(sync.Loader), CarDetailsIO.Polled);
 		}
 		foreach (int loader in dirty.Keys.ToList())
