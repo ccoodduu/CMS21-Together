@@ -41,7 +41,7 @@ Prerequisites (merged): `session-persistence-and-rejoin` groups 1–2 (contract,
       indexes); the save name ↔ loader index mapping; whether the snapshot car is `Ready` when `CustomLoad` reaches the
       report and `AfterExamine` fires once per examined part; every window/mode the guard blocked. Verify: each item of
       the spike doc's section 10 (1–5) is answered in design.md or moved to Risks.
-- [ ] 1.3 Departure replay: in the same scenario, a harness-only prefix holds the first `SelectSceneToLoad(…, TestTrack,
+- [ ] 1.3 **Partly done (2026-10-06):** `departure-hold`, results in design.md (hold in `MoveNext`, no replay; cancel leaves `LocalScene = Loading`); the map UI paths need a hand check. Departure replay: in the same scenario, a harness-only prefix holds the first `SelectSceneToLoad(…, TestTrack,
       …)` for 1 s and replays it with `StartCoroutine`; repeat from the map UI path while seated (`MapWindow`) and on
       foot (`SideCarsPanel`); and a held call that is never replayed (cancel). Record whether the replay reaches the
       track with the right car and what the cancel leaves behind (map window, input mode, pie menu, `loadingScene`).

@@ -397,3 +397,17 @@ Spike 1.4, `diag-trace` (run `20261006-154846_L1_diag-trace`, guard `LogOnly`, t
   (`0 body, 8 mechanical`); no claim needed (D9 holds).
 - Still to check by hand: the path test exit and its report, a tuned car on the dyno (curve before, preview, after
   measure and after cancel), and a job car on the dyno.
+
+Spike 1.3, `departure-hold` (run `20261006-155235_L1_departure-hold`), harness path (`testdrive-go`), not the map UI:
+
+- **Hold:** a prefix on `NotificationCenter.<SelectSceneToLoad>d__34.MoveNext` that returns `true` while
+  `<>1__state == 0` and `sceneType == TestTrack` holds the departure (about 75 frames per second here). Nothing of
+  the coroutine has run: `loadingScene` stays false, the game mode is unchanged, the player can still play.
+- **Release:** letting `MoveNext` run continues the same coroutine; it reaches the track with the right car. No
+  replay with `StartCoroutine` is needed, so D2 should hold in `MoveNext` rather than skip and replay the builder.
+- **Cancel:** returning `false` from `MoveNext` (state 0) ends the coroutine with nothing done in the game, and a
+  later departure works. But our own `ClientScene.LocalScene` is already `Loading`, because `SceneHooks` fires
+  `LeavingScene` in the builder prefix; it stays `Loading` after the cancel. D2 must either fire `LeavingScene`
+  only after the grant (when the held `MoveNext` is let through) or restore `Garage` on a refusal.
+- Not checked: the two map UI paths (`MapWindow` seated, `SideCarsPanel` on foot) and what their windows, input
+  mode and pie menu look like after a cancel; that needs a hand check.

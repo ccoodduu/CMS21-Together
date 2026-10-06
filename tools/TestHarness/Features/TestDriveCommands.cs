@@ -103,6 +103,62 @@ public static class TestDriveCommands
         MelonLogger.Msg($"[Harness] testdrive-trace {key}({arguments}){state} NewMileage {GlobalData.NewMileage}, SelectedCarLoader '{GlobalData.SelectedCarLoader}', TestToShow '{GlobalData.TestToShow}' #{counts[key]}");
     }
 
+    private enum HoldMode { Off, Hold, Release, Cancel }
+
+    private static HoldMode holdMode;
+    private static bool holdPatched;
+    private static int heldFrames;
+
+    [HarnessCommand("testdrive-hold")]
+    private static object Hold(string args)
+    {
+        if (!holdPatched)
+        {
+            holdPatched = true;
+            var target = AccessTools.Method(typeof(NotificationCenter._SelectSceneToLoad_d__34), "MoveNext");
+            harmony.Patch(target, prefix: new HarmonyMethod(typeof(TestDriveCommands).GetMethod(nameof(HoldPrefix), BindingFlags.NonPublic | BindingFlags.Static)));
+        }
+        switch ((args ?? "").Trim())
+        {
+            case "on": holdMode = HoldMode.Hold; heldFrames = 0; break;
+            case "release": holdMode = HoldMode.Release; break;
+            case "cancel": holdMode = HoldMode.Cancel; break;
+            case "off": holdMode = HoldMode.Off; break;
+            case "state": break;
+            default: throw new ArgumentException("usage: testdrive-hold on|release|cancel|off|state");
+        }
+        var center = NotificationCenter.m_instance;
+        return new
+        {
+            mode = holdMode.ToString(),
+            heldFrames,
+            loadingScene = center != null && center.loadingScene,
+            gameMode = GameMode.Get()?.GetCurrentMode().ToString(),
+            scene = CMS21Together.Data.ClientScene.LocalScene.ToString(),
+        };
+    }
+
+    private static bool HoldPrefix(NotificationCenter._SelectSceneToLoad_d__34 __instance, ref bool __result)
+    {
+        if (holdMode == HoldMode.Off || __instance.__1__state != 0 || __instance.sceneType != SceneType.TestTrack) return true;
+        switch (holdMode)
+        {
+            case HoldMode.Hold:
+                heldFrames++;
+                __result = true;
+                return false;
+            case HoldMode.Cancel:
+                MelonLogger.Msg($"[Harness] testdrive-hold cancelled the departure after {heldFrames} frames");
+                holdMode = HoldMode.Off;
+                __result = false;
+                return false;
+            default:
+                MelonLogger.Msg($"[Harness] testdrive-hold released the departure after {heldFrames} frames");
+                holdMode = HoldMode.Off;
+                return true;
+        }
+    }
+
     [HarnessCommand("testdrive-go")]
     private static object Go(string args)
     {
