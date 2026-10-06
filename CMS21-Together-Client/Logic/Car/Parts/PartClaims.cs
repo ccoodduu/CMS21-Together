@@ -22,6 +22,9 @@ public static class PartClaims
 		LastBlocked = null;
 	}
 
+	public static IReadOnlyDictionary<string, int> Held(int loader) =>
+		owners.TryGetValue(loader, out var keys) ? keys : new Dictionary<string, int>();
+
 	public static int OwnerOf(int loader, string key) =>
 		owners.TryGetValue(loader, out var keys) && keys.TryGetValue(key, out int owner) ? owner : CarPartClaimUpdatePacket.Released;
 

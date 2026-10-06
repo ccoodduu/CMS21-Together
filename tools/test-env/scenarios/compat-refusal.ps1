@@ -29,6 +29,7 @@ function Save-Report([string]$Name, [string]$Label) {
 }
 
 function Join-Refused([string]$Expected, [string]$Label) {
+    Wait-HarnessStatus -Instance $b -TimeoutSec 20 -What "B idle before joining ($Label)" -Condition { param($s) $s.joinStatus -ne "Failed" } | Out-Null
     $mark = Get-ServerLogMark
     Send-HarnessCommand -Instance $b -Verb mp-join -Arguments $address | Out-Null
     $s = Wait-HarnessStatus -Instance $b -TimeoutSec 60 -What "B refused ($Label)" -Condition { param($s) $s.joinStatus -eq "Failed" }

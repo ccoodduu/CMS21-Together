@@ -25,6 +25,11 @@ function Wait-Ready([string]$Name, [int]$TimeoutSec = 120) {
     throw "$Name loader $loader not Ready within $TimeoutSec s"
 }
 
+function Get-BlockedKeys($Dump) {
+    $car = @($Dump.cars | Where-Object { $_.index -eq $loader })[0]
+    @($car.subParts | Where-Object { $_.blocked } | ForEach-Object { $_.key } | Sort-Object)
+}
+
 function Wait-Same([string]$What, [int]$TimeoutSec = 15) {
     $deadline = (Get-Date).AddSeconds($TimeoutSec)
     do {
@@ -61,6 +66,7 @@ Start-Sleep -Seconds 1
 $try = Send-HarnessCommand -Instance $b -Verb part-action-unmount -Arguments "$loader $claimKey"
 Check (-not $try.blocked) "the part is free again after A releases it"
 
+$dumpBeforeUnmount = Send-HarnessCommand -Instance $b -Verb dump
 $unmount = Send-HarnessCommand -Instance $a -Verb part-fast-unmount -Arguments "$loader"
 Write-Host "A unmounts $($unmount.key) ($($unmount.id))"
 $same = Wait-Same "unmount"
@@ -71,6 +77,11 @@ $dumpA = Send-HarnessCommand -Instance $a -Verb dump
 $dumpB = Send-HarnessCommand -Instance $b -Verb dump
 $diff = Compare-HarnessDumps $dumpA $dumpB -Sections @("inventory", "stats")
 Check ($diff.Count -eq 0) "inventory and stats equal after the unmount (differ: $($diff -join ', '))"
+$blockedA = Get-BlockedKeys $dumpA
+$blockedB = Get-BlockedKeys $dumpB
+$blockedBefore = Get-BlockedKeys $dumpBeforeUnmount
+Write-Host "blocked parts: $(@($blockedBefore).Count) before the unmount, $(@($blockedA).Count) after"
+Check (($blockedA -join ",") -eq ($blockedB -join ",")) "A and B block the same parts after the unmount (A $(@($blockedA).Count), B $(@($blockedB).Count))"
 $changeLine = Get-Content -LiteralPath (Join-Path $Ctx.ServerDir "Log\Latest.txt") | Select-String "\[Cars\] Change .* inventory \+1" | Select-Object -First 1
 Check ([bool]$changeLine) "the unmount's inventory item travelled inside the part change ($($changeLine.Line))"
 

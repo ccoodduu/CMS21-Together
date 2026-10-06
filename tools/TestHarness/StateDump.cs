@@ -1,7 +1,10 @@
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using CMS21_Together_Core.Network.Packets;
 using CMS21Together.Data;
+using CMS21Together.Logic.Car.Parts;
 using CMS21Together.Logic.Player;
 using CMS21Together.Session;
 using CMS21Together.Network;
@@ -117,19 +120,50 @@ public static class StateDump
         {
             var loader = game.carOnScene[i];
             if (loader == null) continue;
-            var parts = new List<object>();
-            if (loader.carParts != null)
-                foreach (var part in loader.carParts)
-                    parts.Add(new { part.name, part.Unmounted, condition = Round(part.Condition), part.Switched });
-
-            cars.Add(new
+            var sync = CarPartsSync.All.FirstOrDefault(s => s.Loader == i);
+            var car = new Dictionary<string, object>
             {
-                index = i,
-                loader.placeNo,
-                carToLoad = string.IsNullOrEmpty(loader.carToLoad) ? null : loader.carToLoad,
-                loader.customerCar,
-                bodyParts = parts,
-            });
+                ["index"] = i,
+                ["placeNo"] = loader.placeNo,
+                ["carToLoad"] = string.IsNullOrEmpty(loader.carToLoad) ? null : loader.carToLoad,
+                ["customerCar"] = loader.customerCar,
+                ["spawnSeq"] = sync?.SpawnSeq ?? 0,
+                ["syncState"] = sync?.State.ToString() ?? "Empty",
+                ["revision"] = sync?.Revision ?? 0,
+                ["claims"] = PartClaims.Held(i).OrderBy(c => c.Key, StringComparer.Ordinal)
+                    .Select(c => new { key = c.Key, owner = c.Value }).ToList(),
+            };
+            if (!string.IsNullOrEmpty(loader.carToLoad) && loader.IsCarLoaded())
+            {
+                var registry = PartRegistry.Build(loader);
+                var body = new List<CarBodyPartUpdatePacket>();
+                var sub = new List<CarSubPartUpdatePacket>();
+                CarPartsSync.CaptureAll(loader, registry, body, sub);
+                car["registryHash"] = registry.Hash();
+                car["bodyParts"] = body.OrderBy(b => b.Key, StringComparer.Ordinal).Select(b => new
+                {
+                    key = b.Key,
+                    name = b.PartName,
+                    unmounted = b.Unmounted,
+                    switched = b.Switched,
+                    condition = Round(b.State?.Condition ?? 0f),
+                    dent = Round(b.State?.Dent ?? 0f),
+                    quality = b.State?.Quality ?? 0,
+                    tunedId = b.TunedID,
+                }).ToList();
+                car["subParts"] = sub.OrderBy(s => s.Key, StringComparer.Ordinal).Select(s => new
+                {
+                    key = s.Key,
+                    id = s.PartId,
+                    unmounted = s.Unmounted,
+                    condition = Round(s.Condition),
+                    quality = s.Quality,
+                    examined = s.IsExamined,
+                    dust = Round(s.Dust),
+                    blocked = registry.Sub(s.Key)?.IsBlocked() ?? false,
+                }).ToList();
+            }
+            cars.Add(car);
         }
         return cars;
     }
