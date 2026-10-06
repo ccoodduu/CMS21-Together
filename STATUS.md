@@ -8,7 +8,7 @@ Newest first. One entry per work session.
 - Lane-1 regression `20261006-133757` of the row 14 branch: all 23 scenarios PASSED (incl. `desync-autofix`,
   `junkyard-trip`, `resync-key`). `main` fast-forwarded to `e81ae48`: M2 (rows 1, 2, 14 b+c, junkyard trips,
   latency injection `net-delay`) is complete in code; the M2 playtest is yours (checklist in the 12:40 entry).
-- Running: the generator-client spike (`tools	est-envRun-GeneratorSpike.ps1`); then row 3.
+- Running: the generator-client spike (`tools/test-env/Run-GeneratorSpike.ps1`); then row 3.
 
 ## 2026-10-06 (13:05–13:40) — M2 rest: desync repair, manual resync, junkyard (branch `change/desync-detection-and-resync`)
 
