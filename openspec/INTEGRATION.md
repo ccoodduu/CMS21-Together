@@ -170,8 +170,8 @@ Verbs are globally unique (`Commands.Discover` throws on a duplicate). Existing:
 |---|---|
 | 7 | `stats-add`, `to-menu` (g1); `player-key`, `send-early-stats`, `profile-pref` (later groups) |
 | 6 | `travel`, `scene-list`, `teleport`, `set-name`, `leave-mark`, `sit`, `stand`, `engine`, `buy-car-here`, `junk-buy` |
-| 1 | `part-trace` (spike only), `car-spawn`, `car-delete`, `car-ready`, `car-hold`, `part-list`, `part-unmount`, `part-mount`, `part-examine`, `part-switch`, `part-claim`, `part-release`, `part-corrupt`, `engine-swap` |
-| 2 | `lift`, `car-move`, `net-hold`, `park`, `unpark`, `park-swap`, `parking-unlock`, `park-incoming` |
+| 1 | `car-spawn`, `car-delete`, `car-loaded`, `car-list`, `car-ready`, `car-baseline`, `car-hold-snapshot`, `car-dlc-cars`, `car-request`, `part-state`, `part-keys`, `part-unmount`, `part-fast-unmount`, `part-fast-mount`, `part-action-unmount`, `part-claim`, `part-corrupt`, `part-hold-remote`, `crane-out`, `crane-in` |
+| 2 | `lift`, `lifters`, `car-move`, `car-place`, `placement`, `net-hold`, `park`, `unpark`, `park-swap`, `parking`, `parking-unlock`, `park-incoming`, `dev-spawn`, `placement-trace` and `parking-probe` (spike) |
 | 3 | `jobs-trace`, `orders-generate`, `orders-mission`, `orders-autogen`, `orders-list`, `order-slots`, `orders-accept`, `orders-decline`, `orders-reload`, `job-examine`, `job-check`, `job-finish`, `tutorial-run`, `job-spawn-unclaimed`, `job-end-dup` |
 | 4 | `cardetails-probe`, `cardetails-roundtrip`, `cardetails-ui`, `cardetails-fluid`, `-wheel`, `-alignment`, `-headlamp`, `-gearbox`, `-tune`, `-paint`, `-tint`, `-wash`, `-plate`, `-mileage`, `-lights`, `-bonus`, `-randomize`, `-hold` |
 | 5a | `tool-list`, `tool-trace` (5b adds hooks to it), `give-item`, `give-group`, `tool-put`, `tool-take`, `tool-hold`, `tool-local-put`, `tool-mount`, `tool-balance`, `tool-balance-open`, `tool-balance-cancel`, `tool-charger`, `tool-angle`, `tool-stand-part`, `tool-move`, `tool-repair`, `tool-paint-part` |
