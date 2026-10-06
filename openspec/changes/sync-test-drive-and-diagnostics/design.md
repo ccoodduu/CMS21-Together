@@ -352,7 +352,7 @@ keeps the three globals; whether `CloseCar(true)` changes synced part state; the
 
 ## Runtime trace results
 
-Spike 1.2, `test-drive-trace` on lane 1 (2026-10-06, run `20261006-154452_L1_test-drive-trace` and the two before it),
+Spike 1.2, `test-drive-trace` on lane 1 (2026-10-06, run `20261006-154447_L1_test-drive-trace` and the two before it),
 one connected client, `car_boltatlanta` on loader 0, guard `Enforce` with `Scene:TestTrack` allowed.
 
 - **Departure:** `LeavingScene(Garage, TestTrack)` → `SelectSceneToLoad(Test_track_1, TestTrack, true, true)` →
