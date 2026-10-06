@@ -29,6 +29,7 @@ Report problems with both players' `MelonLoader\Latest.log` and the server's `Lo
    "New engine" (building one from parts on the stand) is refused for now.
 7. Fluids, wheels and alignment, plates, paint shop and window tint; also car wash, interior
    detailing and welder: the other player sees the result. Fees are charged once, by the server.
+   **Hand check:** tint some windows: the money drops once by 50 per window for both players.
 8. Sell a car, open crates, scrap parts, buy plates, reset skills: money, scrap and XP stay the same for everyone.
 
 ## Test drive and diagnostics
