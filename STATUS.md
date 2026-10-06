@@ -2,6 +2,27 @@
 
 Newest first. One entry per work session.
 
+## 2026-10-06 (09:00–09:45) — scenes, join UI, guard; two real bugs
+
+- **Bug: sessions ran on the player's own profile 0.** The game reads the selected profile from PlayerPrefs on
+  every `GetSelectedProfile` call (native decompile); once the pref write was dropped, `ProfileManager.Load` picked
+  "My Save". `SessionGuard` now answers slot 4 while active; the pref is never touched. `scenes` and
+  `profile-safety` assert slot 4 during a session.
+- **Bug: joins failed randomly with a socket access error.** The client bound UDP to the TCP local port; Windows
+  reserves UDP ranges inside the dynamic port area (`netsh ... excludedportrange`). UDP now binds any free port.
+  This also explains the "connected but never valid" hangs from the morning.
+- Row 6 group 4: scene tracking, away/return as late join, `GarageBound` gating; `scenes` passes (car steps wait
+  for `sync-car-parts`).
+- Row 8 part 1: `JoinTarget`/`JoinService`/`ConnectionStatus`, readable failures (Unreachable, Timeout,
+  VersionMismatch with both versions, ServerFull, Kicked, server lost), `Server.Refuse`, `ServerInfo`, server
+  overrides, IMGUI join panel + overlay + message (spike 1.1 = IMGUI works). `join-ui` passes. Not done: Steam
+  rich presence and join strings (group 4), the friend test.
+- Row 14a `multiplayer-guard` (agent wrote it, I tested on lane 1): `guard` passes; pie options are locked in a
+  `PrepareIcons` postfix. Open: runtime trace spike, the single-player audit (3.1).
+- Row 12 part 1 is on `change/release-and-docs` (agent; `release-smoke` not run yet).
+- Memory: two instances commit up to 31 of 40 GB (each game commits 8–9 GB while loading, working set 2–3.5 GB);
+  four instances exceed the commit limit. A larger page file would allow two lanes (user's decision).
+
 ## 2026-10-06 (late morning) — M0 done, M1 started: presence
 
 - **M0 complete** and on `main`: regression `20261006-083824_regression` PASSED on lane 1 (connect,

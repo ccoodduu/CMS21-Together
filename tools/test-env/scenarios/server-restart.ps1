@@ -34,8 +34,10 @@ $dumpBeforeKill = Save-HarnessDump -Instance $a -RunDir $Ctx.RunDir -Label "befo
 
 Stop-TestServer
 Write-Host "Server killed"
-Send-HarnessCommand -Instance $a -Verb to-menu | Out-Null
-Wait-HarnessStatus -Instance $a -TimeoutSec 120 -What "menu after kill" -Condition { param($s) $s.scene -eq "Menu" -and $s.playable -and -not $s.connected } | Out-Null
+# The client notices the lost server by itself (TCP close) and returns to the menu.
+$lost = Wait-HarnessStatus -Instance $a -TimeoutSec 30 -What "menu after kill" -Condition { param($s) $s.scene -eq "Menu" -and $s.playable -and -not $s.connected }
+if ($lost.joinStatus -ne "Disconnected") { $Ctx.Result.notes += "A after the server kill: joinStatus $($lost.joinStatus), expected Disconnected" }
+Send-HarnessCommand -Instance $a -Verb mp-ui -Arguments "ok" | Out-Null
 
 Start-TestServer | Out-Null
 Write-Host "Server restarted"
