@@ -94,16 +94,16 @@ Wait-HarnessDump -Instance $loser -TimeoutSec 15 -What "claim released" -Conditi
 Cmd $loser tool-take "WheelBalancer" | Out-Null
 Wait-Same "balancer emptied" | Out-Null
 
-Cmd $a tool-stand-create "EngineStand1 engine_r4" | Out-Null
+Cmd $a tool-stand-create "EngineStand1 engine_v8_stary" | Out-Null
 Wait-Same "engine on the stand" 60 | Out-Null
-$engines = @((Cmd $a dump).inventory.groups | Where-Object { $_.ID -eq "engine_r4" }).Count
+$engines = @((Cmd $a dump).inventory.groups | Where-Object { $_.ID -eq "engine_v8_stary" }).Count
 Hold "on"
 Cmd $a tool-take "EngineStand1" | Out-Null
 Cmd $b tool-take "EngineStand1" | Out-Null
 Start-Sleep -Seconds 2
 Hold "off"
 $d = Wait-Same "two engine take-offs"
-Check (@($d.inventory.groups | Where-Object { $_.ID -eq "engine_r4" }).Count -eq $engines + 1) "exactly one engine group came back"
+Check (@($d.inventory.groups | Where-Object { $_.ID -eq "engine_v8_stary" }).Count -eq $engines + 1) "exactly one engine group came back"
 
 Save-HarnessDump -Instance $a -RunDir $Ctx.RunDir -Label "end" | Out-Null
 Save-HarnessDump -Instance $b -RunDir $Ctx.RunDir -Label "end" | Out-Null

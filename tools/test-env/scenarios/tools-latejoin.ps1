@@ -43,7 +43,7 @@ Cmd $a tool-put "TireChanger $wheel" | Out-Null
 $balanced = (Cmd $a give-group "wheel").UID
 Cmd $a tool-put "WheelBalancer $balanced" | Out-Null
 Cmd $a tool-balance | Out-Null
-Cmd $a tool-stand-create "EngineStand1 engine_r4" | Out-Null
+Cmd $a tool-stand-create "EngineStand1 engine_v8_stary" | Out-Null
 Start-Sleep -Seconds 5
 Cmd $a tool-angle "EngineStand1 90" | Out-Null
 $part = Cmd $a tool-stand-part "EngineStand1 auto unmount"

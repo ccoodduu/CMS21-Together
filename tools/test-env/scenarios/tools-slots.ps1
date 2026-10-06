@@ -137,7 +137,7 @@ $d = Wait-Same "B took the battery"
 Check ((ItemCount $d $battery) -eq 1) "the battery is back once"
 
 # Engine stand: build an engine, rotate, unmount one part, B takes it off.
-Cmd $a tool-stand-create "EngineStand1 engine_r4" | Out-Null
+Cmd $a tool-stand-create "EngineStand1 engine_v8_stary" | Out-Null
 $d = Wait-Same "engine on the stand" 60
 Check ((Tool $d "EngineStand1").uid -ne 0) "an engine is on engine stand 1"
 Cmd $a tool-angle "EngineStand1 90" | Out-Null
@@ -147,10 +147,10 @@ $part = Cmd $a tool-stand-part "EngineStand1 auto unmount"
 Write-Host "A unmounted $($part.key) ($($part.id))"
 $d = Wait-Same "part unmounted on the stand"
 Check (@((Tool $d "EngineStand1").unmountedParts) -contains $part.key) "the part is unmounted on both stands"
-$engineGroups = @($d.inventory.groups | Where-Object { $_.ID -eq "engine_r4" }).Count
+$engineGroups = @($d.inventory.groups | Where-Object { $_.ID -eq "engine_v8_stary" }).Count
 Cmd $b tool-take "EngineStand1" | Out-Null
 $d = Wait-Same "B took the engine off"
-Check (@($d.inventory.groups | Where-Object { $_.ID -eq "engine_r4" }).Count -eq $engineGroups + 1) "exactly one engine group came back"
+Check (@($d.inventory.groups | Where-Object { $_.ID -eq "engine_v8_stary" }).Count -eq $engineGroups + 1) "exactly one engine group came back"
 
 # Tool positions.
 foreach ($tool in "Welder", "Oilbin", "EngineCrane") {
