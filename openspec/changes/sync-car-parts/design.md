@@ -103,6 +103,21 @@ done on the void entry points and on `CanTakeOffCarPart`. IL2CPP may inline smal
 never reaches the detour; spike 0.1 confirms that every hook above fires on the real UI path and replaces any that
 does not (with its caller or a coarser postfix).
 
+**Static check of the hooks (2026-10-06, native `xref.py` over `GameAssembly.dll`):** every hook target is a real
+function with direct callers on the interactive path, so a Harmony detour catches it (indirect calls through method
+pointers reach the detour too): `ActionUnMount` ← `Raycast.PartSelect`; `ActionMount` ← `Raycast.PartSelectMount`;
+`DoMount` ← `GameScript.SelectPartToMount`; `Hide` ← `ActionUnMount`, `FastUnmount`, `CancelUnmountAnim`,
+`PartScript.Update`; `Examine` ← `Raycast.ExamineCondition` and the diagnostic tools' `UseAnim`; `TakeOffCarPart`
+← `GameScript.ClickIO`/`BodyMount`; `CanTakeOffCarPart` and `SwitchCarPart` ← `GameScript.ClickIO`;
+`UndoMounting`/`UndoUnMounting` ← `GameScript.CleanUnfinishedMount`/`CleanUnfinishedUnMount`; engine crane out ←
+`ToolsManager.UseEngineCrane` → `NotificationCenter.ActionUnMountGroup`. `FastUnmount`, `FastMount` and
+`ActionInsertEngineToCar` have no direct caller (debug/UI-callback entry points). Event order, item IDs and the
+`ShowMounted` mode question still need a runtime trace.
+
+**Part identity spike (2026-10-06, scenario `part-identity`):** client A spawns each car model on loader 0, client B
+loads it from the server's `CarSpawnResponse`, both dump body indices/names and mechanical sibling paths/ids from
+`CarLoader.root` (the object carrying `CarLoaderOnCar`); see STATUS.md for the run over all 163 models.
+
 Alternative considered: a periodic full scan of all parts. Rejected as the primary mechanism (hundreds of parts
 per car); the harness diff is our drift detector instead. If spike 0.1 shows a path that no hook catches, a slow
 (~5 s) full compare of that car while it is `Ready` is the fallback.

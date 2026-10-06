@@ -58,6 +58,7 @@ namespace CMS21Together.Logic.Hook
             if (__instance == null || string.IsNullOrEmpty(__instance.carToLoad)) return true;
             if (IsSuppressed(CarLoaderPlaces.Get().GetCarLoaderId(__instance))) return true;
 
+            Car.Parts.CarPartsSync.OnCarDeleted(CarLoaderPlaces.Get().GetCarLoaderId(__instance));
             // Request delete from server to notify OTHER clients
             MelonCoroutines.Start(CarSpawnManager.RequestCarDelete(__instance));
 

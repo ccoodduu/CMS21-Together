@@ -10,6 +10,7 @@ using CMS21_Together_Core.Logging;
 using CMS21_Together_Core.Network.Packets;
 using CMS21Together.Data;
 using CMS21Together.Guard;
+using CMS21Together.Logic.Hook;
 using CMS21Together.Logic.Player;
 using CMS21Together.Network;
 using CMS21Together.Session;
@@ -141,22 +142,18 @@ public static class LoaderAddition
 		int num;
 		for (int i = 0; i < carLoaderCount; i = num + 1)
 		{
-			CarLoader car = __instance.carLoader[i];
-			car.DeleteCar();
-			car.LoadCarFromFile();
-			while (!car.IsLoadedFromFile())
+			CarSpawnHooks.Suppress(i);
+			try
 			{
-				yield return YieldInstructions.WaitForEndOfFrame;
+				__instance.carLoader[i].DeleteCar();
 			}
-			if (car.GetSaveName() == GlobalData.SelectedCarLoader && GlobalData.NewMileage != 0)
+			finally
 			{
-				CarLoader carLoader = car;
-				carLoader.CarInfoData = carLoader.CarInfoData with { Mileage = carLoader.CarInfoData.Mileage + GlobalData.NewMileage };
-				GlobalData.NewMileage = 0;
-				car = null;
+				CarSpawnHooks.Release(i);
 			}
 			num = i;
 		}
+		Log.Info($"[Parts] Cleared {carLoaderCount} car loaders; cars come from the server snapshot.");
 		GameSettings.DoNotUnloadAssets = false;
 		GameSettings.DoNotClearPartsIDCache = false;
 		Helper.ClearCacheForIDs();

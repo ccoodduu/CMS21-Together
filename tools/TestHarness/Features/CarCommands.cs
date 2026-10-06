@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using CMS21Together.Logic.Car.Parts;
 using UnityEngine;
 
 namespace TogetherTestHarness.Features;
@@ -51,6 +52,78 @@ public static class CarCommands
     {
         var carLoader = Loader(args);
         return new Dictionary<string, object> { ["car"] = carLoader.carToLoad, ["loaded"] = !string.IsNullOrEmpty(carLoader.carToLoad) && carLoader.IsCarLoaded() };
+    }
+
+    [HarnessCommand("car-ready")]
+    private static object CarReady(string args)
+    {
+        int loader = int.Parse((args ?? "").Trim());
+        var carLoader = Loader(args);
+        var sync = CarPartsSync.All.FirstOrDefault(s => s.Loader == loader);
+        var result = new Dictionary<string, object>
+        {
+            ["car"] = carLoader.carToLoad,
+            ["loaded"] = !string.IsNullOrEmpty(carLoader.carToLoad) && carLoader.IsCarLoaded(),
+            ["state"] = sync?.State.ToString() ?? "Empty",
+            ["spawnSeq"] = sync?.SpawnSeq ?? 0,
+            ["revision"] = sync?.Revision ?? 0,
+        };
+        if ((bool)result["loaded"])
+        {
+            var registry = PartRegistry.Build(carLoader);
+            var body = new List<CMS21_Together_Core.Network.Packets.CarBodyPartUpdatePacket>();
+            var sub = new List<CMS21_Together_Core.Network.Packets.CarSubPartUpdatePacket>();
+            CarPartsSync.CaptureAll(carLoader, registry, body, sub);
+            result["registryHash"] = registry.Hash();
+            result["body"] = body.Count;
+            result["sub"] = sub.Count;
+            result["unmounted"] = body.Count(b => b.Unmounted) + sub.Count(s => s.Unmounted);
+            result["stateHash"] = StateHash(body, sub);
+        }
+        return result;
+    }
+
+    private static string StateHash(List<CMS21_Together_Core.Network.Packets.CarBodyPartUpdatePacket> body, List<CMS21_Together_Core.Network.Packets.CarSubPartUpdatePacket> sub)
+    {
+        var lines = body.Select(b => $"{b.Key}|{b.Unmounted}|{b.Switched}|{b.TunedID}|{b.State?.Condition:F3}|{b.State?.Dent:F3}|{b.State?.Quality}")
+            .Concat(sub.Select(s => $"{s.Key}|{s.Unmounted}|{s.TunedID}|{s.Condition:F3}|{s.Quality}|{s.IsExamined}"))
+            .OrderBy(l => l, StringComparer.Ordinal);
+        using (var sha = System.Security.Cryptography.SHA1.Create())
+            return BitConverter.ToString(sha.ComputeHash(System.Text.Encoding.UTF8.GetBytes(string.Join("\n", lines)))).Replace("-", "").Substring(0, 12);
+    }
+
+    [HarnessCommand("part-state")]
+    private static object PartState(string args)
+    {
+        var parts = (args ?? "").Split(new[] { ' ' }, 2, StringSplitOptions.RemoveEmptyEntries);
+        if (parts.Length != 2) throw new ArgumentException("usage: part-state <loader> <file>");
+        var carLoader = Loader(parts[0]);
+        var registry = PartRegistry.Build(carLoader);
+        var body = new List<CMS21_Together_Core.Network.Packets.CarBodyPartUpdatePacket>();
+        var sub = new List<CMS21_Together_Core.Network.Packets.CarSubPartUpdatePacket>();
+        CarPartsSync.CaptureAll(carLoader, registry, body, sub);
+        File.WriteAllLines(parts[1], body.Select(b => $"{b.Key} {b.PartName} unmounted={b.Unmounted} switched={b.Switched} tuned={b.TunedID} cond={b.State?.Condition:F3} dent={b.State?.Dent:F3} q={b.State?.Quality}")
+            .Concat(sub.Select(s => $"{s.Key} {s.PartId} unmounted={s.Unmounted} tuned={s.TunedID} cond={s.Condition:F3} q={s.Quality} examined={s.IsExamined}")));
+        return parts[1];
+    }
+
+    [HarnessCommand("part-unmount")]
+    private static object PartUnmount(string args)
+    {
+        var parts = (args ?? "").Split(new[] { ' ' }, StringSplitOptions.RemoveEmptyEntries);
+        var carLoader = Loader(parts[0]);
+        var registry = PartRegistry.Build(carLoader);
+        string key = parts.Length > 1 ? parts[1] : registry.SubKeys.First(k => !registry.Sub(k).IsUnmounted && registry.Sub(k).GetUnmountWith().Count == 0);
+        var script = registry.Sub(key) ?? throw new ArgumentException($"no part {key}");
+        script.HideBySavegame(false, carLoader);
+        return new Dictionary<string, object> { ["key"] = key, ["id"] = script.id };
+    }
+
+    [HarnessCommand("car-baseline")]
+    private static object CarBaseline(string args)
+    {
+        CarPartsSync.UploadBaseline(int.Parse((args ?? "").Trim()));
+        return "baseline sent";
     }
 
     [HarnessCommand("part-keys")]

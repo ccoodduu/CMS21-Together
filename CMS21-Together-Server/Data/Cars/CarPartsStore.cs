@@ -1,4 +1,6 @@
 using System;
+using System.Collections.Generic;
+using System.Linq;
 using CMS21_Together_Core.Data;
 using CMS21_Together_Core.Network.Packets;
 using CMS21_Together_Server.Log;
@@ -19,6 +21,8 @@ namespace CMS21_Together_Server.Data.Cars
 		public static event Action<int, CarLoaderEntry> SpawnRegistered;
 		public static event Action<int, CarLoaderEntry, ClearReason> LoaderCleared;
 
+		private const int SnapshotBatchSize = 100;
+
 		private static CarState State => GameDataManager.CurrentState.CarState;
 
 		public static CarLoaderEntry Get(int loader) => State.LoadedCars.TryGetValue(loader, out var entry) ? entry : null;
@@ -37,6 +41,67 @@ namespace CMS21_Together_Server.Data.Cars
 			Logger.Info($"[Cars] Loader {spawn.CarLoaderID}: {spawn.CarToLoad} spawned by client {clientId}, SpawnSeq {spawnSeq}.");
 			SpawnRegistered?.Invoke(spawn.CarLoaderID, entry);
 			return entry;
+		}
+
+		public static void StoreBaseline(CarLoaderEntry entry, string engineSwap, IEnumerable<CarBodyPartUpdatePacket> body, IEnumerable<CarSubPartUpdatePacket> sub)
+		{
+			entry.Revision = entry.HasBaseline ? entry.Revision + 1 : 1;
+			entry.HasBaseline = true;
+			entry.EngineSwap = engineSwap;
+			entry.BodyParts.Clear();
+			entry.SubParts.Clear();
+			foreach (var record in body)
+			{
+				record.Revision = entry.Revision;
+				entry.BodyParts[record.PartIndex] = record;
+			}
+			foreach (var record in sub)
+			{
+				record.Revision = entry.Revision;
+				entry.SubParts[CarSubPartIdentity.BuildKey(record.PartIndexPath)] = record;
+			}
+			Logger.Info($"[Cars] Loader {entry.Spawn.CarLoaderID}: baseline revision {entry.Revision} ({entry.BodyParts.Count} body, {entry.SubParts.Count} mechanical).");
+		}
+
+		public static void SendSnapshot(int loader, CarLoaderEntry entry, int snapshotId, int only = CarLoaderEntry.NoClient, int except = CarLoaderEntry.NoClient)
+		{
+			var records = entry.BodyParts.Values.Cast<object>().Concat(entry.SubParts.Values).ToList();
+			int batchCount = Math.Max(1, (records.Count + SnapshotBatchSize - 1) / SnapshotBatchSize);
+			for (int i = 0; i < batchCount; i++)
+			{
+				var slice = records.Skip(i * SnapshotBatchSize).Take(SnapshotBatchSize).ToList();
+				var packet = new CarPartsSnapshotPacket
+				{
+					SnapshotId = snapshotId,
+					CarLoaderID = loader,
+					SpawnSeq = entry.SpawnSeq,
+					Revision = entry.Revision,
+					BatchIndex = i,
+					IsLastBatch = i == batchCount - 1,
+					Spawn = entry.Spawn,
+					EngineSwap = entry.EngineSwap,
+					BodyParts = slice.OfType<CarBodyPartUpdatePacket>().ToList(),
+					SubParts = slice.OfType<CarSubPartUpdatePacket>().ToList()
+				};
+				if (only != CarLoaderEntry.NoClient) Server.SendToClient(packet, only);
+				else Server.SendToClients(packet, except);
+			}
+		}
+
+		public static void OnPlayerLeft(int clientId)
+		{
+			foreach (var pair in State.LoadedCars.Where(c => c.Value.SpawnedBy == clientId).ToList())
+			{
+				if (!pair.Value.HasBaseline)
+				{
+					ClearLoader(pair.Key, ClearReason.SpawnerLeft);
+					Server.SendToClients(new CarSpawnDeletePacket { CarLoaderID = pair.Key });
+				}
+				else
+				{
+					pair.Value.SpawnedBy = CarLoaderEntry.NoClient;
+				}
+			}
 		}
 
 		public static bool ClearLoader(int loader, ClearReason reason)

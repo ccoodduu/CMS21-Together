@@ -5,6 +5,7 @@ using CMS21_Together_Core.Network;
 using CMS21_Together_Core.Network.Packets;
 using CMS21Together.Logic.Hook;
 using CMS21Together.Data;
+using CMS21Together.Logic.Car.Parts;
 using MelonLoader;
 using UnityEngine;
 
@@ -15,7 +16,11 @@ namespace CMS21Together.Network.Handlers
         [PacketHandler(PacketTypes.CarSpawnResponse)]
         public static void HandleCarSpawnResponse(long clientId, CarSpawnResponsePacket packet)
         {
-            ClientScene.GarageBound(() => MelonCoroutines.Start(ProcessCarSpawnResponse(packet)));
+            ClientScene.GarageBound(() =>
+            {
+                CarPartsSync.OnRemoteSpawn(packet);
+                MelonCoroutines.Start(ProcessCarSpawnResponse(packet));
+            });
         }
 
         private static IEnumerator ProcessCarSpawnResponse(CarSpawnResponsePacket packet)
@@ -63,7 +68,11 @@ namespace CMS21Together.Network.Handlers
         [PacketHandler(PacketTypes.CarSpawnDelete)]
         public static void HandleCarSpawnDelete(long clientId, CarSpawnDeletePacket packet)
         {
-            ClientScene.GarageBound(() => MelonCoroutines.Start(ProcessCarSpawnDelete(packet)));
+            ClientScene.GarageBound(() =>
+            {
+                CarPartsSync.OnCarDeleted(packet.CarLoaderID);
+                MelonCoroutines.Start(ProcessCarSpawnDelete(packet));
+            });
         }
 
         private static IEnumerator ProcessCarSpawnDelete(CarSpawnDeletePacket packet)
@@ -90,6 +99,19 @@ namespace CMS21Together.Network.Handlers
             {
                 CarSpawnHooks.Release(packet.CarLoaderID);
             }
+        }
+
+        [PacketHandler(PacketTypes.CarSpawnAck)]
+        public static void HandleCarSpawnAck(long clientId, CarSpawnAckPacket packet)
+        {
+            CarPartsSync.OnSpawnAck(packet);
+        }
+
+        [PacketHandler(PacketTypes.CarPartsSnapshot)]
+        public static void HandleCarPartsSnapshot(long clientId, CarPartsSnapshotPacket packet)
+        {
+            int snapshotId = SyncTracker.ReceivingSnapshotId;
+            ClientScene.GarageBound(() => CarPartsSync.OnSnapshot(packet, snapshotId));
         }
 
         [PacketHandler(PacketTypes.CarSpawnRejected)]
