@@ -77,7 +77,7 @@ public static class ToolPositionSync
 			{
 				if (!manager.IsOnDefaultPosition(tool)) manager.SetOnDefaultPosition(tool);
 			}
-			else if (manager.CanMove(tool, (CarPlace)place))
+			else if (CanMoveOrUnknown(manager, tool, (CarPlace)place))
 			{
 				manager.MoveTo(tool, (CarPlace)place, false);
 			}
