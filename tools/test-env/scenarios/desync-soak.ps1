@@ -1,6 +1,7 @@
 # run-all: skip
 # desync-detection-and-resync task 2.6 false-alarm check: A and B work on one car for 10 minutes (unmount/mount on
-# alternating clients, scrap/XP changes) while the server compares digests every 5 s; no desync may be confirmed.
+# alternating clients, scrap/XP changes, B with 250 ms incoming latency) while the server compares digests every 5 s;
+# no desync may be confirmed.
 param($Ctx, [int]$Minutes = 10)
 
 $a, $b = $Ctx.Instances
@@ -34,6 +35,7 @@ Send-HarnessCommand -Instance $a -Verb car-spawn -Arguments "0 $car 0" | Out-Nul
 Wait-Ready $a | Out-Null
 Wait-Ready $b | Out-Null
 
+Send-HarnessCommand -Instance $b -Verb net-delay -Arguments "250" | Out-Null
 $mark = Get-ServerLogMark
 $end = (Get-Date).AddMinutes($Minutes)
 $step = 0
