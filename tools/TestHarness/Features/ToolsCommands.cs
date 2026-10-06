@@ -527,15 +527,18 @@ public static class ToolsCommands
     }
 
     // sync-workshop-car-tools verbs. tool-use starts the tool's own DoWorkAnim (what the ask window's accept does, minus
-    // the fee), so the actor hooks and the commit point run as in the game.
+    // the fee), so the actor hooks and the commit point run as in the game. "paid" runs the accept lambda itself, which
+    // charges the fee first (welder and interior detailing).
     [HarnessCommand("tool-use")]
     private static object Use(string args)
     {
         var parts = Args(args);
-        if (parts.Length != 2) throw new ArgumentException("usage: tool-use <Welder|CarWash|InteriorDetailing|InteriorDetailingStationary|OilBin> <loader>");
+        if (parts.Length < 2 || parts.Length > 3 || (parts.Length == 3 && parts[2] != "paid"))
+            throw new ArgumentException("usage: tool-use <Welder|CarWash|InteriorDetailing|InteriorDetailingStationary|OilBin> <loader> [paid]");
         var tool = ToolArg(parts[0]);
         var carLoader = CarArg(parts[1]);
         var tools = ToolsMoveManager.Get() ?? throw new ArgumentException("no workshop tools in this scene");
+        if (parts.Length == 3) return UsePaid(tool, carLoader, tools);
         if (tool == ModToolId.OilBin)
         {
             float oil = carLoader.FluidsData.Oil?.Level ?? 0f;
@@ -553,6 +556,25 @@ public static class ToolsCommands
         };
         logic.StartCoroutine(logic.DoWorkAnim(carLoader));
         return new { tool = tool.ToString(), effectTime = logic.effectTime };
+    }
+
+    private static object UsePaid(ModToolId tool, CarLoader carLoader, ToolsMoveManager tools)
+    {
+        long before = GlobalData.PlayerMoney;
+        switch (tool)
+        {
+            case ModToolId.Welder:
+                var weld = new WelderLogic.__c__DisplayClass5_0 { carLoader = carLoader, __4__this = tools.WelderLogic };
+                weld.Method_Internal_Void_Boolean_PDM_0(true);
+                break;
+            case ModToolId.InteriorDetailing:
+                var detail = new InteriorDetailingToolkitLogic.__c__DisplayClass6_0 { carLoader = carLoader, __4__this = tools.InteriorDetailingToolkitLogic };
+                detail.Method_Internal_Void_Boolean_PDM_0(true);
+                break;
+            default:
+                throw new ArgumentException($"{tool} has no paid accept (welder and interior detailing only)");
+        }
+        return new { tool = tool.ToString(), paid = true, moneyBefore = before, moneyAfter = GlobalData.PlayerMoney };
     }
 
     [HarnessCommand("tool-engine-out")]
@@ -613,6 +635,7 @@ public static class ToolsCommands
         carLoader.SetCarColor(null, new Color(rgb[0], rgb[1], rgb[2], 1f));
         paintshop.carLoader = carLoader;
         paintshop.PaintshopType = CMS.UI.Logic.PaintshopType.Garage;
+        if (!paintshop.TryGetMoneyForPaint()) throw new InvalidOperationException("not enough money to paint");
         paintshop.SubmitColor(false);
         return new { painted = true };
     }

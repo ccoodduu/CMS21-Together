@@ -2,6 +2,24 @@
 
 Newest first. One entry per work session.
 
+## 2026-10-06 (22:30–23:40) — row 5b merged; guard audit; a late-join fix
+
+- `main` = `614cee9`: row 5b (car tools: engine crane effects, car paint, car wash, interior detailing, oil bin,
+  welder, dyno from the map) merged. Single-lane regression `20261006-221425`: all passed except `economy-fees`
+  (failed) and `test-drive-latejoin` (flaky); both are fixed and re-run green, as is `tools-car-effects`.
+- `economy-fees` ran the paint, wash, welder and interior fee steps for the first time (5b opened them in the guard).
+  The harness verbs skipped the game's payment calls; now they use them (`tool-use ... paid` runs the accept lambda,
+  `wash-paint` runs `ShowCoroutine(clearCar: true)`, `tool-paint-car` pays with `TryGetMoneyForPaint`). The client
+  was right: every fee goes through the server once.
+- Late-join bug: `PartScript.SetConditionNormal` throws after storing `Condition` when the part's highlighter is not
+  set up yet. That aborted the car snapshot and B's join failed (seen with a car on the test track). Fixed in
+  `PartApplier`.
+- Guard audit: rows 4, 5a and 6 part 2 were merged with their guard entries still `Planned`, so real players were
+  refused the workshop machines, part paint, window tint and starting the engine (the harness runs with the guard
+  off). Branch `change/guard-open` opens 23 entries and is being tested next. Still blocked on purpose: tuning
+  (gearbox changes are not sent), car version, bonus parts, building a new engine on the stand, driving, buying
+  cars, barn, auction, salon, parking scene.
+
 ## 2026-10-06 (20:10–22:30) — row 5a merged; 5b, 14d and row 7 part 2 ready to test
 
 - `main` = `6859362`: row 5a (workshop machines: tire changer, wheel balancer with its lock, spring clamp, brake
