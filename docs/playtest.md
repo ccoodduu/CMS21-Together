@@ -26,6 +26,7 @@ Report problems with both players' `MelonLoader\Latest.log` and the server's `Lo
    lathe, battery charger.
    **Hand check: the engine stand** (hang an engine on it, rotate it, take a part off, take the engine off). The harness
    cannot build an engine on the stand (the game's own build throws when driven from outside the UI, also offline).
+   "New engine" (building one from parts on the stand) is refused for now.
 7. Fluids, wheels and alignment, plates, paint shop and window tint; with row 5b (once merged) also car wash, interior
    detailing and welder: the other player sees the result. Fees are charged once, by the server.
 8. Sell a car, open crates, scrap parts, buy plates, reset skills: money, scrap and XP stay the same for everyone.
@@ -45,6 +46,8 @@ Report problems with both players' `MelonLoader\Latest.log` and the server's `Lo
 ## Travel and sessions
 
 1. Junkyard alone, come back: the garage reloads from the server; bought parts are in the shared inventory.
+   **Hand check:** try to buy a car in the junkyard. Buying cars is not shared yet, so it must be refused before any
+   money leaves (the game takes the money before it asks where the car goes). Note your money before and after.
 2. Leave and rejoin; stop the server with `/stop` and start it again: everything comes back.
 3. If something looks out of sync, press F7: the garage reloads from the server.
 
