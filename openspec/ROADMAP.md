@@ -4,18 +4,15 @@ Goal: a playable co-op session on the dedicated server (Dev architecture) for 2â
 shared cars, shared jobs and tools, with state that survives a server restart and a late join â€” installable
 by a friend from a release zip and joinable without typing IDs by hand.
 
-## Status (2026-10-05)
+## Status (2026-10-06)
 
-Working on `main` (= upstream `Dev` a490cd5): DirectIP/Steam transport, connect + initial sync
-(WorldState, GarageState, inventory), player movement/animation, money/exp/level/scrap/skills,
-garage upgrades, server-authoritative inventory/shop/warehouse/exchange, car spawn/delete in the garage.
-DTOs for body-part and sub-part updates exist (`CarBodyPartUpdatePacket`, `CarSubPartUpdatePacket`,
-`ModGameState.CarState`) but nothing sends or handles them. Cars and jobs are not part of initial sync.
-The connect handshake checks the mod version only (`gameVersion` is sent but not checked). The client runs
-the session in profile slot 4 with difficulty hardcoded to Normal.
-
-Verified with the harness: two clients connect to the local server, reach the garage and dump identical
-stats/inventory/cars, and see each other.
+M0 done. `main` has: the sync contract (versioned save sections, `SyncBegin/SyncEnd{Items}/SyncAck`,
+`StateLock`), crash-safe server saves with backups/fallback/refusal and `--check-save`, client save safety (no
+profile writes or profile switch during a session, profile backups), `DisconnectReason`, configurable port,
+isolated parallel test lanes and `Run-All`. M1 in progress: presence roster, spawn slots, names and name tags
+(row 6 slice 1; the idle late-join bug is fixed). Still from upstream: movement/animation, money/exp/level/scrap/
+skills, garage upgrades, server-authoritative inventory/shop/warehouse/exchange, car spawn/delete in the garage;
+cars and jobs are not part of the snapshot yet; the handshake checks the mod version only.
 
 ## Changes
 

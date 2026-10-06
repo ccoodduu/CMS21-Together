@@ -2,6 +2,21 @@
 
 Newest first. One entry per work session.
 
+## 2026-10-06 (late morning) — M0 done, M1 started: presence
+
+- **M0 complete** and on `main`: regression `20261006-083824_regression` PASSED on lane 1 (connect,
+  presence-latejoin, profile-safety, server-restart, server-saves) in 3½ min.
+- `sync-players-and-scenes` slice 1 + names (tasks 1.2–1.8, 2.1–2.6, 3.1–3.3): server presence records, roster
+  snapshot (`players`), avatars driven by the roster, spawn slots, player names (preference, de-duplicated on the
+  server), IMGUI name tags. **The idle late-join bug is fixed**: `presence-latejoin` passes, `connect` now requires
+  both players to see each other.
+- Seen in a log: on the way to the menu the game called `GameDataManager.Save(0)` (the player's real profile 0 in a
+  normal install) during a session; `SessionGuard` blocked it.
+- User allowed game tests while they are at the PC; answers to the M1 questions recorded (DLC: shared use only for
+  content all players own; gameplay mods dropped in multiplayer for now; everything in English).
+- `release-and-docs` part 1 is being built by an agent in its own worktree (no game runs there).
+- Next: row 6 hook trace (1.1) and scene tracking (group 4: travel, away/return), then `multiplayer-guard`.
+
 ## 2026-10-06 (morning, autonomous loop) — M0 contract, test lanes, save robustness
 
 - `session-persistence-and-rejoin` groups 1–3 done and merged/pushed to `main`:
