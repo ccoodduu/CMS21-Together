@@ -87,6 +87,9 @@ Build-Release.ps1 [-Release] [-AllowDirty] [-OutDir tools/release/out] [-DraftGi
    - Part 2 adds `Collect-Logs.ps1` + `Collect-Logs.bat` to both (client zip: game root; server zip: server root and
      `TogetherServer\`).
    - `.pdb` files are included next to their dlls (line numbers in bug-report stack traces; size is small).
+   - `steam_api64.dll` shipped: `CMS21-Together-Server\Libs\steam_api64.dll`, file version 05.69.73.98, 262 944 bytes,
+     SHA-256 `473f5a312b56519f…`. Server side checked (task 2.3): the server from the server zip with `use_steam = True`
+     logged "Steam connection established! SteamID: …" (2026-10-06); the client side waits for a game run.
 4. Verify each zip against an explicit expected-file list in the script (missing or extra file → fail), and that
    `BuildInfo.ModVersion` in the built Core equals the zip name. Write `SHA256SUMS.txt`.
 5. `-DraftGitHubRelease`: `gh release create v<version> --draft` with the changelog section and both zips — only on the

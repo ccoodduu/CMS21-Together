@@ -106,3 +106,13 @@ ROADMAP now names `Build-Release.ps1`, `release-smoke` and `docs/try-it.md`.
    hit this when they show or check versions on the client.
 3. **Release label.** `-p:TogetherBuildLabel=` (empty) builds the plain version; part 2's `-Release` uses that. A global
    property overrides `Directory.Build.props`, so no extra switch is needed.
+4. **`Build-Release.ps1` details.** `.dirty` is appended only when the tree is actually dirty (with `-AllowDirty` on a
+   clean tree the build is clean). The version check reads `BuildInfo` from each Core dll inside the finished zips and
+   looks for the `ModVersion` constant in the mod dll and the server exe, so a stale client or server fails too.
+   `-DropFromStaging <path>` exists only to test the content check (task 2.2).
+5. **`Run-All.ps1`** now honours the marker only on the first line (it matched any line before) and has `-List` for the
+   dry listing of task 2.5.
+6. **`Install-ReleaseToTestEnv.ps1`** clears the lane's server folder except `server_config.ini`, `Saves\`, `Log\` and
+   `BugReports\` before extracting, so files of the dev deploy do not mix with the release. The lane config helper and
+   the list of release-only files moved into `TestLanes.psm1` (`Set-LaneServerConfig`, `Remove-ReleaseOnlyFiles`),
+   shared by `Deploy-Mod.ps1`; the dev deploy also removes the release's `.pdb`s and root `CMS21-Together-*` files.
