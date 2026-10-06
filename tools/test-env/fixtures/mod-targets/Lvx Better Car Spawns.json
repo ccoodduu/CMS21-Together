@@ -1,0 +1,41 @@
+[
+  {
+    "Name": "Lvx Better Car Spawns",
+    "Version": "1.0.0",
+    "Author": "LvxMagick",
+    "File": "LvxBetterCarSpawns.dll",
+    "Assembly": "LvxBetterCarSpawns",
+    "Targets": [
+      {
+        "Assembly": "Assembly-CSharp-firstpass",
+        "Type": "CMS.SceneLoaders.AuctionManager",
+        "Method": "GenerateCars"
+      },
+      {
+        "Assembly": "Assembly-CSharp-firstpass",
+        "Type": "CMS.UI.Windows.ItemsExchangeWindow",
+        "Method": "Show"
+      },
+      {
+        "Assembly": "Assembly-CSharp-firstpass",
+        "Type": "JunkyardGenerator",
+        "Method": "CreateCar"
+      },
+      {
+        "Assembly": "Assembly-CSharp-firstpass",
+        "Type": "JunkyardGenerator",
+        "Method": "Generate"
+      },
+      {
+        "Assembly": "Assembly-CSharp-firstpass",
+        "Type": "ShedManager",
+        "Method": "CreateCar"
+      },
+      {
+        "Assembly": "Assembly-CSharp-firstpass",
+        "Type": "ShedManager",
+        "Method": "Generate"
+      }
+    ]
+  }
+]

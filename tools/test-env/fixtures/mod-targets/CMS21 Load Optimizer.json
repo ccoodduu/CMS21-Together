@@ -1,0 +1,121 @@
+[
+  {
+    "Name": "CMS21 Load Optimizer",
+    "Version": "0.5.0",
+    "Author": "ccoodduu",
+    "File": "CMS21LoadOptimizer.dll",
+    "Assembly": "CMS21LoadOptimizer",
+    "Targets": [
+      {
+        "Assembly": "QoLmod",
+        "Type": "CMS2021mod.Helpers",
+        "Method": "AuthenticBrandLogos"
+      },
+      {
+        "Assembly": "QoLmod",
+        "Type": "CMS2021mod.Helpers",
+        "Method": "AuthenticCarNames"
+      },
+      {
+        "Assembly": "QoLmod",
+        "Type": "CMS2021mod.Helpers",
+        "Method": "LoadBrandlogosfromMods"
+      },
+      {
+        "Assembly": "QoLmod",
+        "Type": "CMS2021mod.Helpers",
+        "Method": "LoadTextureFromByteToSprite"
+      },
+      {
+        "Assembly": "QoLmod",
+        "Type": "CMS2021mod.Main",
+        "Method": "OnSceneWasInitialized"
+      },
+      {
+        "Assembly": "QoLmod",
+        "Type": "CMS2021mod.PaintMod",
+        "Method": "EnablePaintAllparts"
+      },
+      {
+        "Assembly": "QoLmod",
+        "Type": "CMS2021mod.Routines",
+        "Method": "LoadTexturesFromFolders"
+      },
+      {
+        "Assembly": "QuickShop",
+        "Type": "QuickShop.Config",
+        "Method": "GetConfigFile"
+      },
+      {
+        "Assembly": "QuickShop",
+        "Type": "QuickShop.Config",
+        "Method": "GetPartFile"
+      },
+      {
+        "Assembly": "TKAftermarket",
+        "Type": "TKAftermarketMod.TKAftermarketModMain",
+        "Method": "AddAftermarketPartsToInventory"
+      },
+      {
+        "Assembly": "TKAftermarket",
+        "Type": "TKAftermarketMod.TKAftermarketModMain",
+        "Method": "GameInventory_ReadTuningData_Postfix"
+      },
+      {
+        "Assembly": "TKAftermarket",
+        "Type": "TKAftermarketMod.TKAftermarketModMain",
+        "Method": "GetAssetBundle"
+      },
+      {
+        "Assembly": "TKAftermarket",
+        "Type": "TKAftermarketMod.TKAftermarketModMain",
+        "Method": "LoadAftermarketMounts"
+      },
+      {
+        "Assembly": "TKAftermarket",
+        "Type": "TKAftermarketMod.TKAftermarketModMain",
+        "Method": "LoadAssetBundleHelper"
+      },
+      {
+        "Assembly": "TKAftermarket",
+        "Type": "TKAftermarketMod.TKAftermarketModMain",
+        "Method": "LoadMountsCache"
+      },
+      {
+        "Assembly": "TKAftermarket",
+        "Type": "TKAftermarketMod.TKAftermarketModMain",
+        "Method": "OnSceneWasUnloaded"
+      },
+      {
+        "Assembly": "TKAftermarket",
+        "Type": "UIHelper",
+        "Method": "ReloadAftermarketSprites"
+      },
+      {
+        "Assembly": "TKBasics",
+        "Type": "TKBasicsMod.TKBasicsModMain",
+        "Method": "ReplaceRepairGroups"
+      },
+      {
+        "Assembly": "UnityEngine.AssetBundleModule",
+        "Type": "UnityEngine.AssetBundle",
+        "Method": "Unload"
+      },
+      {
+        "Assembly": "UnityEngine.CoreModule",
+        "Type": "UnityEngine.Texture2D",
+        "Method": "Compress"
+      },
+      {
+        "Assembly": "UnityEngine.UnityWebRequestTextureModule",
+        "Type": "UnityEngine.Networking.DownloadHandlerTexture",
+        "Method": "GetContent"
+      },
+      {
+        "Assembly": "UnityEngine.UnityWebRequestTextureModule",
+        "Type": "UnityEngine.Networking.UnityWebRequestTexture",
+        "Method": "GetTexture"
+      }
+    ]
+  }
+]

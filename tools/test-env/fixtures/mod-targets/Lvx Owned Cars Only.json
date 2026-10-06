@@ -1,0 +1,16 @@
+[
+  {
+    "Name": "Lvx Owned Cars Only",
+    "Version": "1.0.0",
+    "Author": "ccoodduu",
+    "File": "LvxOwnedCarsOnly.dll",
+    "Assembly": "LvxOwnedCarsOnly",
+    "Targets": [
+      {
+        "Assembly": "LvxBetterCarSpawns",
+        "Type": "LvxBetterCarSpawns.Database.RuntimeVehicleDatabase",
+        "Method": "GetCandidatesForLocation"
+      }
+    ]
+  }
+]
