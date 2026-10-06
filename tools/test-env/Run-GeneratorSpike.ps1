@@ -3,7 +3,8 @@
 Generator-client spike (docs/spikes/generator-client.md §5): starts lane 1's instance A alone, offline, in each launch
 variant, loads the garage from the menu, idles there and samples memory/CPU every 2 s and the order list every 30 s.
 Results: tools\runs\<timestamp>_generator-spike\<variant>.json and summary.json.
-Variants: normal (960x540), nographics (-batchmode -nographics), batchmode (-batchmode), lowfx (320x180, cameras off).
+Variants: normal (960x540), nographics (-batchmode -nographics), nographics15 (the same, capped at 15 fps), batchmode
+(-batchmode), lowfx (320x180, cameras off, 15 fps).
 #>
 param(
     [string[]]$Variants = @("normal", "nographics", "batchmode", "lowfx"),
@@ -51,6 +52,7 @@ try {
         switch ($variant) {
             "normal" { $arguments += @("-screen-fullscreen", "0", "-screen-width", "960", "-screen-height", "540", "--harness.window=960x540") }
             "nographics" { $arguments += @("-batchmode", "-nographics", "-logFile", (Join-Path $runDir "$variant.unity.log")) }
+            "nographics15" { $arguments += @("-batchmode", "-nographics", "-logFile", (Join-Path $runDir "$variant.unity.log")) }
             "batchmode" { $arguments += @("-batchmode", "-logFile", (Join-Path $runDir "$variant.unity.log")) }
             "lowfx" { $arguments += @("-screen-fullscreen", "0", "-screen-width", "320", "-screen-height", "180", "--harness.window=320x180") }
         }
@@ -79,7 +81,7 @@ try {
             }
             if (-not $result.reachedGarage) { throw "did not reach the garage (exited: $($process.HasExited))" }
             $result.garageSeconds = [math]::Round(((Get-Date) - $start).TotalSeconds)
-            if ($variant -eq "lowfx") { $result.lowfx = Send-HarnessCommand -Instance $name -Verb lowfx -Arguments "15" }
+            if ($variant -eq "lowfx" -or $variant -eq "nographics15") { $result.lowfx = Send-HarnessCommand -Instance $name -Verb lowfx -Arguments "15" }
 
             $probes = @()
             $idleStart = Get-Date
