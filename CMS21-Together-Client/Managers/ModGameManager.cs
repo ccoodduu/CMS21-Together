@@ -1,4 +1,6 @@
 using CMS21_Together_Core.Logging;
+using CMS21Together.Network;
+using CMS21Together.Persistence;
 using CMS21Together.Utils;
 using Il2CppSystem.IO;
 using UnityEngine;
@@ -12,8 +14,15 @@ public static class ModGameManager
 	
 	public static void StartGame()
 	{
-		SaveUtils.ExtendProfileDataSize();
+		if (!ProfileBackup.EnsureBackedUp())
+		{
+			Client.Instance.Disconnect();
+			return;
+		}
+
 		GameManager manager = Singleton<GameManager>.Instance;
+		SessionGuard.Begin(manager.ProfileManager);
+		SaveUtils.ExtendProfileDataSize();
 
 		var writer = new BinaryWriter();
 		var save = new ProfileData();
@@ -24,7 +33,6 @@ public static class ModGameManager
 
 		manager.GameDataManager.ProfileData[4] = save;
 		manager.ProfileManager.selectedProfile = 4;
-		manager.RDGPlayerPrefs.SetInt("selectedProfile", 4);
 		Singleton<GameManager>.Instance.ProfileManager.SetNameForCurrentProfile("ClientSave");
 		Singleton<GameManager>.Instance.ProfileManager.SetDifficultyForCurrentProfile(DifficultyLevel.Normal);
 		manager.ProfileManager.Load();

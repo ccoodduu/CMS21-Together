@@ -6,6 +6,7 @@ using CMS21Together.Data;
 using CMS21Together.Logging;
 using CMS21Together.Managers;
 using CMS21Together.Network;
+using CMS21Together.Persistence;
 using MelonLoader;
 using Steamworks;
 using UnityEngine;
@@ -72,7 +73,10 @@ namespace CMS21Together
 			}
 		}
 
-		public override void OnSceneWasLoaded(int buildindex, string sceneName) { }
+		public override void OnSceneWasLoaded(int buildindex, string sceneName)
+		{
+			if (sceneName == "Menu") SessionGuard.End();
+		}
 
 		public override void OnUpdate()
 		{
@@ -108,6 +112,9 @@ namespace CMS21Together
 			ModConsole.Initialize();
 		}
 
-		public override void OnApplicationQuit() { }
+		public override void OnApplicationQuit()
+		{
+			SessionGuard.End();
+		}
 	}
 }

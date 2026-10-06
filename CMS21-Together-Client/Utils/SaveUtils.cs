@@ -1,21 +1,27 @@
-﻿using UnhollowerBaseLib;
+using UnhollowerBaseLib;
 
 namespace CMS21Together.Utils;
 
 public static class SaveUtils
 {
-	public static void ExtendProfileDataSize()
+	private const int GameProfileCount = 4;
+	private const int SessionProfileCount = 5;
+
+	public static void ExtendProfileDataSize() => ResizeProfileData(SessionProfileCount);
+
+	public static void RestoreProfileDataSize() => ResizeProfileData(GameProfileCount);
+
+	private static void ResizeProfileData(int size)
 	{
-		if (Singleton<GameManager>.Instance.GameDataManager.ProfileData.Length == 5)
+		var gameDataManager = Singleton<GameManager>.Instance.GameDataManager;
+		var current = gameDataManager.ProfileData;
+		if (current == null || current.Length == size)
 			return;
 
-		Il2CppReferenceArray<ProfileData> profileData = new(5);
-		profileData[0] = Singleton<GameManager>.Instance.GameDataManager.ProfileData[0];
-		profileData[1] = Singleton<GameManager>.Instance.GameDataManager.ProfileData[1];
-		profileData[2] = Singleton<GameManager>.Instance.GameDataManager.ProfileData[2];
-		profileData[3] = Singleton<GameManager>.Instance.GameDataManager.ProfileData[3];
-		
-		Singleton<GameManager>.Instance.GameDataManager.ProfileData = profileData;
+		Il2CppReferenceArray<ProfileData> profileData = new(size);
+		for (int i = 0; i < size && i < current.Length; i++)
+			profileData[i] = current[i];
+
+		gameDataManager.ProfileData = profileData;
 	}
-	
 }
