@@ -43,6 +43,8 @@ public static class CarPartsSync
 	private static readonly Dictionary<int, LoaderSync> loaders = new Dictionary<int, LoaderSync>();
 	private static readonly Dictionary<string, List<CarPartsSnapshotPacket>> incoming = new Dictionary<string, List<CarPartsSnapshotPacket>>();
 
+	public static float TestSnapshotDelaySeconds { get; set; }
+
 	public static event Action<int> BaselineUploaded;
 	public static event Action<int, IReadOnlyCollection<string>> LocalPartsCommitted;
 
@@ -200,6 +202,7 @@ public static class CarPartsSync
 			float deadline = Time.realtimeSinceStartup + LoadTimeoutSeconds;
 			while (!carLoader.IsCarLoaded() && Time.realtimeSinceStartup < deadline) yield return new WaitForEndOfFrame();
 		}
+		if (TestSnapshotDelaySeconds > 0f) yield return new WaitForSeconds(TestSnapshotDelaySeconds);
 		if (sync.SpawnSeq != first.SpawnSeq) yield break;
 
 		sync.Registry = PartRegistry.Build(carLoader);

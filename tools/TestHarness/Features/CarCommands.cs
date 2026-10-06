@@ -47,6 +47,13 @@ public static class CarCommands
         return "deleted";
     }
 
+    [HarnessCommand("car-hold-snapshot")]
+    private static object CarHoldSnapshot(string args)
+    {
+        CarPartsSync.TestSnapshotDelaySeconds = float.Parse((args ?? "0").Trim(), System.Globalization.CultureInfo.InvariantCulture);
+        return CarPartsSync.TestSnapshotDelaySeconds;
+    }
+
     [HarnessCommand("car-loaded")]
     private static object CarLoaded(string args)
     {

@@ -90,5 +90,27 @@ $same = Wait-Same "mount"
 Check ($same[0].unmounted -eq $readyA.unmounted) "A's part is mounted again ($($same[0].unmounted))"
 Check ($same[0].stateHash -eq $same[1].stateHash) "B sees A's mount ($($same[0].stateHash) / $($same[1].stateHash))"
 
+# D8 queue: A unmounts right after its own baseline, while B is still loading the car; B applies the queued change
+# once its snapshot is in. car-hold-snapshot keeps B loading for 8 s; a second load of the same car is too fast otherwise.
+Send-HarnessCommand -Instance $a -Verb car-delete -Arguments "$loader" | Out-Null
+$deadline = (Get-Date).AddSeconds(30)
+do {
+    Start-Sleep -Milliseconds 500
+    $gone = @($a, $b | ForEach-Object { (Send-HarnessCommand -Instance $_ -Verb car-ready -Arguments "$loader").loaded }) -notcontains $true
+} while (-not $gone -and (Get-Date) -lt $deadline)
+Check $gone "the car is gone on both after A deletes it"
+Send-HarnessCommand -Instance $b -Verb car-hold-snapshot -Arguments "8" | Out-Null
+Send-HarnessCommand -Instance $a -Verb car-spawn -Arguments "$loader $car 0" | Out-Null
+$readyA = Wait-Ready $a
+$early = Send-HarnessCommand -Instance $a -Verb part-fast-unmount -Arguments "$loader"
+$stateB = Send-HarnessCommand -Instance $b -Verb car-ready -Arguments "$loader"
+Write-Host "A unmounts $($early.key) while B is $($stateB.state) (loaded $($stateB.loaded))"
+Check ($stateB.state -ne "Ready") "B is not Ready yet when A unmounts ($($stateB.state)), so the change goes through the queue"
+Wait-Ready $b | Out-Null
+Send-HarnessCommand -Instance $b -Verb car-hold-snapshot -Arguments "0" | Out-Null
+$same = Wait-Same "unmount-while-loading" 20
+Check ($same[0].unmounted -eq $readyA.unmounted + 1) "A's early unmount happened ($($readyA.unmounted) -> $($same[0].unmounted))"
+Check ($same[0].stateHash -eq $same[1].stateHash) "B ends with A's early unmount after loading ($($same[0].stateHash) / $($same[1].stateHash))"
+
 $Ctx.Result.notes += $failures
 $Ctx.Result.passed = ($failures.Count -eq 0)
