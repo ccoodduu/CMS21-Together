@@ -18,8 +18,22 @@ Newest first. One entry per work session.
   - Harness fix: `Get-ServerLogMark` skipped the first new log line.
 - Two checks need a person in the game (M2 playtest): event order and item IDs of a body-part unmount through the
   pie menu, and whether a second action can start before the first finishes.
-- Running: a full lane-1 regression of `0f10bf9`; if green, row 1 is merged into `main`. An agent does row 2's
-  static spikes (`docs/spikes/car-placement.md`).
+- Lane-1 regression `20261006-113902` PASSED (all 16, none flaky). `main` fast-forwarded to `b282383` (row 1).
+  Row 2 continues on `change/sync-car-placement-and-lifts`. An agent does row 2's static spikes
+  (`docs/spikes/car-placement.md`).
+- Zips `tools\release\out\CMS21-Together-0.6.0-dev.586-client.zip` / `-server.zip`; `release-smoke` PASSED on them.
+
+### What to try (row 1 playtest, on top of the M1 checklist)
+
+1. Both players in the garage. One buys or gets a car onto a garage place (moving cars between places, lifts and
+   parking is row 2 and still blocked).
+2. Unmount and mount mechanical parts and body parts (doors, hood) at the same time on the same car: the other player
+   sees the change within a second, the part's item lands in the shared inventory once.
+3. Try the same part at the same moment: one of you gets "… is working on this part" or the part goes back.
+4. Examine parts; leave and rejoin: the car comes back with the same parts off and examined.
+5. Engine crane: needs the oil drained, which is still blocked (row 4), so expect the game's oil warning.
+6. Report with both `MelonLoader\Latest.log` files and the server's `Log\Latest.txt`; the server command `cars`
+   prints what the server thinks the car looks like.
 
 ## 2026-10-06 (11:00–11:25) — row 1: race fixed, API, dumps (branch `change/sync-car-parts`)
 
