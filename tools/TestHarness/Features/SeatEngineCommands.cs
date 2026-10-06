@@ -111,6 +111,27 @@ public static class SeatEngineCommands
         return GameState();
     }
 
+    [HarnessCommand("engine")]
+    private static object Engine(string args)
+    {
+        var controller = Singleton<GameManager>.Instance?.EngineAudioController ?? throw new InvalidOperationException("no EngineAudioController");
+        switch ((args ?? "").Trim())
+        {
+            case "on":
+                var game = GameScript.Get();
+                int loader = CMS21Together.Logic.Player.SeatEngine.SeatCarLoaderId;
+                if (loader < 0) throw new InvalidOperationException("not seated in a car");
+                bool seatedMode = game != null && game.inInterior;
+                controller.StartCoroutine(controller.StartIgnition(seatedMode, LoadedCar(loader.ToString()), 0f));
+                break;
+            case "off":
+                controller.EngineStop();
+                break;
+            default: throw new ArgumentException("usage: engine on|off");
+        }
+        return GameState();
+    }
+
     private static CarLoader LoadedCar(string index)
     {
         var carLoader = CarLoaderPlaces.Get()?.GetCarLoaderByIndex(int.Parse(index));

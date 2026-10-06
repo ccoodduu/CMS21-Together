@@ -14,6 +14,7 @@ public static class SeatEngine
 {
 	private const float PollSeconds = 0.25f;
 	private const float PendingTimeoutSeconds = 10f;
+	private const float RpmThreshold = 150f;
 
 	private static int pendingLoader = PlayerPresenceRecord.NoCar;
 	private static bool pendingLeft;
@@ -24,6 +25,9 @@ public static class SeatEngine
 	public static bool SeatLeft { get; private set; }
 	public static bool IsSeated => SeatCarLoaderId != PlayerPresenceRecord.NoCar;
 	public static int PendingCarLoaderId => pendingLoader;
+	public static int EngineCarLoaderId { get; private set; } = PlayerPresenceRecord.NoCar;
+	public static bool EngineRunning { get; private set; }
+	public static float EngineRpm { get; private set; }
 
 	public static bool InSeatedMode
 	{
@@ -43,12 +47,18 @@ public static class SeatEngine
 		pendingLoader = PlayerPresenceRecord.NoCar;
 		SeatCarLoaderId = PlayerPresenceRecord.NoCar;
 		SeatLeft = false;
+		EngineCarLoaderId = PlayerPresenceRecord.NoCar;
+		EngineRunning = false;
+		EngineRpm = 0f;
 	}
 
 	public static void FillRecord(PlayerPresenceRecord record)
 	{
 		record.SeatCarLoaderId = SeatCarLoaderId;
 		record.SeatLeft = SeatLeft;
+		record.EngineCarLoaderId = EngineCarLoaderId;
+		record.EngineRunning = EngineRunning;
+		record.EngineRpm = EngineRpm;
 	}
 
 	[HarmonyPatch(typeof(GameScript), nameof(GameScript.SitInside))]
@@ -77,6 +87,8 @@ public static class SeatEngine
 		if (!Active || Time.realtimeSinceStartup < nextPoll) return;
 		nextPoll = Time.realtimeSinceStartup + PollSeconds;
 		PollSeat();
+		PollEngine();
+		RemoteEngines.Refresh();
 	}
 
 	private static void PollSeat()
@@ -97,6 +109,28 @@ public static class SeatEngine
 			return;
 		}
 		if (IsSeated && !seatedMode) SetSeat(PlayerPresenceRecord.NoCar, false);
+	}
+
+	private static void PollEngine()
+	{
+		var controller = Singleton<GameManager>.Instance?.EngineAudioController;
+		int loader = PlayerPresenceRecord.NoCar;
+		float rpm = 0f;
+		if (controller != null && controller.GetEngineStartingOrWorking() && controller.carLoader != null)
+		{
+			loader = CarLoaderPlaces.Get().GetCarLoaderId(controller.carLoader);
+			if (loader >= 0) rpm = controller.CurrentRpm;
+			else loader = PlayerPresenceRecord.NoCar;
+		}
+		bool running = loader != PlayerPresenceRecord.NoCar;
+		if (running == EngineRunning && loader == EngineCarLoaderId && Mathf.Abs(rpm - EngineRpm) <= RpmThreshold) return;
+
+		if (running != EngineRunning || loader != EngineCarLoaderId)
+			Log.Info(running ? $"[Presence] Engine of car {loader} running." : "[Presence] Engine stopped.");
+		EngineCarLoaderId = loader;
+		EngineRunning = running;
+		EngineRpm = rpm;
+		PresenceManager.PublishLocal();
 	}
 
 	private static void SetSeat(int loader, bool left)

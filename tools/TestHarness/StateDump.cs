@@ -76,7 +76,15 @@ public static class StateDump
             avatarActive = p.Value.HasAvatar && p.Value.Avatar.gameObject.activeSelf,
             avatarPosition = p.Value.HasAvatar ? Vec(p.Value.Avatar.transform.position) : null,
             nameTag = NameTags.IsDrawn(p.Value),
+            engineCarLoaderId = p.Value.Record.EngineCarLoaderId,
+            engineRpm = Round(p.Value.Record.EngineRpm),
         });
+        dump["remoteEngines"] = RemoteEngines.All.Select(e => (object)new
+        {
+            playerId = e.PlayerId,
+            carLoaderId = e.CarLoaderId,
+            audioPlaying = e.IsAlive && e.Source.isPlaying,
+        }).ToList();
         return dump;
     }
 
@@ -92,6 +100,7 @@ public static class StateDump
             name = PlayerSettings.PlayerName,
             seat = SeatEngine.SeatCarLoaderId,
             seatLeft = SeatEngine.SeatLeft,
+            engine = new { carLoaderId = SeatEngine.EngineCarLoaderId, running = SeatEngine.EngineRunning, rpm = Round(SeatEngine.EngineRpm) },
         };
     }
 

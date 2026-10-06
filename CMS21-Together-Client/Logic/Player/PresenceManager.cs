@@ -79,6 +79,7 @@ public static class PresenceManager
 	{
 		if (!Roster.TryGetValue(playerId, out var player)) return;
 		DestroyAvatar(player);
+		RemoteEngines.Remove(playerId);
 		Roster.Remove(playerId);
 		Log.Info($"[Presence] Player {playerId} left.");
 		RichPresence.Publish();
@@ -87,6 +88,7 @@ public static class PresenceManager
 	public static void Clear()
 	{
 		foreach (var player in Roster.Values) DestroyAvatar(player);
+		RemoteEngines.Clear();
 		Roster.Clear();
 	}
 
@@ -98,6 +100,12 @@ public static class PresenceManager
 	public static void Reconcile(int playerId)
 	{
 		if (!Roster.TryGetValue(playerId, out var player)) return;
+		ReconcileAvatar(player);
+		RemoteEngines.Apply(player);
+	}
+
+	private static void ReconcileAvatar(RemotePlayer player)
+	{
 		var record = player.Record;
 
 		bool visible = record.Scene == ClientScene.LocalScene
