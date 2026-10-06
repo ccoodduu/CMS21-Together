@@ -399,7 +399,6 @@ public static class ToolsCommands
             return new { tool = tool.ToString(), place = "default" };
         }
         var place = (CarPlace)Enum.Parse(typeof(CarPlace), parts[1], true);
-        if (!manager.CanMove(tool, place)) return new { tool = tool.ToString(), place = place.ToString(), moved = false };
         manager.MoveTo(tool, place, true);
         return new { tool = tool.ToString(), place = place.ToString(), moved = true };
     }
