@@ -1,4 +1,5 @@
 using CMS21_Together_Core.Logging;
+using CMS21Together.Guard;
 using CMS21Together.Network;
 using CMS21Together.Persistence;
 using CMS21Together.Utils;
@@ -22,6 +23,7 @@ public static class ModGameManager
 
 		GameManager manager = Singleton<GameManager>.Instance;
 		SessionGuard.Begin(manager.ProfileManager);
+		FeatureGuard.LogSessionStart();
 		SaveUtils.ExtendProfileDataSize();
 
 		var writer = new BinaryWriter();

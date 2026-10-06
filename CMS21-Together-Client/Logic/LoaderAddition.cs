@@ -9,6 +9,7 @@ using CMS21_Together_Core.Data.Enum;
 using CMS21_Together_Core.Logging;
 using CMS21_Together_Core.Network.Packets;
 using CMS21Together.Data;
+using CMS21Together.Guard;
 using CMS21Together.Logic.Player;
 using CMS21Together.Network;
 using HarmonyLib;
@@ -282,7 +283,7 @@ public static class LoaderAddition
 		{
 			WindowManager.Instance.EnableWindowOpening(WindowID.ExamineReport);
 			GameScript.Get().SetCurrentExamineType(ToolType.TestDrive);
-			WindowManager.Instance.Show(WindowID.ExamineReport, false);
+			using (FeatureGuard.Bypass()) WindowManager.Instance.Show(WindowID.ExamineReport, false);
 			canOpenPieMenu = false;
 		}
 		if (dlcErrorWindow.ShouldShow())
