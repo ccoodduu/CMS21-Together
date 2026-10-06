@@ -59,6 +59,8 @@ public static class StateDump
         };
         dump["inventory"] = Inventory();
         dump["cars"] = Cars();
+        dump["away"] = CMS21Together.Logic.Car.Away.CarAwaySync.All.OrderBy(a => a.Key)
+            .Select(a => (object)new { loader = a.Key, kind = a.Value.Kind.ToString(), owner = a.Value.Owner }).ToList();
         dump["placement"] = Placement();
         dump["jobs"] = Jobs();
         dump["players"] = PresenceManager.Roster.Where(p => p.Value.HasAvatar).ToDictionary(
@@ -145,6 +147,7 @@ public static class StateDump
                 ["spawnSeq"] = sync?.SpawnSeq ?? 0,
                 ["syncState"] = sync?.State.ToString() ?? "Empty",
                 ["revision"] = sync?.Revision ?? 0,
+                ["specialState"] = loader.specialState,
                 ["claims"] = PartClaims.Held(i).OrderBy(c => c.Key, StringComparer.Ordinal)
                     .Select(c => new { key = c.Key, owner = c.Value }).ToList(),
             };

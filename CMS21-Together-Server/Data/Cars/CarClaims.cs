@@ -23,6 +23,14 @@ namespace CMS21_Together_Server.Data.Cars
 		{
 			var entry = CarPartsStore.Get(packet.CarLoaderID);
 			if (entry == null || entry.SpawnSeq != packet.SpawnSeq) return;
+			if (!packet.Release && CarAwayRegistry.Blocks(packet.CarLoaderID, clientId, "part claim"))
+			{
+				Server.SendToClient(new CarPartClaimUpdatePacket
+				{
+					CarLoaderID = packet.CarLoaderID, SpawnSeq = packet.SpawnSeq, Keys = packet.Keys, OwnerPlayerId = CarAwayRegistry.OwnerOf(packet.CarLoaderID)
+				}, clientId);
+				return;
+			}
 			if (!claims.TryGetValue(packet.CarLoaderID, out var held))
 			{
 				held = new Dictionary<string, Claim>();

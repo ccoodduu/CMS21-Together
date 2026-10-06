@@ -24,12 +24,14 @@ $deadline = (Get-Date).AddSeconds(90)
 do { Start-Sleep -Milliseconds 700; $r = Send-HarnessCommand -Instance $a -Verb car-ready -Arguments "0" } while (-not ($r.state -eq "Ready" -and $r.loaded) -and (Get-Date) -lt $deadline)
 Start-Sleep -Seconds 2
 Step "details-before" (Send-HarnessCommand -Instance $a -Verb cardetails-show -Arguments "0").Info
-Step "trace-on" (Send-HarnessCommand -Instance $a -Verb testdrive-trace -Arguments "on").failures
+Step "garageparts" (Send-HarnessCommand -Instance $a -Verb testdrive-partnames -Arguments "0")
+Step "trace-on"(Send-HarnessCommand -Instance $a -Verb testdrive-trace -Arguments "on").failures
 
 foreach ($mode in "all", "abort") {
     Try-Step "go-$mode" "testdrive-go" "0"
     try { Wait-Scene "(?i)track" 120 } catch { Step "track-$mode" "did not reach the track: $($_.Exception.Message)"; break }
     Start-Sleep -Seconds 5
+    Try-Step "trackparts-$mode" "testdrive-partnames"
     Try-Step "drive-$mode" "testdrive-drive" "5000"
     Start-Sleep -Seconds 2
     Try-Step "finish-$mode" "testdrive-finish" $mode

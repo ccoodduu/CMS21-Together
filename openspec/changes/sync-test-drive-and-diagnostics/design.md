@@ -102,15 +102,15 @@ be silently overwritten by, or race with, the results (upstream's bug class).
 
 ### D2. How a claim is taken: ask first for the track, optimistic in the garage
 
-- **Test track (ask first):** a prefix on `NotificationCenter.SelectSceneToLoad(string, SceneType, bool, bool)` (after
-  the guard, `__runOriginal`) with `sceneType == TestTrack` and connected: if the loader of `SelectedCarLoader` has no
-  granted claim of ours, return an empty enumerator (as the guard does), store the call's arguments, send
-  `CarAwayRequest { RequestId, CarLoaderID, SpawnSeq, Kind = TestTrack }`. On grant, re-run the stored call with
-  `NotificationCenter.m_instance.StartCoroutine(...)`; the prefix lets it through because the claim is now held. On
-  refusal or no answer within 5 s: an info message ("<name> is test-driving / working on this car"), `GlobalData.
-  SelectedCarLoader`/`TestToShow` cleared, input and pie menu restored the way a cancelled map selection leaves them
-  (spike 1.3 records what that is). The prefix runs before the coroutine body, so nothing (fade, `loadingScene`, input
-  lock, save) has happened yet.
+- **Test track (ask first):** a prefix on `NotificationCenter.<SelectSceneToLoad>d__34.MoveNext` with
+  `<>1__state == 0`, `sceneType == TestTrack` and connected (spike 1.3): if the loader of `SelectedCarLoader` has no
+  granted claim of ours, send `CarAwayRequest { RequestId, CarLoaderID, SpawnSeq, Kind = TestTrack }` once and hold the
+  coroutine (`__result = true`, skip the body) until the answer. On grant, let `MoveNext` run: the same coroutine
+  continues, no replay. On refusal or no answer within 5 s: `__result = false` ends the coroutine, an info message
+  ("<name> is test-driving / working on this car"), `GlobalData.SelectedCarLoader`/`TestToShow` cleared. Nothing in
+  the game has happened yet (fade, `loadingScene`, input lock, save). `SceneHooks` must fire `LeavingScene(Garage,
+  TestTrack)` only when the held call is let through (today it fires in the builder prefix, and a cancel would leave
+  `ClientScene.LocalScene = Loading`). What the map UI paths leave behind after a cancel is a hand check (spike 1.3).
 - **Dyno and test path (optimistic):** the client checks its mirror before the activity (a locked car refuses with a
   toast, D3) and sends the request when the activity starts (postfix on `DynoManager.RunDyno`, on
   `PathTestManager.Prepare`). A refusal only happens when two requests race; the client then aborts: dyno →
@@ -349,3 +349,65 @@ Deferrable unknowns (answered by the spikes in tasks.md, they do not change the 
 keeps the three globals; whether `CloseCar(true)` changes synced part state; the track car's part order; whether the
 `SelectSceneToLoad` replay leaves the UI clean; the path-test abort and `SetCarPositionAfterLoad` side effects;
 `DynoManager.job/haveJob`; the windows/modes the track flow needs from the guard.
+
+## Runtime trace results
+
+Spike 1.2, `test-drive-trace` on lane 1 (2026-10-06, run `20261006-154447_L1_test-drive-trace` and the two before it),
+one connected client, `car_boltatlanta` on loader 0, guard `Enforce` with `Scene:TestTrack` allowed.
+
+- **Departure:** `LeavingScene(Garage, TestTrack)` → `SelectSceneToLoad(Test_track_1, TestTrack, true, true)` →
+  `CloseCar(true)` → `GarageLoader.Save(false)` (into the session's profile slot). `CloseCar(true)` sends no part or
+  detail change: nothing between it and the track load in the client log.
+- **On the track:** the track car is loaded from that save. Its `carParts` order equals the garage car's (27 names,
+  same order), so D4's cosmetics can be read by index. Loading it calls `PartScript.Examine(true)` once per examined
+  part (52); there is no `CarLoaderPlaces` on the track, so row 1's hooks stay quiet. The guard reports
+  `Mode:CarDrive` (D11 needs that entry).
+- **Return, all tests done:** the last `DoneTest` calls `TestTrackManager.ReturnToGarage` itself →
+  `PrepareCarPhysics.SaveMileage(false)` (sets `GlobalData.NewMileage`: 5000 m → 5) → `LeavingScene(TestTrack, Garage)`
+  → `SelectSceneToLoad(garage, Garage, true, true)`. D4's order holds: the result can be read in `LeavingScene`
+  with the track still loaded.
+- **Return, aborted:** the pause menu's `ReturnToGarage` → `SaveMileage` → `LeavingScene`; `TestToShow` is cleared
+  (`''`), so no examine report opens.
+- **`GlobalData.Load` on return keeps** `NewMileage`, `SelectedCarLoader` and `TestToShow`.
+- **The mileage is lost today:** after both returns the car's `Info.Mileage` is still 0, because the garage loads
+  the car from the server snapshot. `NewMileage` is never reset either, so it is still 5 at the next departure
+  (the loop D5 fixes).
+- **Examine report:** `GetExaminedParts` runs once after the snapshot car is `Ready`; its 52 examine calls reach the
+  server as one row 1 change (`0 body, 52 mechanical`).
+- Bugs found and fixed on `main`: row 4's detail hooks threw on the track (no `CarLoaderPlaces`), and presence threw
+  there (no `CharacterMotor` while driving).
+- Not covered yet: the path test, the dyno, `diag-examine` (the verbs are still to write) and the map entry
+  (`SideCarsPanel.DriveAction`, `VerifyCarStateIfInterior`), which the harness skips by calling `SelectSceneToLoad`.
+
+Spike 1.4, `diag-trace` (run `20261006-154846_L1_diag-trace`, guard `LogOnly`, the same car moved with `car-move`):
+
+- **Placement:** `car-move 0 Dyno` and `car-move 0 DiagnosticPath` go through row 2 like any move (`-1 → 6`, `6 → 7`).
+- **Dyno:** `RunDyno` → `PrepareDyno` sets `EngineData.measured = true` at once (before any run), so `measured` alone
+  does not tell a measured car. Engine curve and `MeasuredDragIndex` (0) did not change for this untuned car, so the
+  backup/restore could not be seen. `HideAction` while the run is still going calls `CloseDyno` but leaves the mode on
+  `UI`; a start followed by `HideAction` (cancel) returns to `Garage` with `DynoMeasured = false`.
+  `DynoManager.job`/`haveJob` stayed empty (no job was active; a job car on the dyno is still unchecked).
+  Guard keys used: `Mode:Dyno`, `Window:Dyno`.
+- **Test path:** `Prepare` → mode `PathTest`; `EndAllTests` sets `specialState = 1` and `testIsComplete`, and at its
+  end one body part change goes out through row 1 (the car body, likely a door); entering and leaving again sends one
+  more. `ExitFromCar` started from the harness yields once and never reaches `GameScript.ExitFromInterior`, so the
+  mode stays `PathTest` and no examine report opens: the exit needs the real player flow. `SetCarPositionAfterLoad`
+  did not run. Guard keys used: `Mode:PathTest`, `Window:PathTest`.
+- **OBD:** `GetPartsToExamine(car, OBD)` + `Examine(true)` examined 8 parts, sent as one row 1 change
+  (`0 body, 8 mechanical`); no claim needed (D9 holds).
+- Still to check by hand: the path test exit and its report, a tuned car on the dyno (curve before, preview, after
+  measure and after cancel), and a job car on the dyno.
+
+Spike 1.3, `departure-hold` (run `20261006-155235_L1_departure-hold`), harness path (`testdrive-go`), not the map UI:
+
+- **Hold:** a prefix on `NotificationCenter.<SelectSceneToLoad>d__34.MoveNext` that returns `true` while
+  `<>1__state == 0` and `sceneType == TestTrack` holds the departure (about 75 frames per second here). Nothing of
+  the coroutine has run: `loadingScene` stays false, the game mode is unchanged, the player can still play.
+- **Release:** letting `MoveNext` run continues the same coroutine; it reaches the track with the right car. No
+  replay with `StartCoroutine` is needed, so D2 should hold in `MoveNext` rather than skip and replay the builder.
+- **Cancel:** returning `false` from `MoveNext` (state 0) ends the coroutine with nothing done in the game, and a
+  later departure works. But our own `ClientScene.LocalScene` is already `Loading`, because `SceneHooks` fires
+  `LeavingScene` in the builder prefix; it stays `Loading` after the cancel. D2 must either fire `LeavingScene`
+  only after the grant (when the held `MoveNext` is let through) or restore `Garage` on a refusal.
+- Not checked: the two map UI paths (`MapWindow` seated, `SideCarsPanel` on foot) and what their windows, input
+  mode and pie menu look like after a cancel; that needs a hand check.

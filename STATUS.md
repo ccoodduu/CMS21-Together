@@ -10,9 +10,54 @@ Newest first. One entry per work session.
   paints a part and tunes the modules, so `car-details` covers them.
 - Row 4 task 4.7: new scenario `car-details-request`. A holds back its spawn snapshot (`cardetails-hold on`); the
   server must ask for it after 10 s and store the answer.
-- Row 13 (test drive and diagnostics): the trace and verbs for the spike (`testdrive-trace`, `testdrive-go`,
-  `testdrive-drive`, `testdrive-finish`) and the spike scenario `test-drive-trace` are committed, not yet run.
-- Running: full lane-1 regression of the row 4 branch (started before these changes).
+- Lane-1 regression `20261006-151624` of the row 4 branch: all 26 PASSED. After it, `car-details` (now with tint,
+  paint and tuning) and `car-details-request` passed. `main` fast-forwarded to row 4 (`48ad607`).
+- Row 13 (test drive and diagnostics), branch `change/sync-test-drive-and-diagnostics`: the runtime trace
+  (`test-drive-trace`) answers spike 1.2; results are in the change's design.md "Runtime trace results". In short:
+  the order the design assumed holds, the track car has the same part order, and `GlobalData.Load` keeps the three
+  globals. Today the driven kilometres are lost, because the garage reloads the car from the server snapshot.
+- Two bugs found by the trace and fixed on `main`: row 4's detail hooks and the presence update threw exceptions on
+  the test track.
+- Next: spike 1.3 (hold and replay the departure) and 1.4 (path test, dyno; their harness verbs are still to write).
+
+## 2026-10-06 (15:55–16:35) — row 13 implemented; handoff before a reboot (pagefile)
+
+- Row 13 spikes 1.1–1.4 done as far as the harness reaches (results in the change's design.md). D2 now holds the
+  departure coroutine in `MoveNext` instead of replaying it.
+- Row 13 groups 2–7 are in code on `change/sync-test-drive-and-diagnostics`: server `CarAwayRegistry`, enforcement,
+  test drive fold, dyno details section; client `CarAwaySync`, locks, labels, `TestDriveSync`, `DynoSync`,
+  `PathTestSync`; guard entries allowed. `test-drive` PASSED (claim, locks, +5 km on both, refusal, abort, fallback).
+- Not run yet: `diagnostics`, `test-drive-latejoin`, and the full regression (one was stopped for the reboot).
+- Pagefile raised to 32–48 GB (was 8–16 GB, needs the reboot). The game commits 8–10 GB per instance but uses
+  2–4.5 GB, so the commit limit, not RAM, kept the lanes taking turns.
+- Background agents (stopped by the reboot): row 5a code on `change/sync-workshop-machines`, row 10 OpenSpec draft on
+  `change/economy-audit`. Check what they pushed; their worktrees stay in `.claude/worktrees/`.
+- Next after the reboot, in order:
+  1. Check the commit limit is about 64 GB (`Win32_OperatingSystem.TotalVirtualMemorySize`).
+  2. `Run-Session.ps1`: hold the lane mutex only while the games start and load, and start a lane only when the
+     commit headroom (limit − committed) is at least about 22 GB; then run lanes 1 and 2 together (`Run-All -Lanes 1,2`).
+  3. Run `diagnostics` and `test-drive-latejoin`, fix, then the full regression; merge row 13 into `main` if green.
+  4. Continue M4: review and test row 5a's branch, then 5b, 6 part 2, 10, 8 part 2.
+
+## 2026-10-06 (16:30–) — after the reboot: two lanes in parallel, row 13 tested
+
+- The commit limit is 63.9 GB now. `Run-Session.ps1` holds the lane mutex only while the games start and waits for
+  22 GB commit headroom, so lanes 1 and 2 run at the same time: four games used 37 of 63.9 GB. `Run-All -Lanes 1,2`
+  halves the regression time.
+- After a reboot Steam must run (offline mode is fine); without it the games hang in the `init` scene.
+- `diagnostics` (lane 1) and `test-drive-latejoin` (lane 2) passed on the first run, in parallel. Row 13 is complete in
+  code; the net-hold race of 8.1, the away-label screenshot (4.3) and the hand checks of spikes 1.3/1.4 are open.
+- A run that is killed before its restore left a test car in lane 1's server save, and every later run restored that
+  dirty save (`car-baseline` failed twice). The clean save is back, and `Run-Session` now leaves a marker with its
+  backup path, so the next run on that lane restores an interrupted run's backup first.
+- `car-placement` failed once on lane 2 (B's car from parking never finished loading, so no unpark request) and
+  passed on the rerun; `ParkingSync` now logs that case.
+- Your answers are in QUESTIONS.md: travel fees follow a server rule (`travel_fees`, added to row 10's design), all
+  other questions take the defaults (generator client as opt-in, row 10 option C, …). Nothing is open.
+- Branches from the agents: `change/sync-workshop-machines` (row 5a, Core + server store, agent still working),
+  `change/economy-audit` (row 10 OpenSpec, complete), `change/sync-players-and-scenes-part2` (row 6 part 2 seat and
+  engine, in code, needs a game run).
+- Running: full regression of the row 13 branch on both lanes.
 
 ## 2026-10-06 (15:10–15:40) — row 3 merged; row 4 car details (branch `change/sync-car-details`)
 

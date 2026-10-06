@@ -24,6 +24,7 @@ public static class CarLoading
 			if (spawn.PlaceNo < 0) carLoader.placeNo = spawn.PlaceNo;
 			CarPlacementSync.ApplyPlace(carLoader, loader, spawn.PlaceNo);
 			if (spawn.IsJob) Jobs.JobsSync.MarkCustomerCar(loader, spawn.JobID);
+			if (spawn.SpecialState > 0) carLoader.specialState = spawn.SpecialState;
 		}
 		finally
 		{

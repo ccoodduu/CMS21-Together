@@ -8,6 +8,7 @@ using CMS21Together.Network;
 using HarmonyLib;
 using MelonLoader;
 using UnityEngine;
+using CMS21Together.Logic.Car.Away;
 
 namespace CMS21Together.Logic.Car.Placement;
 
@@ -31,8 +32,13 @@ public static class LifterSync
 
 	[HarmonyPatch(typeof(CarLifter), nameof(CarLifter.Action))]
 	[HarmonyPrefix]
-	private static void BeforeAction(CarLifter __instance, out (int State, bool Moving) __state) =>
+	private static bool BeforeAction(CarLifter __instance, out (int State, bool Moving) __state)
+	{
 		__state = ((int)__instance.GetState(), __instance.isMoving);
+		if (!Active || applying.Contains(IndexOf(__instance)) || __instance.connectedCarLoader == null) return true;
+		int loader = CarLoaderPlaces.Get().GetCarLoaderId(__instance.connectedCarLoader);
+		return loader < 0 || !CarAwaySync.BlockIfLocked(loader, "lift");
+	}
 
 	[HarmonyPatch(typeof(CarLifter), nameof(CarLifter.Action))]
 	[HarmonyPostfix]
