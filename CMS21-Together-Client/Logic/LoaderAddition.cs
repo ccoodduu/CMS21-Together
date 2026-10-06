@@ -11,6 +11,7 @@ using CMS21_Together_Core.Network.Packets;
 using CMS21Together.Data;
 using CMS21Together.Logic.Player;
 using CMS21Together.Network;
+using CMS21Together.Session;
 using HarmonyLib;
 using Il2CppSystem.Collections.Generic;
 using MelonLoader;
@@ -259,11 +260,8 @@ public static class LoaderAddition
 		if (timedOut)
 		{
 			ClientData.IsInitialSyncFinished = false;
-			Client.Instance.Disconnect();
-			
-			//TODO: Show timeout message
-			var manager = NotificationCenter.m_instance;
-			manager.StartCoroutine(manager.SelectSceneToLoad("Menu", SceneType.Menu, true, false));
+			if (!ConnectionStatus.Fail(JoinFailure.Server, SyncTracker.DescribeProgress(), DisconnectReason.SyncFailed))
+				JoinService.ResetAfterFailure();
 			yield break;
 		}
 		Log.Success("Game synced successfully.");

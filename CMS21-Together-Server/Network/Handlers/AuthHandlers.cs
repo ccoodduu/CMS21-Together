@@ -7,6 +7,7 @@ using CMS21_Together_Server.Data;
 using CMS21_Together_Server.Data.Persistence;
 using CMS21_Together_Server.Data.Presence;
 using CMS21_Together_Server.Log;
+using CMS21_Together_Server.Network.Transport;
 
 namespace CMS21_Together_Server.Network.Handlers
 {
@@ -28,14 +29,21 @@ namespace CMS21_Together_Server.Network.Handlers
 
 			if (packet.modVersion != Program.MOD_VERSION)
 			{
-				Server.SendToClient(new DisconnectPacket()
-				{
-					message = $"Server require mod version {Program.MOD_VERSION}.",
-					reason = DisconnectReason.VersionMismatch
-				},(int)clientId);
+				Server.Refuse((int)clientId, DisconnectReason.VersionMismatch,
+					$"This server runs Together {Program.MOD_VERSION}; you have {packet.modVersion}.");
 				return;
 			}
 			Server.Clients[(int)clientId].OnConnectedSuccessfully.Invoke();
+			Server.SendToClient(new ServerInfoPacket
+			{
+				ServerName = Program.Config.ServerName,
+				ModVersion = Program.MOD_VERSION,
+				Port = Program.Config.Port,
+				MaxPlayers = Program.Config.MaxPlayers,
+				SteamId = Program.Config.UseSteam ? SteamTransport.GetServerSteamID() : 0,
+				PublicAddress = Program.Config.PublicAddress,
+				Difficulty = GameDataManager.CurrentState.WorldState.Gamemode
+			}, (int)clientId);
 
 			var record = PresenceRegistry.Add((int)clientId, packet.username);
 			Logger.Info($"Player {record.PlayerId} '{record.Username}' joined");

@@ -9,6 +9,8 @@ using CMS21Together.Logging;
 using CMS21Together.Managers;
 using CMS21Together.Network;
 using CMS21Together.Persistence;
+using CMS21Together.Session;
+using CMS21Together.UI;
 using MelonLoader;
 using Steamworks;
 using UnityEngine;
@@ -90,17 +92,13 @@ namespace CMS21Together
 			if (!isModInitialized )
 				return;
 			
-			if (Input.GetKeyDown(KeyCode.F5))
+			if (PlayerSettings.DevHotkeys && Input.GetKeyDown(KeyCode.F5))
 			{
-				Log.Info("Local Connection Attempt...");
-				Client.Instance.ConnectToServer("127.0.0.1");
+				string target = string.IsNullOrWhiteSpace(PlayerSettings.LastJoinTarget) ? "127.0.0.1" : PlayerSettings.LastJoinTarget;
+				if (!JoinService.Join(target, out string error)) Log.Warn($"[Join] {error}");
 			}
-			if (Input.GetKeyDown(KeyCode.F6) && IsSteamAvailable)
-			{
-				Log.Info("Steam Connection Attempt...");
-				Client.Instance.ConnectToSteamServer();
-			}
-			
+			ConnectionStatus.Update();
+
 			if (Client.Instance.IsConnectionValid)
 				ClientData.Update();
 
@@ -116,7 +114,9 @@ namespace CMS21Together
 
 		public override void OnGUI()
 		{
-			if (isModInitialized && Client.Instance.IsConnectionValid) NameTags.Draw();
+			if (!isModInitialized) return;
+			if (Client.Instance.IsConnectionValid) NameTags.Draw();
+			ImguiView.Draw();
 		}
 
 		public override void OnInitializeMelon()

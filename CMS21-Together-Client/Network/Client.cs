@@ -9,15 +9,13 @@ using CMS21_Together_Core.Network;
 using CMS21Together.Data;
 using CMS21Together.Managers;
 using CMS21Together.Network.Transport;
+using CMS21Together.Session;
 using UnityEngine;
 
 namespace CMS21Together.Network;
 
 public class Client
 {
-	// TODO: Temporary dev-testing default (F5/F6 quick-connect) until a server browser / join-by-ID UI exists.
-	private const ulong DEV_TEST_STEAM_SERVER_ID = 85568392935755356;
-
 	public static Client Instance;
 	public ClientTCP Tcp;
 	public ClientUDP UDP;
@@ -25,7 +23,6 @@ public class Client
 	public int ID;
 
 	public NetworkType NetworkType;
-	public ulong ServerID = DEV_TEST_STEAM_SERVER_ID;
 
 	public bool IsConnected { get; private set; }
 	public bool IsConnectionValid;
@@ -68,13 +65,13 @@ public class Client
 		return Dns.GetHostAddresses(host).First(a => a.AddressFamily == AddressFamily.InterNetwork);
 	}
 
-	public void ConnectToSteamServer()
+	public void ConnectToSteamServer(ulong serverId)
 	{
 		if (IsConnected) return;
 		
 		NetworkType = NetworkType.Steam;
 		IsConnected = true;
-		Steam = ClientSteam.ConnectToServer(ServerID);
+		Steam = ClientSteam.ConnectToServer(serverId);
 		OnConnectionValidated += OnConnectionSuccessful;
 		Application.runInBackground = true;
 	}
@@ -101,6 +98,7 @@ public class Client
 	private void OnConnectionSuccessful()
 	{
 		IsConnectionValid = true;
+		ConnectionStatus.Set(JoinStatus.Loading);
 		
 		ModGameManager.LoadPlayerPrefab();
 		ModGameManager.StartGame();
@@ -116,6 +114,8 @@ public class Client
 		IsConnected = false;
 		IsConnectionValid = false;
 		OnConnectionValidated -= OnConnectionSuccessful;
+		ConnectionStatus.OnLocalDisconnect();
+		ClientData.ServerInfo = null;
 		ClientData.Reset();
 		Log.Info("Disconnected from server.");
 	}

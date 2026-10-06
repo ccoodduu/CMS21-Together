@@ -63,8 +63,7 @@ namespace CMS21_Together_Server.Network
 						if (Server.Clients.ContainsKey(playerId) && Server.Clients[playerId].IsConnected)
 						{
 							Logger.Info($"Kicking player {playerId}...");
-							Server.SendToClient(new DisconnectPacket() { message = "You have been kicked by the server.", playerID = playerId, reason = DisconnectReason.Kicked }, playerId);
-							Server.Clients[playerId].Disconnect();
+							Server.Refuse(playerId, DisconnectReason.Kicked, "You have been kicked by the server.");
 						}
 						else
 						{

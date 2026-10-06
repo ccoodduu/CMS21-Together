@@ -4,6 +4,7 @@ using CMS21_Together_Core;
 using CMS21_Together_Core.Logging;
 using CMS21_Together_Core.Network;
 using CMS21Together.Managers;
+using CMS21Together.Session;
 
 namespace CMS21Together.Network.Transport;
 
@@ -51,7 +52,16 @@ public class ClientTCP
         catch (Exception ex)
         {
             Log.Error($"Error ConnectCallback : {ex.Message}");
+            string detail = ex.Message;
+            ThreadManager.ExecuteOnMainThread<object>(_ => ConnectionStatus.Fail(JoinFailure.Unreachable, detail), null);
         }
+    }
+
+    private void CloseFromRemote()
+    {
+        if (socket == null) return;
+        Disconnect();
+        ThreadManager.ExecuteOnMainThread<object>(_ => JoinService.OnTransportClosed(), null);
     }
 
     private void ReceiveCallback(IAsyncResult result)
@@ -61,7 +71,7 @@ public class ClientTCP
             int byteLength = stream.EndRead(result);
             if (byteLength <= 0)
             {
-                Disconnect();
+                CloseFromRemote();
                 return;
             }
 
@@ -74,7 +84,7 @@ public class ClientTCP
         }
         catch
         {
-            Disconnect();
+            CloseFromRemote();
         }
     }
 

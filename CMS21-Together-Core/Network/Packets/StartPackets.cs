@@ -37,5 +37,20 @@ public enum DisconnectReason
 	VersionMismatch,
 	DuplicateIdentity,
 	MissingIdentity,
-	SyncFailed
+	SyncFailed,
+	ServerFull,
+	WrongPassword
+}
+
+[Serializable]
+[NetworkPacket(PacketTypes.ServerInfo)]
+public class ServerInfoPacket : INetworkData
+{
+	public string ServerName;
+	public string ModVersion;
+	public int Port;
+	public int MaxPlayers;
+	public ulong SteamId;
+	public string PublicAddress;
+	public Data.Enum.Gamemode Difficulty;
 }

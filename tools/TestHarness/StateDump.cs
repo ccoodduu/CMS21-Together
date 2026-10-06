@@ -3,6 +3,7 @@ using System.IO;
 using System.Linq;
 using CMS21Together.Data;
 using CMS21Together.Logic.Player;
+using CMS21Together.Session;
 using CMS21Together.Network;
 using UnityEngine;
 
@@ -25,6 +26,8 @@ public static class StateDump
             ["initialSyncFinished"] = ClientData.IsInitialSyncFinished,
             ["snapshotId"] = SyncTracker.CurrentSnapshotId,
             ["syncAcked"] = SyncTracker.Acked,
+            ["joinStatus"] = ConnectionStatus.State.ToString(),
+            ["lastDisconnect"] = Features.JoinCommands.LastDisconnect(),
             ["remotePlayers"] = PresenceManager.VisibleAvatarCount,
         };
     }
@@ -56,6 +59,7 @@ public static class StateDump
             p => p.Key.ToString(),
             p => (object)Vec(p.Value.Avatar.transform.position));
         dump["local"] = Local();
+        dump["session"] = Features.JoinCommands.Session();
         dump["roster"] = PresenceManager.Roster.ToDictionary(p => p.Key.ToString(), p => (object)new
         {
             name = p.Value.Record.Username,

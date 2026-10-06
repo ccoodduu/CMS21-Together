@@ -3,6 +3,7 @@ using System.Linq;
 using CMS21_Together_Core.Logging;
 using CMS21_Together_Core.Network.Packets;
 using CMS21Together.Network;
+using CMS21Together.Session;
 using UnityEngine;
 
 namespace CMS21Together.Data;
@@ -44,6 +45,7 @@ public static class SyncTracker
 		Reset();
 		CurrentSnapshotId = packet.snapshotId;
 		InSnapshot = true;
+		ConnectionStatus.Set(JoinStatus.Syncing);
 		Log.Debug($"[SyncTracker] Snapshot {packet.snapshotId} started.");
 	}
 
@@ -87,6 +89,8 @@ public static class SyncTracker
 		Client.Instance.Send(new SyncAck { snapshotId = CurrentSnapshotId });
 		ClientData.IsInitialSyncFinished = true;
 		ClientScene.DrainPending();
+		ConnectionStatus.Set(JoinStatus.InSession);
+		JoinService.OnInSession();
 		Log.Success($"Initial synchronization finished (snapshot {CurrentSnapshotId}).");
 	}
 

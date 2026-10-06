@@ -13,9 +13,9 @@ public class ClientUDP
 	public UdpClient socket;
     public IPEndPoint endPoint;
 
-    public void Connect(int _localPort)
+    public void Connect()
     {
-        socket = new UdpClient(_localPort);
+        socket = new UdpClient(0);
         socket.Connect(endPoint);
         socket.BeginReceive(ReceiveCallback, null);
         

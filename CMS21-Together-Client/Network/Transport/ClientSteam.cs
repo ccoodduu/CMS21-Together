@@ -6,6 +6,7 @@ using CMS21_Together_Core.Network;
 using CMS21_Together_Core.Network.Packets;
 using CMS21Together.Data;
 using CMS21Together.Managers;
+using CMS21Together.Session;
 using Steamworks;
 using Steamworks.Data;
 
@@ -13,6 +14,8 @@ namespace CMS21Together.Network.Transport;
 
 public class ClientSteam : ConnectionManager
 {
+	private const int ServerFullEndCode = 1001;
+
 	public static ClientSteam ConnectToServer(ulong serverSteamId)
 	{
 		return SteamNetworkingSockets.ConnectRelay<ClientSteam>(serverSteamId, MainMod.PORT);
@@ -35,12 +38,17 @@ public class ClientSteam : ConnectionManager
 			OnConnected(info);
 			Log.Success("[ClientSteam->OnConnectionChanged] Connection established.");
 		}
-		else if (info.State == ConnectionState.ClosedByPeer || info.State == ConnectionState.Dead || info.State == ConnectionState.None)
+		else if (info.State == ConnectionState.ClosedByPeer || info.State == ConnectionState.Dead || info.State == ConnectionState.None
+		         || info.State == ConnectionState.ProblemDetectedLocally)
 		{
 			Connected = false;
 			OnDisconnected(info);
-			Log.Info("[ClientSteam->OnConnectionChanged] Disconnected.");
+			Log.Info($"[ClientSteam->OnConnectionChanged] Disconnected ({info.State}, {info.EndReason}).");
 			Close();
+			if ((int)info.EndReason == ServerFullEndCode)
+				ConnectionStatus.Fail(JoinFailure.Server, "", DisconnectReason.ServerFull);
+			else
+				ConnectionStatus.Fail(JoinFailure.SteamFailed, $"({info.State}, {info.EndReason})");
 		}
 		else
 		{
@@ -60,7 +68,7 @@ public class ClientSteam : ConnectionManager
 		{
 			gameVersion = "",
 			message = "",
-			modVersion = MainMod.ASSEMBLY_MOD_VERSION,
+			modVersion = ClientVersion.Current,
 			playerID = Client.Instance.ID,
 			username = PlayerSettings.PlayerName
 		});

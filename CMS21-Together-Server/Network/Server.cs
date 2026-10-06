@@ -81,8 +81,8 @@ namespace CMS21_Together_Server.Network
                     }
                 }
 
-                Logger.Debug($"Connection refused : Server full.");
-                client.Close();
+                Logger.Info($"Connection refused: server full ({client.Client.RemoteEndPoint}).");
+                RefuseUnassigned(client, DisconnectReason.ServerFull, $"The server is full ({MaxPlayers} players).");
             }
             catch (ObjectDisposedException) { return; }
             catch (Exception e)
@@ -168,6 +168,54 @@ namespace CMS21_Together_Server.Network
             }
         }
         
+        private static readonly List<int> pendingRefusals = new List<int>();
+
+        // The slot is closed on the next tick so the refusal packet goes out first.
+        public static void Refuse(int clientId, DisconnectReason reason, string message)
+        {
+            lock (Data.GameDataManager.StateLock)
+            {
+                Logger.Info($"Refusing client {clientId}: {reason} ({message})");
+                SendToClient(new DisconnectPacket { playerID = clientId, reason = reason, message = message }, clientId);
+                if (!pendingRefusals.Contains(clientId)) pendingRefusals.Add(clientId);
+            }
+        }
+
+        private static void RefuseUnassigned(TcpClient socket, DisconnectReason reason, string message)
+        {
+            try
+            {
+                using (Packet packet = new Packet((int)PacketTypes.Disconnect))
+                {
+                    packet.Write(new DisconnectPacket { playerID = -1, reason = reason, message = message });
+                    packet.WriteLength();
+                    byte[] bytes = packet.ToArray();
+                    socket.GetStream().Write(bytes, 0, bytes.Length);
+                }
+            }
+            catch (Exception e)
+            {
+                Logger.Debug($"Could not send the refusal: {e.Message}");
+            }
+            finally
+            {
+                socket.Close();
+            }
+        }
+
+        private static void ProcessRefusals()
+        {
+            if (pendingRefusals.Count == 0) return;
+            foreach (int clientId in pendingRefusals.ToArray())
+            {
+                var client = Clients[clientId];
+                if (!client.IsConnected) continue;
+                if (client.ConnectionType == NetworkType.Steam) client.SteamConnection.Close();
+                client.Disconnect();
+            }
+            pendingRefusals.Clear();
+        }
+
         public static void SendUDPData(IPEndPoint _clientEndPoint, Packet _packet)
         {
             try
@@ -213,6 +261,7 @@ namespace CMS21_Together_Server.Network
             
             lock (Data.GameDataManager.StateLock)
             {
+                ProcessRefusals();
                 foreach (var client in Clients.Values)
                 {
                     if (client.IsConnected)

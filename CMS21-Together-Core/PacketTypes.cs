@@ -40,5 +40,7 @@ public enum PacketTypes
 	SyncAck,
 
 	PlayerPresence,
-	PlayerRoster
+	PlayerRoster,
+
+	ServerInfo
 }

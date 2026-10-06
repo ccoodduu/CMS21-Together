@@ -114,7 +114,7 @@ namespace CMS21_Together_Server.Network.Transport
                 if (Server.Clients.Values.All(c => c.IsConnected))
                 {
                     Logger.Debug($"[SteamTransport->OnConnectionChanged] Incoming connection {clientID} would exceed max connection count. Rejecting.");
-                    connection.Close(false, 0, "Max Connection Exceeded");
+                    connection.Close(false, 1001, "ServerFull");
                     return;
                 }
 

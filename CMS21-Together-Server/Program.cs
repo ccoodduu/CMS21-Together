@@ -60,6 +60,8 @@ namespace CMS21_Together_Server
 			PacketRouter.Initialize(Assembly.GetExecutingAssembly());
 			
 			Config = ServerConfig.LoadOrCreate();
+			Config.ApplyArguments(args);
+			Logger.Info($"Settings: {Config.Describe()}");
 			Logger.CurrentLogLevel = Config.LogLevel;
 			Logger.Info($"Log Level set to: {Logger.CurrentLogLevel}");
 			

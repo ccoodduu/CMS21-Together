@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Reflection;
 using CMS21Together.Network;
+using CMS21Together.Session;
 using UnityEngine;
 
 namespace TogetherTestHarness;
@@ -50,7 +51,7 @@ public static class Commands
     [HarnessCommand("connect")]
     private static object Connect(string args)
     {
-        Client.Instance.ConnectToServer(string.IsNullOrEmpty(args) ? "127.0.0.1" : args);
+        if (!JoinService.Join(string.IsNullOrEmpty(args) ? "127.0.0.1" : args, out string error)) throw new ArgumentException(error);
         return "connecting";
     }
 

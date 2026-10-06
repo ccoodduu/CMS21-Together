@@ -1,3 +1,4 @@
+using CMS21_Together_Core.Network.Packets;
 using CMS21Together.Logic.Player;
 
 namespace CMS21Together.Data;
@@ -10,6 +11,7 @@ public static class ClientData
 	public static bool IsInventorySynced { get; set; }
 	public static bool IsInitialSyncFinished { get; set; }
 	public static bool IsServerUpdating { get; set; }
+	public static ServerInfoPacket ServerInfo { get; set; }
 
 	public static void Reset()
 	{
