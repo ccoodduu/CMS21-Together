@@ -277,6 +277,7 @@ namespace CMS21_Together_Server.Network
                 Data.Reconciliation.ReconciliationService.Tick(Data.ServerTime.Time);
                 Data.Jobs.JobsService.Tick(Data.ServerTime.Time);
                 Data.Cars.CarDetailsStore.Tick(Data.ServerTime.Time);
+                Data.Cars.CarAwayRegistry.Tick(Data.ServerTime.Time);
                 foreach (var client in Clients.Values)
                 {
                     if (client.IsConnected)
