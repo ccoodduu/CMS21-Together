@@ -120,7 +120,7 @@ Work on branch `change/economy-audit`.
       level-based range. Verify: in 7.2 a second loot request for the same case (`econ-crate` replayed by the harness
       with `econ-ledger resend`) is refused `Invalid`, and `econ-crate-close` leaves no entry (`economy cases`).
 - [ ] 3.8 `ParkingHandlers` (D11): server-computed level price with `cheaper_parking`; `ParkArrival` refuses
-      `Price < 0` or `> max_car_purchase_price`; config keys `max_car_sale_price`, `max_car_purchase_price` (default
+      `Price < 0` or `> max_car_purchase_price`; config keys `travel_fees` (default `true`, the user's server rule for travel fees, D5), `max_car_sale_price`, `max_car_purchase_price` (default
       5,000,000, appended to `server_config.ini` when missing); server command `economy [n] | cases | reasons`; debug server command `gamemode <name>` (sets `WorldState.Gamemode`,
       broadcasts `WorldState` with `updateGamemode = true`).
       Verify: the `car-placement` and `car-parking-full` scenarios still pass, and in 7.2 a `parking-unlock` with a

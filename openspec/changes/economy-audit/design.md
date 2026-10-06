@@ -38,8 +38,8 @@ from `docs/spikes/economy-paths.md` (static decompile, 2026-10-06; VAs and the f
     `ScrapPerCondition`, `ShopLicenseBuy` ("row 10"). It allows `Window Upgrades` (skill reset reachable), the
     unmount modes (spill fine reachable), `Window Map` and `Scene Junkyard` (junkyard travel fee reachable).
 - **Paths and amounts** (spike §3), grouped by who can compute the amount:
-  - Fixed, known to the server: travel (Auction −200, Junkyard −500, Barn −100, only when the traveller's
-    `GameSettings.GameSettingsData.TravelHaveCost` is on and the difficulty is not Sandbox); fluid spill −50; paint
+  - Fixed, known to the server: travel (Auction −200, Junkyard −500, Barn −100, only when the server rule
+    `travel_fees` is on and the difficulty is not Sandbox); fluid spill −50; paint
     −1000 (`paintshopType` 0) / −100 (1); wash before paint or tint −100; tint −50 per window; skill reset −1000 per
     reset point; parking level `UnlockedLevels × 50,000`, halved with `cheaper_parking`.
   - Computable from data the server has: scrap from an item (`GlobalData.GetScrapFromItem`: `min(Condition, Dent) ×
@@ -222,8 +222,10 @@ prediction) — the UI would show the old money until the round trip, and a miss
   bool)` with `wasAccepted`: send `EconomyRequest { BarnMap, ItemUid = map }`, skip vanilla. Server: the map item is
   in the inventory → remove it (`InventoryItemAction Remove` to everyone), `Barns + 1`, `WorldState`, result. The
   client plays vanilla's `AddMap` sound on the accepted result.
-- **Travel fee and the setting:** `TravelHaveCost` is the traveller's own game setting. The server charges what the
-  traveller's game charged (A3 in Open Questions); it checks only that the amount matches the table.
+- **Travel fee and the setting (user decision 2026-10-06: a server rule):** server config `travel_fees` (default
+  `true`, vanilla's default) decides for everyone. The client sends the trip's `EconomyRequest { Travel, Scene }`
+  whatever its own `TravelHaveCost` says and suppresses its local charge; the server charges the table amount when
+  `travel_fees` is on and the difficulty is not Sandbox, else nothing, and answers with the new money.
 - A trip whose fee the server refuses (`Invalid`) still happens; the log shows it.
 
 ### D6. Selling a car: ask first, the server deletes and pays
@@ -434,7 +436,7 @@ Decided without the user (each can be overridden; listed in QUESTIONS.md under r
 
 - **A1** Option C (`QUESTIONS.md` default). D18 lists what A or B would change.
 - **A2** Unattributed money and scrap calls are dropped locally and logged (not applied and later undone).
-- **A3** Travel fees follow the traveller's own "travel costs money" game setting; the server checks only the amount.
+- **A3** Decided (user, 2026-10-06): travel fees follow the server rule `travel_fees`, not the player's setting.
 - **A4** Fees charged after the fact are applied with vanilla's clamp (money can reach 0); they are never refused for
   lack of money.
 - **A5** A car cannot be sold while another player holds a part claim on it, it is away (row 13) or it is a job car.
