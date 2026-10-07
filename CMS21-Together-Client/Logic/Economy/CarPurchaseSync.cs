@@ -80,6 +80,12 @@ public static class CarPurchaseSync
 		locationBypass?.Dispose();
 		locationBypass = null;
 		if (__exception == null || __state == null) return __exception;
+		var windows = CMS.UI.WindowManager.Instance;
+		if (windows == null || !windows.IsWindowActive(CMS.UI.WindowID.CarLocationWindow))
+		{
+			Drop($"BuyCar threw before the location window opened: {__exception.Message.Split('\n')[0]}");
+			return __exception;
+		}
 		// BuyCar ends with play-time bookkeeping on the selected profile, which has no profile data in a session slot.
 		Log.Debug($"[Purchase] BuyCar threw after showing the location window: {__exception.Message.Split('\n')[0]}");
 		return null;
