@@ -47,6 +47,33 @@ code taken) and the code on `main` (`bd3415f`):
   visit; the history is a JSON file per game install. Row 9 refuses the mod in sessions (`ModClassifierRules`), so
   it never runs next to this change.
 
+### Static spike results (group 1, 2026-10-07)
+
+Static halves of tasks 1.1-1.5 (dump, decompile, `xref.py`, the unhollowed assembly); details in
+`docs/spikes/outdoor-runtime.md`. Runtime halves stay open and are marked there.
+
+- **1.1** `Start` is only `StartCoroutine(Generate())` and `Generate()` is the iterator builder, so the hold is not a
+  `Generate` prefix with a bypass flag: both iterators already wait in states 1/2 (junkyard: `CarBundleLoader` ready;
+  barn: `Localization` ready) after state 0 blacked the screen and turned input off, before any random roll. The hold
+  keeps the iterator in that wait state (`MoveNext` prefix: `__1__state = 2`, `__2__current = null`, `true`) until the
+  instance arrives or 15 s pass. *Open:* loader tolerance for 2/5/15 s and the call order.
+- **1.2** Reseed key = seed, kind, entry state, loop variable, car index (no step counters: the wait loops repeat a
+  machine-dependent number of times). `difficulty == 2` is **Sandbox** (`DifficultyLevel`). The map's barn check was
+  not found statically (`get_BarnsAmount` is inlined everywhere): D9's fallback applies. *Open:* digest equality.
+- **1.3** Claim hook `AuctionBidding.StartAuction` (fires via the `StartAuctionAction` thunk). `AIBid`,
+  `FinishAuction`, `StopAuction` are **inlined into `Update`**; `OnStateChange(AuctionState)` fires and carries the
+  end (Win 3, Loss 4). `PlayerBid` (same body as `BidAction`) has no money check and can be driven from outside the
+  UI, so Q3 keeps the raise (view-only only if the runtime check fails). Amount ranges are private fields of the
+  scene's `AuctionManager`: the generator sends them on arrival. Lot values come from `GetRatingForCar`,
+  `CarBundleLoaderExtension.GetCarValue` and `GetStartingPrice`, in that order. *Open:* the runtime trace, the value
+  equality under a seed, `PlayerBid()` from a verb.
+- **1.4** `ItemsInTrash` is `List<BaseItem>` (group items possible; v1 leaves them local), `BaseItem.UID` is a public
+  field, `TempInventory.RemoveItem` (both overloads) is called only by the taken-items window's remove and trash
+  actions, `MoveItem`'s `windowType` is not a literal (recorded at runtime). *Open:* key stability on two clients,
+  `windowType`, move-all, window refresh.
+- **1.5** `GetCarsForScene` does not depend on the loaded scene (works in the garage); `rarity` is not read yet.
+  *Open:* sizes and DLC entries on two clients.
+
 ## Goals / Non-Goals
 
 **Goals:**
@@ -89,16 +116,19 @@ list, D3), `GeneratorId` (D5), `Members`, `Sold` (car indices), `Loot` (D6), `Lo
 2. Server (under `StateLock`): open or join the instance, add the member, answer `OutdoorInstance` (all of D1's fields
    the client needs: id, seed, picks, sold, generator flag, loot record and item states, lots and lot states,
    `FillAllSpawnPoints`).
-3. Client: the generator entry (`JunkyardGenerator.Generate`, `ShedManager.Generate`; auction lists are lazy, D8) is
-   held: the prefix returns false while no instance for this scene has arrived, starts a coroutine that waits for it
-   (15 s), then calls the builder again with a bypass flag. On timeout the visit is local (`OutdoorSession.Local`):
-   vanilla generation, no loot or car sync, avatars hidden as today, one warning and a toast.
+3. Client: the generator iterators (`JunkyardGenerator.<Generate>d__18`, `ShedManager.<Generate>d__29`; auction lists
+   are lazy, D8) are held in their own wait state 1/2 (spike 1.1) while no instance for this scene has arrived, at
+   most 15 s after `OutdoorEnter`. On timeout the visit is local (`OutdoorVisit.Local`): vanilla generation, no loot or
+   car sync, avatars hidden as today, one warning and a toast.
 4. `SceneReady` publishes the scene only after the instance is applied (cars created, piles replayed), so another
    player never sees an avatar in a yard that is still being built.
 - No snapshot slot: outdoor state is not part of the garage snapshot and is only sent on entry. A client joining the
   session lands in the garage and gets an instance when it travels.
 - Avatars: `GameSceneInfo.ShowsAvatars(Barn)` becomes true when the barn is shared; the server's movement relay
-  additionally requires the same `InstanceId` (a `Local` visit has none), so a local barn never shows an avatar.
+  additionally requires the same `InstanceId` (a `Local` visit has none), so a local barn never shows an avatar. The
+  server writes each member's instance id into `PlayerPresenceRecord.OutdoorInstanceId` (additive optional field) and
+  rebroadcasts the record, so clients hide avatars of players in another instance or a local visit too (the record
+  carries `LastMovement`).
 
 ### D3. Car catalog and selection on the server
 - **Catalog:** after its initial sync, each client sends `OutdoorCatalog { Scenes: { Junkyard, Barn, AuctionNormal,
@@ -134,7 +164,8 @@ list, D3), `GeneratorId` (D5), `Members`, `Sold` (car indices), `Loot` (D6), `Lo
 - **Digest:** after generation each client sends `OutdoorDigest { InstanceId, Rows }` with one row per car
   (`index|carId|version|position index|colour hash|missing panel count|condition sum rounded|negotationMod`) and, for
   the barn, the layout choices (group, floor, wall and prop prefab names hashed). The server stores the generator's
-  rows and compares each later digest; a mismatch is logged (`[Outdoor] digest mismatch Junkyard car 3 colour ...`)
+  rows and compares each later digest (rows of cars sold meanwhile are left out on both sides); a mismatch is logged
+  (`[Outdoor] digest mismatch Junkyard player 2: car:3 colour ...`)
   and counted in the `outdoor` command and the harness dump. v1 does not correct cars (a car is a scene object; the
   buyer's own copy is what reaches the parking, so a difference costs consistency, not money or items).
 - *Alternative (spike option 2):* record each car as `NewCarData` and load it on later visitors — rejected for v1:
@@ -152,8 +183,10 @@ the record exists keep pile windows closed (D6) until it arrives.
   `NotificationCenter.IsGameReady` turning true), the client collects every `Junk` under `Junkyard` and
   `JunkyardRandomShow` (barn: the `_PGPlace` piles under `ShedRoot`) in `GetComponentsInChildren<InteractiveObject>`
   order and sends `OutdoorLootRecord { InstanceId, Piles: [LootPile { Index, Key, Items: [ModItem] }], RandomShowActive }`.
-  `Key` is the pile's world position rounded to 0.1 m; later players match piles by key and fall back to the index.
-  Item UIDs are the generator's UIDs.
+  `Key` is the pile's world position rounded to 0.1 m (`#n` appended to a repeated key); piles are found with
+  `Resources.FindObjectsOfTypeAll<Junk>` (inactive `RandomShow` piles included) and indexed in key order, not
+  hierarchy order; later players match piles by key and fall back to the index. Item UIDs are the generator's UIDs.
+  Group items stay local in v1 (spike 1.4).
 - **Replay:** a later player, after its own (seeded) generation, sets every pile's `ItemsInTrash` from the record
   (items rebuilt from `ModItem` with the recorded UID), applies `RandomShowActive`, then removes every item whose state
   is not `Available`. Unmatched piles are emptied and logged. Pile contents therefore never depend on the owned-car
@@ -165,8 +198,10 @@ the record exists keep pile windows closed (D6) until it arrives.
   other members; not available → `LootTakeRefused { Uid, By }` to the sender, which removes the item from
   `TempInventory` (`RemoveItem`) and the scene `Inventory` (`Delete`), refreshes the window and shows "Bob took it
   first". Others remove the UID from that pile's `ItemsInTrash` and refresh an open window on it.
-- **Put back:** `MoveItem(toWarehouse = false)`, `TakenItemsWindow.RemoveCurrentItemAction` and the trash button →
-  `LootPutBack { Uid }` → `Available` again, `LootUpdate` with the item to every other member, who add it to the pile.
+- **Put back:** `MoveItem(toWarehouse = false)` and `TempInventory.RemoveItem` (both overloads, called only by
+  `TakenItemsWindow.RemoveCurrentItemAction` and the trash button) → `LootPutBack { Uid }` → `Available` again,
+  `LootUpdate` with the item to every other member, who add it to its recorded pile (the remover's own client puts it
+  back into that pile too).
 - **Leave without paying, disconnect:** on `SceneChanged`/`Left` every item `Held` by that player becomes `Available`
   and is broadcast. Items bought in the same trip are already `Bought` because `ItemsExchange` precedes the presence
   change on the same ordered stream.
@@ -190,23 +225,29 @@ car it already knows as sold (the race window is the round trip). A later player
 (the prefix sets the pick but the car is deleted right after creation, so the seeded sequence stays aligned).
 
 ### D8. Shared auction
-- **Lots:** on entry the server builds `Lots[type]` for normal and salvage: `Count` picks from the selector (count drawn
-  from the client-reported `normalCarsAmountRange`/`salvageCarsAmountRange`, sent with the catalog) and a `Seed` per lot
-  (server random). `Rating`, `Value` and `StartingPrice` need game functions (`AuctionHelper.GetRatingForCar`,
-  `GetCarValue`, `GetStartingPrice`), so the generator client computes them under `Random.InitState(lot seed)` and
-  uploads them with its digest; the server stores them and sends them to every member. Every client's `GenerateCars`
-  prefix returns the server's list (returns false); a non-generator whose lots are not complete yet shows "preparing
-  the auction" and retries. `LoadCar` then builds the same car from `Seed` on every client.
+- **Lots:** the server builds the lots for normal and salvage: `Count` picks from the selector (count drawn from
+  `normalCarsAmountRange`/`salvageCarsAmountRange`) and a `Seed` per lot (server random). The ranges are private fields
+  of the auction scene's `AuctionManager` (spike 1.3), so the first visitor sends them on arrival
+  (`OutdoorDigest.AuctionAmounts`); until then the instance has `LotsPending` and a `GenerateCars` call keeps the
+  vanilla list for that type (logged, regenerated when the lots arrive). The server keeps the ranges for later
+  instances. Lot indices run over both types (one `Lot` number per instance); a client finds a lot by its `Seed`.
+  `Rating`, `Value` and `StartingPrice` come from `AuctionHelper.GetRatingForCar`,
+  `CarBundleLoaderExtension.GetCarValue` and `AuctionHelper.GetStartingPrice`; every client computes them under
+  `Random.InitState(lot seed)` when the server has none yet, the generator uploads its values with its digest and the
+  server sends them to everyone. Every client's `GenerateCars` prefix returns the server's list (returns false).
+  `LoadCar` then builds the same car from `Seed` on every client. A closed lot is marked `AuctionCarData.Sold`.
 - **Lot state** (server, `AuctionService`): `Open`, `Bidding(ownerId, currentBid, leader Team|Ai, secondsLeft)`,
-  `Won`, `Lost`. One owner per lot: starting the bidding (the hook found by task 1.3) sends `AuctionLotClaim`; the
-  server grants it if the lot is `Open`, else the client cancels the start and shows "Ann is bidding on this car".
-- **Bidding runs in the owner's game:** vanilla AI bidders and timers. The owner's client sends `AuctionBidState` every
-  change and once a second; the server stores and relays it to the members, whose auction window shows the lot as
+  `Won`, `Lost`. One owner per lot: a prefix on `AuctionBidding.StartAuction` (spike 1.3) cancels the start and sends
+  `AuctionLotClaim`; the server grants it if the lot is `Open` and the client calls `StartAuction()` again, else the
+  client shows "Ann is bidding on this car".
+- **Bidding runs in the owner's game:** vanilla AI bidders and timers. The owner's client sends `AuctionBidState` from an
+  `OnStateChange` postfix (AI bids and the end happen inside `Update`, spike 1.3) and once a second; the server stores and relays it to the members, whose auction window shows the lot as
   "Ann is bidding: 12,400 (team leads), 0:14". Watching a lot that someone else bids on does not load its car on the
   watcher's stage in v1.
-- **Team bid from another player:** `AuctionBidRequest { Lot }` → server (lot `Bidding`, money check against shared
-  money) → owner's client → `AuctionBidding.PlayerBid` (or the method task 1.3 finds). If the bid cannot be driven
-  from outside the UI, the watcher is view-only (QUESTIONS.md default).
+- **Team bid from another player:** `AuctionBidRequest { Lot }` → server (lot `Bidding`, the team not leading, money
+  check `currentBid + bidStep` against shared money) → owner's client → `AuctionBidding.PlayerBid()` (no money check of
+  its own, spike 1.3). If the runtime check shows it cannot be driven from outside the UI, the watcher is view-only
+  (QUESTIONS.md default).
 - **End:** team wins → the owner's `ReceiveCarAction` capture sends `CarParkRequest` with `SourceLot`; accept → `Won`;
   refused (`NoMoney`, `ParkingFull`) → `Lost`. AI wins → `AuctionLotClosed { Lot, Lost }`. Owner leaves or disconnects
   while bidding → `Lost` (vanilla also loses the lot when the player walks away). Closed lots are removed from every
@@ -263,12 +304,14 @@ without it.
 - **Server restart:** instances are gone; clients in an outdoor scene are disconnected by the restart anyway.
 
 ### D15. Packets
-Appended to `PacketTypes`: `OutdoorCatalog` (C→S), `OutdoorEnter` (C→S), `OutdoorInstance` (S→C),
-`OutdoorLootRecord` (C→S), `OutdoorDigest` (C→S, also carries auction values from the generator), `LootTake`,
+Appended to `PacketTypes`: `OutdoorCatalog` (C→S), `OutdoorEnter` (C→S), `OutdoorInstance` (S→C, also sent again as
+an update: record arrived, generator promoted, lots built), `OutdoorLootRecord` (C→S), `OutdoorDigest` (C→S, also
+carries the auction amount ranges and lot values from the generator), `LootTake`,
 `LootPutBack` (C→S), `LootUpdate`, `LootTakeRefused` (S→C), `OutdoorCarRemoved` (S→C), `AuctionLotClaim` (both:
 request and answer), `AuctionBidState` (owner → S → members), `AuctionBidRequest` (C → S → owner), `AuctionLotClosed`
 (S→C). Changed, additive (`[OptionalField]`): `CarParkRequestPacket` (`SourceInstanceId`, `SourceCarIndex`,
-`SourceLot`), `ItemsExchangePacket` (`InstanceId`), `ServerInfo` (`SharedOutdoorScenes`). All outdoor handlers run
+`SourceLot`), `ItemsExchangePacket` (`InstanceId`), `ServerInfo` (`SharedOutdoorScenes`), `PlayerPresenceRecord`
+(`OutdoorInstanceId`). All outdoor handlers run
 under `StateLock`; `OutdoorEnter` and the loot packets need `InSession` (a client travels only after its sync).
 
 ## Risks / Trade-offs
@@ -309,8 +352,9 @@ Decided without the user (QUESTIONS.md lists them with these defaults):
   spawn points" is off by default (the user's single-player mod turns it on).
 - **Q6** Asking LvxMagick for permission is the user's step (outward communication); the Lvx selector waits for it.
 
-Deferrable unknowns (answered by group 1): the hold tolerance of the scene loader; reseed determinism across two
-clients; whether `GetCarValue`/`GetStartingPrice` are deterministic under a seed; the auction's bid, start and AI
-methods and whether `PlayerBid` can be called from outside the UI; `MoveItem`'s `windowType`, right-click move-all, and
-whether piles hold `GroupItem`s; whether a recorded UID can be set on a rebuilt `Item`; the map's barn availability
-check; the amount and rating ranges of `AuctionManager` per type.
+Deferrable unknowns (group 1). Answered statically (2026-10-07, see "Static spike results"): the auction's start, bid,
+AI and end methods; piles can hold `GroupItem`s by type; a recorded UID can be set (`BaseItem.UID` is a field); the
+amount ranges live in the scene's `AuctionManager`; difficulty 2 is Sandbox. Still open (runtime): the hold tolerance
+of the scene loader; reseed determinism across two clients; whether `GetCarValue`/`GetStartingPrice` are deterministic
+under a seed; whether `PlayerBid` called from the mod behaves like the button; `MoveItem`'s `windowType` and right-click
+move-all; whether group items occur in piles; the map's barn availability check (not found statically).
