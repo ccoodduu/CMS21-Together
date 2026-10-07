@@ -70,6 +70,7 @@ public static class StateDump
         dump["toolPositions"] = Features.ToolsCommands.Positions();
         dump["toolActionsSeen"] = Features.ToolsCommands.ActionsSeen();
         dump["visuals"] = Features.VisualCommands.Dump();
+        dump["remoteCars"] = Features.DriveCommands.Dump();
         dump["lifterButtonsEnabled"] = Features.ToolsCommands.LifterButtons();
         dump["players"] = PresenceManager.Roster.Where(p => p.Value.HasAvatar).ToDictionary(
             p => p.Key.ToString(),

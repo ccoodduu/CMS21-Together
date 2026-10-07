@@ -2,6 +2,38 @@
 
 Newest first. One entry per work session.
 
+## 2026-10-07 (20:30–22:00) — driving merged, part-locks drafted and reviewed, harness guards
+
+- `main` = `d85243c`. Row 17 part 2 (remote driving on the test track) merged (`310cb3a`): `drive-track`,
+  `drive-latejoin` and the smoke set pass on lane 1; the other player's car appears after about 10 s (QUESTIONS row
+  17 #8); garage driving does not exist in the game (#7).
+- Row 18 `part-locks` (strict server-granted locks on connected parts, fluids and the car; refusal at click time and
+  on hover) drafted from the playtest, reviewed by a second agent (3 blockers, 7 majors, all resolved in the
+  documents), merged as documents (`b9bd13a`); implementation started on lane 1 with the defaults of QUESTIONS
+  "Open — row 18".
+- Harness: test games never open URLs and headless ones get no UI navigation (`b6779dc`; Enter in another window
+  opened the CMS 2026 page); Steam stats and achievements are blocked in test games (`0ee1ba0`; four were unlocked
+  on the user's account). `visual-lift` (playtest finding 1) passes apart from a lift state name, fixed (`07faf20`).
+- Row 15 (shared outdoor scenes): all two-player scenarios and the smoke set pass on lane 2; `outdoor-scale` on lane
+  3 waits for free lanes, then merge.
+- Playtest findings 3–5 (tire tunedId desync, rollback after a rejected mount, WorldState error on F7) are fixed by
+  an agent on lane 2. The user's game is restored (mods back, Together moved to `Desktop\CMS21-Together-removed`;
+  the save was unchanged).
+
+## 2026-10-07 (19:00–21:15) — row 17 part 2 (driving) on `change/remote-driving`
+
+- Spike 8.1: the pie option `car_drive` only opens the map; there is no driving inside the garage, so garage driving
+  (group 11) is dropped and `Pie:car_drive`/`Mode:CarDrive` stay `Planned` (QUESTIONS.md row 17 #7).
+- Test track: the driver streams its car (`CarDriveStart/State/Stop`, 36-byte state, 15 Hz moving, 3 Hz parked); the
+  server relays it to players on the track and gives a newcomer the running drive. Observers build an inert copy of
+  the car (no physics, no colliders) and move it 100 ms behind the driver with turning wheels and engine sound.
+- Runs (lane 1, headless): `drive-probe` (spike), `drive-track` and `drive-latejoin` pass (`20261007-210258`,
+  `20261007-210430`); smoke set passes (`20261007-205411_regression`, `guard` flaky once in the batch: "Inventory did
+  not open after the blocked mode change", passed alone). Measured: `CarDriveState` 276 B (4.1 kB/s per moving
+  driver), `CarDriveStart` 15.6 kB.
+- Open: the other car shows about 10 s after arriving (spec 2 s; QUESTIONS.md row 17 #8); the `testdrive`,
+  `placement`, `guard` areas were not run; not merged.
+
 ## 2026-10-07 (19:00–20:30) — first playtest over Steam (2, then 3 players)
 
 - Host from the game on the user's PC, friends joined over Steam with `dev.893`/`dev.894`. Five F8 bundles
