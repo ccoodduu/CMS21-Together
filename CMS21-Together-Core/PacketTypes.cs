@@ -110,5 +110,11 @@ public enum PacketTypes
 	PlayerActivity,
 	CarDriveStart,
 	CarDriveState,
-	CarDriveStop
+	CarDriveStop,
+
+	CarLockRequest,
+	CarLockResult,
+	CarLockUpdate,
+	CarLockRelease,
+	CarLockRenew
 }
