@@ -23,6 +23,10 @@ foreach ($name in $Ctx.Instances) {
         throw "$name has release $($manifest.fullVersion), the server $($serverManifest.fullVersion)"
     }
 
+    foreach ($file in "Collect-Logs.bat", "Collect-Logs.ps1", "CMS21-Together-QUICKSTART-DA.txt", "TogetherServer\Collect-Logs.bat") {
+        if (-not (Test-Path -LiteralPath (Join-Path (Get-InstanceDir $name) $file))) { throw "$name has no $file from the client zip" }
+    }
+
     $info = Send-HarnessCommand -Instance $name -Verb build-info
     if ($info.fullVersion -ne $manifest.fullVersion) { throw "$name runs $($info.fullVersion), release.json says $($manifest.fullVersion)" }
     foreach ($file in $info.files.PSObject.Properties) {
