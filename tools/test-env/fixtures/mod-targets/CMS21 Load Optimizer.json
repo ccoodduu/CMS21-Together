@@ -8,8 +8,68 @@
     "Targets": [
       {
         "Assembly": "QoLmod",
+        "Type": "CMS2021mod.Routines",
+        "Method": "LoadTexturesFromFolders"
+      },
+      {
+        "Assembly": "QoLmod",
         "Type": "CMS2021mod.Helpers",
-        "Method": "AuthenticBrandLogos"
+        "Method": "LoadTextureFromByteToSprite"
+      },
+      {
+        "Assembly": "TKAftermarket",
+        "Type": "UIHelper",
+        "Method": "ReloadAftermarketSprites"
+      },
+      {
+        "Assembly": "TKAftermarket",
+        "Type": "TKAftermarketMod.TKAftermarketModMain",
+        "Method": "LoadMountsCache"
+      },
+      {
+        "Assembly": "TKAftermarket",
+        "Type": "TKAftermarketMod.TKAftermarketModMain",
+        "Method": "LoadAftermarketMounts"
+      },
+      {
+        "Assembly": "TKAftermarket",
+        "Type": "TKAftermarketMod.TKAftermarketModMain",
+        "Method": "OnSceneWasUnloaded"
+      },
+      {
+        "Assembly": "UnityEngine.AssetBundleModule",
+        "Type": "UnityEngine.AssetBundle",
+        "Method": "Unload"
+      },
+      {
+        "Assembly": "TKAftermarket",
+        "Type": "TKAftermarketMod.TKAftermarketModMain",
+        "Method": "GetAssetBundle"
+      },
+      {
+        "Assembly": "UnityEngine.UnityWebRequestTextureModule",
+        "Type": "UnityEngine.Networking.UnityWebRequestTexture",
+        "Method": "GetTexture"
+      },
+      {
+        "Assembly": "UnityEngine.UnityWebRequestTextureModule",
+        "Type": "UnityEngine.Networking.DownloadHandlerTexture",
+        "Method": "GetContent"
+      },
+      {
+        "Assembly": "UnityEngine.CoreModule",
+        "Type": "UnityEngine.Texture2D",
+        "Method": "Compress"
+      },
+      {
+        "Assembly": "TKAftermarket",
+        "Type": "TKAftermarketMod.TKAftermarketModMain",
+        "Method": "AddAftermarketPartsToInventory"
+      },
+      {
+        "Assembly": "TKAftermarket",
+        "Type": "TKAftermarketMod.TKAftermarketModMain",
+        "Method": "LoadAssetBundleHelper"
       },
       {
         "Assembly": "QoLmod",
@@ -18,13 +78,8 @@
       },
       {
         "Assembly": "QoLmod",
-        "Type": "CMS2021mod.Helpers",
-        "Method": "LoadBrandlogosfromMods"
-      },
-      {
-        "Assembly": "QoLmod",
-        "Type": "CMS2021mod.Helpers",
-        "Method": "LoadTextureFromByteToSprite"
+        "Type": "CMS2021mod.PaintMod",
+        "Method": "EnablePaintAllparts"
       },
       {
         "Assembly": "QoLmod",
@@ -33,13 +88,18 @@
       },
       {
         "Assembly": "QoLmod",
-        "Type": "CMS2021mod.PaintMod",
-        "Method": "EnablePaintAllparts"
+        "Type": "CMS2021mod.Helpers",
+        "Method": "AuthenticBrandLogos"
       },
       {
         "Assembly": "QoLmod",
-        "Type": "CMS2021mod.Routines",
-        "Method": "LoadTexturesFromFolders"
+        "Type": "CMS2021mod.Helpers",
+        "Method": "LoadBrandlogosfromMods"
+      },
+      {
+        "Assembly": "TKAftermarket",
+        "Type": "TKAftermarketMod.TKAftermarketModMain",
+        "Method": "GameInventory_ReadTuningData_Postfix"
       },
       {
         "Assembly": "QuickShop",
@@ -52,69 +112,54 @@
         "Method": "GetPartFile"
       },
       {
-        "Assembly": "TKAftermarket",
-        "Type": "TKAftermarketMod.TKAftermarketModMain",
-        "Method": "AddAftermarketPartsToInventory"
-      },
-      {
-        "Assembly": "TKAftermarket",
-        "Type": "TKAftermarketMod.TKAftermarketModMain",
-        "Method": "GameInventory_ReadTuningData_Postfix"
-      },
-      {
-        "Assembly": "TKAftermarket",
-        "Type": "TKAftermarketMod.TKAftermarketModMain",
-        "Method": "GetAssetBundle"
-      },
-      {
-        "Assembly": "TKAftermarket",
-        "Type": "TKAftermarketMod.TKAftermarketModMain",
-        "Method": "LoadAftermarketMounts"
-      },
-      {
-        "Assembly": "TKAftermarket",
-        "Type": "TKAftermarketMod.TKAftermarketModMain",
-        "Method": "LoadAssetBundleHelper"
-      },
-      {
-        "Assembly": "TKAftermarket",
-        "Type": "TKAftermarketMod.TKAftermarketModMain",
-        "Method": "LoadMountsCache"
-      },
-      {
-        "Assembly": "TKAftermarket",
-        "Type": "TKAftermarketMod.TKAftermarketModMain",
-        "Method": "OnSceneWasUnloaded"
-      },
-      {
-        "Assembly": "TKAftermarket",
-        "Type": "UIHelper",
-        "Method": "ReloadAftermarketSprites"
-      },
-      {
         "Assembly": "TKBasics",
         "Type": "TKBasicsMod.TKBasicsModMain",
         "Method": "ReplaceRepairGroups"
       },
       {
-        "Assembly": "UnityEngine.AssetBundleModule",
-        "Type": "UnityEngine.AssetBundle",
-        "Method": "Unload"
+        "Assembly": "QoLmod",
+        "Type": "CMS2021mod.Helpers",
+        "Method": "SetAllCarsShowSuspOnTrack"
       },
       {
-        "Assembly": "UnityEngine.CoreModule",
-        "Type": "UnityEngine.Texture2D",
-        "Method": "Compress"
+        "Assembly": "QoLmod",
+        "Type": "CMS2021mod.Helpers",
+        "Method": "CreateDummyGarageDecorationCarConfig"
       },
       {
-        "Assembly": "UnityEngine.UnityWebRequestTextureModule",
-        "Type": "UnityEngine.Networking.DownloadHandlerTexture",
-        "Method": "GetContent"
+        "Assembly": "QoLmod",
+        "Type": "CMS2021mod.Helpers",
+        "Method": "HandleSpecialData2"
       },
       {
-        "Assembly": "UnityEngine.UnityWebRequestTextureModule",
-        "Type": "UnityEngine.Networking.UnityWebRequestTexture",
-        "Method": "GetTexture"
+        "Assembly": "QoLmod",
+        "Type": "CMS2021mod.Main",
+        "Method": "OnSceneWasLoaded"
+      },
+      {
+        "Assembly": "TKAftermarket",
+        "Type": "TKAftermarketMod.TKAftermarketModMain",
+        "Method": "AddAftermarketPartTuningValuesToTuningData"
+      },
+      {
+        "Assembly": "TKAftermarket",
+        "Type": "TKAftermarketMod.TKAftermarketModMain",
+        "Method": "LoadMaterialCache"
+      },
+      {
+        "Assembly": "TKAftermarket",
+        "Type": "TKAftermarketMod.TKAftermarketModMain",
+        "Method": "OnSceneWasLoaded"
+      },
+      {
+        "Assembly": "TKAftermarket",
+        "Type": "TKAftermarketMod.TKAftermarketModMain",
+        "Method": "OnSceneWasInitialized"
+      },
+      {
+        "Assembly": "TKBasics",
+        "Type": "TKBasicsMod.TKBasicsModMain",
+        "Method": "InitializeModData"
       }
     ]
   }

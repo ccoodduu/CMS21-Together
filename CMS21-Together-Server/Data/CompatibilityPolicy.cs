@@ -85,12 +85,19 @@ namespace CMS21_Together_Server.Data
 
 			var mods = packet.mods ?? new List<ModReport>();
 			var verdicts = ApplyLists(clientId, classifier.ClassifyAll(mods));
-			foreach (var verdict in verdicts.Where(v => v.Class >= ModClass.Unknown && !IsRequired(v.Mod.Name)))
+			var refusedMods = verdicts.Where(v => v.Class >= ModClass.Unknown && !IsRequired(v.Mod.Name)).ToList();
+			foreach (var verdict in refusedMods)
 			{
 				string what = verdict.Class == ModClass.Gameplay ? "changes gameplay" : "may change gameplay";
 				string targets = verdict.Reasons.Count > 0 ? $" ({string.Join(", ", verdict.Reasons)})" : "";
-				Fail(DisconnectReason.ModMismatch, $"{verdict.Mod} {what}{targets}. Remove it or ask the host to allow it.");
+				Fail(DisconnectReason.ModMismatch, string.IsNullOrEmpty(verdict.KnownReason)
+					? $"{verdict.Mod} {what}{targets}."
+					: $"{verdict.Mod} {verdict.KnownReason}.");
 			}
+			if (refusedMods.Count > 0)
+				findings.Add(refusedMods.Count == 1
+					? "To join, remove this mod from the game's Mods folder, or ask the host to allow it."
+					: "To join, remove these mods from the game's Mods folder, or ask the host to allow them.");
 			foreach (string required in config?.ModsRequired ?? new List<string>())
 			{
 				SplitRequired(required, out string name, out string version);
@@ -134,7 +141,7 @@ namespace CMS21_Together_Server.Data
 				else if (Contains(config?.ModsGameplay, verdict.Mod.Name))
 				{
 					verdict.Class = ModClass.Gameplay;
-					if (verdict.Reasons.Count == 0) verdict.Reasons.Add("listed in mods_gameplay");
+					verdict.KnownReason = "is listed as a gameplay mod by the host";
 				}
 			}
 			return verdicts;

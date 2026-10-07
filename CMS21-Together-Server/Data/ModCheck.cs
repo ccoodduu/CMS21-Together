@@ -20,6 +20,9 @@ namespace CMS21_Together_Server.Data
 					: new List<string> { path };
 				var mods = files.SelectMany(f => JsonConvert.DeserializeObject<List<ModReport>>(File.ReadAllText(f)) ?? new List<ModReport>()).ToList();
 				var verdicts = new ModClassifier(ModClassifierRules.Default).ClassifyAll(mods);
+				var heuristicRules = ModClassifierRules.Default;
+				heuristicRules.KnownMods.Clear();
+				var heuristic = new ModClassifier(heuristicRules).ClassifyAll(mods);
 
 				string expectedPath = Directory.Exists(path) ? Path.Combine(path, ExpectedFile) : null;
 				var expected = expectedPath != null && File.Exists(expectedPath)
@@ -27,8 +30,10 @@ namespace CMS21_Together_Server.Data
 					: new Dictionary<string, string>();
 
 				int mismatches = 0;
-				foreach (var verdict in verdicts)
+				for (int i = 0; i < verdicts.Count; i++)
 				{
+					var verdict = verdicts[i];
+					string guessed = heuristic[i].Class == verdict.Class ? "" : $" (heuristic: {heuristic[i].Class})";
 					string status = "";
 					if (expected.TryGetValue(verdict.Mod.Name, out string want))
 					{
@@ -36,7 +41,7 @@ namespace CMS21_Together_Server.Data
 						if (!ok) mismatches++;
 						status = ok ? " ok" : $" EXPECTED {want}";
 					}
-					Console.WriteLine($"{verdict.Mod.Name,-24} {verdict.Class,-8} {verdict.Mod.Targets?.Count ?? 0,4} targets{status}  {string.Join(", ", verdict.Reasons)}");
+					Console.WriteLine($"{verdict.Mod.Name,-24} {verdict.Class,-8} {verdict.Mod.Targets?.Count ?? 0,4} targets{status}{guessed}  {verdict.Explanation}");
 				}
 				foreach (string missing in expected.Keys.Where(k => verdicts.All(v => v.Mod.Name != k)))
 				{

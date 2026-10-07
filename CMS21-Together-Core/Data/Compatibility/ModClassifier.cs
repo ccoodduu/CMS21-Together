@@ -17,10 +17,19 @@ public class ModVerdict
 {
 	public ModReport Mod;
 	public ModClass Class;
+	public string KnownReason;
 	public List<string> Reasons = new List<string>();
 
-	public override string ToString() =>
-		Reasons.Count == 0 ? $"{Mod} [{Class}]" : $"{Mod} [{Class}: {string.Join(", ", Reasons)}]";
+	public string Explanation =>
+		!string.IsNullOrEmpty(KnownReason) ? KnownReason : string.Join(", ", Reasons);
+
+	public override string ToString()
+	{
+		var details = new List<string>();
+		if (!string.IsNullOrEmpty(KnownReason)) details.Add($"known mod: {KnownReason}");
+		if (Reasons.Count > 0) details.Add(string.Join(", ", Reasons));
+		return details.Count == 0 ? $"{Mod} [{Class}]" : $"{Mod} [{Class}: {string.Join("; ", details)}]";
+	}
 }
 
 public class ModClassifier
@@ -32,11 +41,13 @@ public class ModClassifier
 	private readonly Regex[] gameplayTargets;
 	private readonly Regex[] visualTargets;
 	private readonly Regex[] uiVisualMethods;
+	private readonly Dictionary<string, KnownMod> knownMods;
 
 	public ModClassifier(ModClassifierRules rules)
 	{
 		this.rules = rules ?? ModClassifierRules.Default;
 		gameAssemblies = new HashSet<string>(this.rules.GameAssemblies, StringComparer.OrdinalIgnoreCase);
+		knownMods = new Dictionary<string, KnownMod>(this.rules.KnownMods ?? new Dictionary<string, KnownMod>(), StringComparer.OrdinalIgnoreCase);
 		gameplayTargets = this.rules.GameplayTargets.Select(Wildcard).ToArray();
 		visualTargets = this.rules.VisualTargets.Select(Wildcard).ToArray();
 		uiVisualMethods = this.rules.UiVisualMethods.Select(Wildcard).ToArray();
@@ -58,6 +69,13 @@ public class ModClassifier
 			if (targetClass > verdict.Class) verdict.Class = targetClass;
 			if (targetClass >= ModClass.Unknown && verdict.Reasons.Count < MaxReasons)
 				verdict.Reasons.Add(target.ToString());
+		}
+
+		if (mod.Name != null && knownMods.TryGetValue(mod.Name, out var known) && known != null)
+		{
+			verdict.Class = known.Class;
+			verdict.KnownReason = known.Reason;
+			if (known.Class < ModClass.Unknown) verdict.Reasons.Clear();
 		}
 		return verdict;
 	}

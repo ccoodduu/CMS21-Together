@@ -246,6 +246,7 @@ public static class BugReport
 			["file"] = v.Mod.File,
 			["assembly"] = v.Mod.Assembly,
 			["class"] = v.Class.ToString(),
+			["knownReason"] = v.KnownReason,
 			["reasons"] = v.Reasons,
 			["targets"] = v.Mod.Targets.Select(t => $"{t.Assembly}:{t.Type}.{t.Method}").ToList(),
 		}).ToList();
