@@ -139,6 +139,7 @@ namespace CMS21Together
 			Logic.Car.Details.CarDetailsSync.Initialize();
 			Logic.Car.Away.TestDriveSync.Initialize();
 			Logic.Car.Away.PathTestSync.Initialize();
+			Logic.Economy.CarPurchaseSync.Initialize();
 			SessionNotifications.Initialize();
 			SeatEngine.Initialize();
 		}
