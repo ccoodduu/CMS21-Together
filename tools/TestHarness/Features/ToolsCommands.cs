@@ -416,8 +416,10 @@ public static class ToolsCommands
     private static object Repair(string args)
     {
         var parts = Args(args);
-        if (parts.Length != 2) throw new ArgumentException("usage: tool-repair <uid> <success|fail>");
+        if (parts.Length < 2 || parts.Length > 3 || (parts.Length == 3 && parts[2] != "paid"))
+            throw new ArgumentException("usage: tool-repair <uid> <success|fail> [paid]");
         var item = Inv.GetItem(long.Parse(parts[0])) ?? throw new ArgumentException($"no item {parts[0]}");
+        if (parts.Length == 3) return RepairPaid(item, parts[1] == "success");
         if (parts[1] == "success")
         {
             item.Condition = 1f;
@@ -429,6 +431,29 @@ public static class ToolsCommands
         }
         ToolSync.SendItemUpdate(item);
         return new { item.UID, condition = item.Condition };
+    }
+
+    // The minigame's result through the repair window, which charges the repair cost.
+    private static object RepairPaid(Item item, bool success)
+    {
+        var manager = WindowManager.Instance;
+        if (!manager.IsWindowActive(WindowID.RepairPart)) manager.Show(WindowID.RepairPart, false);
+        var window = manager.GetWindowByID<RepairPartWindow>(WindowID.RepairPart) ?? throw new InvalidOperationException("no repair window");
+        long before = GlobalData.PlayerMoney;
+        int cost = window.CalculateRepairPrice(item);
+        window.currentItemInfo = new CMS.UI.Logic.RepairPart.PartInfo
+        {
+            Item = item,
+            RepairCost = cost,
+            CurrentCondition = item.Condition,
+            SuccessCondition = 1f,
+            FailCondition = item.Condition * 0.5f,
+            DentCurrentCondition = item.Dent,
+            DentSuccessCondition = 0f,
+            DentFailCondition = item.Dent,
+        };
+        window.ProcessGameResult(success ? CMS.UI.Logic.BarType.Success : CMS.UI.Logic.BarType.Fail);
+        return new { item.UID, condition = item.Condition, cost, moneyBefore = before, moneyAfter = GlobalData.PlayerMoney };
     }
 
     [HarnessCommand("tool-paint-part")]
