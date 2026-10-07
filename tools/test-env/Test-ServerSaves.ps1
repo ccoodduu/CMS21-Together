@@ -2,7 +2,7 @@
 <#
 Server-only checks of save robustness (no game needed): crash-safe writes, backups, start copies, fallback,
 quarantine, refusal, --check-save and saving on /stop and window close. Runs in its own copy of the server
-(CMS21-TestInstalls\ServerSaveTest, port 7797) built by Deploy-Mod.ps1 from this worktree.
+(CMS21-TestInstalls\ServerSaveTest, port 7807) built by Deploy-Mod.ps1 from this worktree.
 #>
 param([string]$Configuration = "Release")
 
@@ -26,11 +26,11 @@ Get-ChildItem -LiteralPath (Join-Path $repo "CMS21-Together-Server\bin\$Configur
 
 function Set-Config([int]$Autosave = 300) {
     Set-Content -LiteralPath (Join-Path $serverDir "server_config.ini") -Encoding ascii -Value @(
-        "max_players = 4", "use_steam = False", 'GSLT_Token = ""', "log_level = 1", "port = 7797",
+        "max_players = 4", "use_steam = False", 'GSLT_Token = ""', "log_level = 1", "port = 7807",
         "autosave_interval_seconds = $Autosave", "backup_count = 5")
 }
 
-Initialize-TestServer -ServerDir $serverDir -CommandFile $commandFile -ConnectAddress "127.0.0.1:7797"
+Initialize-TestServer -ServerDir $serverDir -CommandFile $commandFile -ConnectAddress "127.0.0.1:7807"
 
 function Get-LogText { Get-Content -LiteralPath (Join-Path $serverDir "Log\Latest.txt") -Raw -ErrorAction SilentlyContinue }
 
@@ -105,7 +105,7 @@ try {
     Set-Content -LiteralPath (Join-Path $backups "server_save_bak1.json") -Value "{ nope" -Encoding ascii
     $p = Start-Raw
     $refused = Wait-Log "the server will not start" 30
-    $listening = [bool](Get-NetTCPConnection -LocalPort 7797 -State Listen -ErrorAction SilentlyContinue)
+    $listening = [bool](Get-NetTCPConnection -LocalPort 7807 -State Listen -ErrorAction SilentlyContinue)
     $results["all garbage refuses to start"] = ($refused -and -not $listening)
     Stop-Process -Id $p.Id -Force -ErrorAction SilentlyContinue; Start-Sleep -Milliseconds 500
 

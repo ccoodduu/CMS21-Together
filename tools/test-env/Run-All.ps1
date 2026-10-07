@@ -9,6 +9,9 @@ fresh session: PASSED there makes it FLAKY with failedInBatch, so batch contamin
 failure. -Fresh runs every scenario as its own session, as before.
 Scenarios with a "# run-all: skip" header line only run when named in -Scenarios. -List prints the scenarios that
 would run, with the reason, and exits.
+Scale lane: scenarios with a "# run-all: lane 3" header line run only with -Lanes 3, which must be the only lane
+given (it uses all four installs and takes the locks of lanes 1 and 2); lanes 1 and 2 skip them unless named.
+The build happens once; each lane deploys it inside its own lane locks (Run-Session.ps1 -Deploy -NoBuild).
 
 Test areas (policy: a change merges after the scenarios of its areas plus the smoke set; the full set runs for
 changes the path table cannot place and before a release). Every scenario carries a "# areas: a, b" header line;
@@ -42,6 +45,9 @@ Import-Module (Join-Path $PSScriptRoot "TestAreas.psm1") -Force
 
 if ($ChangedSince -and -not $Changed) { throw "A git ref ('$ChangedSince') only goes with -Changed." }
 if ($Smoke -and $NoSmoke) { throw "-Smoke and -NoSmoke exclude each other." }
+$scaleLane = $Lanes -contains 3
+if ($scaleLane -and $Lanes.Count -gt 1) { throw "-Lanes 3 uses all four installs; it cannot run together with lanes $(@($Lanes | Where-Object { $_ -ne 3 }) -join ', ')." }
+foreach ($lane in $Lanes) { Get-TestLane $lane | Out-Null }
 $knownAreas = Get-KnownAreas
 $wantAreas = @($Areas | ForEach-Object { $_ -split '[,\s]+' } | Where-Object { $_ })
 if ($wantAreas -contains "smoke") { $Smoke = [switch]$true; $wantAreas = @($wantAreas | Where-Object { $_ -ne "smoke" }) }
@@ -54,6 +60,10 @@ foreach ($h in $headers.Values) {
     if ($h.UnknownAreas) { Write-Warning "scenarios\$($h.Name).ps1 names unknown area(s): $($h.UnknownAreas -join ', ')" }
 }
 foreach ($name in $Scenarios) { if (-not $headers.Contains($name)) { throw "Unknown scenario: $name" } }
+if ($scaleLane -and $Scenarios) {
+    $notScale = @($Scenarios | Where-Object { -not $headers[$_].Lane3 })
+    if ($notScale) { throw "-Lanes 3 runs only '# run-all: lane 3' scenarios; not: $($notScale -join ', ')" }
+}
 
 $picks = [ordered]@{}
 function Add-Pick([string]$Name, [string]$Reason) {
@@ -97,6 +107,7 @@ if ($Changed) {
 foreach ($name in $Scenarios) { Add-Pick $name "named" }
 foreach ($h in $headers.Values) {
     if ($h.Skip) { continue }
+    if ($h.Lane3 -ne $scaleLane) { continue }
     if (-not $areaMode -and -not $Scenarios) { Add-Pick $h.Name "all"; continue }
     if ($fullReason) { Add-Pick $h.Name "full set"; continue }
     if (-not $areaMode) { continue }
@@ -106,7 +117,9 @@ foreach ($h in $headers.Values) {
     elseif (-not $h.HasAreas -and $wantAreas.Count -gt 0) { Add-Pick $h.Name "no '# areas:' line" }
 }
 foreach ($name in $changedScenarios) {
-    if ($headers[$name].Skip -and -not $picks.Contains($name)) {
+    if ($headers[$name].Lane3 -ne $scaleLane) {
+        if (-not $picks.Contains($name)) { Write-Host "  (changed scenario $name is $(if ($scaleLane) { 'not ' })a lane-3 scenario; $(if ($scaleLane) { 'run it on lane 1 or 2' } else { 'run it with -Lanes 3' }))" }
+    } elseif ($headers[$name].Skip -and -not $picks.Contains($name)) {
         Write-Host "  (changed scenario $name is marked '# run-all: skip'; name it in -Scenarios to run it)"
     } elseif (-not $headers[$name].Skip) { Add-Pick $name "changed" }
 }
@@ -116,7 +129,7 @@ if ($List) {
     foreach ($name in $Scenarios) {
         $single = -not $Fresh -and (Test-ScenarioNeedsFreshGame (Join-Path $scenarioDir "$name.ps1"))
         $reason = if ($areaMode) { "  <- " + ($picks[$name] -join "; ") } else { "" }
-        Write-Host ("{0}{1}{2}" -f $name, $(if ($single) { " (single session)" } else { "" }), $reason)
+        Write-Host ("{0}{1}{2}{3}" -f $name, $(if ($headers[$name].Lane3) { " (lane 3)" } else { "" }), $(if ($single) { " (single session)" } else { "" }), $reason)
     }
     Write-Host $(if ($Scenarios.Count) { "{0} scenario(s) + server-saves" -f $Scenarios.Count } else { "Nothing to run: no scenario selected." })
     return
@@ -126,16 +139,14 @@ if ($Scenarios.Count -eq 0) {
     exit 0
 }
 
-if (-not $SkipDeploy) {
-    foreach ($lane in $Lanes) { & (Join-Path $PSScriptRoot "Deploy-Mod.ps1") -Lane $lane | Out-Host }
-}
+if (-not $SkipDeploy) { & (Join-Path $PSScriptRoot "Deploy-Mod.ps1") -BuildOnly | Out-Host }
 
 $started = Get-Date
 $runSession = Join-Path $PSScriptRoot "Run-Session.ps1"
 $laneWork = {
-    param($RunSession, $Lane, $Names, $Batch, $MinFreeMemoryGb)
+    param($RunSession, $Lane, $Names, $Batch, $Deploy)
     $gate = @{ Lane = $Lane }
-    if ($MinFreeMemoryGb) { $gate.MinFreeMemoryGb = $MinFreeMemoryGb }
+    $script:deployPending = $Deploy
 
     function Get-Result([string]$Output, [string]$Name) {
         $found = [regex]::Matches($Output, "RESULT L$Lane $([regex]::Escape($Name)): (PASSED|FAILED)( \(batch\))?")
@@ -154,6 +165,7 @@ $laneWork = {
     }
 
     function Invoke-RunSession([hashtable]$Arguments) {
+        if ($script:deployPending) { $Arguments.Deploy = $true; $Arguments.NoBuild = $true; $script:deployPending = $false }
         $collected = New-Object System.Collections.Generic.List[object]
         try { & $RunSession @Arguments @gate *>&1 | ForEach-Object { $collected.Add($_) } } catch { $collected.Add("ERROR: $($_.Exception.Message)") }
         $collected | Out-String
@@ -186,8 +198,7 @@ $laneWork = {
 $jobs = @()
 for ($i = 0; $i -lt $Lanes.Count; $i++) {
     $names = @(for ($j = $i; $j -lt $Scenarios.Count; $j += $Lanes.Count) { $Scenarios[$j] })
-    $minFreeMemoryGb = if ($i -gt 0) { 10 } else { $null }
-    if ($names.Count -gt 0) { $jobs += Start-Job -ScriptBlock $laneWork -ArgumentList $runSession, $Lanes[$i], $names, (-not $Fresh), $minFreeMemoryGb }
+    if ($names.Count -gt 0) { $jobs += Start-Job -ScriptBlock $laneWork -ArgumentList $runSession, $Lanes[$i], $names, (-not $Fresh), (-not $SkipDeploy) }
 }
 $serverJob = Start-Job -ScriptBlock { param($script) & $script *>&1 | Out-String } -ArgumentList (Join-Path $PSScriptRoot "Test-ServerSaves.ps1")
 
