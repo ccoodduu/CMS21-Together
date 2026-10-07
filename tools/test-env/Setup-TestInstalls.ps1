@@ -1,6 +1,8 @@
 #Requires -Version 5.1
 <#
-Creates (or refreshes) side-by-side test installs of CMS21 for local multiplayer tests (two per test lane).
+Creates (or refreshes) side-by-side test installs of CMS21 for local multiplayer tests (A and B for lane 1, C and D
+for lane 2, all four for lane 3), and the server folder of every lane whose installs all exist (Server, Server2,
+Server3) with its server_config.ini (port, max_players = 4). Deploy-Mod.ps1 -Lane <n> then copies the build into them.
 
 Game binaries and data are NTFS hard links to the Steam install, so each install costs almost no
 disk space. Every file a test run may write (MelonLoader, Mods, UserData, UserLibs, boot.config)
@@ -10,6 +12,7 @@ param(
     [string]$GameDir = "C:\Program Files (x86)\Steam\steamapps\common\Car Mechanic Simulator 2021",
     [string]$TestRoot = "$env:USERPROFILE\CMS21-TestInstalls",
     [string[]]$Instances = @("A", "B", "C", "D"),
+    [int[]]$Lanes = @(1, 2, 3),
     [switch]$Force
 )
 
@@ -90,4 +93,14 @@ foreach ($name in $Instances) {
 }
 
 New-ProfileSeed
-Write-Host "Done. Deploy the mod with Deploy-Mod.ps1 -Lane <n>."
+
+foreach ($lane in $Lanes) {
+    $laneInfo = Get-TestLane $lane
+    $missing = @($laneInfo.Instances | Where-Object { -not (Test-Path -LiteralPath (Join-Path $TestRoot $_)) })
+    if ($missing) { Write-Host "Lane ${lane}: no server folder yet (installs missing: $($missing -join ', '))"; continue }
+    New-Item -ItemType Directory -Force -Path $laneInfo.ServerDir | Out-Null
+    Set-LaneServerConfig $laneInfo
+    Write-Host "Lane ${lane}: $($laneInfo.Instances -join ', ') + $($laneInfo.ServerDir), port $($laneInfo.Port)"
+}
+New-Item -ItemType Directory -Force -Path (Join-Path $TestRoot "fixtures") | Out-Null
+Write-Host "Done. Deploy the mod with Deploy-Mod.ps1 -Lane <n> (-Lane 3 fills all four installs and Server3)."

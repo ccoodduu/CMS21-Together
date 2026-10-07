@@ -183,7 +183,7 @@ Verbs are globally unique (`Commands.Discover` throws on a duplicate). Existing:
 | 7 | `stats-add`, `to-menu` (g1); `player-key`, `send-early-stats`, `profile-pref` (later groups) |
 | 6 | `travel`, `scene-list`, `teleport`, `set-name`, `leave-mark`, `sit`, `stand`, `engine`, `seat-trace` (spike), `buy-car-here`, `junk-buy` |
 | 1 | `car-spawn`, `car-delete`, `car-loaded`, `car-list`, `car-ready`, `car-baseline`, `car-hold-snapshot`, `car-dlc-cars`, `car-request`, `part-state`, `part-keys`, `part-unmount`, `part-fast-unmount`, `part-fast-mount`, `part-action-unmount`, `part-claim`, `part-corrupt`, `part-hold-remote`, `crane-out`, `crane-in` |
-| 2 | `lift`, `lifters`, `car-move`, `car-place`, `placement`, `net-hold`, `park`, `unpark`, `park-swap`, `parking`, `parking-unlock`, `park-incoming`, `dev-spawn`, `placement-trace` and `parking-probe` (spike) |
+| 2 | `lift`, `lifters`, `car-move`, `car-place`, `placement`, `net-hold` (`on`/`off`; `out` = full stall of both directions, heartbeats included, added by 11), `park`, `unpark`, `park-swap`, `parking`, `parking-unlock`, `park-incoming`, `dev-spawn`, `placement-trace` and `parking-probe` (spike) |
 | 3 | `jobs-trace`, `orders-generate`, `orders-mission`, `orders-autogen`, `orders-list`, `order-slots`, `orders-accept`, `orders-decline`, `orders-reload`, `job-examine`, `job-check`, `job-finish`, `tutorial-run`, `job-spawn-unclaimed`, `job-end-dup` |
 | 13 | `testdrive-trace`, `testdrive-go`, `testdrive-drive`, `testdrive-finish`, `testdrive-partnames`, `testdrive-hold`, `testdrive-skip-result`, `dyno-run`, `pathtest-run`, `diag-examine`, `away-try`; dump section `away`, car field `specialState`; scenarios `test-drive`, `test-drive-latejoin`, `diagnostics` (spikes: `test-drive-trace`, `diag-trace`, `departure-hold`) |
 | 4 | `cardetails-probe`, `cardetails-roundtrip`, `cardetails-ui`, `cardetails-fluid`, `-wheel`, `-alignment`, `-headlamp`, `-gearbox`, `-tune`, `-paint`, `-tint`, `-wash`, `-plate`, `-mileage`, `-lights`, `-bonus`, `-randomize`, `-hold` |
@@ -217,7 +217,24 @@ Scenarios (unique): 7 `server-restart`, `profile-safety`, `rejoin`, `latejoin`, 
 `jobs-restart`; 4 `car-details`, `car-details-latejoin`; 5a `tools-slots`, `tools-race`, `tools-latejoin`;
 5b `tools-car-effects`; 8 `join-ui`, `join-coldstart`, `host-from-game`, `session-admin`; 9 `compat-refusal`;
 12 `release-smoke` (marked `# run-all: skip`, run after `Install-ReleaseToTestEnv.ps1`); 14a `guard`; 14
-`desync-autofix`, `resync-key`, `bug-report`.
+`desync-autofix`, `resync-key`, `bug-report`; 11 `scale-connect`, `soak`, `latejoin-full`, `storm` (all
+`# run-all: lane 3`), `full-garage-fixture` and `perf-probe` (`# run-all: skip`).
+
+Scale lane and long runs (owner 11, design `multiplayer-soak-and-scale` D1-D9):
+
+| Item | What |
+|---|---|
+| Lane 3 | A, B, C, D with `Server3` on port 7797 (`Test-ServerSaves.ps1` moved to 7807); memory gates per lane in `TestLanes.psm1` (22/6, 22/10, 44/16 GB commit/RAM) |
+| Lane locks | `Global\CMS21TogetherLane1`/`Lane2`, held by `Run-Session.ps1` for the whole run (lane 3 takes 1 then 2, `-LaneWaitMinutes` 120); `Deploy-Mod.ps1` takes them and fails with "lane N is busy"; the launch mutex stays |
+| `Run-Session.ps1` | `-ScenarioArgs <hashtable>` (splatted after `-Ctx`), `-Deploy [-NoBuild]` inside the locks, `-Headless C,D`; roles `A`-`D` in `.launch.psd1`; `$Ctx.Launch` (lane, window, sound, headless) for relaunches; log slices restart after a relaunch; `deployed.json` of every install and the server in `result.json` (warning on mixed builds) |
+| `Deploy-Mod.ps1` | `-BuildOnly`, `-NoBuild`; writes `deployed.json` (repo, commit, dirty, time) into each `UserData\TestHarness` and the server folder. `Run-All.ps1` builds once and deploys per lane through `Run-Session -Deploy -NoBuild` |
+| `Run-All.ps1 -Lanes 3` | runs only `# run-all: lane 3` scenarios and must be the only lane; lanes 1 and 2 skip them unless named; `-List` marks them |
+| `TestLanes.psm1` | `Start-HarnessInstance -Lane -Instance [-Headless] [-NoWait]`, `Wait-HarnessInstances`, `Enter-LaneLocks`/`Exit-LaneLocks`, `Get-InstanceGameProcess`, `Get-LaneDeployedBuilds` |
+| `HarnessClient.psm1` | `Wait-HarnessDumpsAllEqual -Instances -Sections -TimeoutSec` (N-way against the first), `Get-SharedDumpSections` (`stats`, `inventory`, `cars`, `placement`, `jobs`, `tools`, `toolPositions`), `Get-LastHarnessDumps` |
+| `ScaleSession.psm1` | connect with `DuplicateIdentity` retry, server config per run, `Invoke-ScaleCheckpoint` (quiesced N-way equality + forced `desync check`, `checkpoints.jsonl`), `Get-ServerPlayerRecords`, log error scan with `scenarios\soak-allow.txt` |
+| `StormKinds.psm1` | storm kinds K1-K8 (`storms.jsonl`), used by `storm` and `soak -StormEveryMinutes` |
+| `FullGarage.psm1` | the full-garage fill and its fixture `CMS21-TestInstallsixturesull-garage_L<levels>_<tag>.json` (outside the repo) |
+| `Run-Soak.ps1` | `-Hours -Seed -Lane -Headless -StormEveryMinutes -Replay -Now`; waits for an idle PC, then `Show-SoakReport.ps1` |
 
 ## Test areas
 
@@ -227,7 +244,8 @@ before a release. Every scenario, skipped ones included, carries a `# areas: a, 
 path → area table in `tools/test-env/TestAreas.psm1`: `connect`, `presence`, `guard`, `cars`, `parts`,
 `placement`, `details`, `jobs`, `economy`, `tools`, `testdrive`, `persistence`, `resync`, `hosting`, `bugreport`,
 `release`); `smoke` in the list puts it in the smoke set (`latejoin`, `car-live`, `junkyard-trip`, `guard`,
-`tools-latejoin`). **A new scenario must carry `# areas:`**; a new source folder needs a row in the table, or its
+`tools-latejoin`). A `# run-all: lane 3` line makes a scenario a scale-lane scenario (`Run-All -Lanes 3` only).
+**A new scenario must carry `# areas:`**; a new source folder needs a row in the table, or its
 changes run the full set.
 
 | `Run-All.ps1` switch | Runs |

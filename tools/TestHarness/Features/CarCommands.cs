@@ -32,11 +32,36 @@ public static class CarCommands
     private static object CarSpawn(string args)
     {
         var parts = (args ?? "").Split(new[] { ' ' }, StringSplitOptions.RemoveEmptyEntries);
-        if (parts.Length < 2) throw new ArgumentException("usage: car-spawn <loader> <car> [config]");
+        if (parts.Length < 2) throw new ArgumentException("usage: car-spawn <loader> <car> [config] [CarPlace|auto]");
         var carLoader = Loader(parts[0]);
         carLoader.ConfigVersion = parts.Length > 2 ? int.Parse(parts[2]) : 0;
+        if (parts.Length > 3)
+        {
+            var place = parts[3] == "auto" ? FreePlace() : (CarPlace)Enum.Parse(typeof(CarPlace), parts[3], true);
+            carLoader.placeNo = (int)place;
+            MelonLoader.MelonCoroutines.Start(SpawnAt(carLoader, parts[1], place));
+            return $"spawning {parts[1]} on loader {parts[0]} at {place}";
+        }
         carLoader.StartCoroutine(carLoader.LoadCar(parts[1]));
         return $"spawning {parts[1]} on loader {parts[0]}";
+    }
+
+    private static readonly CarPlace[] SpawnPlaces = { CarPlace.Entrance1, CarPlace.Entrance2, CarPlace.Entrance3, CarPlace.CarLifter1, CarPlace.CarLifter2 };
+
+    private static CarPlace FreePlace()
+    {
+        var places = CarLoaderPlaces.Get();
+        foreach (var candidate in SpawnPlaces)
+            if (places.GetCarLoaderForPlace(candidate) == null) return candidate;
+        throw new InvalidOperationException("no free car place");
+    }
+
+    private static System.Collections.IEnumerator SpawnAt(CarLoader carLoader, string car, CarPlace place)
+    {
+        carLoader.StartCoroutine(carLoader.LoadCar(car));
+        while (!carLoader.IsCarLoaded()) yield return null;
+        carLoader.ResetCarLifter();
+        carLoader.ChangePosition((int)place);
     }
 
     [HarnessCommand("car-delete")]

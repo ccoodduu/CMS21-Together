@@ -80,6 +80,42 @@ function Wait-HarnessDumpsEqual {
     throw "Timeout after $TimeoutSec s waiting for equal dumps of $Left and $Right (differ: $($differ -join ', '))"
 }
 
+$script:SharedSections = @("stats", "inventory", "cars", "placement", "jobs", "tools", "toolPositions")
+$script:LastDumps = $null
+
+# The dump sections every client of a session must agree on (local, roster, status and the like are per client).
+function Get-SharedDumpSections { $script:SharedSections }
+
+function Get-LastHarnessDumps { $script:LastDumps }
+
+# N-way Wait-HarnessDumpsEqual: polls every instance's dump until the sections equal the first instance's and
+# returns the dumps by instance; throws naming each instance/section that still differs. The last dumps stay
+# available through Get-LastHarnessDumps, also after a timeout.
+function Wait-HarnessDumpsAllEqual {
+    param([string[]]$Instances, [string[]]$Sections = $script:SharedSections, [int]$TimeoutSec = 60)
+    $first = $Instances[0]
+    $differ = @()
+    $deadline = (Get-Date).AddSeconds($TimeoutSec)
+    do {
+        $dumps = [ordered]@{}
+        foreach ($name in $Instances) { $dumps[$name] = Send-HarnessCommand -Instance $name -Verb dump -TimeoutSec 30 }
+        $script:LastDumps = $dumps
+        $differ = @(foreach ($name in @($Instances | Select-Object -Skip 1)) {
+            foreach ($section in @(Compare-HarnessDumps -Left $dumps[$first] -Right $dumps[$name] -Sections $Sections)) { "$name/$section" }
+        })
+        if ($differ.Count -eq 0) { return $dumps }
+        Start-Sleep -Seconds 1
+    } while ((Get-Date) -lt $deadline)
+    foreach ($entry in @($differ | Select-Object -First 4)) {
+        $name, $section = $entry -split '/', 2
+        $left = $dumps[$first].$section | ConvertTo-Json -Depth 10 -Compress
+        $right = $dumps[$name].$section | ConvertTo-Json -Depth 10 -Compress
+        Write-Host "  $section $first`: $($left.Substring(0, [math]::Min(600, $left.Length)))"
+        Write-Host "  $section $name`: $($right.Substring(0, [math]::Min(600, $right.Length)))"
+    }
+    throw "Timeout after $TimeoutSec s waiting for equal dumps of $($Instances -join ', ') against $first (differ: $($differ -join ', '))"
+}
+
 function Save-HarnessScreenshot {
     param([string]$Instance, [string]$RunDir, [string]$Label)
     Send-HarnessCommand -Instance $Instance -Verb screenshot -Arguments (Join-Path $RunDir "shot_${Label}_$Instance.png") | Out-Null
@@ -186,6 +222,7 @@ function Send-ServerCommand {
 }
 
 Export-ModuleMember -Function Get-HarnessDir, Get-HarnessStatus, Wait-HarnessStatus, Send-HarnessCommand,
-    Save-HarnessDump, Wait-HarnessDump, Wait-HarnessDumpsEqual, Save-HarnessScreenshot, Compare-HarnessDumps,
-    Initialize-TestServer, Connect-HarnessInstance, Get-ServerLogMark, Wait-ServerLog, Start-TestServer, Stop-TestServer,
-    Send-ServerCommand
+    Save-HarnessDump, Wait-HarnessDump, Wait-HarnessDumpsEqual, Wait-HarnessDumpsAllEqual, Get-SharedDumpSections,
+    Get-LastHarnessDumps, Save-HarnessScreenshot, Compare-HarnessDumps,
+    Initialize-TestServer, Connect-HarnessInstance, Get-ServerLogMark, Get-ServerLogLines, Wait-ServerLog, Start-TestServer,
+    Stop-TestServer, Send-ServerCommand, Get-TestServerProcesses

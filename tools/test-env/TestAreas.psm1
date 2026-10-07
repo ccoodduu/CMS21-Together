@@ -1,5 +1,5 @@
 # Test areas for Run-All.ps1 -Areas/-Smoke/-Changed. Every scenario names its areas in a header line
-# "# areas: a, b" (the pseudo-area "smoke" puts it in the smoke set). $PathAreaTable maps a changed file to areas,
+# "# areas: a, b" (the pseudo-area "smoke" puts it in the smoke set); "# run-all: lane 3" marks a scale-lane scenario. $PathAreaTable maps a changed file to areas,
 # first match wins (-like patterns, so * also crosses folders). "full" (harness core) and "unmapped" (mod code the
 # table cannot place) run every scenario, "smoke" only the smoke set, "none" nothing. Files under
 # tools/test-env/scenarios are handled before the table.
@@ -176,6 +176,7 @@ function Get-ScenarioHeader([string]$Path) {
     [pscustomobject]@{
         Name = [System.IO.Path]::GetFileNameWithoutExtension($Path)
         Skip = $runAll -contains "skip"
+        Lane3 = ($runAll -join " ") -match '\blane 3\b'
         Smoke = $areas -contains "smoke"
         HasAreas = $null -ne $areas
         Areas = @($areas | Where-Object { $_ -ne "smoke" })

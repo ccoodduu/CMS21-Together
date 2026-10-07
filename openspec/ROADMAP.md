@@ -196,6 +196,12 @@ it says so in its design as an assumption/dependency instead of implementing it.
 - **Draft ahead.** While a milestone is being implemented, draft the next milestone's undrafted rows (M1 needs 8
   part 1, 9 part 1, 12 part 1, 14a — all drafted and integrated 2026-10-06) with the same draft → review → integration pass; never start a row whose
   change is not drafted and reviewed.
+- **Scale lane (row 11).** `Run-All -Lanes 3` (`scale-connect`, `soak` 10 min, `latejoin-full`, `storm`; about
+  45 minutes, lanes 1 and 2 wait meanwhile) runs when server, Core or session code changed, and before each
+  milestone from M5 on. A long soak (`Run-Soak.ps1 -Hours 2` or more, storms every 20 minutes) runs before M5 closes
+  and before each release, only when the user starts it or says yes for that night, never while the user is at the
+  PC (`Run-Soak.ps1` waits for 10 idle minutes). A failure is reproduced from its run folder (seed, `actions.jsonl`
+  with `-Replay`, `deployed.json`) and fixed in the owning row's code.
 - **Unattended-run safety.** `Run-Session.ps1` must abort (not wait) when Steam shows the "KickingOtherSession"
   prompt (the user forgot offline mode on another device) — port the check from LoadOptimizer's `testrun.sh`
   (M0 task). If the regression run is red and two attempts to fix it fail, stop feature work, log it in

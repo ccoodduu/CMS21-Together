@@ -1,4 +1,5 @@
 # run-all: skip
+# areas: connect
 # multiplayer-soak-and-scale groups 2-3 smoke check: the server's perf log, perf command and snapshot ack line, and
 # the client perf/fps-cap verbs. The perf log interval is set for this run only (Run-Session restores the config).
 param($Ctx)
