@@ -235,7 +235,7 @@ public static class RemoteCars
 
 	private static void MakeInert(RemoteCar car)
 	{
-		car.Root = car.Loader.GetRootTransform();
+		car.Root = DriveCapture.RootOf(car.Loader);
 		if (car.Root == null || !car.Root) car.Root = car.Holder.transform;
 		if (!car.Root.IsChildOf(car.Holder.transform)) car.Root.SetParent(car.Holder.transform, true);
 		var bodies = car.Holder.GetComponentsInChildren<Rigidbody>(true);

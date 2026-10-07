@@ -47,12 +47,12 @@ Start-Sleep -Seconds 2
 Try-Save "pie_later" { Cmd $a drive-pie "close" }
 Send-ServerCommand "save"
 Start-Sleep -Seconds 3
-Try-Save "blob" { Cmd $a drive-blob "1" }
 
 Cmd $a guard-allow "Mode:CarDrive" | Out-Null
 Cmd $a testdrive-go "0" | Out-Null
 Wait-HarnessStatus -Instance $a -TimeoutSec 120 -What "test track" -Condition { param($s) $s.scene -match "(?i)track" -and $s.playable } | Out-Null
 Start-Sleep -Seconds 6
+Try-Save "blob" { Cmd $a drive-blob }
 Try-Save "track_idle" { Cmd $a drive-probe }
 Try-Save "input" { Cmd $a drive-input "0.6 0 6" }
 Start-Sleep -Seconds 1

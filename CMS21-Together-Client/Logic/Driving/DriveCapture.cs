@@ -149,14 +149,26 @@ public static class DriveCapture
 		return ++windowCount <= MaxPerSecond;
 	}
 
+	public static Transform RootOf(CarLoader carLoader)
+	{
+		if (carLoader == null) return null;
+		var root = carLoader.GetRoot();
+		return root != null && root ? root.transform : null;
+	}
+
 	public static Transform BodyOf(BaseCarPhysics car)
 	{
-		var root = car.CarLoader == null ? null : car.CarLoader.GetRootTransform();
+		var root = RootOf(car.CarLoader);
 		var body = car.rigidBody;
 		if (root != null && root && body != null && body && root.IsChildOf(body.transform)) return root;
 		var model = car.carModel;
-		if (model != null && model) return model;
-		return root != null && root ? root : car.transform;
+		if (model == null || !model) return root != null && root ? root : car.transform;
+		var parts = car.CarLoader == null ? null : car.CarLoader.carParts;
+		var handle = parts != null && parts.Count > 0 ? parts[0].handle : null;
+		if (handle == null || !handle) return model;
+		var modelRoot = handle.transform;
+		while (modelRoot.parent != null && modelRoot.parent != model) modelRoot = modelRoot.parent;
+		return modelRoot.parent == model ? modelRoot : model;
 	}
 
 	public static bool TryRead(BaseCarPhysics car, out DriveState state)
@@ -207,7 +219,7 @@ public static class DriveCapture
 		}
 		var res = car.res;
 		if (res != null && res) state.Rpm = res.engineCurrentRPM;
-		if (state.Gear < 0) state.Flags |= DriveFlags.Reverse;
+		if (Vector3.Dot(velocity, rotation * Vector3.forward) < -0.5f) state.Flags |= DriveFlags.Reverse;
 		if (car.CarLoader != null && car.CarLoader.LightsOn) state.Flags |= DriveFlags.Lights;
 		return true;
 	}

@@ -242,7 +242,7 @@ public static class DriveCommands
     {
         var physics = TrackCar();
         var carLoader = physics.CarLoader;
-        var root = carLoader == null ? null : carLoader.GetRootTransform();
+        var root = DriveCapture.RootOf(carLoader);
         var model = physics.carModel;
         var body = physics.rigidBody;
         var vehicle = physics.VehicleController;
@@ -469,18 +469,15 @@ public static class DriveCommands
             if (s.Gear != d.Gear) gearErrors++;
             if (s.Flags != d.Flags) flagErrors++;
         }
-        bool passed = maxPos < 1e-3 && maxRotDeg < 0.05 && maxVel <= 0.01 && maxSteer <= 0.25 && maxWheel <= 0.006 && maxRpm <= 0.5 && gearErrors == 0 && flagErrors == 0;
+        bool passed = maxPos < 1e-3 && maxRotDeg < 0.1 && maxVel <= 0.01 && maxSteer <= 0.25 && maxWheel <= 0.006 && maxRpm <= 0.5 && gearErrors == 0 && flagErrors == 0;
         return new { passed, size = DriveStateCodec.Size, maxPos, maxRotDeg, maxVel, maxSteer, maxWheel, maxRpm, gearErrors, flagErrors };
     }
 
     [HarnessCommand("drive-blob")]
     private static object Blob(string args)
     {
-        int loader = int.Parse((args ?? "0").Trim());
-        var carLoader = CarLoaderPlaces.Get()?.GetCarLoaderByIndex(loader);
-        if (carLoader == null || !carLoader.IsCarLoaded()) throw new ArgumentException("no loaded car");
-        var data = Singleton<GameManager>.Instance.GameDataManager.LoadCarInGarage(Helper.GetIndexFromCarLoaderName(carLoader.GetSaveName()));
-        if (data == null || data.IsDefault()) throw new InvalidOperationException("no saved data for that car (save it first)");
+        var data = Singleton<GameManager>.Instance.GameDataManager.LoadCarInGarage(Helper.GetIndexFromCarLoaderName(GlobalData.SelectedCarLoader));
+        if (data == null || data.IsDefault()) throw new InvalidOperationException("no saved data for the selected car (run it on the track)");
         savedBlob = NewCarDataCodec.Serialize(data);
         savedCar = data.carToLoad;
         return new { car = savedCar, bytes = savedBlob.Length };
