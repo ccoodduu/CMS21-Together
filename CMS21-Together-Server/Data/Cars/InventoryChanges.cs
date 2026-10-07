@@ -6,23 +6,26 @@ namespace CMS21_Together_Server.Data.Cars
 {
 	public static class InventoryChanges
 	{
-		private static readonly HashSet<long> removedUids = new HashSet<long>();
+		public const int UnknownRemover = -1;
 
-		public static void NoteRemoved(long uid)
+		private static readonly Dictionary<long, int> removedBy = new Dictionary<long, int>();
+
+		public static void NoteRemoved(long uid, int clientId)
 		{
-			lock (removedUids) removedUids.Add(uid);
+			lock (removedBy) removedBy[uid] = clientId;
 		}
 
-		public static bool WasRemoved(long uid)
+		public static bool RemovedByOther(long uid, int clientId)
 		{
-			lock (removedUids) return removedUids.Contains(uid);
+			lock (removedBy) return removedBy.TryGetValue(uid, out int remover) && remover != clientId;
 		}
 
-		public static void Apply(InventoryDelta delta)
+		public static void Apply(InventoryDelta delta, int clientId)
 		{
 			if (delta == null || delta.IsEmpty) return;
 			var inventory = GameDataManager.CurrentState.InventoryState;
-			foreach (long uid in delta.RemovedItemUids.Concat(delta.RemovedGroupUids)) NoteRemoved(uid);
+			foreach (var item in inventory.InventoryItems.Where(i => delta.RemovedItemUids.Contains(i.UID))) NoteRemoved(item.UID, clientId);
+			foreach (var group in inventory.InventoryGroupItems.Where(g => delta.RemovedGroupUids.Contains(g.UID))) NoteRemoved(group.UID, clientId);
 			inventory.InventoryItems.RemoveAll(i => delta.RemovedItemUids.Contains(i.UID));
 			inventory.InventoryGroupItems.RemoveAll(g => delta.RemovedGroupUids.Contains(g.UID));
 			foreach (var item in delta.AddedItems)

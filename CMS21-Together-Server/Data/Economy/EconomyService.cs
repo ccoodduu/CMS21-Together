@@ -145,7 +145,7 @@ namespace CMS21_Together_Server.Data.Economy
 		public static void RemoveItem(ModItem item)
 		{
 			GameDataManager.CurrentState.InventoryState.InventoryItems.RemoveAll(i => i.UID == item.UID);
-			Cars.InventoryChanges.NoteRemoved(item.UID);
+			Cars.InventoryChanges.NoteRemoved(item.UID, Cars.InventoryChanges.UnknownRemover);
 			Server.SendToClients(new InventoryItemActionPacket { Action = ItemActionType.Remove, Item = item });
 		}
 
