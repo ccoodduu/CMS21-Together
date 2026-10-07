@@ -106,3 +106,55 @@ of that tool for the prop (`ToolProps`).
 - 1.4: `vfx-trace report` lists the avatar's bones (expected `mixamorig:RightArm`, `RightForeArm`, `RightHand`) and the
   loaded meshes whose names contain wrench, ratchet or spanner; `CurrentUsedTool`'s name and layer for OBD.
 - Material check: whether a part's material has `_AlphaDissolve` while mounted (dump `visuals.ghostsActive[].fade`).
+
+## Part 2: driving (group 8)
+
+Static, 2026-10-07, from the existing decompiles (`native\out\testdrive_clean\PieMenuController$$GetOnClick.c`,
+`cartools2_clean\PieMenuController$$_GetOnClick_b__72_52.c`) and `dump.cs`; no new Ghidra run was needed.
+
+### 8.1 What `Pie:car_drive` does: it opens the map
+
+- `PieMenuController.GetOnClick("car_drive")` returns the lambda `<GetOnClick>b__72_52` (`0x1812DB790`), whose whole
+  body is `WindowManager.Instance.Show(WindowID.Map (12)); CloseAnim()`. No game mode, no scene change, no car moves.
+- The string `car_drive` is used only by `PieMenuController..ctor`, `GetOnClick` and `GetSetDesc` (`dxref.py`).
+- With the map open while seated, `MapWindow.Show` → `VerifyCarStateIfInterior` sets `GlobalData.SelectedCarLoader`
+  to the seated car, and a destination is a scene trip: the test track is row 13's flow (its departure hold and claim
+  work from this path as well), the race, drag, off-road and other tracks are guard backlog scenes.
+- `GameMode.CarDrive` (15) is set only by the track managers (`TestTrackManager.<Prepare>d__6`,
+  `TrackManager.<Restart>d__16`; `xref.py` on `GameMode$$SetCurrentMode` lists no garage caller that sets it).
+  `ParkingSpace.DriveIn/DriveOut` belong to the Parking scene.
+- **Garage driving: no-go.** The game has no free driving in the garage scene, so group 11 is parked: no
+  `CarAwayKind.Driving`, no `GarageDriveHooks`, `Pie:car_drive` and `Mode:CarDrive` stay `Planned` (QUESTIONS.md row 17
+  asks whether to allow `car_drive` as the map shortcut it is). The server accepts drives only in the test track scene.
+- Runtime check (`drive-probe` scenario, `drive-pie`): A calls the lambda with the guard off; `drive-trace` and the
+  before/after snapshot show `WindowManager.Show(Map)`, the game mode and every car's place unchanged.
+
+### 8.2 A second car on the test track
+
+- Each client's track scene has one `CarLoader` (the one `PrepareCarPhysics` drives). The drag strip shows that a
+  track scene can hold a second car (`OpponentCarPhysics.LoadCar`, `EnableKinematic`).
+- Route in code (`RemoteCars`): clone the track's `CarLoader` object under an inactive parent (so no `Awake` runs on
+  copied scripts), drop its children and every other `MonoBehaviour`, rename it `RemoteCar[<player>]` (the game
+  finds the track car by `GetSaveName()` = object name, so the copy never matches `SelectedCarLoader`), then
+  `LoadCarFromFile(NewCarData)` from the driver's blob (`GameDataManager.LoadCarInGarage` of the selected loader, the
+  data the track itself loads). Inert: every `Rigidbody` kinematic without collisions, every `Collider`, `PartScript`,
+  `MountObject` and `InteractiveObject` disabled, `addInteractiveObject` off, no `PrepareCarPhysics`. Fallbacks:
+  `new` (a fresh `GameObject` with a `CarLoader`) and `base` (`LoadCar(carToLoad)`, mode `ghost=base`).
+- Cost (load time, memory) and which route works: `drive-probe` (`drive-ghost-test clone|new|base`), still to run.
+
+### 8.3 Drive state sources (VPP)
+
+- `BaseCarPhysics` (namespace `CMS.Tracks.CarPhysics`): `rigidBody`, `carModel`, `VehicleController`
+  (`VPVehicleController`), `res` (`RealisticEngineSound.engineCurrentRPM`).
+- `VehicleBase.wheelState[]` (`steerable`, `steerAngle` in degrees, `angularVelocity` in rad/s, `wheelCol.wheelTransform`).
+- `VehicleBase.data` (`DataBus.Get(channel, id)`): `Channel.Vehicle` `EngineRpm` (×1000), `EngineWorking`,
+  `GearboxGear`; `Channel.Input` `Steer`, `Throttle`, `Brake`, `Key`. Lights: `CarLoader.LightsOn`.
+- Input for the harness: `VPStandardInput.externalThrottle/externalBrake/externalSteer/reverse` (added to the axes).
+- Observer wheels: `CarLoader.GetWheelFL/FR/RL/RRHandle()`; each wheel turns about the car's axes (steer about up for
+  the front pair, spin about right) from its rest pose relative to the root.
+- Which transform carries the visible car on the driver (`carModel` or the loader root) is read by `drive-probe`
+  (paths and positions of root, `carModel`, rigidbody and the first part); still to run.
+
+### 8.4 Two cars away at once
+
+Covered by `drive-track` (both claims granted at once, both results applied); still to run.

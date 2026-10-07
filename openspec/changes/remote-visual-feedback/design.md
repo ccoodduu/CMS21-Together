@@ -206,7 +206,7 @@ Late join: a claim seen in a snapshot (`SyncTracker.InSnapshot`) starts no bolt 
 | Stream | Rate | Estimate (BinaryFormatter) | Worst case per client with 4 busy players |
 |---|---|---|---|
 | `PlayerActivity` | on change, ≤ 4/s | ≈ 0.4–0.6 kB per packet | up 2.4 kB/s, down 7.2 kB/s |
-| `CarDriveState` | 15 Hz while driving | ≈ 0.25 kB (one 40-byte packed `byte[]`) | up 3.8 kB/s, down 11.3 kB/s |
+| `CarDriveState` | 15 Hz while driving | ≈ 0.25 kB (one 36-byte packed `byte[]`) | up 3.8 kB/s, down 11.3 kB/s |
 | `CarDriveStart` | once per drive | ≈ 30 kB (`NewCarData` blob, test track only) | burst, within the 1 MB/s peak |
 
 Worst case ≈ 19 kB/s down and 6 kB/s up on top of today's ≈ 2.7 kB/s (≈ 21 kB/s down in all): inside the 50/20
@@ -221,7 +221,8 @@ twice the estimate goes to QUESTIONS.md before merge.
   `VehicleController` steer and wheel speed, `res.engineCurrentRPM`, gear, brake and light flags, and sends
   `CarDriveStatePacket { DriveId, Seq, Payload }` at 15 Hz unreliable. `DriveStateCodec` packs time (float),
   position (3 floats), rotation (smallest-three, 3 × int16 + index), velocity (3 × int16, cm/s), steer (int8), wheel
-  angular speed (int16), rpm (uint16), gear (int8), flags (byte): 40 bytes.
+  angular speed (int16, 0.01 rad/s), rpm (uint16), gear (int8), flags (byte: brake, lights, engine, reverse): 36
+  bytes. Steer is the front wheels' angle in 0.5° steps; the sender's `Time.time` is the state time.
 - `CarDriveStartPacket { DriveId, Scene, CarLoaderID, CarToLoad, CarBlob }` (reliable) when driving starts;
   `CarLoaderID` is the garage loader for `car_drive` (observers use their own copy, `CarBlob` empty) and the source
   loader for the test track (`CarBlob` = `NewCarDataCodec` blob of the track car). `CarDriveStopPacket { DriveId,
@@ -229,8 +230,9 @@ twice the estimate goes to QUESTIONS.md before merge.
 - **Server stores** (`ActiveDrives`, under `StateLock`, never saved): per driver the start packet and the latest
   state; cleared on stop, on the driver's scene change and on leave (then it sends `CarDriveStop` itself). **Server
   relays** start/state/stop to clients in the driver's scene (`ShowsAvatars` rule; state unreliable). **Server
-  decides:** a garage drive needs the driver's row 13 claim on that loader (`CarAwayRegistry.IsOwner`, kind
-  `Driving`), else the start is dropped and the driver gets nothing back (its own client already refused).
+  decides:** a start is accepted only in the test track scene and only when the driver's presence scene is that scene
+  (garage driving does not exist, spike 8.1); a start for a car that is away with another player is dropped. A player
+  whose presence scene becomes a drive scene gets each running drive there (start and latest state, no history).
 - Observers (`RemoteCars` + `DriveInterpolator`): a buffer of states rendered 100 ms behind the newest, Hermite between
   two states using their velocities; extrapolation up to 250 ms when packets stop, then hold; snap when the error is
   over 5 m; wheels spin from the wheel speed and the front wheels steer; `RemoteEngines` plays the engine from the
@@ -247,21 +249,20 @@ twice the estimate goes to QUESTIONS.md before merge.
   does for a drag opponent: rigidbody kinematic, colliders disabled, `PartScript`/interactive objects disabled, no
   `PrepareCarPhysics`. Fallback if a second car cannot be loaded in the track scene: the base model of `CarToLoad` with
   default config and the blob's paint, logged as `ghost=base`.
-- **Garage area** (only if spike 8.1 finds `car_drive` drives a garage car in the garage scene): the observer moves
-  its own copy of that loader's car root kinematically (its rigidbody, if any, set kinematic for the drive and restored
-  on stop); the parts on it stay row 1's. On stop the car is put to the pose the authoritative placement gives (row 2):
-  if the game's drive ends with a place change, the driver sends it through row 2's existing `CarPlaceChangeRequest`;
-  a free pose that row 2 cannot express is not allowed (the driver's car is returned to its place by the driver's
-  client before `CarDriveStop`; open question 6).
+- **Garage area: no-go (spike 8.1).** `car_drive` only opens the map (`WindowManager.Show(Map)`); the game has no
+  free driving in the garage scene, so there is no garage car to move, no `CarAwayKind.Driving` and no
+  `GarageDriveHooks`. Group 11 is parked; QUESTIONS.md row 17 asks whether to allow `car_drive` as a map shortcut.
+- The copy is renamed `RemoteCar[<player>]`, because the game finds a track's car by its loader's object name, and it
+  is cloned under an inactive parent so that no copied script runs `Awake`; the scripts other than `CarLoader` are
+  removed before it is activated.
 - Collisions: observer cars have colliders off, so the local player and the local car pass through them (open
   question 1).
 
 ### D11. Guard (part 2)
 
-`Pie:car_drive` and `Mode:CarDrive` change owner from "row 6 part 2" to "row 17" now (labels only); the driving merge
-commit allows them, and the driving scenarios run with the guard on `Enforce`. `Mode:CarDrive` stays log-only in
-`GuardHooks` for the test track. Until then garage driving is refused with the guard's "not supported in multiplayer
-yet" message as today.
+`Pie:car_drive` and `Mode:CarDrive` change owner from "row 6 part 2" to "row 17" (labels only). Spike 8.1 found no
+garage driving, so both stay `Planned`: `Mode:CarDrive` stays log-only in `GuardHooks` for the test track (only the
+track managers set it), and `car_drive` (the map shortcut) waits for the user's answer in QUESTIONS.md.
 
 ### D12. Harness
 
@@ -333,6 +334,16 @@ Runtime half (task 1.3/1.4, 2026-10-07, lane 1, headless; runs `20261007-181727_
   in use; the prop comes from `ToolsManager.ObdScanner` as designed.
 - A fast mount (`part-fast-mount`) leaves the actor's bolts at `mountState` 0 on a mounted part; a following
   `vfx-unscrew` then reports full progress at once. Scenarios use parts nobody has fast-mounted for the bolt steps.
+
+Part 2 static half (2026-10-07, `docs/spikes/remote-visuals.md` "Part 2"):
+
+- **8.1 garage driving: no-go.** `<GetOnClick>b__72_52` = `WindowManager.Show(Map)` + `CloseAnim()`; no mode, no
+  scene, no car move. Only the track managers set `GameMode.CarDrive`. D10/D11 updated; group 11 parked.
+- **8.3 state sources:** `BaseCarPhysics.rigidBody`/`carModel`/`VehicleController`/`res`; `wheelState[]`
+  (`steerAngle`, `angularVelocity`); `data` bus (`GearboxGear`, `EngineWorking`, input `Brake`); `LightsOn`. D9's field
+  list holds; the packed state is 36 bytes. Which transform carries the visible car is read in the runtime probe.
+- **8.2 route:** clone of the track's `CarLoader` (inactive parent, renamed), `LoadCarFromFile(NewCarData)`; cost
+  measured by `drive-probe`.
 
 ## Measurements
 

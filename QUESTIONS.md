@@ -14,6 +14,11 @@ Answered ones move to the bottom with the answer.
 4. **Remote visuals** (parts moving, bolts turning) on by default, with a local off switch. **Default:** yes.
 5. **Driving** as part 2 of this change (merged separately) or a change of its own. **Default:** part 2.
 6. **A garage drive** that ends somewhere other than a car place. **Default:** the car goes back to its place.
+   *Moot since spike 8.1: the game has no driving inside the garage.*
+7. **The pie option "Drive" (`car_drive`)** only opens the map (spike 8.1, 2026-10-07); there is no driving inside
+   the garage, so garage driving (group 11) is dropped. Allow the option in multiplayer as a map shortcut? A test
+   track trip from that map goes through row 13's claim as usual. **Default:** it stays blocked (`Planned`) until
+   you say yes.
 
 ## Accepted defaults (user, 2026-10-06)
 
