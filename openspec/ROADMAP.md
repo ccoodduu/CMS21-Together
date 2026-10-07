@@ -8,8 +8,8 @@ by a friend from a release zip and joinable without typing IDs by hand.
 
 M0–M2 done; M3 done in code (rows 3, 4, 13 merged). M4: rows 5a, 5b, 6 part 2, 8 part 2 and 10 merged (2026-10-06 evening;
 the engine stand of row 5a is a hand check). The M2 and M3 playtests are the user's. The guard is open for them (2026-10-07).
-Left in M4: car purchases outside the garage (`change/car-purchases`). M5: row 7 part 2 is being tested, row 14d
-waits, row 11 is planned (`change/soak-and-scale`). Two test lanes can run in parallel since the pagefile was
+Left in M4: car purchases outside the garage (`change/car-purchases`). M5: row 7 is done (2026-10-07), row 14d is
+next, row 11 is planned (`change/soak-and-scale`). Two test lanes can run in parallel since the pagefile was
 raised (commit limit 64 GB); until the user answers QUESTIONS.md, one lane at a time because of Claude Code's memory
 guard.
 

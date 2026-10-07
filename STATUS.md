@@ -15,7 +15,14 @@ Newest first. One entry per work session.
   compared A's state before the part had settled) and `persistence-restart` pass; its full batch regression runs on
   lane 2. Once, under four games' load, the server timed out both clients at the same moment ~20 s into B's join and
   their UDP packets arrived 13 s late; not explained yet (row 11's lock-wait metrics should show it).
-- Car purchases outside the garage (row 6 part 2 group 6, `change/car-purchases`): in code; being tested.
+- Row 7 is done: part 2 merged (`151c606`) after the batch regression `20261007-082204` (all passed;
+  `car-placement-race` and `economy-trades` failed once inside the batch with "cars differ" and passed fresh; a probe
+  showed that a client does not keep cars from an earlier session in the same game process, so the cause is still
+  open) and a short batch with the guard change.
+- Car purchases outside the garage (row 6 part 2 group 6, `change/car-purchases`): first game runs found two bugs,
+  both fixed: patching `GameDataManager.SaveCar` (it takes the `NewCarData` struct by value) crashed the game, and
+  opening `CarLocationWindow` in the guard also opened the garage's car moves. Driving a junkyard purchase from the
+  harness still fails (`BuyCar` needs the car info window flow); being worked on, on lane 1.
 - Row 11 OpenSpec change written (`change/soak-and-scale`), questions in QUESTIONS.md.
 
 ## 2026-10-06 (23:40–00:05) — handoff for the night (PC off)
