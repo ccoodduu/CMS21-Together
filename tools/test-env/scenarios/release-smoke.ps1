@@ -1,4 +1,5 @@
 # run-all: skip
+# run-all: fresh
 # Smoke test of a release install (tools\release\Install-ReleaseToTestEnv.ps1 first; fails against a dev deploy):
 # both clients and the server run the zip's build (version and dll hashes equal release.json), both clients
 # connect, reach the garage and end up with the same shared state.

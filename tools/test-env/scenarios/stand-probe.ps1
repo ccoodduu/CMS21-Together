@@ -1,4 +1,5 @@
 # run-all: skip
+# run-all: fresh
 # Engine stand probe (instance A only): take an engine out with the crane, build it on the stand with the trace on,
 # and log the stand state every second.
 param($Ctx)

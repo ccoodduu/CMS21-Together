@@ -67,6 +67,14 @@ public static class JobsTrace
         }
     }
 
+    internal static void Reset(List<string> changed)
+    {
+        if (tracing) changed.Add("jobs-trace");
+        tracing = false;
+        counts.Clear();
+        lastLogged.Clear();
+    }
+
     private static object Report() => new Dictionary<string, object>
     {
         ["tracing"] = tracing,

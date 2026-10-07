@@ -40,6 +40,13 @@ public static class JobsCommands
         return autogen ? "on" : "off";
     }
 
+    internal static void Reset(List<string> changed)
+    {
+        if (!autogen) changed.Add("orders-autogen off");
+        autogen = true;
+        nextTtl = -1f;
+    }
+
     [HarnessCommand("orders-generate")]
     private static object OrdersGenerate(string args)
     {

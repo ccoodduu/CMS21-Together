@@ -28,6 +28,25 @@ public static class GuardCommands
         return $"allowed {FeatureGuard.Key(kind, id)}";
     }
 
+    internal static void Reset(List<string> changed)
+    {
+        if (FeatureGuard.ModeOverride != null) changed.Add($"guard-set {FeatureGuard.ModeOverride}");
+        FeatureGuard.ModeOverride = null;
+        var runtimeAllow = PrivateStatic<HashSet<string>>("runtimeAllow");
+        if (runtimeAllow.Count > 0) changed.Add($"guard-allow {string.Join(";", runtimeAllow)}");
+        runtimeAllow.Clear();
+        var blocks = PrivateStatic<Queue<GuardBlock>>("blocks");
+        if (blocks.Count > 0) changed.Add($"guard log ({blocks.Count} blocks)");
+        blocks.Clear();
+        PrivateStatic<Dictionary<string, DateTime>>("lastLogged").Clear();
+        FeatureGuard.RecentDecisions.Clear();
+        GuardNotice.Forget();
+    }
+
+    private static T PrivateStatic<T>(string field) where T : class =>
+        HarmonyLib.AccessTools.Field(typeof(FeatureGuard), field)?.GetValue(null) as T
+        ?? throw new MissingFieldException(nameof(FeatureGuard), field);
+
     [HarnessCommand("guard-log")]
     private static object GuardLog(string args) => new Dictionary<string, object>
     {
