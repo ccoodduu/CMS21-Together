@@ -159,19 +159,19 @@ try {
         Check ($infoB.id -eq $id -and $infoB.origin -eq "collect") "B's info.json has the same id and origin collect"
     }
     if (Test-Path -LiteralPath $serverZip) {
-        $rootS = Open-Bundle $serverZip "server"; $roots += $rootS
+        $rootServer = Open-Bundle $serverZip "server"; $roots += $rootServer
         foreach ($file in "server\info.json", "server\Log\Latest.txt", "server\server_config.ini", "server\save.json", "server\players.json", "server\state\world.json", "server\state\cars.json") {
-            Check (Has $rootS $file) "the server bundle has $file"
+            Check (Has $rootServer $file) "the server bundle has $file"
         }
-        Check (@(Get-ChildItem -LiteralPath (Join-Path $rootS "server\Log\desync") -Filter "*.json" -ErrorAction SilentlyContinue).Count -ge 1) "the server bundle has the desync record"
-        $infoS = Get-Content -LiteralPath (Join-Path $rootS "server\info.json") -Raw | ConvertFrom-Json
+        Check (@(Get-ChildItem -LiteralPath (Join-Path $rootServer "server\Log\desync") -Filter "*.json" -ErrorAction SilentlyContinue).Count -ge 1) "the server bundle has the desync record"
+        $infoS = Get-Content -LiteralPath (Join-Path $rootServer "server\info.json") -Raw | ConvertFrom-Json
         Check ($infoS.id -eq $id -and @($infoS.askedSlots).Count -eq 1) "the server info.json has the id and asked one other player"
-        $configS = Get-Content -LiteralPath (Join-Path $rootS "server\server_config.ini") -Raw
+        $configS = Get-Content -LiteralPath (Join-Path $rootServer "server\server_config.ini") -Raw
         Check ($configS -match 'GSLT_Token = "<redacted>"' -and $configS -match '(?m)^password = <redacted>' -and $configS -match '(?m)^admin_key = <redacted>') "the bundled config shows the token, password and admin key as <redacted>"
-        $save = Get-Content -LiteralPath (Join-Path $rootS "server\save.json") -Raw | ConvertFrom-Json
+        $save = Get-Content -LiteralPath (Join-Path $rootServer "server\save.json") -Raw | ConvertFrom-Json
         $playersText = if ($save.Sections.players) { $save.Sections.players | ConvertTo-Json -Depth 20 -Compress } else { "" }
         Check (-not ($playersText -match '"Key"\s*:')) "save.json has no players[].Key"
-        $playersJson = @(Get-Content -LiteralPath (Join-Path $rootS "server\players.json") -Raw | ConvertFrom-Json)
+        $playersJson = Get-Content -LiteralPath (Join-Path $rootServer "server\players.json") -Raw | ConvertFrom-Json
         Check ($playersJson.Count -eq 2) "players.json lists both players ($($playersJson.Count))"
     }
     $leaks = @(foreach ($root in $roots) { Find-Text $root $secretValues })
