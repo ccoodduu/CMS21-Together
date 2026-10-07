@@ -216,6 +216,9 @@ parts the user would expect to be independent conflict, the rule is narrowed (de
 
   The details packet then travels ahead of the change on the same ordered stream, and therefore ahead of the
   release. The next holder starts from the drained level, not from the next 1 Hz poll.
+- **Only changed fluids are sent (audit 2026-10-07, note 1).** A polled or flushed `Fluids` update carries only the
+  fluids whose level or condition changed since the last known state, never the whole list, so it cannot overwrite
+  another player's other fluid. Row 19 (`state-merges-and-contention`) builds its per-entry sends on top of this.
 - The user's example: the coolant reservoir holds `f:EngineCoolant.0` shared, and filling coolant needs it
   exclusive. They exclude each other in both orders, and the reservoir's drain is on the server before anyone can
   fill.
@@ -352,6 +355,11 @@ is refused while the lift's X lock holds or the lift is still moving on the frie
 - **Guard (14a).** The guard's prefixes run first. A gated action the guard refuses never sends a request. No guard
   entry is added.
 - **Visuals (17).** No change beyond D6.
+- **Owned by row 19, not here (audit 2026-10-07).** A stale attribute-only record (examine, condition) that carries
+  the sender's old mount state is audit gap 3; row 19's mask-based merge handles it. Row 18 relies on the lock rule
+  (a flip of another player's exclusive key is rejected) meanwhile. Row 18 keeps two smaller pieces row 19 builds on:
+  a removed car drops its open part transactions on the client (`PartTransactions.DropLoader`), and the server's
+  releases of a removed car's locks reach every client as `CarLockUpdate` records.
 
 ### D9. Blocked at selection, and what the player sees
 

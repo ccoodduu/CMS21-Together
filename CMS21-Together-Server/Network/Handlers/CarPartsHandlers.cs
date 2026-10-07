@@ -30,7 +30,6 @@ namespace CMS21_Together_Server.Network.Handlers
 				return;
 			}
 
-			var (keptBody, keptSub) = KeepStoredMountState(entry, change, (int)clientId);
 			string conflict = !OnlyExamines(entry, change) && CarAwayRegistry.Blocks(change.CarLoaderID, (int)clientId, $"change {change.TxId}")
 				? "the car is away"
 				: FindConflict(entry, change, (int)clientId);
@@ -75,8 +74,7 @@ namespace CMS21_Together_Server.Network.Handlers
 			change.Revision = entry.Revision;
 			Server.SendToClient(new CarPartsChangeResultPacket
 			{
-				CarLoaderID = change.CarLoaderID, SpawnSeq = change.SpawnSeq, TxId = change.TxId, Accepted = true, Revision = entry.Revision,
-				BodyParts = keptBody, SubParts = merged.Concat(keptSub.Where(k => !merged.Contains(k))).ToList()
+				CarLoaderID = change.CarLoaderID, SpawnSeq = change.SpawnSeq, TxId = change.TxId, Accepted = true, Revision = entry.Revision, SubParts = merged
 			}, (int)clientId);
 			Server.SendToClients(change, (int)clientId);
 			Logger.Info($"[Cars] Change {change.TxId} from client {clientId} on loader {change.CarLoaderID}: revision {entry.Revision} ({change.BodyParts.Count} body, {change.SubParts.Count} mechanical, inventory +{change.InventoryDelta.AddedItems.Count + change.InventoryDelta.AddedGroups.Count} -{change.InventoryDelta.RemovedItemUids.Count + change.InventoryDelta.RemovedGroupUids.Count})."); 
@@ -136,28 +134,6 @@ namespace CMS21_Together_Server.Network.Handlers
 					Logger.Info($"[Cars] Change {change.TxId} removes group {uid}, which the server does not have and no other player took; ignored.");
 				}
 			return null;
-		}
-
-		private static (List<CarBodyPartUpdatePacket>, List<CarSubPartUpdatePacket>) KeepStoredMountState(CMS21_Together_Core.Data.CarLoaderEntry entry, CarPartsChangePacket change, int clientId)
-		{
-			var keptBody = new List<CarBodyPartUpdatePacket>();
-			var keptSub = new List<CarSubPartUpdatePacket>();
-			var flipping = new HashSet<string>(change.Preconditions.Select(p => p.Key));
-			foreach (var record in change.BodyParts)
-				if (!flipping.Contains(record.Key) && entry.BodyParts.TryGetValue(record.PartIndex, out var stored) && stored.Unmounted != record.Unmounted)
-				{
-					Logger.Info($"[Cars] Change {change.TxId} from client {clientId} carries a stale mount state for {record.Key}; the stored one is kept.");
-					record.Unmounted = stored.Unmounted;
-					keptBody.Add(record);
-				}
-			foreach (var record in change.SubParts)
-				if (!flipping.Contains(record.Key) && entry.SubParts.TryGetValue(CarSubPartIdentity.BuildKey(record.PartIndexPath), out var stored) && stored.Unmounted != record.Unmounted)
-				{
-					Logger.Info($"[Cars] Change {change.TxId} from client {clientId} carries a stale mount state for {record.Key}; the stored one is kept.");
-					record.Unmounted = stored.Unmounted;
-					keptSub.Add(record);
-				}
-			return (keptBody, keptSub);
 		}
 
 		private static IEnumerable<string> FlippedKeys(CMS21_Together_Core.Data.CarLoaderEntry entry, CarPartsChangePacket change)
