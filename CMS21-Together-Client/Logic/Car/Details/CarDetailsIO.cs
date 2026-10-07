@@ -155,7 +155,7 @@ public static class CarDetailsIO
 	private static void Try(string what, Action apply)
 	{
 		try { apply(); }
-		catch (Exception e) { Log.Error($"[CarDetails] Applying {what} failed: {e.Message}"); }
+		catch (Exception e) { Log.Error($"[CarDetails] Applying {what} failed: {e}"); }
 	}
 
 	private static void ApplyFluids(CarLoader carLoader, List<ModFluidLevel> fluids)
@@ -259,10 +259,15 @@ public static class CarDetailsIO
 			{
 				var tint = ToGame(entry.TintColor);
 				part.SetColorAndOpacity(tint, Mathf.RoundToInt(tint.a * 255f), entry.IsTinted);
-				if (part.handle != null) PaintHelper.SetWindowProperties(part.handle, tint);
+				if (IsTintableWindow(part)) PaintHelper.SetWindowProperties(part.handle, tint);
 			}
 		}
 	}
+
+	// The game's own window list (WindowTintManager.PrepareWindowsArray); other parts' renderers can hold null
+	// materials, on which SetWindowProperties throws.
+	private static bool IsTintableWindow(CarPart part) =>
+		part.handle != null && !part.Unmounted && part.name != null && part.name.Contains("window");
 
 	private static void ApplyPlates(CarLoader carLoader, ModLPData plates)
 	{

@@ -2,10 +2,13 @@
 # sync-car-placement-and-lifts: A spawns a car and moves it onto lift 1 (vanilla ChangeCarPos coroutine), A and B
 # raise the lift one step each, A moves the car off the raised lift (the lift goes back to the floor), A parks the
 # car, B takes it out of parking onto another loader. After each step both clients' placement dumps must match.
+# B then parks and unparks the car itself: A, which only watched both, used to throw in
+# PaintHelper.SetWindowProperties while applying car_sixoncebulion's details (soak 2026-10-07), because the tint
+# went to body parts that are not windows.
 param($Ctx)
 
 $a, $b = $Ctx.Instances
-$car = "car_boltatlanta"
+$car = "car_sixoncebulion"
 $failures = @()
 function Check([bool]$Condition, [string]$Message) { if (-not $Condition) { $script:failures += $Message; Write-Host "FAIL: $Message" -ForegroundColor Red } else { Write-Host "ok: $Message" } }
 
@@ -78,6 +81,20 @@ Wait-SamePlacement "B took the car out of parking" { param($p) @($p.cars | Where
 $ra = Send-HarnessCommand -Instance $a -Verb car-ready -Arguments "1"
 $rb = Send-HarnessCommand -Instance $b -Verb car-ready -Arguments "1"
 Check ($ra.stateHash -eq $rb.stateHash) "the unparked car's parts match ($($ra.stateHash) / $($rb.stateHash))"
+
+Send-HarnessCommand -Instance $b -Verb park -Arguments "1" | Out-Null
+Wait-SamePlacement "B parked the car" { param($p) @($p.cars).Count -eq 0 -and @($p.parking.slots | Where-Object { $_.carToLoad -eq $car }).Count -eq 1 } | Out-Null
+$slot = @((Placement $b).parking.slots | Where-Object { $_.carToLoad -eq $car })[0].index
+Send-HarnessCommand -Instance $b -Verb unpark -Arguments "$slot 1" | Out-Null
+Wait-Ready $b 1 | Out-Null
+Wait-Ready $a 1 | Out-Null
+Wait-SamePlacement "B took its parked car out again" { param($p) @($p.cars | Where-Object { $_.loader -eq 1 }).Count -eq 1 -and @($p.parking.slots).Count -eq 0 } | Out-Null
+Start-Sleep -Seconds 2
+$detailErrors = @($Ctx.Instances | ForEach-Object {
+    $name = $_
+    Get-Content -LiteralPath (Join-Path $env:USERPROFILE "CMS21-TestInstalls\$name\MelonLoader\Latest.log") | Select-String "\[CarDetails\] Applying \w+ failed" | ForEach-Object { "${name}: $($_.Line)" }
+})
+Check ($detailErrors.Count -eq 0) "both clients apply the unparked car's details without errors ($($detailErrors -join ' | '))"
 
 $mark = Get-ServerLogMark
 Send-ServerCommand "placement"
