@@ -34,7 +34,10 @@ Not questions for the user; open bugs from the first playtest, fixed one by one.
 5. **F7 on a friend's client** logs `Error in handler WorldState: Object reference not set`. **Fixed** (`c81fd05`):
    UIManager is missing while the garage reloads; the refresh is skipped then. `resync-key` sends money changes
    during the reload.
-6. **Car state "not ready"** in the host's bug report while the car was being worked on (`be9b`).
+6. **Car state "not ready"** in the host's bug report while the car was being worked on (`be9b`). **Expected:** the
+   car digest is left out while any claim, open transaction or unsent change exists on the car (`ClientDigests.Car`),
+   which is almost always the case during shared work. Row 18 (locks) should keep car digests running while locks
+   are held. **Expected:** the car digest is left out while any claim, open transaction or unsent change exists on the car (`ClientDigests.Car`), which is almost always during shared work. Row 18 (locks) should keep digests running with locks held.
 7. **Version check too strict for a playtest:** **Fixed** (this commit: same version and build kind, e.g. `dev.892` and `dev.894`, join when the protocol hash matches; releases must match exactly; `compat-refusal` proves both).   every commit changes `dev.N`, so friends must reinstall for
    server-only fixes. Proposal: compare the base version and the protocol hash, not the build number.
 
