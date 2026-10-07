@@ -21,8 +21,8 @@ namespace CMS21_Together_Server.Data.Presence
 
 		public static string Resolve(Client client, string playerKey)
 		{
-			if (client.ConnectionType == NetworkType.Steam)
-				return client.SteamID != 0 ? $"steam:{client.SteamID}" : null;
+			if (client.ConnectionType == NetworkType.Steam && client.SteamID != 0)
+				return $"steam:{client.SteamID}";
 
 			string key = playerKey?.Trim();
 			if (string.IsNullOrEmpty(key) || key.Length > MaxKeyLength || !key.All(c => char.IsLetterOrDigit(c) || c == '-'))

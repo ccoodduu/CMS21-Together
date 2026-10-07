@@ -107,6 +107,7 @@ public enum PacketTypes
 	BugReportRequest,
 	BugReportCollect,
 	BugReportResult,
+	PlayerActivity,
 
 	OutdoorCatalog,
 	OutdoorEnter,
@@ -123,3 +124,4 @@ public enum PacketTypes
 	AuctionBidRequest,
 	AuctionLotClosed
 }
+

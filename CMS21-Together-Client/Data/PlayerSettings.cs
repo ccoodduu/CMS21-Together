@@ -15,6 +15,7 @@ public static class PlayerSettings
 	private static MelonPreferences_Entry<string> serverPath;
 	private static MelonPreferences_Entry<string> sessionPanelHotkey;
 	private static MelonPreferences_Entry<string> bugReportHotkey;
+	private static MelonPreferences_Entry<bool> remoteVisuals;
 
 	public static string NameOverride { get; set; }
 
@@ -30,6 +31,7 @@ public static class PlayerSettings
 		serverPath = category.CreateEntry("ServerPath", "", description: "Server program started by Host. Empty = TogetherServer\\CMS21_Together_Server.exe in the game folder.");
 		sessionPanelHotkey = category.CreateEntry("SessionPanelHotkey", "F9", description: "Key that opens the session panel (players, ping, kick, Steam friends).");
 		bugReportHotkey = category.CreateEntry("BugReportHotkey", "F8", description: "Key that saves a bug report (logs, settings, mod list, shared state) to UserData\\CMS21Together\\BugReports; when connected the server and the other players save theirs with the same id.");
+		remoteVisuals = category.CreateEntry("RemoteVisuals", true, description: "Show other players' work as it happens (parts moving off and on, bolts turning, the avatar working with a tool). Off: their changes still apply, without animation.");
 	}
 
 	public static UnityEngine.KeyCode BugReportKey =>
@@ -66,6 +68,15 @@ public static class PlayerSettings
 			if (lastJoinTarget == null) return;
 			lastJoinTarget.Value = value ?? "";
 			category.SaveToFile(false);
+		}
+	}
+
+	public static bool RemoteVisuals
+	{
+		get => remoteVisuals == null || remoteVisuals.Value;
+		set
+		{
+			if (remoteVisuals != null) remoteVisuals.Value = value;
 		}
 	}
 

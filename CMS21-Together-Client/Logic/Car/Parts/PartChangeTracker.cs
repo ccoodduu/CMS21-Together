@@ -28,6 +28,7 @@ public static class PartChangeTracker
 
 	public static void MarkDirty(int loader)
 	{
+		Visuals.VisualScope.CheckLeak("MarkDirty");
 		if (ApplyingRemote.IsActive(loader)) return;
 		if (!mechanicalDirty.Contains(loader)) Log.Debug($"[Parts] Loader {loader} marked dirty.");
 		mechanicalDirty.Add(loader);

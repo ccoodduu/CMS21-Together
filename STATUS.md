@@ -2,6 +2,35 @@
 
 Newest first. One entry per work session.
 
+## 2026-10-07 (18:00–19:00) — row 17 part 1 merged (remote work visuals)
+
+- `main` = `85b90ea`: other players' part work is now visible: a ghost copy of a part slides off or on, the bolts
+  turn with the actor's progress, and the avatar shows a work pose and the tool prop (OBD scanner). Everything is
+  visual only (ghosts; the real state is never touched or delayed; a leak detector logs state changes inside a
+  visual). New `PlayerActivity` packet (≤ 4/s, latest value kept for late joiners). `visual-parts`,
+  `visual-activity`, `visual-latejoin` pass, and the `parts`, `presence`, `tools`, `visuals` areas pass (23
+  scenarios). Spike: one bolt takes about 0.9 s; the claim release arrives before the commit in the same frame; part
+  materials have no dissolve, so ghosts shrink out.
+- Left for row 17 part 1: `visual-screens` (needs a visible window: a night run), the lane-3 budget scenario, the
+  README section. Part 2 (driving) has started on lane 1; row 15 (shared outdoor scenes) is tested on lane 2.
+
+## 2026-10-07 (17:00–18:00) — headless tests, release smoke, M7 designs, branch cleanup
+
+- Test games run headless by default (`-Visible` or `CMS21_TEST_VISIBLE=1` to see them; `# needs: graphics` for
+  scenarios that need a window); test servers start hidden. The game moved the Windows cursor through `ProMouse`
+  (its setters are inlined, so the harness stops the move coroutine) and Unity re-centred it on cursor lock; both are
+  off in test games, so the user can use the PC during runs.
+- Daily regression on `main` headless: all game scenarios pass (`car-live`, `economy-trades` flaky in the batch);
+  `server-saves`' window-close check now starts its server minimized.
+- `release-smoke` passes with a real release zip (`0.6.0-dev.878`) installed in lane 1; `Build-Release -Release`
+  dry run passes (refuses without changelog section or tag). M6 now waits only for the user (friend install test,
+  publishing).
+- M7: OpenSpec changes `remote-visual-feedback` (row 17) and `shared-outdoor-scenes` (row 15) are on `main`; agents
+  write their code (no game runs yet). Row 15's car selection uses our own selector; the LvxBetterCarSpawns-based
+  one waits for the user to ask LvxMagick.
+- GitHub cleanup (user): 33 merged branches deleted (kept `main`, `Dev`, `MainMod`, `dev-0.4.x`); 20 local worktrees
+  and 30 local branches removed.
+
 ## 2026-10-07 (16:30–17:00) — row 9 part 2: mod check tuned on the user's mod list
 
 - `main` = `d2b5f8a`: the user's eight mods were loaded in test install A (copied from the real game folder, read

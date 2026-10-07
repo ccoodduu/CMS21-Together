@@ -115,15 +115,18 @@ moment, or the last owner of that key within 2 s (the release may arrive first; 
   the renderers of `unmountWith` members unmounting in the same change) into a ghost at the part's world pose. After
   the apply (the real part is now hidden by `HideBySavegame`), move the ghost along the part's unmount direction
   (`GetUnmountDir()`, else `unmountDirection` in the part's frame, around `customPivotForUnmount` and spinning when
-  `unmountSpinning`) by 0.35 m over 0.6 s and dissolve it with `TweenHelper.TweenAlphaDissolve(ghost, 0, 0.6)`; then
-  destroy it. Body panels (`CarPart`) use the panel's handle mesh and a straight 0.4 m pull away from the car centre.
+  `unmountSpinning`) by 0.35 m over 0.6 s and dissolve it (the ghost's own material copies, `_AlphaDissolve` 1 → 0,
+  the property `TweenAlphaDissolve` tweens, driven per frame so `vfx-hold` can freeze it; a ghost whose materials lack
+  the property shrinks instead); then destroy it. Body panels (`CarPart`) use the panel's handle mesh and a straight
+  0.4 m pull away from the car centre.
 - **On:** after the apply, clone the now-mounted part, set `forceRenderingOff` on the real renderers, fly the ghost
   in from the same offset over 0.5 s with the dissolve going 0 → 1, then restore the real renderers and destroy the
   ghost. `PartApplier`'s own 0.5 s `ShowMounted` replica still runs; it only touches `enabled`.
-- **Door, hood, trunk:** if the spike (1.2) finds `SwitchCarPart(part, false, switched)` free of inventory, money, XP
-  and mode changes, the receiver calls it instead of the instant variant (the same end state, animated, with the
-  game's sound); `PartApplier` gets an `animate` argument for live changes only. Otherwise a ghost swing around the
-  hinge (the panel's pivot) and `forceRenderingOff` on the real panel.
+- **Door, hood, trunk:** a ghost swing over 0.6 s from the panel's pose before the instant switch to its pose after
+  it, about the hinge axis those two poses imply (no hinge data needed), and `forceRenderingOff` on the real panel.
+  The spike (1.1) ruled out the animated `SwitchCarPart(part, false, switched)`: it keeps `InProgress` set for a
+  second, and a second change inside it leaves `Switched` inverted (Spike results). `PartApplier` keeps the instant
+  call.
 - Limits: at most 16 ghosts at a time per client and 4 per car; over the limit, or farther than 40 m from the camera,
   or with `RemoteVisuals` off, the change applies without a visual (counted as `skipped` with the reason). No
   `isVisible` culling (always false headless).
@@ -136,9 +139,10 @@ When a `CarPartClaimUpdate` gives a `PartScript` key to another player, the rece
 (`PartRegistry.Sub(key)`), takes its `MountObjects`, sets `forceRenderingOff` on each bolt and shows a ghost bolt that
 spins about its axis and moves from its mounted to its unmounted position (`posUnMount`, `childPosUnMount`;
 `CalcUnmountPos` is not called on the real bolt) for an unmount, reverse for a mount (direction from the actor's
-`PlayerActivity.Kind`, default unmount if the part is mounted). Bolt i of n is shown done when the actor's progress
-`p ≥ (i + 1) / n`; between progress updates the current bolt advances at the game's per-bolt speed (spike 1.3) and
-never past the next threshold. The commit (`CarPartsChange` for that key) finishes the remaining bolts in 0.2 s and
+`PlayerActivity.Kind`, default unmount if the part is mounted). The actor's progress `p` is the mean bolt progress, so
+bolt i of n shows progress `clamp(p * n - i, 0, 1)`, drawn with the game's own `SetPosition` formula (Spike results);
+between progress updates the shown `p` follows the rate of the last two updates and never passes the reported value
+by more than one 1/16 step. The commit (`CarPartsChange` for that key) finishes the remaining bolts in 0.2 s and
 hands over to D3; a release without a commit (undo) runs the bolts back in 0.3 s. All bolt ghosts are destroyed and
 real bolts restored at the end, so the real bolts show exactly what `PartApplier` set.
 
@@ -153,7 +157,8 @@ Late join: a claim seen in a snapshot (`SyncTracker.InSnapshot`) starts no bolt 
 - `ActivityKind`: `None, Unmount, Mount, BodyPanel, Examine, Fluid, CarTool, Machine, Interior`.
 - `ActivityCapture` polls at 4 Hz while the garage is ready: own claims (`PartClaims.Held` where the owner is the local
   id → `Unmount`/`Mount` by game mode `PartUnMount`/`PartMount`/`GroupUnMount`/`GroupMount`, `PartKey`, `Progress` =
-  share of the claimed part's `MountObjects` whose `GetMountState()` reached its end, quantized to 1/16);
+  mean progress of the claimed part's `MountObjects` (`1 - GetMountState()` for an unmount, `GetMountState()` for a
+  mount), quantized to 1/16);
   `ToolsManager.ToolIsActive` + `currentUsedTool` (`Examine`, `Fluid`, with the car from
   `GameScript.GetIOMouseOverCarLoader2()`); `CarToolActions.Started/Finished` (`CarTool`, `ModTool`, loader); row 5a's
   `ToolSync` machine in use (`Machine`, `ModTool`); game mode `Interior`/`InteriorAssemble`/`InteriorDisassemble`.
@@ -190,7 +195,9 @@ Late join: a claim seen in a snapshot (`SyncTracker.InSnapshot`) starts no bolt 
 - Snapshot packets never start visuals; live packets before `IsInitialSyncFinished` are dropped for visuals (the
   state apply still runs).
 - A late joiner or returning player gets `Activity` in the roster (D5) and shows the pose and prop at once; it plays
-  no ghost and no bolt animation for anything that happened before.
+  no ghost and no bolt animation for anything that happened before. Because activity is relayed per scene, the server
+  sends a player who enters a scene one `PlayerActivity` per player already there (idle included), so a returning
+  player never keeps an activity it missed the end of.
 - On `PresenceManager.Remove`, a car delete (`CarSpawnDelete`, row 1's `ClearLoader` on the client) or a car snapshot
   for a loader, all visuals of that player or loader are cancelled with their renderers restored.
 
@@ -274,6 +281,58 @@ yet" message as today.
   <throttle> <steer> <seconds>` (feeds VPP input), `drive-stop`, `drive-codec-check` (encode/decode round trip).
 - Visual effects are checked through state the harness can read (counters and `*Active` flags rather than pixels),
   plus screenshots in `# needs: graphics` scenarios with `vfx-hold on`.
+
+## Spike results
+
+Static half of group 1 (2026-10-07, `docs/spikes/remote-visuals.md`; decompile `native\work\out_rvf1`). The runtime
+halves are still open and marked there.
+
+- **Door, hood, trunk (1.1/1.2): ghost swing.** The animated `SwitchCarPart(part, false, switched)` has no inventory,
+  money, XP or mode calls, but it keeps `InProgress` set for 1 s, and `SwitchCarPart(part, bool, bool)` writes
+  `Switched = !switched` before its coroutine checks `InProgress` (its own and its `ConnectedParts`'). A second change
+  inside that second would leave `Switched` inverted, so a visual could change state. `PartApplier` keeps the instant
+  call; D3's ghost swing applies. No game run is needed to choose the route.
+- **Dissolve (1.1):** `TweenAlphaDissolve` is safe on a ghost (it only tweens `_AlphaDissolve` on the ghost's instanced
+  materials; 0 = gone). Materials without the property do not fade, so a ghost whose materials lack it shrinks out
+  instead (dump `fade`: `dissolve` or `shrink`); which one parts use when mounted needs a game run.
+- **Bolts (1.1/1.3):** a bolt's pose is a pure function of `mountState` (D4 replays `SetPosition` on the ghost:
+  `Lerp(oldPos, posUnMount, 1 - m)`, spin `(1 - m) * 360 * length * 30` degrees about local X, child shown at
+  `m >= 0.9`). Bolt speed is `|sin(10 t)| * max(0.7, fast_mount * 0.05 / colliderSize)` per second, about 0.7–2.2 s per
+  bolt. D4/D5 change accordingly: `Progress` is the mean bolt progress of the claimed part, and the receiver paces
+  bolts from that mean and the rate between packets, so the bolt speed is not needed on the receiver. The measured time
+  per bolt and the claim/commit/release order still need task 1.3's run.
+- **Unmount direction (1.1):** `GetUnmountDir()` only refreshes the derived `unmountVector` (world space) and is called
+  on the receiver; the game's mount animation starts at `position + unmountVector * vol * 0.15`.
+- **Avatar (1.4, static):** Mixamo bones `mixamorig:RightArm`, `RightForeArm`, `RightHand` (left the same), bones point
+  along local +Y; no work clips. No wrench or ratchet mesh exists by name in the game data (only sounds), so part work
+  has no prop unless the runtime check finds one. Both are confirmed by `vfx-trace report` in a game run.
+
+Runtime half (task 1.3/1.4, 2026-10-07, lane 1, headless; runs `20261007-181727_L1_visual-probe`,
+`20261007-182206_L1_visual-parts`):
+
+- **Time per bolt:** about 0.9 s (exhaust manifold `v8_kolektor_wydechowy_stary_1`, 8 bolts in 7.1 s; valve cover
+  `v8_pokrywa_glowicy_stara_1`, 5 of 10 bolts in 4.6 s; fan `wentylator_2`, 4 bolts). The actor sends 16 progress
+  steps per part, two per second, well under the 4/s cap.
+- **Packet order:** on the receiver the release (`CarPartClaimUpdate`, owner -1) arrives **before** the
+  `CarPartsChange` that commits the part, in the same frame. `BoltEffect`'s 0.5 s release grace covers it (the commit
+  finishes the bolts instead of running them back).
+- **Game modes:** `ActionUnMount` → `GameScript.SelectToUnMount` → `SetCurrentMode(PartUnMount)`, which sets
+  `GameMode.mountUnMountMode`; `MountObject.Update` resets a bolt's `canBeUnmount` while that flag is off. After the
+  part comes off the mode is `PartSelect`. The examine tools leave the mode at `Garage`. D5's mapping holds.
+- **Commit point:** `PartScript.Update` hides the part (`Hide()`, stat `stat_unscrew`) when the sum of its bolts'
+  `mountState` reaches 0, and shows it mounted (`ShowMounted()`) when it reaches the bolt count in mount mode.
+  `PartScript.Update` also refreshes `canBeUnmount = blockedNo == 0`.
+- **Disabled parts on test games:** in the headless test games the probed `PartScript`s and their renderers are
+  disabled (`enabled = false`; most likely `PartScriptCuller`, not proven), so their `Update` never runs: `canBeUnmount` stays false and nothing commits.
+  `vfx-unscrew` therefore sets `canBeUnmount` for an unblocked culled part and starts `Hide()`/`ShowMounted()` itself
+  when the bolts are done, as `PartScript.Update` would. Ghosts ignore `Renderer.enabled` for the same reason.
+- **Dissolve:** a mounted part's materials have no `_AlphaDissolve`; Off/On ghosts use the shrink fallback
+  (`fade = shrink`).
+- **Rig and props (1.4):** the bones are as in the static half (`mixamorig:RightArm` …); no loaded mesh is named
+  wrench, ratchet or spanner (no part-work prop). `ToolsManager.CurrentUsedTool` stays null while the OBD scanner is
+  in use; the prop comes from `ToolsManager.ObdScanner` as designed.
+- A fast mount (`part-fast-mount`) leaves the actor's bolts at `mountState` 0 on a mounted part; a following
+  `vfx-unscrew` then reports full progress at once. Scenarios use parts nobody has fast-mounted for the bolt steps.
 
 ## Measurements
 

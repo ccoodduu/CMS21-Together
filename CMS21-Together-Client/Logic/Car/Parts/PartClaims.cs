@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using CMS21_Together_Core.Network.Packets;
@@ -23,6 +24,8 @@ public static class PartClaims
 		LastBlocked = null;
 	}
 
+	public static event Action<int, IReadOnlyList<string>, int, bool> ClaimChanged;
+
 	public static IReadOnlyDictionary<string, int> Held(int loader) =>
 		owners.TryGetValue(loader, out var keys) ? keys : new Dictionary<string, int>();
 
@@ -40,6 +43,14 @@ public static class PartClaims
 		{
 			if (packet.OwnerPlayerId == CarPartClaimUpdatePacket.Released) keys.Remove(key);
 			else keys[key] = packet.OwnerPlayerId;
+		}
+		try
+		{
+			ClaimChanged?.Invoke(packet.CarLoaderID, packet.Keys, packet.OwnerPlayerId, SyncTracker.InSnapshot);
+		}
+		catch (Exception e)
+		{
+			CMS21_Together_Core.Logging.Log.Error($"[Visuals] Claim visual failed on loader {packet.CarLoaderID}: {e.Message}");
 		}
 	}
 

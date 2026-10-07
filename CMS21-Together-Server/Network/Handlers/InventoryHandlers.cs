@@ -5,6 +5,7 @@ using CMS21_Together_Core;
 using CMS21_Together_Core.Network;
 using CMS21_Together_Core.Network.Packets;
 using CMS21_Together_Server.Data;
+using CMS21_Together_Server.Data.Cars;
 using CMS21_Together_Server.Data.Economy;
 using CMS21_Together_Server.Log;
 
@@ -32,6 +33,7 @@ namespace CMS21_Together_Server.Network.Handlers
                 var removed = state.InventoryState.InventoryItems.RemoveAll(i => i.UID == packet.Item.UID) > 0;
                 if (removed)
                 {
+                    InventoryChanges.NoteRemoved(packet.Item.UID, (int)clientId);
                     Server.SendToClients(packet, (int)clientId);
                     EconomyService.OnInventoryRemoved((int)clientId, packet.Item);
                 }
@@ -68,6 +70,7 @@ namespace CMS21_Together_Server.Network.Handlers
                 var removed = state.InventoryState.InventoryGroupItems.RemoveAll(i => i.UID == packet.GroupItem.UID) > 0;
                 if (removed)
                 {
+                    InventoryChanges.NoteRemoved(packet.GroupItem.UID, (int)clientId);
                     Server.SendToClients(packet, (int)clientId);
                 }
             }
@@ -84,6 +87,7 @@ namespace CMS21_Together_Server.Network.Handlers
                 {
                     if (state.InventoryState.InventoryGroupItems.RemoveAll(i => i.UID == packet.GroupItem.UID) > 0)
                     {
+                        InventoryChanges.NoteRemoved(packet.GroupItem.UID, (int)clientId);
                         state.InventoryState.WarehouseGroupItems.Add(packet.GroupItem);
                         Server.SendToClients(packet); // Send to all including sender so sender can update their local UI
                     }
@@ -92,6 +96,7 @@ namespace CMS21_Together_Server.Network.Handlers
                 {
                     if (state.InventoryState.InventoryItems.RemoveAll(i => i.UID == packet.Item.UID) > 0)
                     {
+                        InventoryChanges.NoteRemoved(packet.Item.UID, (int)clientId);
                         state.InventoryState.WarehouseItems.Add(packet.Item);
                         Server.SendToClients(packet);
                     }

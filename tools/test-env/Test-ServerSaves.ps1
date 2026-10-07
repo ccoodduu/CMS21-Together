@@ -137,7 +137,7 @@ try {
     $results["stop saves and exits"] = ((Get-Item -LiteralPath $main).LastWriteTimeUtc -gt $stamp -and (Get-Content -LiteralPath $main -Raw) -match '"Money": 4242')
 
     # 3.6: closing the console window saves
-    Start-TestServer | Out-Null; Send-ServerCommand "money set 5151"
+    Start-TestServer -Window | Out-Null; Send-ServerCommand "money set 5151"
     Start-Sleep -Seconds 1
     $proc = Get-Process -Name "CMS21_Together_Server" | Where-Object { $_.Path -ieq $exe }
     [void]$proc.CloseMainWindow()

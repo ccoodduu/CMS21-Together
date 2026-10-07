@@ -21,14 +21,18 @@ public static class CarToolActions
 
 	private static readonly Dictionary<ToolActionKind, int> seen = new Dictionary<ToolActionKind, int>();
 	private static readonly HashSet<ToolActionKind> localBusy = new HashSet<ToolActionKind>();
+	private static readonly Dictionary<ToolActionKind, (ModToolId Tool, int Loader)> localWork = new Dictionary<ToolActionKind, (ModToolId, int)>();
 	private static CMS.Managers.PaintshopManager paintshop;
 
 	public static IReadOnlyDictionary<ToolActionKind, int> Seen => seen;
+
+	public static IEnumerable<(ModToolId Tool, int Loader)> LocalWork => localWork.Values;
 
 	public static void Reset()
 	{
 		seen.Clear();
 		localBusy.Clear();
+		localWork.Clear();
 	}
 
 	public static int LoaderOf(CarLoader carLoader)
@@ -40,12 +44,14 @@ public static class CarToolActions
 	public static void Started(ModToolId tool, CarLoader carLoader, ToolActionKind kind)
 	{
 		localBusy.Add(kind);
+		localWork[kind] = (tool, LoaderOf(carLoader));
 		Send(tool, carLoader, kind);
 	}
 
 	public static void Finished(ToolActionKind kind)
 	{
 		localBusy.Remove(kind);
+		localWork.Remove(kind);
 		ToolSync.TraceEvent($"{kind} finished");
 	}
 

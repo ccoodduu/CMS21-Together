@@ -1,8 +1,10 @@
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using CMS21_Together_Core.Logging;
 using CMS21_Together_Core.Network.Packets;
 using CMS21Together.Data;
+using CMS21Together.Logic.Visuals;
 using CMS21Together.Network.Handlers;
 
 namespace CMS21Together.Logic.Car.Parts;
@@ -10,6 +12,11 @@ namespace CMS21Together.Logic.Car.Parts;
 public static class PartChanges
 {
 	private static readonly List<CarPartsChangePacket> heldForTest = new List<CarPartsChangePacket>();
+	private static bool releasingHeld;
+
+	// Live changes of other players only: snapshots, resyncs, released test holds and own results never animate.
+	public static event Action<int, List<CarBodyPartUpdatePacket>, List<CarSubPartUpdatePacket>> RemoteChangeApplying;
+	public static event Action<int, List<CarBodyPartUpdatePacket>, List<CarSubPartUpdatePacket>> RemoteChangeApplied;
 
 	public static bool TestHoldRemote { get; set; }
 
@@ -18,7 +25,15 @@ public static class PartChanges
 		TestHoldRemote = false;
 		var held = heldForTest.ToList();
 		heldForTest.Clear();
-		foreach (var change in held) OnRemoteChange(change);
+		releasingHeld = true;
+		try
+		{
+			foreach (var change in held) OnRemoteChange(change);
+		}
+		finally
+		{
+			releasingHeld = false;
+		}
 	}
 
 	public static void OnRemoteChange(CarPartsChangePacket change)
@@ -40,12 +55,15 @@ public static class PartChanges
 		}
 		if (change.Revision <= sync.Revision) return;
 
+		Raise(RemoteChangeApplying, change);
 		Apply(sync, change.BodyParts, change.SubParts);
 		sync.Revision = change.Revision;
+		Raise(RemoteChangeApplied, change);
 	}
 
 	public static void OnResult(CarPartsChangeResultPacket result)
 	{
+		VisualScope.CancelFor(result.CarLoaderID, result.BodyParts.Select(r => r.Key).Concat(result.SubParts.Select(r => r.Key)), "own result");
 		PartTransactions.OnResult(result);
 		var sync = CarPartsSync.Get(result.CarLoaderID);
 		if (result.SpawnSeq != sync.SpawnSeq) return;
@@ -60,6 +78,19 @@ public static class PartChanges
 		Log.Warn($"[Parts] Loader {result.CarLoaderID}: change {result.TxId} rejected ({result.Reason}); restoring the server's state.");
 		Apply(sync, result.BodyParts, result.SubParts);
 		if (result.Revision > sync.Revision) sync.Revision = result.Revision;
+	}
+
+	private static void Raise(Action<int, List<CarBodyPartUpdatePacket>, List<CarSubPartUpdatePacket>> handler, CarPartsChangePacket change)
+	{
+		if (handler == null || releasingHeld) return;
+		try
+		{
+			handler(change.CarLoaderID, change.BodyParts, change.SubParts);
+		}
+		catch (Exception e)
+		{
+			Log.Error($"[Visuals] Part change visual failed on loader {change.CarLoaderID}: {e.Message}");
+		}
 	}
 
 	public static void ApplyInventory(InventoryDelta delta)

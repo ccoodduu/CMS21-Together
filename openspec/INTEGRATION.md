@@ -33,6 +33,7 @@ part 2. "Owner" defines it; "Users" only call or subscribe.
 | `ServerInfo` + `SharedDlc` (`[OptionalField]`; resent to every client when the set changes) | S→C | 9 | 1, 2, 5a (block DLC content outside the set) |
 | `StateDigestRequest`, `StateDigest`, `StateDetailRequest`, `StateDetail`, `DesyncNotice` | both | 14 (b, c) | — |
 | `BugReportRequest`, `BugReportCollect`, `BugReportResult` | both | 14 (d) | — |
+| `PlayerActivity { PlayerId, State }` (`PlayerActivityState { Kind, CarLoaderID, PartKey, ToolType, ModTool, Progress }`); `PlayerPresenceRecord.Activity` (`[OptionalField]`, never saved) | C→S→same scene | 17 | 6 (roster carries it to late joiners); server drops more than 8/s per client and clears it on scene change |
 
 Rows 12 and 14a add no packets.
 
@@ -81,6 +82,9 @@ row 8's client enum `JoinFailure` and never travel.
 | client | `FeatureGuard` (`Decide`, `Bypass` scope, block ring buffer), `GuardRules` | 14a | every row adds its guard entries in its merge commit; 14 (`Bypass` for the resync reload, `guard.log`) |
 | client / server / Core | `IClientDigest`, `IServerDigest`, `[DigestSection]`, `CanonicalHasher`, `Projection` | 14 | 3, 4, 5a register a digest when they land (see "Not resolved") |
 | client | `ResyncController.Request()` | 14 | harness `resync` |
+| client | `PartChanges.RemoteChangeApplying/RemoteChangeApplied(loader, body, sub)` (live remote changes only), `PartClaims.ClaimChanged(loader, keys, owner, fromSnapshot)` (added to row 1's code) | 17 | 17 (`PartGhosts`, `BoltReplay`, `ActivityCapture`) |
+| client | `VisualScope.CheckLeak(what)` (called from 1's `PartChangeTracker.MarkDirty` and 4's `CarDetailsSync.MarkDirty`), `CancelLoader` (1's snapshot apply and car delete), `CancelFor` (1's `OnResult`) | 17 | 1, 4 |
+| client | `CarToolActions.LocalWork`, `ToolSync.OwnClaims` (read-only views added to 5b/5a) | 17 | 17 (`ActivityCapture`) |
 | Core | `Diagnostics/Redaction` (shared redaction rule, below) | 14 | 12 (`Collect-Logs.ps1` mirrors it) |
 
 Prefix rule on guarded game methods: row 14a's prefixes run at `Priority.First`; every other prefix of this mod on the
@@ -136,6 +140,7 @@ guard. Key bindings end in `Hotkey` (the redaction rule skips them).
 | `CMS21Together.LastJoinTarget`, `DevHotkeys`, `AdvertisePresence`, `AdminKey` (secret), `ServerPath`, `SessionPanelHotkey` | 8 |
 | `CMS21Together.EnableDevTools`, `DbExportHotkey` | 9 (part 2, exporter) |
 | `CMS21Together.ResyncHotkey`, `BugReportHotkey` | 14 |
+| `CMS21Together.RemoteVisuals` (default true) | 17 |
 | `CMS21Together_Guard.Mode`, `Allow`, `Deny` | 14a |
 
 Hotkeys (unique; row 14a's trace task 1.1 checks that the game binds none of F7–F9):
@@ -195,6 +200,7 @@ Verbs are globally unique (`Commands.Discover` throws on a duplicate). Existing:
 | 14a | `guard-trace` (spike only), `guard-set`, `guard-allow`, `guard-try`, `guard-log`, `guard-rules` |
 | 14 | `digest-show`, `inv-corrupt`, `digest-hold`, `resync [force]` (5a uses it instead of its former `tool-resync`), `bug-report [list]` |
 | 11 | `perf` (frame time over 10 s, managed and IL2CPP heap, scene, `syncAcked`), `fps-cap <n>` |
+| 17 | `vfx-trace`, `vfx-probe` (spike), `vfx-unscrew`, `vfx-tool`, `vfx-hold`, `vfx-enable`, `vfx-parts`, `vfx-switch`, `vfx-stand`; dump section `visuals` (part 2 adds `drive-*` and `remoteCars`) |
 
 | PowerShell helper / server command | Owner (first to land) |
 |---|---|
@@ -217,7 +223,7 @@ Scenarios (unique): 7 `server-restart`, `profile-safety`, `rejoin`, `latejoin`, 
 `jobs-restart`; 4 `car-details`, `car-details-latejoin`; 5a `tools-slots`, `tools-race`, `tools-latejoin`;
 5b `tools-car-effects`; 8 `join-ui`, `join-coldstart`, `host-from-game`, `session-admin`; 9 `compat-refusal`, `compat-mods-probe` (run-all: skip; needs real mods copied into A);
 12 `release-smoke` (marked `# run-all: skip`, run after `Install-ReleaseToTestEnv.ps1`); 14a `guard`; 14
-`desync-autofix`, `resync-key`, `bug-report`; 11 `scale-connect`, `soak`, `latejoin-full`, `storm` (all
+`desync-autofix`, `resync-key`, `bug-report`; 17 `visual-parts`, `visual-activity`, `visual-latejoin`, `visual-screens` (`# needs: graphics`, `# run-all: skip`), `visual-probe` (spike, `# run-all: skip`); 11 `scale-connect`, `soak`, `latejoin-full`, `storm` (all
 `# run-all: lane 3`), `full-garage-fixture` and `perf-probe` (`# run-all: skip`).
 
 Scale lane and long runs (owner 11, design `multiplayer-soak-and-scale` D1-D9):
@@ -243,7 +249,7 @@ regression; the full set runs when a change touches mod code the path table cann
 before a release. Every scenario, skipped ones included, carries a `# areas: a, b` header line (vocabulary and the
 path → area table in `tools/test-env/TestAreas.psm1`: `connect`, `presence`, `guard`, `cars`, `parts`,
 `placement`, `details`, `jobs`, `economy`, `tools`, `testdrive`, `persistence`, `resync`, `hosting`, `bugreport`,
-`release`); `smoke` in the list puts it in the smoke set (`latejoin`, `car-live`, `junkyard-trip`, `guard`,
+`release`, `visuals` and `driving` (row 17)); `smoke` in the list puts it in the smoke set (`latejoin`, `car-live`, `junkyard-trip`, `guard`,
 `tools-latejoin`). A `# run-all: lane 3` line makes a scenario a scale-lane scenario (`Run-All -Lanes 3` only).
 **A new scenario must carry `# areas:`**; a new source folder needs a row in the table, or its
 changes run the full set.

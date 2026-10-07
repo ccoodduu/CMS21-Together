@@ -44,6 +44,10 @@ public static class ClientData
 		Logic.Tools.ToolSync.Reset();
 		Logic.Outdoor.OutdoorSession.Reset();
 		Logic.Outdoor.CatalogReporter.Reset();
+		Logic.Visuals.VisualScope.Reset();
+		Logic.Visuals.PartGhosts.Reset();
+		Logic.Visuals.ActivityCapture.Reset();
+		Logic.Visuals.RemoteActivity.Reset();
 	}
 
 	public static void Update()

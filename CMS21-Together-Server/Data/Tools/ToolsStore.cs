@@ -131,7 +131,7 @@ namespace CMS21_Together_Server.Data.Tools
 			}
 
 			foreach (var record in change.SubParts) slot.Parts[record.Key] = record;
-			InventoryChanges.Apply(change.Delta);
+			InventoryChanges.Apply(change.Delta, clientId);
 			Server.SendToClient(new ToolPartChangeResultPacket { Tool = change.Tool, EngineUid = change.EngineUid, TxId = change.TxId, Accepted = true }, clientId);
 			Server.SendToClients(change, clientId);
 			Logger.Info($"[Tools] {change.Tool}: part change {change.TxId} from client {clientId} ({change.SubParts.Count} parts, inventory +{change.Delta.AddedItems.Count + change.Delta.AddedGroups.Count} -{change.Delta.RemovedItemUids.Count + change.Delta.RemovedGroupUids.Count}).");

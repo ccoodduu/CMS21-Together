@@ -71,6 +71,7 @@ public static class CarDetailsSync
 
 	public static void MarkDirty(CarLoader carLoader, CarDetailSection sections)
 	{
+		Visuals.VisualScope.CheckLeak("CarDetailsSync.MarkDirty");
 		var places = CarLoaderPlaces.Get();
 		if (carLoader == null || places == null) return;
 		int loader = places.GetCarLoaderId(carLoader);

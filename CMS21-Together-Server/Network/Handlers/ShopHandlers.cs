@@ -4,6 +4,7 @@ using CMS21_Together_Core;
 using CMS21_Together_Core.Network;
 using CMS21_Together_Core.Network.Packets;
 using CMS21_Together_Server.Data;
+using CMS21_Together_Server.Data.Cars;
 using CMS21_Together_Server.Data.Outdoor;
 using CMS21_Together_Server.Log;
 
@@ -71,6 +72,7 @@ namespace CMS21_Together_Server.Network.Handlers
                 {
                     int price = PricingCalculator.GetPrice(item, SellPriceFactor);
                     state.InventoryState.InventoryItems.Remove(item);
+                    InventoryChanges.NoteRemoved(item.UID, (int)clientId);
                     state.WorldState.Money += price;
                     
                     Server.SendToClients(packet);
@@ -83,6 +85,7 @@ namespace CMS21_Together_Server.Network.Handlers
                     {
                         int price = (int)(PricingCalculator.GetPrice(groupItem) * SellPriceFactor);
                         state.InventoryState.InventoryGroupItems.Remove(groupItem);
+                        InventoryChanges.NoteRemoved(groupItem.UID, (int)clientId);
                         state.WorldState.Money += price;
                         
                         Server.SendToClients(packet);
@@ -101,6 +104,7 @@ namespace CMS21_Together_Server.Network.Handlers
                     {
                         totalEarned += PricingCalculator.GetPrice(item, SellPriceFactor);
                         state.InventoryState.InventoryItems.RemoveAt(i);
+                        InventoryChanges.NoteRemoved(item.UID, (int)clientId);
                         
                         Server.SendToClients(new InventoryItemActionPacket 
                         { 
@@ -127,6 +131,7 @@ namespace CMS21_Together_Server.Network.Handlers
                     {
                         totalEarned += (int)(PricingCalculator.GetPrice(groupItem) * SellPriceFactor);
                         state.InventoryState.InventoryGroupItems.RemoveAt(i);
+                        InventoryChanges.NoteRemoved(groupItem.UID, (int)clientId);
                         
                         Server.SendToClients(new InventoryGroupItemActionPacket 
                         { 

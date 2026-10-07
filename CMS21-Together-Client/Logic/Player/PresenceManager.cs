@@ -203,6 +203,7 @@ public static class PresenceManager
 		avatar.SetActive(true);
 		avatar.name = $"Player[{record.PlayerId}]";
 		var instance = avatar.AddComponent<PlayerInstance>();
+		instance.PlayerId = record.PlayerId;
 		ApplyMovement(instance, movement);
 		Log.Debug($"[Presence] Avatar for player {record.PlayerId} at ({position.x:F2},{position.y:F2},{position.z:F2}).");
 		return instance;
