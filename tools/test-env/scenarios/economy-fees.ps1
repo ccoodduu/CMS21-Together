@@ -113,6 +113,13 @@ if ($inJunkyard) {
     Start-Sleep -Seconds 3
 }
 Fee-Step $b "econ-map-travel" "Auction" "TravelFee" -200 -GuardKey "Scene:Auction" -What "B travels to the auction"
+$inAuction = try { Wait-HarnessStatus -Instance $b -TimeoutSec 120 -What "B in the auction" -Condition { param($s) $s.scene -ne "garage" -and $s.playable }; $true } catch { $false }
+if ($inAuction) {
+    Send-HarnessCommand -Instance $b -Verb travel -Arguments "Garage" | Out-Null
+    Wait-InGarage $b
+    foreach ($loader in 0, 1) { Check (Wait-Ready $b $loader) "B has loader $loader ready after the trip" }
+    Start-Sleep -Seconds 3
+}
 
 # Fees with a fixed amount.
 Fee-Step $a "econ-fee" "spill 0" "FluidSpill" $null -What "A spills fluid"
