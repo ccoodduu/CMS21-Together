@@ -2,6 +2,21 @@
 
 Newest first. One entry per work session.
 
+## 2026-10-07 (14:00–15:45) — first soak with four players; two more sync bugs fixed
+
+- Four graphical games use about 6 GB RAM each and leave under 1 GB free, so the soak's watchdog stopped the first
+  run. With C and D headless (`-Headless C,D`) the 15-minute soak runs: 216 actions, about 1.3–2.7 kB/s download per
+  client, 4–5 % server CPU, lock wait under 50 ms.
+- Fixed on `main` (`91fbdd6`), each with a scenario that fails without it:
+  - a remote mount also mounted the part's `unmountWith` members (e.g. the bushings of a control arm), which the game
+    only does for a group item (`car-live`);
+  - window tint was applied visually to non-window parts and threw on a null material when another player unparked
+    a car (`car-placement`).
+  - The memory slope warning was warm-up; the 50 ms handler was a bug report zip and the periodic save.
+- Playtest build refreshed: `0.6.0-dev.852` in `Desktop\CMS21-Together-playtest`.
+- Still open, an agent is on it: one checkpoint where only the rejoined client D shows lift 1 connected to a car;
+  `GameMode::SetCurrentMode` errors when a player sits in a car; a `PartScript.Hide` error on a headless client.
+
 ## 2026-10-07 (11:10–14:00) — playtest build; row 11 runs with four players; two inventory bugs fixed
 
 - Playtest build for the user (Steam join): `0.6.0-dev.846` zips with a Danish quick start
