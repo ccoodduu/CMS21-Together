@@ -54,6 +54,7 @@ namespace CMS21_Together_Server.Network
 					Logger.Info("  away              - Show cars on the test track, test path or dyno");
 					Logger.Info("  tools             - Show the workshop machines, tool positions and claims");
 					Logger.Info("  desync [check]    - Show recent desync repairs; check compares every player now");
+					Logger.Info("  bugreport         - List the bug-report bundles in BugReports/");
 					Logger.Info("  economy [n]       - Show the last n economy requests and a count per reason");
 					Logger.Info("  economy cases     - Show opened cases that can still be looted");
 					Logger.Info("  economy reasons   - Show the count per reason");
@@ -101,6 +102,11 @@ namespace CMS21_Together_Server.Network
 						break;
 					}
 					foreach (string line in Data.Reconciliation.ReconciliationService.Describe())
+						Logger.Info(line);
+					break;
+
+				case "bugreport":
+					foreach (string line in Data.Diagnostics.BugReportWriter.Describe())
 						Logger.Info(line);
 					break;
 

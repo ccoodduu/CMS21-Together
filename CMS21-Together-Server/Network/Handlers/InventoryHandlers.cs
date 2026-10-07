@@ -1,5 +1,6 @@
 using System;
 using System.Linq;
+using System.Threading;
 using CMS21_Together_Core;
 using CMS21_Together_Core.Network;
 using CMS21_Together_Core.Network.Packets;
@@ -118,9 +119,17 @@ namespace CMS21_Together_Server.Network.Handlers
             }
         }
         
+        private static long lastUid;
+
         public static long GenerateNewUID()
         {
-            return DateTime.UtcNow.Ticks;
+            long uid, last;
+            do
+            {
+                last = Interlocked.Read(ref lastUid);
+                uid = Math.Max(DateTime.UtcNow.Ticks, last + 1);
+            } while (Interlocked.CompareExchange(ref lastUid, uid, last) != last);
+            return uid;
         }
     }
 }

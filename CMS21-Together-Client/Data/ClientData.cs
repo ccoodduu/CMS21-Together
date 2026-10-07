@@ -39,6 +39,7 @@ public static class ClientData
 		PartTransactions.Reset();
 		Logic.Economy.EconomyScope.Reset();
 		Logic.Economy.EconomyRequests.Reset();
+		Logic.Economy.CarPurchaseSync.Reset();
 		Logic.Tools.ToolSync.Reset();
 	}
 

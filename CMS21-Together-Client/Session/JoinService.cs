@@ -22,6 +22,8 @@ public static class JoinService
 	public static string RememberedPassword(JoinTarget target) =>
 		target != null && passwords.TryGetValue(target.ToString(), out string password) ? password : "";
 
+	public static IEnumerable<string> RememberedPasswords => passwords.Values;
+
 	public static bool Join(string text, out string error, string password = null, string adminKey = null)
 	{
 		if (!JoinTarget.TryParse(text, MainMod.PORT, out var target, out error)) return false;

@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using CMS21_Together_Core;
+using CMS21_Together_Core.Data.Compatibility;
 using CMS21_Together_Core.Data.Enum;
 using CMS21_Together_Core.Network;
 using CMS21_Together_Core.Network.Packets;
@@ -57,6 +58,9 @@ namespace CMS21_Together_Server.Network.Handlers
 			client.Identity = identity;
 
 			client.IsAdmin = !string.IsNullOrEmpty(Program.Config.AdminKey) && packet.adminKey == Program.Config.AdminKey;
+			client.GameVersion = packet.gameVersion;
+			client.ModVersion = packet.modVersion;
+			client.Mods = (packet.mods ?? new List<ModReport>()).Select(m => m.ToString()).ToList();
 			client.OnConnectedSuccessfully.Invoke();
 			SharedDlc.Add(client.ID, packet.dlc);
 			Server.SendToClient(BuildServerInfo(client.ID), client.ID);

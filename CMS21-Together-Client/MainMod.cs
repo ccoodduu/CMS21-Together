@@ -103,6 +103,8 @@ namespace CMS21Together
 			}
 			if (Client.Instance.IsConnectionValid && Input.GetKeyDown(PlayerSettings.ResyncKey)) ResyncController.Request();
 			if (Input.GetKeyDown(PlayerSettings.SessionPanelKey)) MultiplayerMenuModel.ToggleSessionPanel();
+			if (Input.GetKeyDown(PlayerSettings.BugReportKey)) Diagnostics.BugReport.Request();
+			Diagnostics.BugReport.Update();
 			if (PlayerSettings.DevHotkeys && Client.Instance.IsConnectionValid && Input.GetKeyDown(KeyCode.F6)) Logic.Car.Placement.DevCarSpawner.SpawnRandom();
 			if (Client.Instance.IsConnectionValid) Logic.Car.Details.CarDetailsSync.Update();
 			if (Client.Instance.IsConnectionValid) Logic.Car.Away.CarAwaySync.Update();
@@ -140,6 +142,7 @@ namespace CMS21Together
 			Logic.Car.Details.CarDetailsSync.Initialize();
 			Logic.Car.Away.TestDriveSync.Initialize();
 			Logic.Car.Away.PathTestSync.Initialize();
+			Logic.Economy.CarPurchaseSync.Initialize();
 			SessionNotifications.Initialize();
 			SeatEngine.Initialize();
 		}

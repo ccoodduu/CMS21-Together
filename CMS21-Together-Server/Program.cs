@@ -59,6 +59,12 @@ namespace CMS21_Together_Server
 				return;
 			}
 
+			if (Array.IndexOf(args, "--check-redaction") >= 0)
+			{
+				Environment.Exit(Data.Diagnostics.RedactionCheck.Run());
+				return;
+			}
+
 			string checkModsPath = GetArgument(args, "--check-mods");
 			if (checkModsPath != null)
 			{
