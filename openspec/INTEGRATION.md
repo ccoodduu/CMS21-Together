@@ -189,7 +189,7 @@ Verbs are globally unique (`Commands.Discover` throws on a duplicate). Existing:
 |---|---|
 | 7 | `stats-add`, `to-menu` (g1); `player-key`, `send-early-stats`, `profile-pref` (later groups) |
 | 6 | `travel`, `scene-list`, `teleport`, `set-name`, `leave-mark`, `sit`, `stand`, `engine`, `seat-trace` (spike), `buy-car-here`, `junk-buy` |
-| 1 | `car-spawn`, `car-delete`, `car-loaded`, `car-list`, `car-ready`, `car-baseline`, `car-hold-snapshot`, `car-dlc-cars`, `car-request`, `part-state`, `part-keys`, `part-unmount`, `part-fast-unmount`, `part-fast-mount`, `part-action-unmount`, `part-claim`, `part-corrupt`, `part-hold-remote`, `crane-out`, `crane-in` |
+| 1 | `car-spawn`, `car-delete`, `car-loaded`, `car-list`, `car-ready`, `car-baseline`, `car-hold-snapshot`, `car-dlc-cars`, `car-request`, `part-state`, `part-keys`, `part-unmount`, `part-fast-unmount`, `part-fast-mount`, `part-action-unmount`, `part-claim`, `part-corrupt`, `part-hold-remote`, `crane-out`, `crane-in`; playtest fixes: `part-twins`, `part-fast-mount <loader> <key> [itemUid]`, `wheel-parts`, `wheel-mount` |
 | 2 | `lift`, `lifters`, `car-move`, `car-place`, `placement`, `net-hold` (`on`/`off`; `out` = full stall of both directions, heartbeats included, added by 11), `park`, `unpark`, `park-swap`, `parking`, `parking-unlock`, `park-incoming`, `dev-spawn`, `placement-trace` and `parking-probe` (spike) |
 | 3 | `jobs-trace`, `orders-generate`, `orders-mission`, `orders-autogen`, `orders-list`, `order-slots`, `orders-accept`, `orders-decline`, `orders-reload`, `job-examine`, `job-check`, `job-finish`, `tutorial-run`, `job-spawn-unclaimed`, `job-end-dup` |
 | 13 | `testdrive-trace`, `testdrive-go`, `testdrive-drive`, `testdrive-finish`, `testdrive-partnames`, `testdrive-hold`, `testdrive-skip-result`, `dyno-run`, `pathtest-run`, `diag-examine`, `away-try`; dump section `away`, car field `specialState`; scenarios `test-drive`, `test-drive-latejoin`, `diagnostics` (spikes: `test-drive-trace`, `diag-trace`, `departure-hold`) |
@@ -219,7 +219,7 @@ Verbs are globally unique (`Commands.Discover` throws on a duplicate). Existing:
 | server commands `password`, `serverinfo` (8); `compat` (9); `desync`, `bugreport` (14); existing `kick`, `stop` (`kick` moves to `Server.Refuse`) | as listed |
 | server command `perf` (`perf`, `perf top <n>`, `perf reset`), snapshot line `Client[n] snapshot <id> acked after …`; `tools/test-env/PerfSampler.psm1` (`Get-PerfSample`, `Add-PerfSample`, `Test-PerfWatchdog`, `Add-FrameSample`), `Show-SoakReport.ps1` | 11 |
 
-Scenarios (unique): 7 `server-restart`, `profile-safety`, `rejoin`, `latejoin`, `persistence-restart`,
+Scenarios (unique): playtest fixes `car-wheel-swap`, `car-mount-race`; 7 `server-restart`, `profile-safety`, `rejoin`, `latejoin`, `persistence-restart`,
 `duplicate-identity`; 6 `presence-latejoin`, `scenes`, `seat-engine`, `seat-engine-trace` (spike), `presence`, `purchases`; 1 `car-parts`, `car-parts-latejoin`;
 2 `car-placement`, `car-placement-latejoin`, `car-parking-full`; 3 `jobs-trace`, `jobs`, `jobs-latejoin`,
 `jobs-restart`; 4 `car-details`, `car-details-latejoin`; 5a `tools-slots`, `tools-race`, `tools-latejoin`;

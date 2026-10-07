@@ -25,9 +25,15 @@ Not questions for the user; open bugs from the first playtest, fixed one by one.
    moved, and the real caliper stayed hidden (`forceRenderingOff`) until the scene was reloaded. Not reproduced by `visual-lift` (fast mount and unscrew while the lift moves, held ghost: no ghost or hidden renderer left, 2026-10-07); the playtest mount ran with bolts. Row 18 `part-locks` D7 (no lift or move while another player holds a lock on the car) removes the situation.
 2. **Server keeps running** after the host returned to the main menu (the user typed `/exit`). By design (session-hosting spec: leaving keeps hosting; Stop on the Host tab or quitting the game stops it); my advice to "go to the main menu" was wrong. Idea: a main-menu notice "your server is still running".
 3. **Persistent car desync** on wheels: `s:3.22.4.tunedId` empty on the host vs `tire_sport` on the server.
+   **Fixed** (`c369763`): the game writes a tire's tuned id as empty or equal to its id, and TunePart also changes a
+   rim's or tire's id; digests and the apply now compare the effective id, and the car-details wheel apply keeps the
+   rim and tire ids. `car-wheel-swap` (own wheel, then a new rim and tire type) proves it.
 4. **Rollback after a rejected mount** (same item taken by both players) left the loser's inventory out of sync
-   until F7.
-5. **F7 on a friend's client** logs `Error in handler WorldState: Object reference not set`.
+   until F7. **Fixed** (`f9557c0`): the rejection gave the loser back the item the other player had mounted; it now
+   restores only items the server still has. `car-mount-race` proves it.
+5. **F7 on a friend's client** logs `Error in handler WorldState: Object reference not set`. **Fixed** (`c81fd05`):
+   UIManager is missing while the garage reloads; the refresh is skipped then. `resync-key` sends money changes
+   during the reload.
 6. **Car state "not ready"** in the host's bug report while the car was being worked on (`be9b`).
 7. **Version check too strict for a playtest:** every commit changes `dev.N`, so friends must reinstall for
    server-only fixes. Proposal: compare the base version and the protocol hash, not the build number.
