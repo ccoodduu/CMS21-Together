@@ -307,6 +307,23 @@ working; `Run-All` now deploys inside `Run-Session -Deploy`.
 3. Headless C and D for long soaks if task 1.6 shows they work: default — allowed for runs ≥ 2 h, normal games for
    the regression runs.
 
+## Implementation notes (2026-10-07, before the first runs)
+
+- `Test-ServerSaves.ps1` used port 7797; it moves to 7807 so it can run next to lane 3.
+- `Run-All` builds once (`Deploy-Mod.ps1 -BuildOnly`) and each lane deploys inside its locks with
+  `Run-Session -Deploy -NoBuild`, so two lane jobs never build the same worktree at the same time.
+- `net-hold` let heartbeats through, so it never stalled a connection: `net-hold out` (task 6.1) holds every incoming
+  packet and the outgoing TCP data and drops UDP; queued or held packets are dropped once the connection is gone.
+- Soak replay: arguments that use an earlier verb's result (a wheel's UID, the key of an unmounted part) are logged as
+  `{step:N:field}` templates and resolved against the replay's own results; checkpoints and storms are marker lines
+  in `actions.jsonl` (a storm with its own seed), so a replay repeats them at the same point of the sequence.
+- K5 kills the client twice: once holding a part claim and the balancer lock, once during a test drive (test-drive
+  claims end when the driver leaves the garage, so the two cannot share one kill).
+- K7 (ii) bounds the loss by sending `stats-add` every 3 s for the autosave interval + 15 s before the kill; every
+  change older than the interval + 5 s must survive.
+- The rule-4 allow-list starts with three client hook errors seen in most runs on 2026-10-07 and two errors a storm
+  causes on purpose (server writes to a killed client, a client connecting to a stopped server).
+
 ## Measurements
 
 (Filled in by tasks 5.3, 7.1 and 7.2.)

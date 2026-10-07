@@ -2,6 +2,28 @@
 
 Newest first. One entry per work session.
 
+## 2026-10-07 — row 11 (soak and scale) groups 1, 4–6 in code, waiting for game runs
+
+- Branch `change/soak-and-scale`. In code, not run (both lanes were busy with the regression): lane 3 (A–D,
+  `Server3`, port 7797) with lane locks held for the whole run and deploys inside them, `Start-HarnessInstance`,
+  `-ScenarioArgs`/`-Deploy`/`-Headless` in `Run-Session`, `Run-All -Lanes 3`; scenarios `scale-connect`, `soak`
+  (seeded action table, `actions.jsonl` + `-Replay`, checkpoints, watchdog, `Run-Soak.ps1`), `storm` (K1–K8,
+  `net-hold out`), `latejoin-full` with the fixture maker `full-garage-fixture`. `Test-ServerSaves.ps1` moved to port
+  7807 (7797 is lane 3's).
+- Once before the first lane-3 run: `Setup-TestInstalls.ps1` (creates `Server3` and its config next to A–D) and
+  `Deploy-Mod.ps1 -Lane 3`.
+- Allow-list `tools/test-env/scenarios/soak-allow.txt` holds three client errors seen in most runs today
+  (`CarLoader::DeleteCar`, `Inventory::Delete`, `ChangeLicencePlateTexture` hooks); each needs its owner's look.
+
+### What to try (M5 hand checks, row 11)
+
+1. The M5 playtest: 3–4 friends, two hours or more over Steam, the host's server with
+   `perf_log_interval_seconds = 10`; one player quits the game hard once, one rejoins, the host restarts the server
+   once. Send `Log/perf_*.jsonl`, the server log and F8 bundles of anything odd; compare bandwidth, CPU and join
+   times with the harness numbers (`Show-SoakReport.ps1` on a run folder).
+2. The host's upload: the summed server upload of that session (server `perf`) against the host's real upload speed.
+3. One join from a friend over the internet into a full garage and full parking (late-join time with real latency).
+
 ## 2026-10-07 (07:55–) — guard opened, batch mode, two lanes again
 
 - Two lanes run in parallel again (Claude Code's memory guard is off; the second lane needs 10 GB free RAM).
