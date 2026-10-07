@@ -203,7 +203,7 @@ function Resolve-ChangedFile([string]$File, $Headers) {
     if ($path -match '^tools/test-env/scenarios/([^/]+?)(\.launch\.psd1|\.ps1)$') {
         $name = $Matches[1]
         if ($Headers.Contains($name)) {
-            return [pscustomobject]@{ File = $path; Kind = "scenario"; Scenario = $name; Areas = $Headers[$name].Areas }
+            return [pscustomobject]@{ File = $path; Kind = "scenario"; Scenario = $name; Areas = @() }
         }
         return [pscustomobject]@{ File = $path; Kind = "none"; Scenario = $null; Areas = @() }
     }

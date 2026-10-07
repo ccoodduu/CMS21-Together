@@ -228,7 +228,7 @@ changes run the full set.
 
 | `Run-All.ps1` switch | Runs |
 |---|---|
-| `-Changed [<ref>]` | files changed since the merge base with `<ref>` (default `origin/main`, plus uncommitted and untracked files) mapped to areas, plus the smoke set; a changed scenario adds itself and its areas; docs alone run nothing |
+| `-Changed [<ref>]` | files changed since the merge base with `<ref>` (default `origin/main`, plus uncommitted and untracked files) mapped to areas, plus the smoke set; a changed scenario adds only itself; docs alone run nothing |
 | `-Areas a,b` | scenarios with any of these areas, plus the smoke set (`-NoSmoke` leaves it out) |
 | `-Smoke` | the smoke set |
 | `-List` | prints the changed files with their areas and each selected scenario with its reason, then exits |
