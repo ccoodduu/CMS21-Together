@@ -94,7 +94,7 @@ Cmd $a vfx-stand "$loader 1.5" | Out-Null
 Cmd $b vfx-stand "$loader 1.5" | Out-Null
 
 $candidates = @(Cmd $b vfx-parts "$loader")
-$part = @($candidates | Where-Object { $_.id -match "zacisk|caliper|tarcza|disc" } | Select-Object -First 1)[0]
+$part = @($candidates | Where-Object { $_.id -match "zacisk|caliper" } | Select-Object -First 1)[0]
 if (-not $part) { $part = $candidates[0] }
 $key = $part.key
 Write-Host "part: $key ($($part.id), $($part.bolts) bolts)"
@@ -113,7 +113,7 @@ Check-Part "unmount on a moved lift" $true
 # B mounts; A lowers the lift right away, while A's On ghost flies.
 Cmd $b part-fast-mount "$loader $key" | Out-Null
 Cmd $a lift "0 down" | Out-Null
-Wait-Lift "Down"
+Wait-Lift "OnFloor"
 Wait-Quiet "after the mount while the lift moved"
 Wait-Same "mount while the lift moved"
 Check-Part "mount while the lift moved" $false
