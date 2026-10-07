@@ -11,15 +11,6 @@ Answered ones move to the bottom with the answer.
    start one or say yes for that night, never while you are at the PC.
 3. **C and D headless in long soaks** (to save memory). **Default:** yes, if a spike shows it works.
 
-## Open — release 1.0 (2026-10-07)
-
-1. **Tags for past milestones.** M1–M4 were never tagged; the changelog lists them as `## M<n>` sections and 1.0.0 is
-   the first release. **Default:** no tags for the past milestones.
-2. **Version jump.** `Directory.Build.props` goes from 0.6.0 straight to 1.0.0 in the release commit. **Default:** yes.
-3. **Where bug reports go.** `docs/bug-reports.md` asks players to open a GitHub issue on this fork. **Default:** keep.
-4. **README look.** The new README drops upstream's logo and badges but keeps the Fozkais credit and the local
-   `LICENSE` link. **Default:** keep.
-
 ## Accepted defaults (user, 2026-10-06)
 
 - Remote players see only the finished part state, not the bolt animation, while a part is reserved.
@@ -42,6 +33,7 @@ Nothing open.
 
 ## Answered
 
+- **Answered by the user on 2026-10-07 (afternoon):** release questions 1–4 take the defaults (no tags for past milestones; 0.6.0 → 1.0.0 in the release commit; bug reports as GitHub issues on the fork; the new README). The Steam playtest will probably be after the autumn holiday. Mod lists: only the user's own install for now (the friends just bought the game). No need to open row 11's proposal/design. Row 11 budgets and the overnight soak: explained, answer pending.
 - **Two lanes and the memory guard (2026-10-06, 23:55):** (b). The user wants parallel lanes again; `CLAUDE_CODE_DISABLE_BG_SHELL_PRESSURE_REAP=1` is in `~/.claude/settings.json` (works after a restart of Claude Code). The second lane only starts with at least 10 GB free RAM. Also: test less (full regression only for client/server changes) and reuse the running games across scenarios (batch mode).
 Answered by the user on 2026-10-06 ("4. server rule, andre questions default"):
 
