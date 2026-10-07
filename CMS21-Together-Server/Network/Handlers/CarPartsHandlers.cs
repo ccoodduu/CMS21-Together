@@ -108,9 +108,17 @@ namespace CMS21_Together_Server.Network.Handlers
 
 			var inventory = GameDataManager.CurrentState.InventoryState;
 			foreach (long uid in change.InventoryDelta.RemovedItemUids)
-				if (inventory.InventoryItems.All(i => i.UID != uid)) return $"item {uid} is gone";
+				if (inventory.InventoryItems.All(i => i.UID != uid))
+				{
+					if (InventoryChanges.WasRemoved(uid)) return $"item {uid} is gone";
+					Logger.Info($"[Cars] Change {change.TxId} removes item {uid}, which the server never had; ignored.");
+				}
 			foreach (long uid in change.InventoryDelta.RemovedGroupUids)
-				if (inventory.InventoryGroupItems.All(g => g.UID != uid)) return $"group {uid} is gone";
+				if (inventory.InventoryGroupItems.All(g => g.UID != uid))
+				{
+					if (InventoryChanges.WasRemoved(uid)) return $"group {uid} is gone";
+					Logger.Info($"[Cars] Change {change.TxId} removes group {uid}, which the server never had; ignored.");
+				}
 			return null;
 		}
 
