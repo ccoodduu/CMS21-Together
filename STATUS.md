@@ -2,6 +2,18 @@
 
 Newest first. One entry per work session.
 
+## 2026-10-07 (18:00–19:00) — row 17 part 1 merged (remote work visuals)
+
+- `main` = `85b90ea`: other players' part work is now visible: a ghost copy of a part slides off or on, the bolts
+  turn with the actor's progress, and the avatar shows a work pose and the tool prop (OBD scanner). Everything is
+  visual only (ghosts; the real state is never touched or delayed; a leak detector logs state changes inside a
+  visual). New `PlayerActivity` packet (≤ 4/s, latest value kept for late joiners). `visual-parts`,
+  `visual-activity`, `visual-latejoin` pass, and the `parts`, `presence`, `tools`, `visuals` areas pass (23
+  scenarios). Spike: one bolt takes about 0.9 s; the claim release arrives before the commit in the same frame; part
+  materials have no dissolve, so ghosts shrink out.
+- Left for row 17 part 1: `visual-screens` (needs a visible window: a night run), the lane-3 budget scenario, the
+  README section. Part 2 (driving) has started on lane 1; row 15 (shared outdoor scenes) is tested on lane 2.
+
 ## 2026-10-07 (17:00–18:00) — headless tests, release smoke, M7 designs, branch cleanup
 
 - Test games run headless by default (`-Visible` or `CMS21_TEST_VISIBLE=1` to see them; `# needs: graphics` for
