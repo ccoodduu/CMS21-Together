@@ -191,11 +191,11 @@ function Wait-ServerLog {
 }
 
 function Start-TestServer {
-    param([string[]]$Arguments = @())
+    param([string[]]$Arguments = @(), [switch]$Window)
     if (Get-TestServerProcesses) { throw "The server in $script:ServerDir is already running." }
     $exe = Join-Path $script:ServerDir "CMS21_Together_Server.exe"
     Remove-Item -LiteralPath (Get-ServerLogPath) -ErrorAction SilentlyContinue
-    $script:ServerProcess = Start-Process -FilePath $exe -WorkingDirectory $script:ServerDir -WindowStyle Hidden `
+    $script:ServerProcess = Start-Process -FilePath $exe -WorkingDirectory $script:ServerDir -WindowStyle $(if ($Window) { "Minimized" } else { "Hidden" }) `
         -ArgumentList (@("--command-file", "`"$script:ServerCommandFile`"") + $Arguments) -PassThru
     Start-Sleep -Milliseconds 500
     Wait-ServerLog -Pattern "Server started\. Listening port" -TimeoutSec 60 | Out-Null
