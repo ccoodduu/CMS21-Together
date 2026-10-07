@@ -26,6 +26,7 @@ public class HarnessMod : MelonMod
         Dir = Path.Combine(MelonUtils.UserDataDirectory, "TestHarness");
         Directory.CreateDirectory(Dir);
         Features.InputGuard.Install(HarmonyInstance);
+        Features.StatsGuard.Install(HarmonyInstance);
         foreach (var file in Directory.GetFiles(Dir, "reply_*.json")) File.Delete(file);
         File.Delete(Path.Combine(Dir, CommandChannel.CommandFile));
 
