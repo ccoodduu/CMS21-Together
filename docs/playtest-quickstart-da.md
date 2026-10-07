@@ -7,7 +7,7 @@ Kort vejledning til et playtest med 2–3 spillere over Steam. Den fulde guide p
 
 - Car Mechanic Simulator 2021 på Steam. Steam skal køre, mens I spiller.
 - Samme version af mod'en. Alle bruger den samme zip-fil: `CMS21-Together-<version>-client.zip`.
-- Ingen gameplay-mods (QoLmod, TK, LvxBetterCarSpawns, QuickShop afvises). Grafik-mods og LoadOptimizer er fine.
+- Ingen gameplay-mods (QoLmod, TK, LvxBetterCarSpawns, LvxOwnedCarsOnly, QuickShop og AutosaveMod afvises). Grafik-mods og LoadOptimizer er fine.
 - Tag en kopi af dine egne saves først, hvis du er nervøs for dem: `%USERPROFILE%\AppData\LocalLow\Red Dot Games\Car
   Mechanic Simulator 2021`. Mod'en gemmer ikke i dine egne saves, mens du er i en session.
 

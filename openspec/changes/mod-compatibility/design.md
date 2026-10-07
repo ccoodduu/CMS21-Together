@@ -177,6 +177,37 @@ refused anyway); AutosaveMod → visual (no patches) — a false negative; its `
 row 7's save guard (see review.md). Rules live in Core (`ModClassifierRules.Default`) and the server can extend them
 with `Database/mod_rules.json` (same shape) without a client update.
 
+**Known mods (part 2, 2026-10-07).** `ModClassifierRules.KnownMods` maps a mod name (`MelonInfo.Name`, case-insensitive)
+to a class and a short reason; it overrides the heuristic, the reason is what the refused player reads ("QoLmod 4.4
+changes inventory, repairs, minigames, shops and more."), and the target list stays in the server log. The server's
+`mod_rules.json` can add or replace entries (`"KnownMods": { "Name": { "Class": "Visual", "Reason": "…" } }`);
+`mods_ignored`/`mods_gameplay` in `server_config.ini` still win. The refusal lists one line per mod and ends with one
+line saying what to do.
+
+Tuning table (task 7.1; the user's main install, runtime `compat-report` in run `20261007-161603_L1_compat-mods-probe`
+before, `20261007-162145_L1_compat-mods-probe` after; friends' installs not collected yet):
+
+| Mod (version) | Runtime targets | Heuristic | Right class | Final | Why |
+|---|---|---|---|---|---|
+| QoLmod 4.4 | 178 | Gameplay | Gameplay | Gameplay (known) | inventory, repair minigames, tire changer, shops, … |
+| TK Aftermarket 0.7.4 | 16 | Gameplay | Gameplay | Gameplay (known) | `CarLoader.LoadCar/CreateParts`, `GameInventory` part lists |
+| TK Basics 0.5.2 | 13 | Gameplay | Gameplay | Gameplay (known) | `Inventory.Add/GetBaseItem`, `PartScript.Start`, repair groups |
+| Lvx Better Car Spawns 1.0.0 | 6 | Gameplay | Gameplay | Gameplay (known) | junkyard, barn and auction generators |
+| QuickShop 1.04 | 1 | Gameplay | Gameplay | Gameplay (known) | `GameScript.Update` postfix: buys parts by hotkey |
+| CMS21 Load Optimizer 0.5.0 | 31 | Visual | Visual | Visual (known) | Unity texture/asset-bundle methods and other mods' loaders (ignored targets); known so its opt-in profiler (game coroutine `MoveNext`) does not refuse it |
+| Lvx Owned Cars Only 1.0.0 | 1 | **Visual** | Gameplay | Gameplay (known) | its only target is a Lvx Better Car Spawns method (another melon's, ignored), but it filters which cars spawn |
+| Autosave Mod 1.0.0 | 0 | **Visual** | Gameplay | Gameplay (known) | no patches; calls `GarageLoader.Save(false)` every 5 min and on each completed job |
+
+AutosaveMod is refused rather than allowed. In a session its saves never reach disk (`GarageLoader.Save` ends in
+`GameDataManager.Save(4)`, which `SessionGuard` blocks; seen in the probe's client log), so it protects nothing and
+the server saves the session anyway. But each trigger still runs the whole save routine on that one client at a time
+nobody chose: every car is written into the in-memory profile, `GetGroupOnEngineStand()` replaces the engine stand's
+items with new UIDs, the player position is written, and the save icon says "Autosaving" although nothing is saved.
+A host who wants it anyway lists it in `mods_ignored`.
+
+No mod applied extra patches between the menu and the garage (the probe's garage report equals the menu report), so
+collecting at connect time is enough for these mods.
+
 Rejected alternatives: a fixed list of known mods only (every new mod is unknown); classifying by mod name or
 description (meaningless); a pure gameplay-type list ("`Inventory`, `CarLoader`, `GlobalData`") — misses the long
 tail of game classes and is the wrong default for a mod check that must be safe.
@@ -245,7 +276,7 @@ player leaves.
 
 - [Classifier refuses a harmless visual mod] → it reports unknown/gameplay with targets; the host adds it to
   `mods_ignored`; group 7 tunes the defaults.
-- [Classifier misses a gameplay mod without patches (AutosaveMod) or with direct calls only] → `mods_gameplay`;
+- [Classifier misses a gameplay mod without patches (AutosaveMod) or with direct calls only] → `KnownMods`, `mods_gameplay`;
   row 7's save guard blocks game saves; row 14's reconciliation catches resulting desyncs.
 - [The user's own main install has five gameplay mods] → they are refused like anyone else; the user plays from an
   install without them (question for the user in review.md).

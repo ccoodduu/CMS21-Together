@@ -9,8 +9,10 @@ for your friends, read [hosting.md](hosting.md) afterwards.
 - **MelonLoader 0.5.7.** Exactly this version: MelonLoader 0.6 does not work with the mod.
 - **The client zip**, named `CMS21-Together-<version>-client.zip` (for example `CMS21-Together-1.0.0-client.zip`).
   Everyone in a game must use the same zip. Ask your host which version they run.
-- **No gameplay mods.** Mods that change how the game plays (for example QoLmod, TK, LvxBetterCarSpawns or QuickShop)
-  are refused by the server. Visual mods are fine. If you need a gameplay mod, ask the host to allow it.
+- **No gameplay mods.** Mods that change how the game plays are refused by the server, for example QoLmod,
+  TK Aftermarket, TK Basics, LvxBetterCarSpawns, LvxOwnedCarsOnly and QuickShop. Autosave mods are refused too: the
+  server saves multiplayer games itself. Visual mods and CMS21LoadOptimizer are fine. If you need a gameplay mod, ask
+  the host to allow it. Keep a second copy of the game without them if you also play with them alone.
 
 ## 1. Back up your saves
 
@@ -140,7 +142,7 @@ The Multiplayer panel says why. What to do:
 | The Steam connection failed. | Try again, or join by IP address. |
 | The server runs another version of Together. | You and the host have different zips. The message names both versions. Everyone installs the same zip. |
 | Your game version differs from the server's. | Update the game in Steam; the host does the same. The message names both versions. |
-| Can't join: gameplay mods differ. | The message names the mod. Remove it from your `Mods` folder, or ask the host to allow it (`mods_ignored` or `mods_required` in [hosting.md](hosting.md#all-server-settings)). |
+| Can't join: gameplay mods differ. | The message names each mod and what it changes. Remove them from your `Mods` folder, or ask the host to allow it (`mods_ignored` or `mods_required` in [hosting.md](hosting.md#all-server-settings)). |
 | Wrong server password. | Type the password the host gave you in the password field that now shows on the Join tab. |
 | The server is full. | Wait until someone leaves, or ask the host to raise `max_players`. |
 | You are already connected to this server from another game. | Close the other game. If nobody else is playing as you: did you copy your game folder to a friend, including `UserData\CMS21Together\player.json`? Then delete that file on the copy. |

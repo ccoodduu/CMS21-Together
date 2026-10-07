@@ -6,8 +6,8 @@ Report problems with both players' `MelonLoader\Latest.log` and the server's `Lo
 
 ## Setup
 
-1. Install the client zip into a game install without gameplay mods (QoLmod, TK, LvxBetterCarSpawns and QuickShop are
-   refused; LoadOptimizer is fine). Set your name in the Multiplayer panel.
+1. Install the client zip into a game install without gameplay mods (QoLmod, TK, LvxBetterCarSpawns,
+   LvxOwnedCarsOnly, QuickShop and AutosaveMod are refused; LoadOptimizer is fine). Set your name in the Multiplayer panel.
 2. Host from the main menu: Multiplayer → Host (starts the bundled server; set a password for internet games). Or run
    `TogetherServer\CMS21_Together_Server.exe` yourself. Friends join by address, or over Steam when `use_steam = True`.
 3. **Hand check:** a friend joins over the internet (Steam "Join Game", invite, and by IP with port forwarding and the
