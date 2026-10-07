@@ -24,6 +24,8 @@ namespace CMS21_Together_Server.Data.Outdoor
 		public GameScene Scene;
 		public int Seed;
 		public int GeneratorId;
+		public int OpenerId;
+		public bool OpenerFeePending;
 		public DateTime OpenedUtc;
 		public float EmptySince = -1f;
 		public readonly List<OutdoorCarPick> Picks = new List<OutdoorCarPick>();

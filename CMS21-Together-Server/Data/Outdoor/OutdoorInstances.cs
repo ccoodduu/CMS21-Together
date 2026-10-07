@@ -15,7 +15,10 @@ namespace CMS21_Together_Server.Data.Outdoor
 		public const int BarnPickCount = 3;
 
 		private static readonly Dictionary<GameScene, OutdoorInstance> open = new Dictionary<GameScene, OutdoorInstance>();
+		private const float BarnFeeMatchSeconds = 60f;
+
 		private static int nextInstanceId = 1;
+		private static readonly Dictionary<int, float> barnPaidAt = new Dictionary<int, float>();
 
 		public static Random Rng { get; set; } = new Random();
 		public static ICarSelector Selector { get; set; } = new BasicCarSelector();
@@ -45,6 +48,7 @@ namespace CMS21_Together_Server.Data.Outdoor
 		public static void Reset()
 		{
 			open.Clear();
+			barnPaidAt.Clear();
 			nextInstanceId = 1;
 			AuctionAmounts.Clear();
 		}
@@ -52,6 +56,19 @@ namespace CMS21_Together_Server.Data.Outdoor
 		public static bool IsShared(GameScene scene) => SharedScenes.Contains(scene);
 
 		public static bool IsOpen(GameScene scene) => open.ContainsKey(scene);
+
+		public static bool BarnTripUsesBarn(int playerId)
+		{
+			var barn = Of(GameScene.Barn);
+			if (barn == null)
+			{
+				barnPaidAt[playerId] = OutdoorNet.Now();
+				return true;
+			}
+			if (barn.OpenerId != playerId || !barn.OpenerFeePending) return false;
+			barn.OpenerFeePending = false;
+			return true;
+		}
 
 		public static OutdoorInstance Get(int instanceId) =>
 			instanceId <= 0 ? null : open.Values.FirstOrDefault(i => i.InstanceId == instanceId);
@@ -104,8 +121,14 @@ namespace CMS21_Together_Server.Data.Outdoor
 				Scene = scene,
 				Seed = Rng.Next(1, int.MaxValue),
 				GeneratorId = playerId,
+				OpenerId = playerId,
 				OpenedUtc = DateTime.UtcNow,
 			};
+			if (scene == GameScene.Barn)
+			{
+				instance.OpenerFeePending = !(barnPaidAt.TryGetValue(playerId, out float paidAt) && OutdoorNet.Now() - paidAt < BarnFeeMatchSeconds);
+				barnPaidAt.Remove(playerId);
+			}
 			instance.Members.Add(playerId);
 			open[scene] = instance;
 

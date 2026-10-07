@@ -429,10 +429,16 @@ namespace CMS21_Together_Server.Data.Outdoor
 		{
 			typeof(GameDataManager).GetProperty(nameof(GameDataManager.CurrentState)).SetValue(null, new ModGameState());
 			var fee = new EconomyRequestPacket { Reason = EconomyReason.TravelFee, Arg = 7, Arg2 = 1, Money = -100 };
-			Check(EconomyRules.Evaluate(1, fee).Barns == -1, "opening a barn uses one barn");
+			Check(EconomyRules.Evaluate(1, fee).Barns == -1, "a fee before the instance opens uses one barn");
 			OutdoorInstances.Enter(1, GameScene.Barn, now);
+			Check(EconomyRules.Evaluate(1, fee).Barns == 0, "the opener's barn is not charged twice");
 			var join = EconomyRules.Evaluate(2, fee);
 			Check(join.Barns == 0 && join.Money == -100, "joining the open barn uses no barn and pays the fee");
+			OutdoorInstances.OnSceneChanged(1, GameScene.Barn, GameScene.Loading);
+			OutdoorInstances.OnSceneChanged(2, GameScene.Barn, GameScene.Loading);
+			OutdoorInstances.Enter(3, GameScene.Barn, now);
+			Check(EconomyRules.Evaluate(3, fee).Barns == -1, "a fee after OutdoorEnter (the order seen at runtime) uses one barn for the opener");
+			Check(EconomyRules.Evaluate(3, fee).Barns == 0, "and only once");
 		}
 
 		private static void PacketRoundTrip()
