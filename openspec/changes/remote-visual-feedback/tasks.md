@@ -37,11 +37,11 @@ same commit. Every scenario carries `# areas:` (new areas `visuals`, `driving`, 
 
 ## 2. Core and server: activity
 
-- [ ] 2.1 Core `Network/Packets/VisualPackets.cs`: `ActivityKind`, `PlayerActivityState { Kind, CarLoaderID, PartKey,
+- [ ] 2.1 **In code (2026-10-07):** needs a game run (packet count on server start). `ToolType`/`ModTool` are `int` (-1 = none), `Progress` 0..16; `PlayerActivityState.Clone`/`SameAs`/`QuantizeProgress`. Core `Network/Packets/VisualPackets.cs`: `ActivityKind`, `PlayerActivityState { Kind, CarLoaderID, PartKey,
       ToolType (int, game value), ModTool, Progress (byte, 1/16 steps) }`, `PlayerActivityPacket { PlayerId, State }`;
       `PlayerPresenceRecord.Activity` (`[OptionalField]`, copied by `Copy()`); append `PlayerActivity` to
       `PacketTypes`. Done when the solution builds and `PacketRouter` logs the new packet count on server start.
-- [ ] 2.2 Server `Network/Handlers/VisualHandlers.cs` (`[AllowBeforeSync]`): under `StateLock` overwrite `PlayerId`,
+- [ ] 2.2 **In code (2026-10-07):** needs a game run. Scene change clears `Activity` before the presence relay, so receivers get the cleared record; leave removes the record; the dispatch already holds `StateLock`; packets with an unknown `Kind` are dropped; idle is stored as `null`. Server `Network/Handlers/VisualHandlers.cs` (`[AllowBeforeSync]`): under `StateLock` overwrite `PlayerId`,
       set `CarLoaderID = -1` when the loader is not in `CarPartsStore`, store the state in the presence record, relay
       to clients in the same scene with `ShowsAvatars` and `SyncState` past `Connected` (the movement rule); drop
       packets beyond 8 per second per client (one warning per minute). `PlayerPresence` scene change and leave clear

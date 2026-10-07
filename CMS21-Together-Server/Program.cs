@@ -98,6 +98,7 @@ namespace CMS21_Together_Server
 			Data.Jobs.JobsService.Initialize();
 			Data.Cars.CarAwayRegistry.Initialize();
 			Data.Tools.ToolsStore.Initialize();
+			Network.Handlers.VisualHandlers.Initialize();
 			Logger.CurrentLogLevel = Config.LogLevel;
 			Logger.Info($"Log Level set to: {Logger.CurrentLogLevel}");
 			

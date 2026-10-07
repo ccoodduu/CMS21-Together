@@ -106,5 +106,6 @@ public enum PacketTypes
 	PlayerRestore,
 	BugReportRequest,
 	BugReportCollect,
-	BugReportResult
-}
+	BugReportResult,
+	PlayerActivity
+}
