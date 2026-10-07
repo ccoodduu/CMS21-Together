@@ -59,6 +59,25 @@ public static class OutdoorCarSync
 		car = local;
 	}
 
+	public static Il2CppSystem.Collections.Generic.List<CarsIdWithConfig> PicksAsCars(GameScene scene, Il2CppSystem.Collections.Generic.List<CarsIdWithConfig> cars, int count)
+	{
+		var catalogScene = scene == GameScene.Barn ? OutdoorCatalogScene.Barn : OutdoorCatalogScene.Junkyard;
+		var picks = OutdoorSession.Instance.Picks;
+		var result = new Il2CppSystem.Collections.Generic.List<CarsIdWithConfig>();
+		for (int i = 0; i < count; i++)
+		{
+			var local = i < picks.Count ? CatalogReporter.Find(catalogScene, picks[i].CarId, picks[i].ConfigVersion) : null;
+			if (local == null && cars != null && cars.Count > 0) local = cars[i % cars.Count];
+			if (local != null) result.Add(local);
+		}
+		return result;
+	}
+
+	public static void Track(CarLoader loader, int index)
+	{
+		if (OutdoorSession.IsShared && loader != null) indexByLoader[loader.Pointer] = index;
+	}
+
 	public static void Created(CarLoader loader, int index)
 	{
 		if (!OutdoorSession.IsShared || loader == null) return;

@@ -1,5 +1,6 @@
 using System;
 using CMS21_Together_Core.Data.Enum;
+using CMS21_Together_Core.Data.Outdoor;
 using CMS21_Together_Core.Logging;
 using HarmonyLib;
 using UnityEngine;
@@ -59,22 +60,25 @@ public static class GeneratorHooks
 		var generator = __instance.__4__this;
 		if (OutdoorSession.IsShared && OutdoorSession.Instance.FillAllSpawnPoints && generator != null)
 			generator.CarsPercentage = new Vector2(100f, 100f);
-		__state = Reseed.Begin("junkyard", state, __instance._i_5__11, -1);
+		__state = Reseed.Begin(__instance.Pointer, "junkyard", -1);
 		return true;
 	}
 
 	[HarmonyPatch(typeof(JunkyardGenerator._Generate_d__18), nameof(JunkyardGenerator._Generate_d__18.MoveNext))]
 	[HarmonyFinalizer]
-	private static Exception JunkyardStepEnd(Exception __exception, bool __state)
+	private static Exception JunkyardStepEnd(Exception __exception, bool __state, bool __result, JunkyardGenerator._Generate_d__18 __instance)
 	{
-		Reseed.End(__state);
+		Reseed.End(__state, __instance.Pointer, __exception != null || !__result);
 		return __exception;
 	}
 
 	[HarmonyPatch(typeof(JunkyardGenerator._CreateCar_d__19), nameof(JunkyardGenerator._CreateCar_d__19.MoveNext))]
 	[HarmonyPrefix]
-	private static void JunkyardCarStep(JunkyardGenerator._CreateCar_d__19 __instance, out bool __state) =>
-		__state = Reseed.Begin("junkyard-car", __instance.__1__state, 0, __instance.index);
+	private static void JunkyardCarStep(JunkyardGenerator._CreateCar_d__19 __instance, out bool __state)
+	{
+		OutdoorCarSync.Track(__instance._carLoader_5__3, __instance.index);
+		__state = Reseed.Begin(__instance.Pointer, "junkyard-car", __instance.index);
+	}
 
 	[HarmonyPatch(typeof(JunkyardGenerator._CreateCar_d__19), nameof(JunkyardGenerator._CreateCar_d__19.MoveNext))]
 	[HarmonyPostfix]
@@ -85,9 +89,9 @@ public static class GeneratorHooks
 
 	[HarmonyPatch(typeof(JunkyardGenerator._CreateCar_d__19), nameof(JunkyardGenerator._CreateCar_d__19.MoveNext))]
 	[HarmonyFinalizer]
-	private static Exception JunkyardCarStepEnd(Exception __exception, bool __state)
+	private static Exception JunkyardCarStepEnd(Exception __exception, bool __state, bool __result, JunkyardGenerator._CreateCar_d__19 __instance)
 	{
-		Reseed.End(__state);
+		Reseed.End(__state, __instance.Pointer, __exception != null || !__result);
 		return __exception;
 	}
 
@@ -104,22 +108,41 @@ public static class GeneratorHooks
 			__result = true;
 			return false;
 		}
-		__state = Reseed.Begin("barn", state, __instance._i_5__12, -1);
+		__state = Reseed.Begin(__instance.Pointer, "barn", -1);
 		return true;
 	}
 
 	[HarmonyPatch(typeof(ShedManager._Generate_d__29), nameof(ShedManager._Generate_d__29.MoveNext))]
 	[HarmonyFinalizer]
-	private static Exception BarnStepEnd(Exception __exception, bool __state)
+	private static Exception BarnStepEnd(Exception __exception, bool __state, bool __result, ShedManager._Generate_d__29 __instance)
 	{
-		Reseed.End(__state);
+		Reseed.End(__state, __instance.Pointer, __exception != null || !__result);
 		return __exception;
 	}
 
 	[HarmonyPatch(typeof(ShedManager._CreateCar_d__30), nameof(ShedManager._CreateCar_d__30.MoveNext))]
 	[HarmonyPrefix]
-	private static void BarnCarStep(ShedManager._CreateCar_d__30 __instance, out bool __state) =>
-		__state = Reseed.Begin("barn-car", __instance.__1__state, 0, __instance.index);
+	private static void BarnCarStep(ShedManager._CreateCar_d__30 __instance, out bool __state)
+	{
+		OutdoorCarSync.Track(__instance._cl_5__3, __instance.index);
+		__state = Reseed.Begin(__instance.Pointer, "barn-car", __instance.index);
+	}
+
+	[HarmonyPatch(typeof(CarLoader._SetRandomColorPanels_d__321), nameof(CarLoader._SetRandomColorPanels_d__321.MoveNext))]
+	[HarmonyPrefix]
+	private static void ColourPanelsStep(CarLoader._SetRandomColorPanels_d__321 __instance, out bool __state)
+	{
+		int index = OutdoorCarSync.IndexOf(__instance.__4__this);
+		__state = index >= 0 && Reseed.Begin(__instance.Pointer, "colour-panels", index);
+	}
+
+	[HarmonyPatch(typeof(CarLoader._SetRandomColorPanels_d__321), nameof(CarLoader._SetRandomColorPanels_d__321.MoveNext))]
+	[HarmonyFinalizer]
+	private static Exception ColourPanelsStepEnd(Exception __exception, bool __state, bool __result, CarLoader._SetRandomColorPanels_d__321 __instance)
+	{
+		Reseed.End(__state, __instance.Pointer, __exception != null || !__result);
+		return __exception;
+	}
 
 	[HarmonyPatch(typeof(ShedManager._CreateCar_d__30), nameof(ShedManager._CreateCar_d__30.MoveNext))]
 	[HarmonyPostfix]
@@ -130,10 +153,19 @@ public static class GeneratorHooks
 
 	[HarmonyPatch(typeof(ShedManager._CreateCar_d__30), nameof(ShedManager._CreateCar_d__30.MoveNext))]
 	[HarmonyFinalizer]
-	private static Exception BarnCarStepEnd(Exception __exception, bool __state)
+	private static Exception BarnCarStepEnd(Exception __exception, bool __state, bool __result, ShedManager._CreateCar_d__30 __instance)
 	{
-		Reseed.End(__state);
+		Reseed.End(__state, __instance.Pointer, __exception != null || !__result);
 		return __exception;
+	}
+
+	[HarmonyPatch(typeof(Helper), nameof(Helper.GetRandomCars))]
+	[HarmonyPrefix]
+	private static bool BeforeGetRandomCars(Il2CppSystem.Collections.Generic.List<CarsIdWithConfig> cars, int count, ref Il2CppSystem.Collections.Generic.List<CarsIdWithConfig> __result)
+	{
+		if (!Reseed.Active || !OutdoorScenes.HasPiles(OutdoorSession.Scene)) return true;
+		__result = OutdoorCarSync.PicksAsCars(OutdoorSession.Scene, cars, count);
+		return false;
 	}
 
 	[HarmonyPatch(typeof(JunkyardGenerator), nameof(JunkyardGenerator.CreateCar))]

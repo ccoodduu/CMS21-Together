@@ -132,19 +132,14 @@ public static class AuctionSync
 
 	private static void ComputeValues(AuctionManager manager, AuctionType auctionType, AuctionCarData data)
 	{
-		var saved = UnityEngine.Random.state;
-		try
+		Reseed.WithSeed(data.Seed, () =>
 		{
-			UnityEngine.Random.InitState(data.Seed);
 			data.Rating = AuctionHelper.GetRatingForCar(auctionType);
 			data.Value = CarBundleLoaderExtension.GetCarValue(Singleton<GameManager>.Instance.CarBundleLoader, data.Car, data.Version);
 			var range = auctionType == AuctionType.Normal ? manager.rangeNormalStartPriceMod : manager.rangeSalvageStartPriceMod;
 			data.StartingPrice = AuctionHelper.GetStartingPrice(data.Value, range, data.Rating);
-		}
-		finally
-		{
-			UnityEngine.Random.state = saved;
-		}
+			return true;
+		});
 	}
 
 	[HarmonyPatch(typeof(AuctionBidding), nameof(AuctionBidding.StartAuction))]

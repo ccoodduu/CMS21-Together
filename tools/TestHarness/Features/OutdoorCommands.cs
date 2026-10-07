@@ -115,7 +115,7 @@ public static class OutdoorCommands
 		MelonLogger.Msg($"[Harness] outdoor-trace {line}");
 	}
 
-	private static string RandomState() => UnityEngine.Random.state.GetHashCode().ToString("x8");
+	private static string RandomState() => Reseed.Current.ToString();
 
 	[HarmonyPatch(typeof(JunkyardGenerator._Generate_d__18), nameof(JunkyardGenerator._Generate_d__18.MoveNext))]
 	[HarmonyPrefix]
@@ -166,15 +166,6 @@ public static class OutdoorCommands
 	[HarmonyPostfix]
 	private static void TraceBarnCreateCar(int index, CarsIdWithConfig carIdWithConfig) =>
 		Note($"ShedManager.CreateCar {index} {carIdWithConfig?.CarID}/{carIdWithConfig?.ConfigVersion}");
-
-	[HarmonyPatch(typeof(ShedManager), nameof(ShedManager.AddItems))]
-	[HarmonyPostfix]
-	private static void TraceBarnItems(GameObject go) => Note($"ShedManager.AddItems {go?.name}");
-
-	[HarmonyPatch(typeof(Junk), nameof(Junk.AddRandomItems))]
-	[HarmonyPostfix]
-	private static void TraceJunkItems(Junk __instance) =>
-		Note($"Junk.AddRandomItems {__instance?.gameObject?.name} at {LootSync.Key(__instance.transform.position)}: {__instance.ItemsInTrash?.Count ?? 0} items");
 
 	[HarmonyPatch(typeof(AuctionManager), nameof(AuctionManager.GenerateCars))]
 	[HarmonyPostfix]
@@ -250,13 +241,21 @@ public static class OutdoorCommands
 	{
 		var type = ParseType(args);
 		var manager = Manager();
-		if (type == AuctionType.Normal) manager.OpenNormalAuctions();
-		else manager.OpenSalvageAuctions();
+		string uiError = null;
+		try
+		{
+			if (type == AuctionType.Normal) manager.OpenNormalAuctions();
+			else manager.OpenSalvageAuctions();
+		}
+		catch (Exception ex)
+		{
+			uiError = ex.Message.Split(new[] { '\n' }, 2)[0];
+		}
 		var list = type == AuctionType.Normal ? manager.normalCars : manager.salvageCars;
 		var lots = new List<object>();
 		for (int i = 0; list != null && i < list.Count; i++)
 			lots.Add(new { position = i, lot = AuctionSync.LotOf(list[i]), list[i].Car, list[i].Version, list[i].Seed, list[i].Rating, list[i].Value, list[i].StartingPrice, list[i].Sold });
-		return new { type = type.ToString(), lots };
+		return new { type = type.ToString(), uiError, lots };
 	}
 
 	[HarnessCommand("auction-start")]
