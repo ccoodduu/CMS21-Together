@@ -1,6 +1,8 @@
 # areas: resync, parts
 # desync-detection-and-resync (c): B's car part state is corrupted locally (no packet), B resyncs (the F7 path) and
 # the garage reload brings B back to the server's state; a second resync right away is refused by the cooldown.
+# Playtest 2026-10-07 finding 5: world-state packets (money changes) that arrive while B's garage reloads are
+# applied without an error in the WorldState handler.
 param($Ctx)
 
 $a, $b = $Ctx.Instances
@@ -40,8 +42,12 @@ $corrupt = Send-HarnessCommand -Instance $b -Verb part-corrupt -Arguments "0"
 $corruptB = Send-HarnessCommand -Instance $b -Verb car-ready -Arguments "0"
 Check ($corruptB.stateHash -ne $readyA.stateHash) "B's car differs after the local corruption of $($corrupt.key)"
 
+$logB = Join-Path $env:USERPROFILE "CMS21-TestInstalls\$b\MelonLoader\Latest.log"
+$logStart = @(Get-Content -LiteralPath $logB).Count
 $mark = Get-ServerLogMark
 $result = Send-HarnessCommand -Instance $b -Verb resync
+$end = (Get-Date).AddSeconds(8)
+while ((Get-Date) -lt $end) { Send-ServerCommand "money add 1"; Start-Sleep -Milliseconds 400 }
 Check ($result -eq "reloading") "B's resync starts ($result)"
 $manual = try { Wait-ServerLog -Pattern "manual resync by .*differing at that moment: .*cars:0" -After $mark -TimeoutSec 10 } catch { $null }
 Check ([bool]$manual) "the server logs the manual resync with the differing car ($manual)"
@@ -50,6 +56,11 @@ Wait-InGarage $b
 $readyB = Wait-Ready $b
 $readyA = Send-HarnessCommand -Instance $a -Verb car-ready -Arguments "0"
 Check ($readyB.stateHash -eq $readyA.stateHash) "after the resync B's car matches A's ($($readyA.stateHash) / $($readyB.stateHash))"
+
+$handlerErrors = @(Get-Content -LiteralPath $logB | Select-Object -Skip $logStart | Where-Object { $_ -match "Error in handler" })
+Check ($handlerErrors.Count -eq 0) "no packet handler failed during B's reload ($($handlerErrors.Count): $($handlerErrors | Select-Object -First 1))"
+$diff = Compare-HarnessDumps (Send-HarnessCommand -Instance $a -Verb dump) (Send-HarnessCommand -Instance $b -Verb dump) -Sections @("stats")
+Check ($diff.Count -eq 0) "A and B have the same money after the reload (differ: $($diff -join ', '))"
 
 $again = Send-HarnessCommand -Instance $b -Verb resync
 Check ("$again" -match "^Wait \d+ s") "a second resync right away is refused ($again)"
