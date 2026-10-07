@@ -29,6 +29,7 @@ public class RemoteCar
 	public float WheelAngle;
 	public RemoteEngine Engine;
 	public float BuildSeconds;
+	public float LongestFrame;
 	public long BuildBytes;
 	public bool Kinematic;
 	public bool CollidersOff;
@@ -44,6 +45,8 @@ public class RemoteCar
 public static class RemoteCars
 {
 	public const float LoadTimeoutSeconds = 30f;
+	public const float LocalCarWaitSeconds = 60f;
+	private static bool building;
 	private static readonly Vector3 ParkingSpot = new Vector3(0f, -500f, 0f);
 
 	private static readonly Dictionary<int, RemoteCar> cars = new Dictionary<int, RemoteCar>();
@@ -128,6 +131,34 @@ public static class RemoteCars
 
 	private static IEnumerator Build(RemoteCar car, string forceRoute)
 	{
+		float waitDeadline = Time.realtimeSinceStartup + LocalCarWaitSeconds;
+		while (!car.Stopped && (building || !LocalCarReady()) && Time.realtimeSinceStartup < waitDeadline) yield return null;
+		if (car.Stopped) yield break;
+		building = true;
+		try
+		{
+			var steps = BuildSteps(car, forceRoute);
+			while (!car.Stopped && steps.MoveNext())
+			{
+				yield return steps.Current;
+				car.LongestFrame = Mathf.Max(car.LongestFrame, Time.unscaledDeltaTime);
+			}
+		}
+		finally
+		{
+			building = false;
+		}
+	}
+
+	// Loading a second car while the game still loads the player's own track car froze the game for over 10 s.
+	private static bool LocalCarReady()
+	{
+		var physics = PrepareCarPhysics.Get();
+		return physics != null && physics.CarLoader != null && physics.CarLoader.IsCarLoaded() && GameMode.Get()?.GetCurrentMode() == gameMode.CarDrive;
+	}
+
+	private static IEnumerator BuildSteps(RemoteCar car, string forceRoute)
+	{
 		float started = Time.realtimeSinceStartup;
 		long memoryBefore = GC.GetTotalMemory(false) + ProcessBytes();
 		NewCarData data = null;
@@ -176,7 +207,7 @@ public static class RemoteCars
 		car.BuildSeconds = Time.realtimeSinceStartup - started;
 		car.BuildBytes = GC.GetTotalMemory(false) + ProcessBytes() - memoryBefore;
 		car.Root.gameObject.SetActive(car.Interpolator.HasState);
-		Log.Info($"[Drive] Observer car of player {car.PlayerId} ready: {car.Mode} by {car.Route} in {car.BuildSeconds:F1} s, {car.BuildBytes / 1048576f:F0} MB, {car.Wheels.Count} wheels, engine {(car.Engine != null ? "on" : "silent")}.");
+		Log.Info($"[Drive] Observer car of player {car.PlayerId} ready: {car.Mode} by {car.Route} in {car.BuildSeconds:F1} s (longest frame {car.LongestFrame:F2} s), {car.BuildBytes / 1048576f:F0} MB, {car.Wheels.Count} wheels, engine {(car.Engine != null ? "on" : "silent")}.");
 	}
 
 	private static long ProcessBytes()

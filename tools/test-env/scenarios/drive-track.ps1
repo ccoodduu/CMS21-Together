@@ -90,14 +90,15 @@ Check (Wait-Track $a) "A reached the test track with car 0"
 Start-Sleep -Seconds 4
 Cmd $b testdrive-go "1" | Out-Null
 Check (Wait-Track $b) "B reached the test track with car 1"
-$away = @((Cmd $a dump).away)
-Check ($away.Count -eq 2 -and @($away | Where-Object { $_.owner -eq $idA -and $_.loader -eq 0 }).Count -eq 1 -and @($away | Where-Object { $_.owner -eq $idB -and $_.loader -eq 1 }).Count -eq 1) "both away claims granted at once ($($away | ConvertTo-Json -Compress))"
+$grants = @(Get-ServerLogLines | Where-Object { $_ -match "\[Away\] TestTrack on loader (0 granted to client $idA|1 granted to client $idB)" })
+$releases = @(Get-ServerLogLines | Where-Object { $_ -match "\[Away\] TestTrack on loader [01] .*released" })
+Check ($grants.Count -eq 2 -and $releases.Count -eq 0) "both away claims granted and held at once ($($grants.Count) grants, $($releases.Count) releases)"
 
 $carA = Wait-RemoteCar $b $idA
 $carB = Wait-RemoteCar $a $idB
 Save "observer_B_start" $carA
 Save "observer_A_start" $carB
-Check ($carA -and $carA.visible -and $carA.mode -match "^ghost") "B shows A's car (A drove before B arrived; mode $($carA.mode), build $($carA.buildSeconds) s, $($carA.buildMb) MB)"
+Check ($carA -and $carA.visible -and $carA.mode -match "^ghost") "B shows A's car (A drove before B arrived; mode $($carA.mode), build $($carA.buildSeconds) s, longest frame $($carA.longestFrame) s, $($carA.buildMb) MB)"
 Check ($carB -and $carB.visible -and $carB.mode -match "^ghost") "A shows B's car (mode $($carB.mode))"
 Check ($carA.kinematic -and $carA.collidersOff) "A's car on B is kinematic with colliders off"
 
