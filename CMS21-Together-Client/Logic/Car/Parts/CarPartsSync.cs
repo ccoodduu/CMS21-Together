@@ -111,6 +111,7 @@ public static class CarPartsSync
 
 	public static void OnCarDeleted(int loader)
 	{
+		Visuals.VisualScope.CancelLoader(loader, "car deleted");
 		ownBaselinePending.Remove(loader);
 		loaders.Remove(loader);
 	}
@@ -174,6 +175,7 @@ public static class CarPartsSync
 		var first = batches[0];
 		var spawn = first.Spawn;
 		int loader = first.CarLoaderID;
+		Visuals.VisualScope.CancelLoader(loader, "snapshot");
 
 		while (!ClientData.IsInventorySynced || !ClientData.IsGarageStateSynced)
 			yield return new WaitForSeconds(0.25f);
