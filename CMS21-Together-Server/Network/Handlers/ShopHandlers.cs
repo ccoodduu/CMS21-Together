@@ -1,8 +1,10 @@
+using System.Collections.Generic;
 using System.Linq;
 using CMS21_Together_Core;
 using CMS21_Together_Core.Network;
 using CMS21_Together_Core.Network.Packets;
 using CMS21_Together_Server.Data;
+using CMS21_Together_Server.Data.Outdoor;
 using CMS21_Together_Server.Log;
 
 namespace CMS21_Together_Server.Network.Handlers
@@ -159,6 +161,18 @@ namespace CMS21_Together_Server.Network.Handlers
                 discount = count * 0.05f; // 5% per level
             }
 
+            List<long> heldUids = null;
+            if (packet.InstanceId > 0)
+            {
+                packet.ItemsToBuy = LootService.HeldBy((int)clientId, packet.InstanceId, packet.ItemsToBuy, out _);
+                heldUids = packet.ItemsToBuy.Select(i => i.UID).ToList();
+                if (packet.ItemsToBuy.Count == 0)
+                {
+                    Logger.Info($"[ShopHandlers] ItemsExchange from client {clientId} in instance {packet.InstanceId}: no held items, nothing bought.");
+                    return;
+                }
+            }
+
             int totalCost = 0;
             foreach (var item in packet.ItemsToBuy)
             {
@@ -170,6 +184,7 @@ namespace CMS21_Together_Server.Network.Handlers
             if (state.WorldState.Money >= totalCost)
             {
                 state.WorldState.Money -= totalCost;
+                if (heldUids != null) LootService.MarkBought((int)clientId, packet.InstanceId, heldUids);
                 foreach (var item in packet.ItemsToBuy)
                 {
                     item.UID = InventoryHandlers.GenerateNewUID();

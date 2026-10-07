@@ -6,6 +6,7 @@ using CMS21_Together_Core.Data.Enum;
 using CMS21_Together_Core.Data.GameType;
 using CMS21_Together_Core.Network.Packets;
 using CMS21_Together_Server.Data.Cars;
+using CMS21_Together_Server.Data.Outdoor;
 using CMS21_Together_Server.Data.Placement;
 using CMS21_Together_Server.Network;
 using CMS21_Together_Server.Network.Handlers;
@@ -120,8 +121,10 @@ namespace CMS21_Together_Server.Data.Economy
 		{
 			if (!TravelTable.TryGetValue(r.Arg, out int table)) return Invalid($"destination {r.Arg}");
 			var outcome = new EconomyOutcome { Money = ChargesTravel ? table : 0 };
-			if (r.Arg == BarnDestination && r.Arg2 == 1) outcome.Barns = -1;
+			bool joinsOpenBarn = r.Arg == BarnDestination && OutdoorInstances.IsOpen(GameScene.Barn);
+			if (r.Arg == BarnDestination && r.Arg2 == 1 && !joinsOpenBarn) outcome.Barns = -1;
 			if (outcome.Money != r.Money) outcome.Note = $"client charged {r.Money}";
+			if (joinsOpenBarn) outcome.Note = (outcome.Note == null ? "" : outcome.Note + ", ") + "joins the open barn";
 			return outcome;
 		}
 

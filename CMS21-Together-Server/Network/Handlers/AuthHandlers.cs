@@ -89,7 +89,8 @@ namespace CMS21_Together_Server.Network.Handlers
 			Difficulty = GameDataManager.CurrentState.WorldState.Gamemode,
 			SharedDlc = SharedDlc.Shared.ToList(),
 			PasswordRequired = !string.IsNullOrEmpty(Program.Config.Password),
-			IsAdmin = Server.Clients.TryGetValue(clientId, out var client) && client.IsAdmin
+			IsAdmin = Server.Clients.TryGetValue(clientId, out var client) && client.IsAdmin,
+			SharedOutdoorScenes = Data.Outdoor.OutdoorInstances.SharedScenes.OrderBy(s => (int)s).ToList()
 		};
 
 		public static void BroadcastServerInfo()
