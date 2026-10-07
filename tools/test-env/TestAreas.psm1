@@ -6,7 +6,7 @@
 
 $script:KnownAreas = @(
     "connect", "presence", "guard", "cars", "parts", "placement", "details", "jobs", "economy", "tools",
-    "testdrive", "persistence", "resync", "hosting", "bugreport", "release", "visuals", "driving"
+    "testdrive", "persistence", "resync", "hosting", "bugreport", "release", "visuals", "driving", "locks"
 )
 
 $script:PathAreaTable = @'

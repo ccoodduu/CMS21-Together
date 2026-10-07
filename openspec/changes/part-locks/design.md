@@ -169,15 +169,17 @@ registry, which covers both directions. It is never built from `blockedBy`, whic
 | Action (`CarLockKind`) | X | S |
 |---|---|---|
 | `PartUnmount`, `PartMount` on part P | the work group W: P's main object (`GetUnmountWithMainObject()` ?? P) first, then its `unmountWith` members | for every member of W: its `PartScript` ancestors in the registry; its blocking neighbours (both directions); its fluids (D4); `car` |
-| `PartMount` item step (`SelectPartToMount`, `ExtendLockId`) | unchanged | unchanged; plus Items = the `BaseItem`'s UID, and for a `GroupItem` its group UID and member UIDs [B1] |
+| `PartMount` item step (`ExtendLockId`) | unchanged | unchanged; plus Items: for a single item its UID at `SelectPartToMount`; for a group built in the chooser each item's UID when it is picked (`SelectItemInCreateGroup`, before its `Inventory.Delete`), and the new group UID at `SelectPartToMount` (unknown to the server, logged) [B1, spike 1.2] |
 | `GroupUnmount`, `GroupMount` | every part of the group (`GameScript.GetUnmountGroup()`/`ForcePartGroup`, spike 1.2) | as for parts |
 | `BodyPart` (take off or mount `b:i`) | `b:i` | `b:j` for each name in `ConnectedParts`; `car` |
 | `Fluid` (refill, extractor) | `f:T.id` | `car` |
 | `OilDrain` (oil bin) | `f:EngineOil.0` | `car` |
-| `Crane` (engine out/in) | the engine root `s:<path>`; for "in", Items = the engine group UID | `car` |
+| `Crane` (engine out/in) | `engine`; for "in", Items = the engine group UID | `car` |
 | `Lift`, `Move` | `car` (a swap: a second linked record for the other loader) | — |
 
-A key in both lists stays in X only.
+A key in both lists stays in X only. Every part under the car's engine (`CarLoader.e_engine_h`) also takes the key
+`engine` shared. Engine parts are siblings, not children of one part (spike 1.3: 111 on `car_boltatlanta`), so the
+crane's exclusive `engine` key stands for the whole engine.
 
 What this covers:
 - **Children** without listing them. Every lock on a descendant holds its ancestors shared, so an X on a part
@@ -191,12 +193,13 @@ parts the user would expect to be independent conflict, the rule is narrowed (de
 
 ### D4. Fluid systems
 
-- `CarFluid` components below each `PartScript` give the key `f:<FluidType>.<ID>` (the row 4 spike: `ID` equals the
+- The `CarFluid` component on a part's parent transform (spike 1.3; `CheckIsFluidContainer` and `GetFluidId` read the
+  parent) gives the key `f:<FluidType>.<ID>` (the row 4 spike: `ID` equals the
   list index). Oil has no `CarFluid`. Its parts come from `FluidRefillLockType == EngineOil` and the drain plug
   `korek_spustowy_1` (spike 1.3).
 - A part takes its fluids **shared** when it does any of the following. Two players can unmount two coolant hoses
   together, and neither can start while someone fills coolant.
-  - contains one (`IsFluidContainer()` or a `CarFluid` below it);
+  - contains one (a `CarFluid` on its parent transform);
   - gates a refill (`FluidRefillLockType`; `All` means every fluid key of the car);
   - drains one when it is unmounted (`<Hide>d__159` zeroes coolant, washer and power steering fluid; spike 1.3 maps
     which part drains which fluid).
@@ -244,15 +247,15 @@ that did not start is released at once. Spike 1.2/1.4 confirms each predicate an
 
 | Kind | Started when | Ends when (normal) | Backed out when | Idle cancel |
 |---|---|---|---|---|
-| `PartUnmount` | the game holds the part as selected to unmount (`GameScript.SelectedPart`, or the mode became `PartUnMount`) | every X key reached its target state on the server, or the client's tracker sent the last X flip [minor 3] | `UndoUnMounting` (from `CleanUnfinishedUnMount`); ESC out of the bolt view; a mode change the action did not set itself [minor 8]; leaving the garage | 5 min without bolt progress |
-| `PartMount`, slot phase | `ChoosePartUpWindow` is shown | moves to the item phase on `SelectPartToMount` | the chooser closes (`Hide`/back, spike 1.2) without a `SelectPartToMount`; a mode change; leaving the garage | 60 s in the chooser |
+| `PartUnmount` | `SelectToUnMount(main)` ran in the call: the mode became `PartUnMount` (`SelectedPart` alone is stale, it keeps the last part); for a `oneClickUnmount` part, `Hide` started | every X key reached its target state on the server, or the client's tracker sent the last X flip [minor 3] | `UndoUnMounting` (from `CleanUnfinishedUnMount`); ESC out of the bolt view; a mode change the action did not set itself [minor 8]; leaving the garage | 5 min without bolt progress |
+| `PartMount`, slot phase | `WindowManager.IsWindowActive(ChoosePartUp)` | moves to the item phase on the first picked item (`SelectItemInCreateGroup`) or `SelectPartToMount` | `ChoosePartUpWindow.Hide` without a `SelectPartToMount`/`MountGroup` (it restores the previous mode); a mode change; leaving the garage | 60 s in the chooser |
 | `PartMount`, item phase | `DoMount` started (the part transaction opened) | as `PartUnmount` | `UndoMounting`; a mode change; leaving the garage | 5 min without bolt progress |
 | `GroupUnmount`/`GroupMount` | the group mode is entered | as `PartUnmount` | `CleanUnfinished*`; a mode change | 5 min |
 | `BodyPart` | the panel's `TakeOnOffInProgress` is true or its `Unmounted` flipped | its X key reached the target state | not started | — |
 | `Fluid` refill | `FluidRefill` is active (`ExamineTool.IsActive`) | `FluidRefill.Hide`, after `FlushNow` | `Hide` without a level change | — (hold) |
 | `Fluid` extractor | `<UseAnim>d__5` started | its last `MoveNext`, after `FlushNow` | — | — |
 | `OilDrain` | the first `MoveNext` of `<UseOilDrain>d__40` yielded (state 0 returns `false` when there is no oil or plug) | its last `MoveNext`, after `FlushNow` | — | — |
-| `Crane` | `ActionUnMountGroup`/`InsertEngineToCar` ran | the engine change is committed | — | — |
+| `Crane` | an engine group appeared in the inventory (out), the group left it (in) | the engine change is committed | — | — |
 | `Lift` | `isMoving` became true | the local `isMoving` falls (30 s cap) | not started | — |
 | `Move` | the coroutine advanced past state 0 | the coroutine ended | not started | — |
 
@@ -296,9 +299,10 @@ in the switch-over task, together with the server's `CarClaims` [B3]. The harnes
 no action) for the scenarios that used `part-claim` as a reservation (`car-live`, `economy-trades`, `test-drive`)
 [minor 13].
 
-`ClientDigests` skips a car only while this client holds a lock on it or has an unconfirmed change, not whenever
-anyone holds a lock. Locks now last longer, and four busy players would otherwise keep a car out of the digest check
-[minor 11]. `CarAwaySync` stays as it is, and the mirror treats an away claim as X `car`.
+`ClientDigests` keeps checking a car while locks are held, its own included. It skips a car only while this client
+has an open part transaction or a change that is not sent or not confirmed yet. Today it skips a car whenever any
+claim exists, which during shared work is almost always, so car desyncs went unnoticed (playtest finding 6); locks
+last longer still [minor 11]. `CarAwaySync` stays as it is, and the mirror treats an away claim as X `car`.
 
 ### D7. Car-level lock: lifts, moves, park, delete, job end, away
 
@@ -358,8 +362,8 @@ are exempt, because `ActionMount` itself calls `SetPartMouseOver` on the caller'
 
 | Where | Hook (spike 1.1 confirms each fires on the real path) | Effect while another player's lock conflicts |
 |---|---|---|
-| Hover highlight | `PartScript.SetMouseOver(bool)` and `InteractiveObject.SetMouseOver(bool, Color)` prefixes skip the highlight. **`GameScript.SetPartMouseOver` is left alone**: it is the game's "what is under the cursor", and the label and the click need it [M2] | no highlight (or orange, open question 5) |
-| Hover label | `GameScript.GetRaycastOnItemName()` postfix (or `UpdateRaycastOnItemName()` if the getter is inlined) | "<name> is working on this part" / "… on the <part>" |
+| Hover highlight | a prefix on `PartScript.SetMouseOver()` (the overload without arguments; `Raycast` calls it every frame and `PartScript.Update` draws and clears the highlight from it, spike 1.1) and on `InteractiveObject.SetMouseOver(bool)`/`(bool, Color)` (body and interior) skips the highlight. **`GameScript.SetPartMouseOver` is left alone**: it is the game's "what is under the cursor", and the label and the click need it [M2] | no highlight (or orange, open question 5) |
+| Hover label | a postfix on `GameScript.SetPartMouseOver(PartScript)` (every frame) and `GameScript.SetIOMouseOver` calls `UIManager.SetIODescription(message, type)` | "<name> is working on this part" / "… on the <part>" |
 | Interior parts | the same hooks, reached from `Raycast.InteriorDisassemble`/`InteriorAssemble`/`PartUnMountPartMount` [minor 12] | as above |
 | Click | the gate (D1 step 1) | error sound, message, `Cursor3D.ResetButton()`, no request |
 | Body panels | `CanTakeOffCarPart` postfix returns `false`. It does not set the `out TakePartOffLockReason`, because the game's reasons have no "another player" text and the game would show its own wrong message | the game does not offer the take-off; the gate shows the message |
@@ -395,7 +399,8 @@ Messages (`LockMessages`, one place; the same text at most once per 2 s):
   playtest. A grant is a few dictionary lookups on sets under 40 keys.
 - **Prefetch at hold start (main design for hold actions) [M1].** The unmount click is a hold with a fill ring
   (`Cursor3D.fillTime`/`holdTime`). When a hold starts over a free part in a part mode, the client requests the lock
-  for that part at once. The fill time is longer than a relay round trip (spike 1.6 measures it), so the grant
+  for that part at once (`Cursor3D.canCountTime` rises over a part, spike 1.6). The fill takes 150 ms plus `fillTime`
+  (1000 ms in `PartSelect` on the test profile, 1150 ms in all), far longer than a relay round trip, so the grant
   usually arrives before the hold completes. `ActionUnMount` then finds the prefetched lock (D1 step 2) and runs with
   no visible wait.
   - A hold that is aborted or moved off the part releases the prefetched lock.
@@ -433,6 +438,10 @@ CarLockRenew    { List<int> LockIds; }                                          
 enum CarLockKind    { PartUnmount, PartMount, GroupUnmount, GroupMount, BodyPart, Fluid, OilDrain, Crane, Lift, Move }
 enum CarLockRefusal { None, Held, Away, NotReady, Stale, Invalid, Item, CarBusy }
 ```
+
+A refusal that has no request (park, delete, job end, a lift or move without the car lock) reaches the client as
+`CarLockResult { RequestId = 0, Refusal = CarBusy, HolderPlayerId, ConflictKey = "park" | "delete" | "job end" |
+"lift" | "move" }`, next to the feature's own refusal; `ParkRefusal` gains `Busy`.
 
 Changed: `ServerInfo` gains `LockScope` (`connected` or `part`), so the client's `LockSets` and hover checks use the
 server's rule. It is marked `[OptionalField]` like the other additions. That is moot while the protocol hash forces
@@ -505,6 +514,10 @@ real with a mouse:
 - parking and job end refused while a friend works.
 
 ### D14. Spikes: game methods to confirm in the IL2CPP dump and at runtime
+
+Results (2026-10-07) are in `docs/spikes/part-locks.md`. They confirmed D1, D5, D9 and D10 and changed two
+rules: the crane takes the key `engine` (D3), and a chooser-built group locks its items when they are picked (D3).
+The input shim works (`lock-click`, D13).
 
 Static (Il2CppDumper `dump.cs` + Ghidra into `native/out/locks_clean`, as in `docs/spikes/native-decompile.md`),
 then a `lock-trace` run where the static answer cannot decide:
@@ -583,5 +596,9 @@ The user's open questions are in proposal.md. Assumptions taken here without the
 
 ## Measurements
 
-(Filled by tasks 1.3, 1.6 and 11.1: lock-set sizes per car, hold fill time, denial rate and median wait in
+- Lock-set sizes (spike 1.3): `car_boltatlanta` 228 parts, largest 21 keys, mean 4.7; `car_sixoncebulion` 224 parts,
+  largest 20, mean 4.3; none over 40.
+- Hold (spike 1.6): `hold full` 1134 ms after the press in `PartSelect` (150 ms + `fillTime` 1000 ms).
+
+(Filled by task 11.1: denial rate and median wait in
 `locks-scale`.)

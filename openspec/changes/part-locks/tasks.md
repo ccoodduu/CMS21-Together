@@ -15,7 +15,7 @@ coolant and connected-part races.
 
 ## 1. Spikes
 
-- [ ] 1.1 Hover and selection path.
+- [x] 1.1 Hover and selection path.
       - Static decompile into `native/out/locks_clean`: `Raycast.Garage`, `PartSelect`, `PartSelectMount`,
         `GarageAssemble`, `InteriorDisassemble`, `InteriorAssemble`, `PartUnMountPartMount`,
         `GameScript.SetPartMouseOver`, `UpdateRaycastOnItemName`, `GetRaycastOnItemName`,
@@ -27,7 +27,8 @@ coolant and connected-part races.
       Done when design.md D9 names, for each row of its table, the hook that fires on the real path. It must state
       that the highlight is suppressed while `GetPartMouseOver()`, the label and the click stay intact, and whether
       the coloured highlight is local only (open question 5).
-- [ ] 1.2 Mount flow, item UIDs and back-outs.
+      **Done (2026-10-07):** `PartScript.SetMouseOver()` (no arguments) for the highlight, `GameScript.SetPartMouseOver` for the label, both on the real path through `lock-click`; body and interior hooks static only. See `docs/spikes/part-locks.md` 1.1 and design.md D9; runs `20261007-214438`, `20261007-215206`, `20261007-215950` (`locks-probe`).
+- [x] 1.2 Mount flow, item UIDs and back-outs.
       - Static: `ActionMount(bool)`, `ChoosePartUpWindow.Show(…)`, `SelectItemInCreateGroup`, `SubmitGroupItem`,
         `Hide`/`BackAction`/`HideAction`, `GameScript.SelectPartToMount(BaseItem)`, where `SelectedToMount` is set,
         the callers of `CleanUnfinishedMount`/`CleanUnfinishedUnMount`, the void caller of `UnMountByGroup`,
@@ -38,7 +39,8 @@ coolant and connected-part races.
 
       Done when design.md D5's lifecycle table has a confirmed "started" predicate and back-out signal per part kind,
       the self-set modes are listed, and D3's item step states which UIDs reach `SelectPartToMount` for a group.
-- [ ] 1.3 Relations and lock-set sizes.
+      **Done (2026-10-07):** started predicates and back-outs in design.md D5; a chooser-built group deletes its items when they are picked, so the item step gates `SelectItemInCreateGroup` (design.md D3). `docs/spikes/part-locks.md` 1.2; runs `20261007-214438`, `20261007-215206`, `20261007-215950` (`locks-probe`).
+- [x] 1.3 Relations and lock-set sizes.
       - `lock-trace relations <loader>` dumps, for every registry part: key, id, `PartScript` ancestors,
         `unmountWith`/main object, `unblockOnUnmount` and the reverse index, `CarFluid` below it, `FluidRefillLockType`,
         `IsFluidContainer()`, and the fluids its hide drains (`<Hide>d__159`). For body parts it dumps
@@ -49,7 +51,8 @@ coolant and connected-part races.
 
       Done when `docs/spikes/part-locks.md` lists the relations summary, the largest sets (under 40 keys, or D3 is
       narrowed), the bearing cap and crankshaft pair for `locks-connected`, and D4's part-to-fluid map.
-- [ ] 1.4 Re-invocation, started predicates and finishers.
+      **Done (2026-10-07):** largest set 21 keys, none over 40; crane narrowed to the key `engine`; pair crankshaft `s:13.5` / caps `s:13.65`–`s:13.67`; fluid map. `docs/spikes/part-locks.md` 1.3; `relations-*.tsv` in runs `20261007-214438`, `20261007-215206`, `20261007-215950` (`locks-probe`).
+- [x] 1.4 Re-invocation, started predicates and finishers.
       - A scratch prefix blocks the first call of each D1 entry point and re-invokes it 150 ms later. Entry points:
         `ActionUnMount`, `ActionMount`, `TakeOffCarPart`, `SelectPartToMount`, `FluidRefill.Use`,
         `FluidExtractor.Use`, `UseOilbin`, `CarLifter.Action`, `ChangeCarPos`, `ActionUnMountGroup(iO)`,
@@ -59,24 +62,29 @@ coolant and connected-part races.
       - Pick the finisher per kind for `lock-try … finish`.
 
       Done when D1's `Context` fields, D5's started column and D13's finisher are confirmed or corrected.
-- [ ] 1.5 Lift and move. How the lift's interactive object reaches `CarLifter.Action(int)`. Whether
+      **Done (2026-10-07):** every entry point re-invoked after 150 ms behaves like the direct call; finisher = bolt loop plus `Hide`/`ShowMounted`. `docs/spikes/part-locks.md` 1.4; runs `20261007-214438`, `20261007-215206`, `20261007-215950` (`locks-probe`).
+- [x] 1.5 Lift and move. How the lift's interactive object reaches `CarLifter.Action(int)`. Whether
       `NotificationCenter.ChangeCarPos(CarLoader, CarPlace, bool)` can be restarted from code with the pie's
       arguments. The pie option ids for `part-locks-2`. Done when D7 names the restart call and the lift hook.
-- [ ] 1.6 Hold. `lock-trace` the unmount click: `Cursor3D.GetIsButtonHold`, `SetHoldID`, `fillTime`/`holdTime`,
+      **Done (2026-10-07):** lift hook `CarLifter.Action`; move restart `StartCoroutine(ChangeCarPos(carLoader, place, movePlayer))` after setting `previousMode`. `docs/spikes/part-locks.md` 1.5.
+- [x] 1.6 Hold. `lock-trace` the unmount click: `Cursor3D.GetIsButtonHold`, `SetHoldID`, `fillTime`/`holdTime`,
       where a hold start over a part is visible, and how long the fill takes. Done when D10 records the fill time
       and the hold-start hook, and the fill time is longer than 150 ms (else D10's prefetch is dropped and recorded).
-- [ ] 1.7 Input shim for `lock-click`: a harness patch on `Cursor3D.GetIsButtonHold`/`GetIsButtonClick` plus a camera
+      **Done (2026-10-07):** hold start = `Cursor3D.canCountTime` rising over a part; full after 1134 ms (150 ms + `fillTime` 1000 ms); prefetch stays. `docs/spikes/part-locks.md` 1.6; run `20261007-215950`.
+- [x] 1.7 Input shim for `lock-click`: a harness patch on `Cursor3D.GetIsButtonHold`/`GetIsButtonClick` plus a camera
       aimed at the part drives `Raycast.PartSelect`, the hover highlight, the label and the hold path in a headless
       test game. Done when `lock-click` unmounts a free part through the game's own raycast (`lock-trace` shows
       `Raycast.PartSelect` → `ActionUnMount`), or design.md D13 records that it does not work and the input checks
       stay manual (task 11.3).
+      **Done (2026-10-07):** `lock-click` drives `Raycast` → hover → hold → `ActionUnMount` headless, after moving the part to layer `Part` and enabling its `PartScript`. `docs/spikes/part-locks.md` 1.7; run `20261007-215950`.
 
 ## 2. Core and server lock table (beside the claims)
 
-- [ ] 2.1 Core `Network/Packets/LockPackets.cs`: the five packets of D12, `CarLockKind`, `CarLockRefusal`, and
+- [x] 2.1 Core `Network/Packets/LockPackets.cs`: the five packets of D12, `CarLockKind`, `CarLockRefusal`, and
       `LockKeys` (`Car`, `Fluid(type, id)`, path-segment ancestry helpers) next to `PartKeys`. Append the packets to
       `PacketTypes` (after whatever `main` has then), and add `ServerInfo.LockScope`. Done when the solution builds
       and the server start log shows the new packet count.
+      **Done (2026-10-07):** builds; the server logs "53 handlers and 94 packets registered" (run `20261007-215950`). Also `LockKeys.Engine` (spike 1.3) and `ParkRefusal.Busy`.
 - [ ] 2.2 Server `Data/Cars/CarLocks.cs` and `Network/Handlers/LockHandlers.cs` per D5:
       - validation, with unknown item UIDs logged and not refused [B1];
       - segment-based ancestor derivation, the D2 table with linked swap records, away claims as X `car`;
@@ -86,6 +94,7 @@ coolant and connected-part races.
 
       `CarClaims` stays. Done when `CMS21-Together-Server.exe --check-locks` passes and the existing `parts` area is
       still green.
+      **In code (2026-10-07):** `CarLocks.cs`, `CarLocksCheck.cs`, `LockHandlers.cs`; `--check-locks` passes (20 checks). The `parts` area run is still open.
 - [ ] 2.3 Server integration, asking both `CarClaims` and `CarLocks` until 5.1:
       - `FindConflict`: reject a mount flip of another player's X key; count S flips as `unlockedFlip`;
       - release on an accepted commit once all X keys reached their target state, broadcast before the relay;
@@ -99,6 +108,7 @@ coolant and connected-part races.
       `CarsSnapshotProvider` sends `CarLockUpdate` for lock records next to today's claim updates. Done when the
       solution builds, and a two-client run with `lock-take` (3.1) logs grant, broadcast, renew, release and expiry
       (`lock_expiry_seconds = 10`), and `locks` lists them.
+      **In code (2026-10-07):** every item above; refusals without a request reach the client as `CarLockResult { RequestId = 0, Refusal = CarBusy }` (design.md D12). Not run yet (needs `lock-take`, 3.1).
 
 ## 3. Harness (before the client gate)
 
@@ -151,7 +161,8 @@ coolant and connected-part races.
       - `PartClaims` becomes the view (its patches and `Claim` removed);
       - `CarClaims.cs`, `OnClaim` and the claim updates in the snapshot are deleted, and every server check asks only
         `CarLocks`;
-      - `ClientDigests` per D6, and the scenarios `car-live`, `economy-trades`, `test-drive` changed from
+      - `ClientDigests` per D6 (digests keep running while locks are held; skip only during an open transaction or an
+        unsent or unconfirmed change, playtest finding 6), and the scenarios `car-live`, `economy-trades`, `test-drive` changed from
         `part-claim` to `lock-take`.
 
       Done when `visual-parts`, `visual-latejoin`, `car-live`, `car-race`, `car-crane`, `economy-trades` and
