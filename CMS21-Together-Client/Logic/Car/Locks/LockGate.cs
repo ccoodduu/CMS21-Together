@@ -131,6 +131,7 @@ public static class LockGate
 				string text = answer.Refusal == CarLockRefusal.Stale || answer.Refusal == CarLockRefusal.NotReady
 					? LockMessages.Loading
 					: LockMessages.ForKey(action.Set.Loader, LockMessages.Name(answer.Holder), answer.ConflictKey, action.TargetKey);
+				PartClaims.LastBlocked = action.TargetKey;
 				LockMessages.Refuse(text);
 				Report(action, new GateReport { Result = "denied", Holder = answer.Holder, ConflictKey = answer.ConflictKey, WaitedMs = answer.WaitedMs });
 				break;
@@ -184,6 +185,8 @@ public static class LockGate
 
 	private static void Refuse(GatedAction action, string text, string result, int holder = -1, string key = null)
 	{
+		PartClaims.LastBlocked = action.TargetKey;
+		if (action.PrefetchedLockId != 0) CarLockMirror.Release(action.PrefetchedLockId);
 		ResetButton();
 		LockMessages.Refuse(text);
 		Report(action, new GateReport { Result = result, Holder = holder, ConflictKey = key });

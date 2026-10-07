@@ -171,6 +171,29 @@ public static class LockCommands
         return new { closed = open };
     }
 
+    [HarnessCommand("lock-hover")]
+    private static object LockHover(string args)
+    {
+        var parts = Args(args);
+        if (parts.Length != 2) throw new ArgumentException("usage: lock-hover <loader> <key>");
+        var carLoader = CarLoaderPlaces.Get().GetCarLoaderByIndex(int.Parse(parts[0])) ?? throw new ArgumentException($"no car loader {parts[0]}");
+        var script = CMS21Together.Logic.Car.Parts.PartRegistry.Build(carLoader).Sub(parts[1]) ?? throw new ArgumentException($"no part {parts[1]}");
+        var game = GameScript.Get();
+        game.IOMouseOverCarLoader = carLoader;
+        script.MouseOver = false;
+        game.SetPartMouseOver(null);
+        script.SetMouseOver();
+        bool highlighted = script.MouseOver;
+        game.SetPartMouseOver(script);
+        return new Dictionary<string, object>
+        {
+            ["highlighted"] = highlighted,
+            ["label"] = UIManager.Get()?.TextDescription?.text,
+            ["partMouseOver"] = game.partMouseOver != null && game.partMouseOver.Pointer == script.Pointer,
+            ["message"] = LockSelection.BlockedMessage(script),
+        };
+    }
+
     [HarnessCommand("lock-tracked")]
     private static object LockTracked(string args) =>
         LockLifecycle.All.Select(t => (object)new { lockId = t.LockId, kind = t.Kind.ToString(), key = t.MainKey, phase = t.Phase.ToString(), ending = t.EndingSince >= 0f, itemPicked = t.ItemPicked }).ToList();

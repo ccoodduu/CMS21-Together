@@ -39,6 +39,7 @@ public static class ClientData
 		Logic.Car.Locks.LockGate.Reset();
 		Logic.Car.Locks.LockLifecycle.Reset();
 		Logic.Car.Locks.LockPrefetch.Reset();
+		Logic.Car.Locks.LockSelection.Reset();
 		Logic.Car.Away.CarAwaySync.Reset();
 		PartTransactions.Reset();
 		Network.Handlers.InventoryHandlers.ResetHeld();

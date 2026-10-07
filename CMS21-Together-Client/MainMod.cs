@@ -111,6 +111,7 @@ namespace CMS21Together
 			if (Client.Instance.IsConnectionValid) Logic.Car.Locks.CarLockMirror.Update();
 			if (Client.Instance.IsConnectionValid) Logic.Car.Locks.LockGate.Update();
 			if (Client.Instance.IsConnectionValid) Logic.Car.Locks.LockLifecycle.Update();
+			if (Client.Instance.IsConnectionValid) Logic.Car.Locks.LockPrefetch.Update();
 			if (Client.Instance.IsConnectionValid) Logic.Car.Away.PathTestSync.Update();
 			if (Client.Instance.IsConnectionValid) Logic.Visuals.ActivityCapture.Update();
 			Logic.Visuals.VisualScope.Update();

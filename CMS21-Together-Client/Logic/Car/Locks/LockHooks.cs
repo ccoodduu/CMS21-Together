@@ -264,9 +264,7 @@ public static class LockHooks
 	private static bool Gate(GatedAction action, string key)
 	{
 		if (action == null) return true;
-		bool run = LockGate.Enter(action);
-		if (!run && !LockGate.IsBypassed(action.Target)) PartClaims.LastBlocked = key ?? action.TargetKey;
-		return run;
+		return LockGate.Enter(action);
 	}
 
 	[HarmonyPatch(typeof(PartScript), nameof(PartScript.ActionUnMount))]
