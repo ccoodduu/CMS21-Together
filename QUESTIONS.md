@@ -8,7 +8,7 @@ Answered ones move to the bottom with the answer.
 Not questions for the user; open bugs from the first playtest, fixed one by one.
 
 1. **Ghost stuck when the lift moves (row 17):** a remote mount's ghost stayed at its world position after the lift
-   moved, and the real caliper stayed hidden (`forceRenderingOff`) until the scene was reloaded.
+   moved, and the real caliper stayed hidden (`forceRenderingOff`) until the scene was reloaded. Not reproduced by `visual-lift` (fast mount and unscrew while the lift moves, held ghost: no ghost or hidden renderer left, 2026-10-07); the playtest mount ran with bolts. Row 18 `part-locks` D7 (no lift or move while another player holds a lock on the car) removes the situation.
 2. **Server keeps running** after the host returned to the main menu (the user typed `/exit`). By design (session-hosting spec: leaving keeps hosting; Stop on the Host tab or quitting the game stops it); my advice to "go to the main menu" was wrong. Idea: a main-menu notice "your server is still running".
 3. **Persistent car desync** on wheels: `s:3.22.4.tunedId` empty on the host vs `tire_sport` on the server.
 4. **Rollback after a rejected mount** (same item taken by both players) left the loser's inventory out of sync
