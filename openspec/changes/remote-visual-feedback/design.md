@@ -342,12 +342,36 @@ Part 2 static half (2026-10-07, `docs/spikes/remote-visuals.md` "Part 2"):
 - **8.3 state sources:** `BaseCarPhysics.rigidBody`/`carModel`/`VehicleController`/`res`; `wheelState[]`
   (`steerAngle`, `angularVelocity`); `data` bus (`GearboxGear`, `EngineWorking`, input `Brake`); `LightsOn`. D9's field
   list holds; the packed state is 36 bytes. Which transform carries the visible car is read in the runtime probe.
-- **8.2 route:** clone of the track's `CarLoader` (inactive parent, renamed), `LoadCarFromFile(NewCarData)`; cost
-  measured by `drive-probe`.
+- **8.2 route:** clone of the track's `CarLoader` (inactive parent, renamed), `LoadCarFromFile(NewCarData)`.
+
+Part 2 runtime half (2026-10-07, lane 1, headless; `20261007-203534_L1_drive-probe`, `drive-track`, `drive-latejoin`):
+
+- **8.1 confirmed:** the lambda opens the map; mode, scene and every car's place unchanged.
+- **8.2:** the clone route works (also `new` and `base`); 0.4 s for the player's own car data, 6.5-9 s for another
+  player's car (frames stay under 0.2 s). Building it in the frame the own track car became driveable stopped the
+  game for over 10 s, so observer cars wait until the own car has been driveable for 3 s and build one at a time.
+- **8.3:** on the track the loader root is gone; the car's parts hang under `VPP BluePrint/Model/model(Clone)`, and
+  the stream sends that object's pose. Reverse comes from the velocity (the gear reads -1 at rest).
+- **8.4:** two cars away at once work (both claims granted and held, both results applied, dumps equal).
 
 ## Measurements
 
 Filled by tasks 1.3 (bolt timing, packet order), 7.3 (bytes per type, frame time) and 12.2 (driving bytes).
+
+Driving (12.2, server `perf top` in `drive-track`, runs `20261007-205002` and `20261007-210258`):
+
+| Packet | Measured | D8 estimate |
+|---|---|---|
+| `CarDriveState` | 276 B per message; 4.1 kB/s per driver while moving (15 Hz), about 0.8 kB/s parked (3 Hz) | 0.25 kB, 3.8 kB/s |
+| `CarDriveStart` | 15.6 kB (15.5 kB car data) once per drive | ≈ 30 kB |
+
+Both are under twice the estimate. While moving, a driver's upload is 3 % over task 12.2's 4 kB/s line (the
+`BinaryFormatter` frame around the 36-byte payload is 240 bytes); the session budget (20 kB/s up) is not at risk.
+Server handler time per state: 0.06 ms average, 0.2 ms p99.
+
+Observer car: shown 9.7 s after the drive reaches a client that arrives on the track (3 s settle + 6.7 s load), 6.5-7
+s after a drive starts while the observer is already there; the spec's 2 s is not met (QUESTIONS.md row 17 #8). The
+pose follows the driver's path within 0.03 m at the observer's render time, 0.3-0.4 s behind the driver.
 
 ## Risks / Trade-offs
 

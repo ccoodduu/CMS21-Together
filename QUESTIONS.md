@@ -34,6 +34,10 @@ Not questions for the user; open bugs from the first playtest, fixed one by one.
    the garage, so garage driving (group 11) is dropped. Allow the option in multiplayer as a map shortcut? A test
    track trip from that map goes through row 13's claim as usual. **Default:** it stays blocked (`Planned`) until
    you say yes.
+8. **Another player's car on the test track appears after about 10 s** (7 s when you are already there), not the
+   2 s the spec asks: loading another car takes about 6.5 s, and it waits 3 s after your own car is ready (starting
+   earlier froze the game). **Default:** accept it for 1.1; a faster way (keeping the copy between drives, loading it
+   before you arrive) would be a follow-up.
 
 ## Accepted defaults (user, 2026-10-06)
 

@@ -140,7 +140,13 @@ Static, 2026-10-07, from the existing decompiles (`native\out\testdrive_clean\Pi
   data the track itself loads). Inert: every `Rigidbody` kinematic without collisions, every `Collider`, `PartScript`,
   `MountObject` and `InteractiveObject` disabled, `addInteractiveObject` off, no `PrepareCarPhysics`. Fallbacks:
   `new` (a fresh `GameObject` with a `CarLoader`) and `base` (`LoadCar(carToLoad)`, mode `ghost=base`).
-- Cost (load time, memory) and which route works: `drive-probe` (`drive-ghost-test clone|new|base`), still to run.
+- Runtime (`20261007-203534_L1_drive-probe`): all three routes load (`clone`, `new`, `base`), 0.4 s each when the
+  car's data is the player's own; another player's car takes 6.5-9 s spread over frames (longest frame 0.1-0.18 s,
+  most likely the rust map of a car UID this game has not cached), memory within the measurement noise. The copy
+  is kinematic with every collider off; 475 scripts disabled for `car_boltatlanta`; 4 wheels and the engine sound.
+- Starting that load in the frame the player's own track car became driveable stopped B's game for more than
+  10 s (the server timed it out, twice). Observer cars now wait until the own car is driveable for 3 s and build
+  one at a time; four runs since passed.
 
 ### 8.3 Drive state sources (VPP)
 
@@ -153,8 +159,23 @@ Static, 2026-10-07, from the existing decompiles (`native\out\testdrive_clean\Pi
 - Observer wheels: `CarLoader.GetWheelFL/FR/RL/RRHandle()`; each wheel turns about the car's axes (steer about up for
   the front pair, spin about right) from its rest pose relative to the root.
 - Which transform carries the visible car on the driver (`carModel` or the loader root) is read by `drive-probe`
-  (paths and positions of root, `carModel`, rigidbody and the first part); still to run.
+  (paths and positions of root, `carModel`, rigidbody and the first part).
+- Runtime: on the track the loader's root is gone (`GetRootTransform()` throws, `GetRoot()` is null). The car hangs
+  under VPP's object: `Physics/VPP BluePrint` (rigidbody, `VPVehicleController`, `CarInputManager`, `VPAudio2` ...),
+  `.../Model/model(Clone)/<parts>`, wheels under `.../Model/Wheels/FL|FR|RL|RR`. The stream sends the pose of
+  `model(Clone)` (the `carModel` child that holds the parts), which is what the observer's loader root shows.
+- `res.engineCurrentRPM` and the data bus agree (rpm ×1000); the gear reads -1 until the car moves, so reverse is
+  taken from the velocity. `externalThrottle` raises the rpm but the car often stays below 2 m/s in a headless
+  game, so the harness then pushes the rigidbody (`drive-input` mode `push`); the stream does not care how the
+  car moves.
 
 ### 8.4 Two cars away at once
 
-Covered by `drive-track` (both claims granted at once, both results applied); still to run.
+`drive-track` passes: both away claims are granted and held at once (server log), both drives' kilometres apply
+after the return, and `cars`/`away` are equal. A client on the track does not mirror other players' claims in its
+own `away` section (it is not in the garage).
+
+### 8.1 runtime
+
+`drive-probe`: calling the lambda opened the map (`WindowManager.Show(Map)`, `MapWindow.Show`, mode `UI` → `UI`);
+every loader kept its place and position; no scene change.
