@@ -111,6 +111,8 @@ namespace CMS21Together
 			if (Client.Instance.IsConnectionValid) Logic.Car.Away.PathTestSync.Update();
 			if (Client.Instance.IsConnectionValid) Logic.Visuals.ActivityCapture.Update();
 			Logic.Visuals.VisualScope.Update();
+			Logic.Driving.DriveCapture.Update();
+			Logic.Driving.RemoteCars.Update();
 			ConnectionStatus.Update();
 			ServerWatchdog.Update();
 			LocalServerHost.Update();
@@ -152,6 +154,8 @@ namespace CMS21Together
 			Logic.Visuals.BoltReplay.Initialize();
 			Logic.Visuals.ActivityCapture.Initialize();
 			Logic.Visuals.RemoteActivity.Initialize();
+			Logic.Driving.DriveCapture.Initialize();
+			Logic.Driving.RemoteCars.Initialize();
 		}
 
 		public override void OnApplicationQuit()

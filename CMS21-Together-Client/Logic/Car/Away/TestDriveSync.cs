@@ -124,7 +124,7 @@ public static class TestDriveSync
 				Log.Info($"[TestDrive] Loader {pair.Key}: result skipped (harness), NewMileage {GlobalData.NewMileage} kept.");
 				return;
 			}
-			var trackCar = Object.FindObjectOfType<CarLoader>();
+			var trackCar = PrepareCarPhysics.Get()?.CarLoader ?? Object.FindObjectOfType<CarLoader>();
 			var cosmetics = trackCar == null ? null : CarDetailsIO.Read(trackCar, CarDetailSection.BodyCosmetics).BodyCosmetics;
 			Log.Info($"[TestDrive] Loader {pair.Key}: result sent (+{GlobalData.NewMileage} km, {cosmetics?.Count ?? 0} parts).");
 			Client.Instance.Send(new TestDriveResultPacket { CarLoaderID = pair.Key, SpawnSeq = pair.Value.SpawnSeq, MileageDeltaKm = GlobalData.NewMileage, Cosmetics = cosmetics });
