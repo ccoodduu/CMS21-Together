@@ -204,10 +204,10 @@ else {
     $mark = Get-ServerLogMark
     Send-HarnessCommand -Instance $b -Verb econ-map-travel -Arguments "Barn" | Out-Null
     Check ([bool](Economy-Line $mark "TravelFee\(7\) money")) "the server applied the barn trip"
-    Wait-Shared "after the barn trip" { param($d) $d.stats.barns -eq $barns } | Out-Null
     try { Wait-HarnessStatus -Instance $b -TimeoutSec 120 -What "B in the barn" -Condition { param($s) $s.scene -ne "garage" -and $s.playable } | Out-Null } catch { }
     Send-HarnessCommand -Instance $b -Verb travel -Arguments "Garage" | Out-Null
     Wait-InGarage $b
+    Wait-Shared "after the barn trip" { param($d) $d.stats.barns -eq $barns } | Out-Null
 }
 
 # Crates (upstream #94).
