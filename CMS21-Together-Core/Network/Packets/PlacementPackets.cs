@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Runtime.Serialization;
 
 namespace CMS21_Together_Core.Network.Packets
 {
@@ -67,6 +68,9 @@ namespace CMS21_Together_Core.Network.Packets
         public int PreferredSlot = -1;
         public ParkedCar Car;
         public int Price;
+        [OptionalField] public int SourceInstanceId;
+        [OptionalField] public int SourceCarIndex = -1;
+        [OptionalField] public int SourceLot = -1;
     }
 
     [Serializable]

@@ -106,5 +106,20 @@ public enum PacketTypes
 	PlayerRestore,
 	BugReportRequest,
 	BugReportCollect,
-	BugReportResult
+	BugReportResult,
+
+	OutdoorCatalog,
+	OutdoorEnter,
+	OutdoorInstance,
+	OutdoorLootRecord,
+	OutdoorDigest,
+	LootTake,
+	LootPutBack,
+	LootUpdate,
+	LootTakeRefused,
+	OutdoorCarRemoved,
+	AuctionLotClaim,
+	AuctionBidState,
+	AuctionBidRequest,
+	AuctionLotClosed
 }

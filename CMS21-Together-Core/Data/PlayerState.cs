@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Runtime.Serialization;
 using CMS21_Together_Core.Data.Enum;
 using CMS21_Together_Core.Network.Packets;
 
@@ -24,6 +25,7 @@ public class PlayerPresenceRecord
 	public bool EngineRunning;
 	public float EngineRpm;
 	public MovementPacket LastMovement;
+	[OptionalField] public int OutdoorInstanceId;
 
 	public PlayerPresenceRecord Copy() => (PlayerPresenceRecord)MemberwiseClone();
 }
