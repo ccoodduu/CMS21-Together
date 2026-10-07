@@ -74,6 +74,7 @@ public class ClientTCP
                 CloseFromRemote();
                 return;
             }
+            ServerWatchdog.MarkReceived();
 
             byte[] data = new byte[byteLength];
             Array.Copy(receiveBuffer, data, byteLength);

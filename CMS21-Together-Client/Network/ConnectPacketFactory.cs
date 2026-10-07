@@ -5,6 +5,7 @@ using CMS21_Together_Core.Logging;
 using CMS21_Together_Core.Network.Packets;
 using CMS21Together.Compatibility;
 using CMS21Together.Data;
+using CMS21Together.Persistence;
 using CMS21Together.Session;
 
 namespace CMS21Together.Network;
@@ -26,11 +27,13 @@ public static class ConnectPacketFactory
 			mods = mods,
 			password = JoinService.CurrentPassword,
 			adminKey = JoinService.CurrentAdminKey,
+			playerKey = PlayerIdentity.Key,
 		};
 
 		var verdicts = new ModClassifier(ModClassifierRules.Default).ClassifyAll(mods);
 		Log.Info($"[Compat] Sending game {packet.gameVersion}, protocol {packet.protocolHash}, DLC [{string.Join(", ", packet.dlc)}], " +
 		         $"mods: {(verdicts.Count == 0 ? "none" : string.Join("; ", verdicts))}{(CompatOverrides.Any ? " (harness overrides active)" : "")}");
+		Log.Info($"[Identity] Sending player key {PlayerIdentity.Short(packet.playerKey)}{(string.IsNullOrEmpty(PlayerIdentity.Override) ? "" : " (harness override)")}.");
 		return packet;
 	}
 

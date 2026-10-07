@@ -2,6 +2,51 @@
 
 Newest first. One entry per work session.
 
+## 2026-10-07 (07:55–) — guard opened, batch mode, two lanes again
+
+- Two lanes run in parallel again (Claude Code's memory guard is off; the second lane needs 10 GB free RAM).
+- `main` = `8ae53d5`: the guard opens the synced workshop machines, part paint, window tint and starting the engine
+  (regression `20261007-075825` plus the 14 scenarios from last night: all passed, `economy-trades` flaky once on
+  "no SkillsTab"). Tint fee is a hand check (the harness cannot drive the tinting window).
+- Batch mode merged (`ed3af35`): `Run-Session -Scenarios` keeps the games running, restarts only the server per
+  scenario, `harness-reset` clears harness toggles, a batch failure is re-run fresh. Three scenarios in one batch
+  took about 4 minutes. `Run-All` batches by default (`-Fresh` for the old way).
+- Row 7 part 2 (`change/session-persistence-part2`): `rejoin`, `duplicate-identity`, `latejoin` (scenario fixed: it
+  compared A's state before the part had settled) and `persistence-restart` pass; its full batch regression runs on
+  lane 2. Once, under four games' load, the server timed out both clients at the same moment ~20 s into B's join and
+  their UDP packets arrived 13 s late; not explained yet (row 11's lock-wait metrics should show it).
+- Row 7 is done: part 2 merged (`151c606`) after the batch regression `20261007-082204` (all passed;
+  `car-placement-race` and `economy-trades` failed once inside the batch with "cars differ" and passed fresh; a probe
+  showed that a client does not keep cars from an earlier session in the same game process, so the cause is still
+  open) and a short batch with the guard change.
+- Car purchases outside the garage (row 6 part 2 group 6, `change/car-purchases`): first game runs found two bugs,
+  both fixed: patching `GameDataManager.SaveCar` (it takes the `NewCarData` struct by value) crashed the game, and
+  opening `CarLocationWindow` in the guard also opened the garage's car moves. Driving a junkyard purchase from the
+  harness still fails (`BuyCar` needs the car info window flow); being worked on, on lane 1.
+- Row 11 OpenSpec change written (`change/soak-and-scale`), questions in QUESTIONS.md.
+
+## 2026-10-06 (23:40–00:05) — handoff for the night (PC off)
+
+- Stopped on purpose for the night; nothing is running. The lane-1 server save was restored from the interrupted
+  run's backup and the recovery marker removed.
+- `change/guard-open` (opens 23 guard entries for rows 4, 5a, 6 part 2; repair and wash-before-tint fees through the
+  game's calls; tint fee is a hand check): `guard`, `economy-fees`, `economy-trades`, `economy-trace`, `tools-slots`
+  pass. Its full regression was stopped after 14 scenarios (all passed, `car-baseline` … `desync-autofix`). Next:
+  finish it (or, with batch mode, the rest) and merge.
+- `change/bug-report` (14d) and `change/session-persistence-part2` (row 7 part 2) contain `main` with 5a/5b and
+  build; they wait for their scenarios (`bug-report`; `rejoin`, `latejoin`, `persistence-restart`,
+  `duplicate-identity`) and a regression each.
+- Batch mode for the harness (user's wish: reuse the running games across scenarios, re-run a failure alone in a
+  fresh session): worktree `CMS21-Together-wt/harness-batch` exists, no code yet. Plan: `Run-Session -Scenarios`,
+  server restart per scenario, clients back to the menu plus a `harness-reset` verb, per-scenario log slices,
+  `# run-all: fresh` for scenarios that test game start or profiles, `Run-All` batches per lane with a fresh re-run
+  of failures.
+- Test budget (user): full regression only when client or server code changed; otherwise the affected scenarios.
+- Two lanes again: `CLAUDE_CODE_DISABLE_BG_SHELL_PRESSURE_REAP=1` is in `~/.claude/settings.json` and takes effect at
+  the next Claude Code start. The second lane only starts with at least 10 GB free RAM.
+- After that: M4's car purchases outside (junkyard, barn, auction into the shared parking; row 6 part 2 group 6),
+  then M5 (rest of row 7, row 11).
+
 ## 2026-10-06 (22:30–23:40) — row 5b merged; guard audit; a late-join fix
 
 - `main` = `614cee9`: row 5b (car tools: engine crane effects, car paint, car wash, interior detailing, oil bin,

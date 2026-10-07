@@ -18,12 +18,14 @@ namespace CMS21_Together_Server.Network.Handlers
 		private static int lastSnapshotId;
 
 		[PacketHandler(PacketTypes.Heartbeat)]
+		[AllowBeforeSync]
 		public static void OnHeartbeat(long clientId, HeartbeatPacket packet)
 		{
 			Server.Clients[(int)clientId].OnHeartbeatEcho(packet.sentTicks);
 		}
 
 		[PacketHandler(PacketTypes.Connect)]
+		[AllowBeforeSync]
 		public static void OnConnected(long clientId, ConnectPacket packet)
 		{
 			Logger.Debug($"Reiceved Connection callback from {packet.username}");
@@ -36,6 +38,22 @@ namespace CMS21_Together_Server.Network.Handlers
 				Server.Refuse(client.ID, DisconnectReason.WrongPassword, "");
 				return;
 			}
+
+			string identity = PlayerRecords.Resolve(client, packet.playerKey);
+			if (identity == null)
+			{
+				Server.Refuse(client.ID, DisconnectReason.MissingIdentity, "");
+				return;
+			}
+			var holder = PlayerRecords.ConnectedWith(identity, client.ID);
+			if (holder != null)
+			{
+				Logger.Info($"{PlayerRecords.ShortKey(identity)} is already connected as Client[{holder.ID}].");
+				Server.Refuse(client.ID, DisconnectReason.DuplicateIdentity, "");
+				return;
+			}
+			client.Identity = identity;
+
 			client.IsAdmin = !string.IsNullOrEmpty(Program.Config.AdminKey) && packet.adminKey == Program.Config.AdminKey;
 			client.GameVersion = packet.gameVersion;
 			client.ModVersion = packet.modVersion;
@@ -45,7 +63,8 @@ namespace CMS21_Together_Server.Network.Handlers
 			Server.SendToClient(BuildServerInfo(client.ID), client.ID);
 
 			var record = PresenceRegistry.Add(client.ID, packet.username);
-			Logger.Info($"Player {record.PlayerId} '{record.Username}' joined{(client.IsAdmin ? " (admin)" : "")}");
+			PlayerRecords.OnJoined(identity, record.Username, out bool returning);
+			Logger.Info($"Player {record.PlayerId} '{record.Username}' joined as {PlayerRecords.ShortKey(identity)} ({(returning ? "returning" : "new")}){(client.IsAdmin ? " (admin)" : "")}");
 			Server.SendToClients(new PlayerPresencePacket { Record = record.Copy() }, record.PlayerId);
 		}
 
@@ -77,6 +96,7 @@ namespace CMS21_Together_Server.Network.Handlers
 		}
 
 		[PacketHandler(PacketTypes.AskForSync)]
+		[AllowBeforeSync]
 		public static void OnAskForSync(long clientId, AskForSync packet)
 		{
 			lock (GameDataManager.StateLock)
@@ -99,6 +119,7 @@ namespace CMS21_Together_Server.Network.Handlers
 		}
 
 		[PacketHandler(PacketTypes.SyncAck)]
+		[AllowBeforeSync]
 		public static void OnSyncAck(long clientId, SyncAck packet)
 		{
 			var client = Server.Clients[(int)clientId];

@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
 using CMS21Together.Data;
@@ -61,5 +62,11 @@ public static class PresenceCommands
     {
         PlayerSettings.NameOverride = args?.Trim();
         return $"name '{PlayerSettings.PlayerName}'";
+    }
+
+    internal static void Reset(List<string> changed)
+    {
+        if (!string.IsNullOrWhiteSpace(PlayerSettings.NameOverride)) changed.Add($"set-name {PlayerSettings.NameOverride}");
+        PlayerSettings.NameOverride = null;
     }
 }

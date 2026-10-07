@@ -81,6 +81,30 @@ public static class JoinCommands
         return $"client version {ClientVersion.Current}";
     }
 
+    internal static void Reset(List<string> changed)
+    {
+        if (ClientVersion.Override != null) changed.Add($"mp-fake-version {ClientVersion.Override}");
+        ClientVersion.Override = null;
+        if (JoinService.PendingConfirmation != null)
+        {
+            changed.Add($"pending join confirmation {JoinService.PendingConfirmation}");
+            JoinService.Answer(false);
+        }
+        if (ConnectionStatus.MessagePending)
+        {
+            changed.Add($"unacknowledged join message ({ConnectionStatus.LastReason})");
+            MultiplayerMenuModel.AcknowledgeMessage();
+        }
+        if (MultiplayerMenuModel.Panel != MenuPanel.None || MultiplayerMenuModel.SessionPanelOpen)
+        {
+            changed.Add($"mp-ui panel {MultiplayerMenuModel.Panel}{(MultiplayerMenuModel.SessionPanelOpen ? " + session" : "")}");
+            MultiplayerMenuModel.Close();
+            MultiplayerMenuModel.CloseSessionPanel();
+        }
+        if (ModNotify.History.Count > 0) changed.Add($"toast history ({ModNotify.History.Count})");
+        ModNotify.History.Clear();
+    }
+
     [HarnessCommand("mp-ui")]
     private static object Ui(string args)
     {

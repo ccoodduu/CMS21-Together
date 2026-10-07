@@ -77,7 +77,8 @@ Step "econ-fee" "tint 0 4" | Out-Null
 Step "tool-paint-car" "0 0.8,0.1,0.1" | Out-Null
 Step "tool-use" "Welder 0 paid" | Out-Null
 Step "tool-use" "InteriorDetailing 0 paid" | Out-Null
-Step "tool-repair" "" | Out-Null
+$worn = (Step "give-item" "tarczaHamulcowa_1 0.3").UID
+Step "tool-repair" "$worn success paid" | Out-Null
 for ($card = 0; $card -le 3; $card++) { Step "econ-crate" "$($cases[$card]) $card" | Out-Null }
 Step "econ-crate-close" "$($cases[4])" | Out-Null
 Step "econ-skill-unlock" "fast_movement 0" 2 | Out-Null

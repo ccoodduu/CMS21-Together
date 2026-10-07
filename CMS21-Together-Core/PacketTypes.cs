@@ -103,6 +103,7 @@ public enum PacketTypes
 	ToolPartChangeResult,
 
 	ToolAction,
+	PlayerRestore,
 	BugReportRequest,
 	BugReportCollect,
 	BugReportResult

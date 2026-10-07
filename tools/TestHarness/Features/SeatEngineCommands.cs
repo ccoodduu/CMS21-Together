@@ -30,6 +30,13 @@ public static class SeatEngineCommands
         ("GameMode", "SetCurrentMode"),
     };
 
+    internal static void Reset(List<string> changed)
+    {
+        if (tracing) changed.Add("seat-trace");
+        tracing = false;
+        counts.Clear();
+    }
+
     [HarnessCommand("seat-trace")]
     private static object Trace(string args)
     {
