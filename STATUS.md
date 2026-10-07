@@ -2,6 +2,22 @@
 
 Newest first. One entry per work session.
 
+## 2026-10-07 (07:55–) — guard opened, batch mode, two lanes again
+
+- Two lanes run in parallel again (Claude Code's memory guard is off; the second lane needs 10 GB free RAM).
+- `main` = `8ae53d5`: the guard opens the synced workshop machines, part paint, window tint and starting the engine
+  (regression `20261007-075825` plus the 14 scenarios from last night: all passed, `economy-trades` flaky once on
+  "no SkillsTab"). Tint fee is a hand check (the harness cannot drive the tinting window).
+- Batch mode merged (`ed3af35`): `Run-Session -Scenarios` keeps the games running, restarts only the server per
+  scenario, `harness-reset` clears harness toggles, a batch failure is re-run fresh. Three scenarios in one batch
+  took about 4 minutes. `Run-All` batches by default (`-Fresh` for the old way).
+- Row 7 part 2 (`change/session-persistence-part2`): `rejoin`, `duplicate-identity`, `latejoin` (scenario fixed: it
+  compared A's state before the part had settled) and `persistence-restart` pass; its full batch regression runs on
+  lane 2. Once, under four games' load, the server timed out both clients at the same moment ~20 s into B's join and
+  their UDP packets arrived 13 s late; not explained yet (row 11's lock-wait metrics should show it).
+- Car purchases outside the garage (row 6 part 2 group 6, `change/car-purchases`): in code; being tested.
+- Row 11 OpenSpec change written (`change/soak-and-scale`), questions in QUESTIONS.md.
+
 ## 2026-10-06 (23:40–00:05) — handoff for the night (PC off)
 
 - Stopped on purpose for the night; nothing is running. The lane-1 server save was restored from the interrupted
