@@ -1,0 +1,210 @@
+# Tasks
+
+**M7 (release 1.1).** Prerequisites (all on `main`): rows 1, 2, 5a, 5b, 6, 11, 13 and 14a. Part 1 = work visuals
+(groups 1–7, M ≈ 4–5 sessions), mergeable on its own. Part 2 = driving (groups 8–12, L ≈ 6–8 sessions); it starts after
+part 1 is merged, and becomes `remote-visual-feedback-2` by the ROADMAP rule if it outgrows its estimate. Runtime facts
+the static decompile cannot give are spikes (groups 1 and 8); a spike that changes a decision updates design.md in the
+same commit. Every scenario carries `# areas:` (new areas `visuals`, `driving`, task 3.4).
+
+## 1. Spikes: work visuals
+
+- [ ] 1.1 Static decompile (setup in `docs/spikes/native-decompile.md`) of `CarLoader.SwitchCarPart(CarPart, bool)`
+      (coroutine) and `SwitchCarPart(CarPart, bool, bool)`, `PartScript.ShowMountAnimation` and its LeanTween lambda,
+      `PartScript.GetUnmountDir`/`CalcUnmountDir`, `TweenHelper.TweenAlphaDissolve`, `MountObject.Update`/`Action`/
+      `SetPosition` (bolt speed per second, what `mountState` runs between), `ToolsManager.Use(ToolType)` and
+      `<UseAnim>` of `ObdScanner`/`FluidRefill` (which object becomes `CurrentUsedTool`, its layer and parent). Write
+      `docs/spikes/remote-visuals.md` with a side-effect list per method (inventory, money, XP, mode, sound, state
+      fields). Done when every method above has its side effects listed, and D3 (dissolve usable on a ghost, door swing
+      route) and D4 (bolt speed) name the answer.
+- [ ] 1.2 Door, hood and trunk route: if 1.1 shows `SwitchCarPart(part, instant: false, switched)` has no inventory,
+      money, XP or mode side effects, confirm it in a game run (`vfx-trace` on, A opens and closes the hood on loader 0,
+      B applies the change with the animated call: B's `stats`, `inventory` and game mode unchanged, no `[Visuals]
+      state leak`); else record the ghost swing. Done when D3 states one route and the reason.
+- [ ] 1.3 Harness verb `vfx-trace on|off|report` (logging only): on the receiver the order and times of
+      `CarPartClaimUpdate`, `CarPartsChange` and the release for one part; on the actor the claimed part's
+      `MountObject.GetMountState()` per frame, game mode and `ToolsManager` (`ToolIsActive`, `currentUsedTool`,
+      `CurrentUsedTool` name and layer). Add `vfx-unscrew <loader> <key> [mount]` (the real
+      `ActionUnMount`/`ActionMount` path driven bolt by bolt to its end). Run it on three parts (a wheel, a brake
+      caliper, an exhaust part) with A and B (needs a lane). Done when design.md D4 has the measured time per bolt, the
+      packet order (and whether the release can arrive before the change), and the activity mapping in D5 is confirmed
+      or corrected.
+- [ ] 1.4 Avatar rig and props: log the bone names of `model_rigged` once at `ModGameManager.LoadPlayerPrefab`; list
+      the names of loaded `Mesh` assets that look like a wrench or ratchet (`Resources.FindObjectsOfTypeAll<Mesh>()`) in
+      the garage. Done when D6 names the right-arm bones (or records that only yaw is possible) and the prop source for
+      part work (mesh name or "none").
+
+## 2. Core and server: activity
+
+- [ ] 2.1 Core `Network/Packets/VisualPackets.cs`: `ActivityKind`, `PlayerActivityState { Kind, CarLoaderID, PartKey,
+      ToolType (int, game value), ModTool, Progress (byte, 1/16 steps) }`, `PlayerActivityPacket { PlayerId, State }`;
+      `PlayerPresenceRecord.Activity` (`[OptionalField]`, copied by `Copy()`); append `PlayerActivity` to
+      `PacketTypes`. Done when the solution builds and `PacketRouter` logs the new packet count on server start.
+- [ ] 2.2 Server `Network/Handlers/VisualHandlers.cs` (`[AllowBeforeSync]`): under `StateLock` overwrite `PlayerId`,
+      set `CarLoaderID = -1` when the loader is not in `CarPartsStore`, store the state in the presence record, relay
+      to clients in the same scene with `ShowsAvatars` and `SyncState` past `Connected` (the movement rule); drop
+      packets beyond 8 per second per client (one warning per minute). `PlayerPresence` scene change and leave clear
+      `Activity`. Done when a two-client `connect` run with A sending a test activity shows the relay log line and B's
+      roster carries it, and A's travel clears it on B.
+
+## 3. Client visual framework and harness
+
+- [ ] 3.1 `Logic/Visuals/VisualScope.cs`: ghost creation (clone `sharedMesh`/`sharedMaterials` of `MeshRenderer`s,
+      no colliders or scripts, source layer), the `forceRenderingOff` record with restore in `finally`,
+      `CancelFor(loader, key)`, `CancelPlayer(id)`, `CancelLoader(loader)`, `Reset()` (wired into `ClientData.Reset`,
+      car delete and car snapshot), the caps of D3, the preference `CMS21Together.RemoteVisuals` (default on), and the
+      D1 leak detector (a scope flag checked in `PartChangeTracker.MarkDirty`, `CarDetailsSync.MarkDirty`, the
+      inventory hooks and a `GameMode.SetCurrentMode` prefix). Done when the client builds and a test effect that calls
+      `MarkDirty` inside the scope logs `[Visuals] state leak MarkDirty`.
+- [ ] 3.2 Row 1 events: `PartChanges.RemoteChangeApplying(loader, body, sub)` raised in `OnRemoteChange` just before
+      `Apply` (not in `OnResult`, snapshots or resync), and `PartClaims.ClaimChanged(loader, keys, owner, fromSnapshot)`
+      raised in `OnUpdate` (`fromSnapshot` = `SyncTracker.InSnapshot`). Done when `car-live` and `car-parts` still pass
+      and a `vfx-trace` run logs both events once per change and claim.
+- [ ] 3.3 Harness `Features/VisualCommands.cs`: dump section `visuals` (D12, plus `renderersHidden` = count of
+      renderers with `forceRenderingOff` set by this change), verbs `vfx-hold on|off`, `vfx-enable on|off`,
+      `vfx-tool <ToolType|none> [loader]`; `vfx-unscrew` gains `pause <fraction>` (stops the real action at that share
+      of bolts and keeps the claim until `vfx-unscrew <loader> <key> resume`, or `undo`, which calls the game's
+      `PartScript.UndoUnMounting`/`UndoMounting`). Register the verbs in INTEGRATION.md
+      (owner row 17). Done when `dump` shows `visuals` on both clients after `connect`.
+- [ ] 3.4 `TestAreas.psm1`: areas `visuals` and `driving`; path rows for `Logic/Visuals/*`,
+      `Network/Handlers/Visual*`, `Network/Packets/VisualPackets.cs` (`visuals, presence`), `Logic/Driving/*`,
+      `Network/Handlers/Drive*`, `Network/Packets/DrivePackets.cs` (`driving, testdrive`),
+      `tools/TestHarness/Features/Visual*` and `Drive*`. `GuardRules`: owner of `Mode:CarDrive` and `Pie:car_drive`
+      becomes "row 17" (still `Planned`). Create `scenarios/visual-parts.ps1` (`# areas: visuals, parts`) with the
+      connect preamble, a car on loader 0 `Ready` on both, and an empty step list. Done when `Run-All -List -Changed`
+      maps the new paths and `Run-Session.ps1 -Scenario visual-parts` passes.
+
+## 4. Parts moving off and on
+
+- [ ] 4.1 `Logic/Visuals/PartGhosts.cs` for `PartScript` per D3: off (clone before the apply, move along the unmount
+      direction with `TweenAlphaDissolve`), on (clone after the apply, real renderers `forceRenderingOff`, fly in),
+      `unmountWith` members of the same change in one ghost, caps and distance skip. Done when the client builds.
+- [ ] 4.2 Body panels (`CarPart`: pull-away ghost) and doors/hood/trunk by the route chosen in 1.2 (`PartApplier`
+      gets `animate` for live changes only if the animated call is used). Done when the client builds.
+- [ ] 4.3 `visual-parts` steps: A `vfx-unscrew 0 <wheel key>` → B `ghostsStarted.Off` +1, then `ghostsActive` empty and
+      `renderersHidden` 0 within 3 s; with B `vfx-hold on` during the next unmount, B's `cars` equals A's while the ghost
+      is held (state applied, ghost only visual), then `vfx-hold off`; A mounts it back → `ghostsStarted.On` +1, same
+      checks; A opens and closes the hood → `ghostsStarted.Swing` +2 (or the animated call counted); B `resync` → no new
+      ghost; B `vfx-enable off`, A unmounts → `ghostsSkipped.disabled` +1 and `cars` equal; `visuals.leaks` 0 on both and
+      no `[Visuals] state leak` in either log. Done when the steps pass.
+
+## 5. Bolts turning
+
+- [ ] 5.1 `Logic/Visuals/BoltReplay.cs` per D4: start on `ClaimChanged` to another player (not `fromSnapshot`), ghost
+      bolts paced by the actor's `Progress` and the measured bolt speed (1.3), finish on the commit (hand over to 4.1),
+      run back on a release without commit, restore the real bolts at the end. Done when the client builds.
+- [ ] 5.2 `visual-parts` steps: A `vfx-unscrew 0 <key> pause 0.5` → B `boltsActive` lists the key with owner A and about
+      half the bolts done (±1), `renderersHidden` > 0; A `resume` → B's bolts finish, the Off ghost plays, then
+      `boltsActive` empty and `renderersHidden` 0; A pauses again and `vfx-unscrew 0 <key> undo` → B's bolts run back and `cars` are unchanged on both. Done when the steps pass.
+
+## 6. Activity and the remote avatar
+
+- [ ] 6.1 `Logic/Visuals/ActivityCapture.cs` per D5 (4 Hz poll, send on change, coalesce to ≤ 4/s, hard cap, `None` on
+      work end, travel and seat). Done when `vfx-trace report` on A lists the activity changes of a `vfx-unscrew` and a
+      `vfx-tool OBD` run with at most 4 sends per second.
+- [ ] 6.2 `Logic/Visuals/RemoteActivity.cs` + `WorkPose` on `PlayerInstance` per D6 (target resolution, yaw, arm aim
+      with the bones from 1.4, wrench oscillation, arms up for a lifted car), applied from the roster and from live
+      packets, cleared on `None`, scene change and `Remove`. Done when the client builds and B's dump shows `pose` and
+      `facing` for A.
+- [ ] 6.3 `Logic/Visuals/ToolProps.cs`: prop cloned from the receiver's own `ToolsManager` tool per `ToolType` (layer to
+      the world layer, scaled, parented to the hand bone), the part-work prop from 1.4 if any, cache per type, destroy
+      with the avatar. Done when the client builds.
+- [ ] 6.4 `scenarios/visual-activity.ps1` (`# areas: visuals, presence, tools`): A stands 1.5 m from loader 0 and
+      `vfx-tool OBD 0` → B's roster `activity.kind` `Examine`, `propActive` true, `propTool` `OBD`, `facing` < 20°; A
+      `vfx-tool none` → `None`, no prop; A `vfx-unscrew 0 <key>` → B `pose` `Wrench` while it runs, `Idle` after; A
+      `tool-use Welder 0` (row 5b) → `activity.kind` `CarTool`, `ModTool` `Welder`, B `toolActionsSeen.Weld` 1; A
+      `travel Junkyard` → B's roster activity `None`; `stats` and `cars` equal throughout. Done when it passes.
+
+## 7. Late join, screenshots, budget and part-1 verification
+
+- [ ] 7.1 `scenarios/visual-latejoin.ps1` (`# areas: visuals, presence, persistence`): A `vfx-tool OBD 0`; B connects
+      → B shows A's prop and pose at once, `ghostsStarted` and `boltsActive` empty; A `vfx-tool none`, A
+      `vfx-unscrew 0 <key> pause 0.5`; B disconnects and reconnects → B shows pose `Wrench` from the roster,
+      `boltsActive` empty (claim came in the snapshot), no ghost; A `resume` → B plays the Off ghost once (live);
+      `cars` equal. Done when it passes.
+- [ ] 7.2 `scenarios/visual-screens.ps1` (`# needs: graphics`, `# areas: visuals`): with `vfx-hold on`, screenshots
+      of an Off ghost mid-way, bolts half out, A's avatar holding the OBD scanner and reaching under a lifted car. Done
+      when the run folder holds the four screenshots and STATUS lists them for the user's look.
+- [ ] 7.3 `scenarios/visual-budget.ps1` (`# run-all: lane 3`, `# areas: visuals`, 2–4 instances): for 3 minutes every
+      client loops `vfx-unscrew`/mount on its own loader and `vfx-tool` on and off; server `perf top` before and after;
+      checks: `PlayerActivity` upload ≤ 2.4 kB/s average per client, every client's total download ≤ 50 kB/s average,
+      no `activityDropped` above the cap, `visuals.leaks` 0, dumps equal at the end; frame time p95 with visuals vs.
+      `vfx-enable off` reported (`WARN` above 1.2×, graphics runs only). Add `vfx-unscrew` and `vfx-tool` rows to row
+      11's soak action table. Done when it passes on lane 3 and the measured bytes per type are in design.md
+      "Measurements" (a value over twice D8's estimate goes to QUESTIONS.md).
+- [ ] 7.4 Two-instance verification: `visual-parts`, `visual-activity`, `visual-latejoin` pass with A and B, plus the
+      scenarios of the `visuals`, `parts`, `presence` and `tools` areas and the smoke set (`Run-All -Changed`); record
+      run ids in STATUS. Done when all are green.
+- [ ] 7.5 Docs: INTEGRATION.md (packet, record field, row 1 events, verbs, dump sections, scenarios, areas), README
+      "Playing together" (what other players see, the `RemoteVisuals` switch). Done when `openspec validate
+      remote-visual-feedback --strict` passes and part 1 is merged.
+
+## 8. Spikes: driving (part 2)
+
+- [ ] 8.1 Static decompile of the `car_drive` pie lambda (`PieMenuController.<GetOnClick>b__72_N`), what it starts
+      (scene change, free drive in the garage scene, `ParkingSpace.DriveIn/DriveOut`), which game modes it sets, where the
+      car ends and whether `CarLoaderPlaces` or the lifts change; add a `drive-trace on|off|report` verb (logging only)
+      and confirm in a game run with the guard on `Off` (single client is enough). Done when docs/spikes/remote-visuals.md
+      has the flow, and design.md D10 says "garage driving: go" (with the end-placement rule) or "no-go" (group 11
+      parked, entry stays `Planned`, recorded in QUESTIONS.md).
+- [ ] 8.2 Second car on the test track: in the track scene, clone the track's `CarLoader`, load a parked car's
+      `NewCarData` blob with `LoadCarFromFile`, make it inert (kinematic, colliders off, `PartScript` and interactive
+      objects disabled, no `PrepareCarPhysics`); measure load time and memory; try the base-model fallback. Done when
+      D10 records which route works and its cost.
+- [ ] 8.3 Drive state sources on VPP: where steer, wheel angular speed, gear, rpm, brake and lights are read on the
+      driver (`VPVehicleController` data channels, `BaseCarPhysics.res`, `rigidBody`), and how the observer turns wheels
+      on an inert car (wheel transforms under the car root). Done when D9's field list is confirmed.
+- [ ] 8.4 Two players at the test track with two different cars at once (row 13 claims both): both drive, return and
+      their results apply. Done when a scratch run shows both away claims granted and released and `cars` equal after the
+      return; a failure goes to row 13's code first.
+
+## 9. Core and server: driving
+
+- [ ] 9.1 Core `Network/Packets/DrivePackets.cs`: `CarDriveStartPacket`, `CarDriveStatePacket { DriveId, Seq, Payload }`,
+      `CarDriveStopPacket`, `DriveStateCodec` (40-byte layout of D9); append the three to `PacketTypes`; append
+      `CarAwayKind.Driving` if 8.1 says go. Done when the solution builds and a harness `drive-codec-check` (encode and
+      decode 1000 random states, errors within the quantization) passes.
+- [ ] 9.2 Server `Network/Handlers/DriveHandlers.cs` + `Data/Presence/ActiveDrives.cs` per D9: store start and latest
+      state per driver, relay to the driver's scene (state unreliable), require the `Driving` away claim for a garage
+      drive, send active drives to a client when its presence scene becomes that scene, send `CarDriveStop` and clear on
+      the driver's scene change and leave; cap state at 20 per second per client. Done when a two-client scratch run logs
+      start, relay and the stop on the driver's disconnect.
+
+## 10. Test track driving
+
+- [ ] 10.1 `Logic/Driving/DriveCapture.cs` on the test track: start when `GameMode.CarDrive` is set by
+      `TestTrackManager` (send `CarDriveStart` with the blob from `NewCarDataCodec`), stream at 15 Hz, stop on
+      `ClientScene.LeavingScene`. Done when the client builds.
+- [ ] 10.2 `Logic/Driving/RemoteCars.cs` + `DriveInterpolator.cs` per D9/D10: build the observer car (route from 8.2),
+      100 ms buffer, Hermite, 250 ms extrapolation, 5 m snap, wheels, engine sound through `RemoteEngines` from the
+      stream's rpm; destroy on stop, leave and scene change. Done when the client builds.
+- [ ] 10.3 Harness `Features/DriveCommands.cs`: `drive-start`, `drive-input <throttle> <steer> <seconds>`, `drive-stop`,
+      dump section `remoteCars`. `scenarios/drive-track.ps1` (`# areas: driving, testdrive`): cars on loaders 0 and 1, A
+      and B each take theirs to the test track; A `drive-input 0.6 0 5` then `0.4 0.5 3` → B's `remoteCars` shows A's car
+      (`mode` `ghost` or `ghost=base`, `collidersOff`, `kinematic`), its position within 1.5 m of A's sampled position
+      100 ms earlier, `snaps` 0; A stops → B's car within 0.3 m of A's final pose; B's own driving is unaffected (B
+      `drive-input` moves B's car); A returns → B's `remoteCars` empty; both return, row 13's results equal (`cars`).
+      Done when it passes.
+
+## 11. Garage-area driving (only if 8.1 says go)
+
+- [ ] 11.1 `CarAwayKind.Driving` claim on `car_drive` (row 13's `CarAwaySync.Request` before the drive starts, the
+      guard's message on refusal), released at the end and on leave. Done when a second player is refused a part edit on
+      the driven car with row 13's away message.
+- [ ] 11.2 `Logic/Driving/GarageDriveHooks.cs`: capture as in 10.1 for the garage car; observers move their own copy of
+      that loader's car root kinematically and restore it on stop; the end placement per D10 (row 2's
+      `CarPlaceChangeRequest`, or back to its place). Done when the client builds.
+- [ ] 11.3 Guard: `Allow` `Pie:car_drive` and `Mode:CarDrive` (owner row 17) in the merge commit; `guard` scenario
+      updated. `scenarios/drive-garage.ps1` (`# areas: driving, placement, guard`, guard on `Enforce`): A drives the car
+      of loader 0 → B sees it move (`remoteCars.mode` `garage`), B cannot edit it; A stops → `placement` and `cars` equal
+      on both, B's copy at the authoritative pose. Done when it passes.
+
+## 12. Driving: late join, budget and verification
+
+- [ ] 12.1 `scenarios/drive-latejoin.ps1` (`# areas: driving, testdrive, presence`): A drives on the test track; B
+      travels there mid-drive → B's car for A appears within 2 s at A's current position (no replay of the path); B
+      disconnects and reconnects while A still drives (garage drive if group 11 is in) → the same. Done when it passes.
+- [ ] 12.2 Budget: `drive-track` reads server `perf top` for `CarDriveState` (≤ 4 kB/s per driver upload) and
+      `CarDriveStart` size; numbers into design.md "Measurements" (over twice D8 → QUESTIONS.md). Done when recorded.
+- [ ] 12.3 Two-instance verification: `drive-track`, `drive-latejoin` (and `drive-garage`) pass with A and B, plus the
+      `driving`, `testdrive`, `placement` and `guard` areas and the smoke set; INTEGRATION.md and README updated (who sees
+      a driven car, no collisions); run ids in STATUS. Done when all are green and part 2 is merged.
