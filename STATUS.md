@@ -2,6 +2,17 @@
 
 Newest first. One entry per work session.
 
+## 2026-10-07 (16:30–17:00) — row 9 part 2: mod check tuned on the user's mod list
+
+- `main` = `d2b5f8a`: the user's eight mods were loaded in test install A (copied from the real game folder, read
+  only, removed again afterwards). Six verdicts were right; `LvxOwnedCarsOnly` (filters which cars spawn) and
+  `AutosaveMod` (runs the game's whole save routine every 5 minutes; our guard blocks the write, but it re-IDs
+  engine-stand items) were wrongly visual and are now refused through a `KnownMods` table (extendable in
+  `mod_rules.json`; a host can still allow a mod in `mods_ignored`). The refusal lists one plain line per mod and
+  says what to do. `compat-mods-probe` proves it. Task 7.1 (friends' mod lists) waits for the friends.
+- Note for the user's own playtest: QoLmod's "load last save on startup" skips the multiplayer menu.
+- Playtest build refreshed: `0.6.0-dev.864`.
+
 ## 2026-10-07 (15:45–16:30) — last soak findings fixed; plans for the long soak and the playtest
 
 - `main` = `f136eb9`: a car deleted on another client kept its loader's ground position, so the next car spawned

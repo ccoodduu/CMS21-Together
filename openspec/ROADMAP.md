@@ -11,7 +11,8 @@ the engine stand of row 5a is a hand check). The M2 and M3 playtests are the use
 M4 is done in code (car purchases merged 2026-10-07; barn, salon and auction purchases are hand
 checks). M5: rows 7 and 14d done; row 11 runs with four players (storms and full-garage late join green); the soak runs
 and the long soak waits for the user. M6: row 12
-part 2 docs merged; the release itself waits for the user. Two test lanes can run in parallel since the pagefile was
+part 2 docs merged, row 9 part 2 tuned on the user's mods (friends' lists later); the release itself waits for
+the user. Two test lanes can run in parallel since the pagefile was
 raised (commit limit 64 GB); until the user answers QUESTIONS.md, one lane at a time because of Claude Code's memory
 guard.
 
