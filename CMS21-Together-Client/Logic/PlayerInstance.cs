@@ -26,6 +26,8 @@ public class PlayerInstance : MonoBehaviour
 	private float lastPacketTime;
 	
 	public float teleportThreshold = 3.0f;
+	public int PlayerId = -1;
+	public Visuals.WorkPose Work;
 	
 	private Animator animator;
 	private Transform spineBone;
@@ -47,6 +49,7 @@ public class PlayerInstance : MonoBehaviour
 			headBone = FindBone(transform, "Head");
 			if (headBone == null) headBone = FindBone(transform, "Neck");
 		}
+		Work = new Visuals.WorkPose(transform, headBone);
 	}
 
 	private Transform FindBone(Transform current, string namePart)
@@ -92,6 +95,9 @@ public class PlayerInstance : MonoBehaviour
 
 	private void LateUpdate()
 	{
+		var activity = Visuals.RemoteActivity.Of(PlayerId);
+		Work?.ApplyYaw(activity, currentVelocity, Time.deltaTime);
+
 		float pitch = targetCameraPitch;
 		if (pitch > 180f) pitch -= 360f;
 		
@@ -108,7 +114,11 @@ public class PlayerInstance : MonoBehaviour
 			float headPitch = Mathf.Clamp(currentPitch, -45f, 45f);
 			headBone.Rotate(transform.right, headPitch, Space.World);
 		}
+
+		Work?.ApplyArms(activity, Time.deltaTime);
 	}
+
+	private void OnDestroy() => Work?.Dispose();
 
 	private void HandleMovement(float t)
 	{

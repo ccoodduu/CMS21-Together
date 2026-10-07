@@ -41,6 +41,8 @@ public static class ToolSync
 	private static readonly Dictionary<int, int> positions = new Dictionary<int, int>();
 	private static readonly Dictionary<ModToolId, int> claims = new Dictionary<ModToolId, int>();
 	private static readonly HashSet<ModToolId> ownClaims = new HashSet<ModToolId>();
+
+	public static IEnumerable<ModToolId> OwnClaims => ownClaims;
 	private static readonly Dictionary<int, PendingUpdate> pending = new Dictionary<int, PendingUpdate>();
 	private static readonly Dictionary<ModToolId, Dictionary<long, int>> takeStart = new Dictionary<ModToolId, Dictionary<long, int>>();
 	private static readonly Dictionary<ModToolId, int> applying = new Dictionary<ModToolId, int>();
