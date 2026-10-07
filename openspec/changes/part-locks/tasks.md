@@ -1,5 +1,27 @@
 # Tasks
 
+> **Resume here (2026-10-07, 23:40).** Branch `change/part-locks`, worktree `CMS21-Together-wt/part-locks`.
+>
+> - **Done and committed:** groups 1, 2, 3, 4, 5.1 (switch-over), 5.2, 5.3; `locks-connected` (6.2 without the
+>   caliper-with-piston step) also passes. Commit `562aa10` is the switch-over; `63b6837` drops the stale-record merge
+>   (row 19 owns audit gap 3).
+> - **Uncommitted work is in the `wip:` commit on top:** `LockSelection` (hover highlight and label, 9.1),
+>   `LockPrefetch` (hold prefetch, 10.1), `lock-hover`, and refusals setting `PartClaims.LastBlocked` only on a real
+>   refusal. Built, never run.
+> - **Last runs (lane 1):** `locks-basic`, `locks-race`, `locks-leak`, `locks-connected`, `jobs-latejoin`,
+>   `junkyard-trip`, `latejoin`, `purchases`, `resync-key`, `seat-engine`, `test-drive-latejoin` passed
+>   (`20261007-232118` … `20261007-233036`; locks-basic `232118`, locks-race `232228`, locks-leak `232330`, locks-connected `232409`); `test-drive` failed once on "A stays in the garage while B works on the car"
+>   although the server refused the drive `InUse` (`20261007-232902_L1_test-drive`, passed in `20261007-223201`); the
+>   first area batch (`20261007-2238xx` … `20261007-230824`) passed except `economy-latejoin` (B never got `SyncEnd`,
+>   no lock traffic involved; `20261007-225540`). Not run since the stop: `tools-car-effects`, `tools-latejoin`,
+>   `visual-activity`, `visual-latejoin`, `visual-lift`, `visual-parts` (passed earlier on the switch-over in
+>   `20261007-222424`/`222532`), `economy-latejoin` (rerun), `car-gone-inflight` (new on main).
+> - **Next step:** after 12:30 (lane 1 is the soak's until then), run
+>   `Run-Session -Lane 1 -Deploy -Scenarios tools-car-effects,tools-latejoin,visual-activity,visual-latejoin,visual-lift,visual-parts,economy-latejoin,car-gone-inflight,test-drive`,
+>   then hand back for 5.1. Then: write `locks-select` (9.2) with `lock-hover` and `lock-click` to prove the wip code,
+>   the caliper-with-piston step (chooser group: confirm whether `SubmitAction`/`NewButtonAccept` or
+>   `NotificationCenter.MountGroup` mounts the group), group 7 (fluid gates), group 8 (lift and move gates).
+
 **Row 18: playtest fix, landing before the next Steam playtest.** It fixes findings 1 and 4 of 2026-10-07, plus the
 coolant and connected-part races.
 
@@ -112,21 +134,24 @@ coolant and connected-part races.
 
 ## 3. Harness (before the client gate)
 
-- [ ] 3.1 `tools/TestHarness/Features/LockCommands.cs` per D13: `lock-take`, `lock-try` (all kinds, `hold`,
+- [x] 3.1 `tools/TestHarness/Features/LockCommands.cs` per D13: `lock-take`, `lock-try` (all kinds, `hold`,
       `finish`, `release`, `nogate`), `lock-chooser`, `lock-hover`, `lock-release`, `lock-renew`, `lock-idle`;
       `lock-trace` moves here; dump section `locks` with the counters. Until 5.1, `lock-try` reports `not gated` for
       kinds whose gate is not in yet. Done when `dump` shows `locks` on both clients after `connect`, and `lock-take`
       on a free part shows the record in both mirrors and in the server's `locks`.
-- [ ] 3.2 `TestAreas.psm1`: area `locks`; path rows for `Logic/Car/Locks/*`, `Network/Handlers/Lock*`,
+      **Done (2026-10-07):** `LockCommands.cs`, `LockTryCommands.cs`, dump section `locks`; `locks-basic` passes (`20261007-232118`).
+- [x] 3.2 `TestAreas.psm1`: area `locks`; path rows for `Logic/Car/Locks/*`, `Network/Handlers/Lock*`,
       `Network/Packets/LockPackets.cs`, `Data/Cars/CarLocks.cs` (`locks, parts, placement, economy`) and
       `tools/TestHarness/Features/Lock*`. INTEGRATION.md: verbs, dump section, area, settings (owner row 18). Done
       when `Run-All -List -Changed` maps the new paths.
-- [ ] 3.3 Only if 1.7 succeeded: `lock-click <loader> <key> [hold <ms>]` with the shim. Done when `lock-click` on a
+      **Done (2026-10-07):** area `locks` and its path rows; `Run-All -List -Changed` maps them; INTEGRATION.md updated.
+- [x] 3.3 Only if 1.7 succeeded: `lock-click <loader> <key> [hold <ms>]` with the shim. Done when `lock-click` on a
       free part unmounts it through `Raycast.PartSelect`.
+      **Done (2026-10-07):** `lock-click` came with spike 1.7 (`LockTraceCommands.cs`).
 
 ## 4. Client lock core (not wired to game hooks yet)
 
-- [ ] 4.1 `Logic/Car/Locks/CarLockMirror.cs` per D6/D10/D11:
+- [x] 4.1 `Logic/Car/Locks/CarLockMirror.cs` per D6/D10/D11:
       - records from `CarLockUpdate` through `ClientScene.GarageBound`, and `Conflict(loader, set)`;
       - pending requests with the 3 s timeout, late-grant release, renew every `expiry / 3`;
       - reset on `ClientData.Reset`, car delete, a `SpawnSeq` change and leaving the garage (pending and own
@@ -134,10 +159,12 @@ coolant and connected-part races.
 
       Done when the `locks` dump section shows the mirror after `lock-take`, and a `net-hold out` of 4 s on the
       requester ends with `timeouts` 1, `lateGrantsReleased` 1 and an empty server `locks`.
-- [ ] 4.2 `LockSets.cs` per D3/D4 (from `unblockOnUnmount` plus the reverse index, segment ancestry, X order with the
+      **Done (2026-10-07):** `CarLockMirror`; `locks-basic` checks the mirrors against the server, the 4 s stall (`timeouts` 1, `lateGrantsReleased` 1) and renew/expiry.
+- [x] 4.2 `LockSets.cs` per D3/D4 (from `unblockOnUnmount` plus the reverse index, segment ancestry, X order with the
       main object first, `LockScope` from `ServerInfo`), cached per loader and `SpawnSeq`. Done when
       `lock-trace relations` prints the sets and they match `docs/spikes/part-locks.md` for the spike's three cars.
-- [ ] 4.3 `LockGate.cs` and `LockMessages.cs` per D1/D9:
+      **Done (2026-10-07):** `LockSets` (crane key `engine`, spike 1.3).
+- [x] 4.3 `LockGate.cs` and `LockMessages.cs` per D1/D9:
       - local refusal with `Cursor3D.ResetButton()`, prefetched or chained pass only, swallowed repeats, cancel on a
         different target;
       - the `Bypass` scope, `Context`, the started check, error sound, rate-limited messages, the 150 ms waiting hint;
@@ -146,13 +173,15 @@ coolant and connected-part races.
       Done when `lock-try unmount` on a part B holds (`lock-take`), driven through the gate by a harness-only test
       hook, reports `denied`, `ran false` and B as holder. A second try reports `refusedLocally` +1 with no new
       request in the server log.
-- [ ] 4.4 `CarDetailsSync.FlushNow(loader, sections) → FlushResult` per D4 (`Sent`, or `Deferred` with the 1 s wait
+      **Done (2026-10-07):** `LockGate`, `LockMessages`, `CarMotion`; `locks-race` (denied, ran false, holder) and `locks-connected` (refusedLocally, no request on the server).
+- [x] 4.4 `CarDetailsSync.FlushNow(loader, sections) → FlushResult` per D4 (`Sent`, or `Deferred` with the 1 s wait
       and a log line). Done when a harness call during an `applying` window logs `Deferred`, then sends within 1 s,
       and `car-details` still passes.
+      **Done (2026-10-07):** `FlushNow`; `locks-basic` sees Deferred and the send within 1 s. Polled and flushed fluid updates carry only the changed fluids (audit note 1).
 
 ## 5. Switch-over: part work through the gate
 
-- [ ] 5.1 One commit that turns the gates on and the claims off [B3]:
+- [x] 5.1 One commit that turns the gates on and the claims off [B3]:
       - `LockHooks.cs` gates `ActionUnMount`, `ActionMount`, `TakeOffCarPart(string)` (and the body mount entry of
         1.2), the group-mode caller, and the crane's `ActionUnMountGroup`/`InsertEngineToCar`;
       - the D5 lifecycle for these kinds (started check, end and back-out signals, mode exits that ignore self-set
@@ -167,12 +196,15 @@ coolant and connected-part races.
 
       Done when `visual-parts`, `visual-latejoin`, `car-live`, `car-race`, `car-crane`, `economy-trades` and
       `test-drive` pass.
-- [ ] 5.2 `scenarios/locks-race.ps1` (`# areas: locks, parts`) per D13, with the same part and the same item; the
+      **Done (2026-10-07, commit 562aa10):** `visual-parts`, `visual-latejoin`, `car-live`, `car-race`, `economy-trades` (`20261007-2222`–`2226`), `car-crane`, `test-drive` (`20261007-223134`, `223201`) pass.
+- [x] 5.2 `scenarios/locks-race.ps1` (`# areas: locks, parts`) per D13, with the same part and the same item; the
       caliper-with-piston group case follows in 6.2. Done when it passes.
-- [ ] 5.3 `scenarios/locks-leak.ps1` (`# areas: locks, parts, details, placement`) per D13 [B2]: chooser open and
+      **Done (2026-10-07):** `locks-race` passes (same part in parallel, same part with incoming held, same item into two slots).
+- [x] 5.3 `scenarios/locks-leak.ps1` (`# areas: locks, parts, details, placement`) per D13 [B2]: chooser open and
       close, refused `ActionUnMount`, a refill with no target, a lift that is already moving, an aborted prefetch
       (once 10.1 is in), and the idle cancels with `lock-idle 5 3`. Each ends with an empty server `locks` within
       1 s. Done when it passes (the prefetch step is added in 10.1).
+      **Done (2026-10-07):** `locks-leak` passes (chooser close, refused unmount, mount on a mounted part, idle cancels); refill, lift and prefetch steps follow with 7.1, 8.1 and 10.1.
 
 ## 6. Connected parts and items
 
