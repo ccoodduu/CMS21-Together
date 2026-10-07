@@ -143,9 +143,9 @@ function Set-LaneServerConfig($LaneInfo) {
 # Files only a release zip installs; Deploy-Mod.ps1 removes them so dev runs stay Steam-free.
 $script:ReleaseOnlyInstanceFiles = @(
     "UserLibs\steam_api64.dll", "TogetherServer", "CMS21-Together-TRY-IT.txt", "CMS21-Together-release.json",
-    "Mods\CMS21-Together.pdb", "UserLibs\CMS21_Together_Core.pdb"
+    "Mods\CMS21-Together.pdb", "UserLibs\CMS21_Together_Core.pdb", "Collect-Logs.ps1", "Collect-Logs.bat"
 )
-$script:ReleaseOnlyServerFiles = @("steam_api64.dll", "TRY-IT.txt", "release.json")
+$script:ReleaseOnlyServerFiles = @("steam_api64.dll", "TRY-IT.txt", "release.json", "Collect-Logs.ps1", "Collect-Logs.bat")
 
 function Remove-ReleaseOnlyFiles($LaneInfo) {
     foreach ($name in $LaneInfo.Instances) {

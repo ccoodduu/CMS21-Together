@@ -155,10 +155,11 @@ Hotkeys (unique; row 14a's trace task 1.1 checks that the game binds none of F7â
 - `client\`: `info.json` (id, UTC time, mod/full version, game version, connection state, scene, slot/name; offline:
   `"offline"`), `MelonLoader\Latest.log` + the newest 5 `MelonLoader\Logs\*.log`, `MelonPreferences.cfg` reduced to the
   `CMS21Together*` categories, `UserData\CMS21Together\*.json` except `player.json`, `files.txt` (`Mods\`/`UserLibs\`
-  with sizes); in-game only: `mods.json`, `guard.log`, `state\<key>.json`; offline only: the newest 3 in-game bundles.
+  with sizes); in-game only: `mods.json`, `guard.log`, `state\<key>.json`; offline only: the newest 3 in-game bundles
+  as `client\BugReports\<id>.zip`.
 - `server\`: `info.json`, `Log\Latest.txt` + the newest 5 `Log\Log_*.txt` (the server's folder is `Log\`, not `Logs\`),
   `server_config.ini`; in-game only: `save.json`, `state\`, `Log\desync\` (last hour), `players.json`; offline:
-  `save.json` only with `-IncludeSave`, plus the newest 3 in-game bundles.
+  `save.json` only with `-IncludeSave`, plus the newest 3 in-game bundles as `server\BugReports\<id>.zip`.
 - Redaction: the value of every config or preference entry whose name contains `token`, `password`, `secret` or `key`
   (case-insensitive) becomes `<redacted>`, except names containing `Hotkey`; covers `GSLT_Token`, `password`,
   `admin_key`, `CMS21Together.AdminKey`. `player.json` is never included; every `save.json` drops `players[].Key`;

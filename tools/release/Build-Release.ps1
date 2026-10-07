@@ -5,11 +5,17 @@ TogetherServer\) and the server zip, each with a release.json manifest, plus SHA
 The version is TogetherVersion from Directory.Build.props with the label dev.<n>, n = commits since the last v* tag.
 Each zip is checked against the expected file list and the version built into it; on failure no zip is left.
 
--AllowDirty builds from uncommitted changes (the full version then ends in .dirty).
+-Release builds the plain version (no label). It refuses unless the tree is clean, CHANGELOG.md has a
+"## [<version>]" section and HEAD carries the tag v<version>; it prints the tag command instead of tagging.
+-DraftGitHubRelease (with -Release, only when the user asks for it) creates a draft GitHub release for the pushed tag
+with the changelog section and both zips.
+-AllowDirty builds from uncommitted changes (the full version then ends in .dirty); not with -Release.
 -DropFromStaging removes staged files (paths relative to the staging folder, e.g. client\UserLibs\steam_api64.dll)
 before zipping, to test the content check.
 #>
 param(
+    [switch]$Release,
+    [switch]$DraftGitHubRelease,
     [switch]$AllowDirty,
     [string]$OutDir = (Join-Path $PSScriptRoot "out"),
     [string[]]$DropFromStaging = @()
@@ -24,13 +30,13 @@ $serverFiles = @(
     "CMS21_Together_Core.dll", "CMS21_Together_Core.pdb", "Facepunch.Steamworks.Win64.dll", "Newtonsoft.Json.dll",
     "Terminal.Gui.dll", "NStack.dll", "steam_api64.dll",
     "Database/garage_upgrade_database.json", "Database/item_database.json", "Database/player_upgrade_database.json",
-    "TRY-IT.txt", "release.json"
+    "TRY-IT.txt", "release.json", "Collect-Logs.ps1", "Collect-Logs.bat"
 )
 $clientFiles = @(
     "Mods/CMS21-Together.dll", "Mods/CMS21-Together.pdb",
     "UserLibs/CMS21_Together_Core.dll", "UserLibs/CMS21_Together_Core.pdb",
     "UserLibs/Facepunch.Steamworks.Win64.dll", "UserLibs/steam_api64.dll",
-    "CMS21-Together-TRY-IT.txt", "CMS21-Together-release.json"
+    "CMS21-Together-TRY-IT.txt", "CMS21-Together-release.json", "Collect-Logs.ps1", "Collect-Logs.bat"
 ) + @($serverFiles | ForEach-Object { "TogetherServer/$_" })
 
 function Invoke-Git {
@@ -115,9 +121,26 @@ function Test-Zip([string]$ZipPath, [string[]]$Expected, [string[]]$CorePaths, [
     return $problems
 }
 
+function Get-ChangelogSection([string]$Version) {
+    $path = Join-Path $repo "CHANGELOG.md"
+    if (-not (Test-Path -LiteralPath $path)) { return $null }
+    $lines = @(Get-Content -LiteralPath $path -Encoding utf8)
+    $heading = "^## \[$([regex]::Escape($Version))\]"
+    $start = -1
+    for ($i = 0; $i -lt $lines.Count; $i++) { if ($lines[$i] -match $heading) { $start = $i; break } }
+    if ($start -lt 0) { return $null }
+    $end = $lines.Count
+    for ($i = $start + 1; $i -lt $lines.Count; $i++) { if ($lines[$i] -match '^## |^\[[^\]]+\]:\s') { $end = $i; break } }
+    if ($end -le $start + 1) { return "" }
+    return ($lines[($start + 1)..($end - 1)] -join "`r`n").Trim()
+}
+
+if ($DraftGitHubRelease -and -not $Release) { throw "-DraftGitHubRelease needs -Release." }
+if ($Release -and $AllowDirty) { throw "-Release cannot be combined with -AllowDirty: a release is built from a clean, tagged commit." }
+
 $changes = @(Invoke-Git status --porcelain)
 if ($changes.Count -gt 0 -and -not $AllowDirty) {
-    Write-Host "Uncommitted changes (commit them, or build with -AllowDirty):"
+    Write-Host "Uncommitted changes (commit them$(if (-not $Release) { ', or build with -AllowDirty' })):"
     $changes | ForEach-Object { Write-Host "  $_" }
     throw "Working tree is not clean; nothing was built."
 }
@@ -126,13 +149,33 @@ $dirty = $changes.Count -gt 0
 [xml]$props = Get-Content -LiteralPath (Join-Path $repo "Directory.Build.props") -Raw
 $version = ([string]$props.Project.PropertyGroup.TogetherVersion).Trim()
 if (-not $version) { throw "TogetherVersion not found in Directory.Build.props" }
-$lastTag = @(Invoke-Git tag --list "v*" --merged HEAD --sort=-v:refname) | Select-Object -First 1
-$count = [int](Invoke-Git rev-list --count $(if ($lastTag) { "$lastTag..HEAD" } else { "HEAD" }))
-$label = "dev.$count"
-$modVersion = "$version-$label"
 $commit = (Invoke-Git rev-parse --short HEAD).Trim()
+
+if ($Release) {
+    $tag = "v$version"
+    $changelog = Get-ChangelogSection $version
+    if ($null -eq $changelog) {
+        throw "CHANGELOG.md has no '## [$version]' section. Add the changelog entry for $version (move the Unreleased notes under it) and commit it first."
+    }
+    if (-not $changelog) { throw "The '## [$version]' section of CHANGELOG.md is empty." }
+    $tagsAtHead = @(Invoke-Git tag --points-at HEAD)
+    if ($tag -notin $tagsAtHead) {
+        Write-Host "HEAD ($commit) does not carry the tag $tag. After checking the changelog, tag it with:"
+        Write-Host "  git tag -a $tag -m `"CMS21 Together $version`""
+        Write-Host "  git push origin $tag"
+        throw "Tag $tag missing on HEAD; nothing was built."
+    }
+    $label = ""
+    $modVersion = $version
+    Write-Host "Building release $modVersion+$commit (tag $tag)"
+} else {
+    $lastTag = @(Invoke-Git tag --list "v*" --merged HEAD --sort=-v:refname) | Select-Object -First 1
+    $count = [int](Invoke-Git rev-list --count $(if ($lastTag) { "$lastTag..HEAD" } else { "HEAD" }))
+    $label = "dev.$count"
+    $modVersion = "$version-$label"
+    Write-Host "Building $modVersion+$commit$(if ($dirty) { '.dirty' })$(if ($lastTag) { " ($count commits since $lastTag)" } else { " (no v* tag yet)" })"
+}
 $fullVersion = "$modVersion+$commit" + $(if ($dirty) { ".dirty" } else { "" })
-Write-Host "Building $fullVersion$(if ($lastTag) { " ($count commits since $lastTag)" } else { " (no v* tag yet)" })"
 
 New-Item -ItemType Directory -Force -Path $OutDir | Out-Null
 $OutDir = (Resolve-Path $OutDir).Path
@@ -168,6 +211,9 @@ Get-ChildItem -LiteralPath $serverBin | Where-Object { $_.Name -notin @("Log", "
     Copy-Item -Destination $serverStage -Recurse -Force
 Copy-Item -LiteralPath $steamLib -Destination $serverStage
 Set-Content -LiteralPath (Join-Path $serverStage "TRY-IT.txt") -Value $tryItText -Encoding utf8
+$collector = @("Collect-Logs.ps1", "Collect-Logs.bat") | ForEach-Object { Join-Path $PSScriptRoot $_ }
+Copy-Item -LiteralPath $collector -Destination $serverStage
+Copy-Item -LiteralPath $collector -Destination $clientStage
 
 foreach ($file in @("CMS21-Together.dll", "CMS21-Together.pdb")) {
     Copy-Item -LiteralPath (Join-Path $clientBin $file) -Destination (Join-Path $clientStage "Mods")
@@ -212,3 +258,12 @@ Remove-Item -LiteralPath $stage -Recurse -Force
 Write-Host "Release $fullVersion written to $OutDir"
 Write-Host "  $clientZipName"
 Write-Host "  $serverZipName"
+
+if ($DraftGitHubRelease) {
+    $notes = Join-Path $OutDir "release-notes-$version.md"
+    Set-Content -LiteralPath $notes -Value $changelog -Encoding utf8
+    & gh release create $tag --draft --verify-tag --title "CMS21 Together $version" --notes-file $notes `
+        (Join-Path $OutDir $clientZipName) (Join-Path $OutDir $serverZipName) (Join-Path $OutDir "SHA256SUMS.txt")
+    if ($LASTEXITCODE -ne 0) { throw "gh release create failed (is the tag $tag pushed to GitHub?)" }
+    Write-Host "Draft GitHub release $tag created; publishing it is a separate, manual step."
+}
