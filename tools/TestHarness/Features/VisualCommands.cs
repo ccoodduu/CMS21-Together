@@ -223,6 +223,7 @@ public static class VisualCommands
             ["blockedNo"] = script.blockedNo,
             ["skipPartsAwake"] = GameSettings.SkipPartsAwake,
             ["active"] = script.gameObject.activeInHierarchy,
+            ["offset"] = Offset(script.transform.position - carLoader.transform.position),
             ["mode"] = mode == null ? null : mode.currentMode.ToString(),
             ["mountUnMountMode"] = mode != null && mode.mountUnMountMode,
             ["selected"] = PartGhosts.PartRenderers(script).Count,
@@ -250,6 +251,8 @@ public static class VisualCommands
             }).ToList(),
         };
     }
+
+    private static float[] Offset(Vector3 v) => new[] { Round(v.x), Round(v.y), Round(v.z) };
 
     private static string PathTo(Transform root, Transform t)
     {

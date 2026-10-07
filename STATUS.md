@@ -2,6 +2,22 @@
 
 Newest first. One entry per work session.
 
+## 2026-10-07 (19:00–20:30) — first playtest over Steam (2, then 3 players)
+
+- Host from the game on the user's PC, friends joined over Steam with `dev.893`/`dev.894`. Five F8 bundles
+  (`b3fd`, `be9b`, `20ec`, `475f`, `5b80`). Server-only fixes were shipped during the session as builds labelled
+  with the clients' version (`-p:TogetherBuildLabel=dev.89x`), so friends did not reinstall.
+- Fixed during the session (on `main`):
+  - `83f93c1` Steam clients without a Steam ID (relay identity 0) are identified by their player key
+    (was `MissingIdentity`).
+  - `65a2f95` Steam login waits 20 s (was 5 s; it takes 3.6–5 s and timed out twice) and logs failures.
+  - `035887c`, `e26d219` mounting a part with sub-parts (caliper + piston, piston + rings) was always rejected:
+    the game builds a new inventory group while mounting that never reaches the server, and the rejection lost the
+    items removed on their own. The server now rejects only when another client removed the entry.
+  - `1efb71c` a remote condition change on a part whose highlighter is not set up yet skipped
+    `UpdateShaderParams`: a replaced disc or ABS module looked worn until F7 (needs a new client).
+- Open findings: see QUESTIONS.md "Playtest findings (2026-10-07)".
+
 ## 2026-10-07 (18:00–19:00) — row 17 part 1 merged (remote work visuals)
 
 - `main` = `85b90ea`: other players' part work is now visible: a ghost copy of a part slides off or on, the bolts
