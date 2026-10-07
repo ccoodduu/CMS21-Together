@@ -36,7 +36,7 @@ function Get-LogText { Get-Content -LiteralPath (Join-Path $serverDir "Log\Lates
 
 function Start-Raw {
     Remove-Item -LiteralPath (Join-Path $serverDir "Log\Latest.txt") -ErrorAction SilentlyContinue
-    Start-Process -FilePath $exe -WorkingDirectory $serverDir -WindowStyle Minimized -ArgumentList @("--command-file", "`"$commandFile`"") -PassThru
+    Start-Process -FilePath $exe -WorkingDirectory $serverDir -WindowStyle Hidden -ArgumentList @("--command-file", "`"$commandFile`"") -PassThru
 }
 
 function Wait-Log([string]$Pattern, [int]$TimeoutSec = 30) {

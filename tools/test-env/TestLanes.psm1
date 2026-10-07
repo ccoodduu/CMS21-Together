@@ -306,7 +306,7 @@ function Start-HarnessInstance {
             "--harness.name=$Instance", "--harness.window=$Window"
         )
         if (-not $Sound) { $arguments += "--harness.mute" }
-        if ($Headless) { $arguments += @("-batchmode", "-nographics") }
+        if ($Headless) { $arguments += @("-batchmode", "-nographics", "--melonloader.hideconsole") }
         $arguments += @($ExtraArguments | Where-Object { $_ } | ForEach-Object { $_.Replace("{port}", "$($laneInfo.Port)") })
         $launch = [pscustomobject]@{ Instance = $Instance; Started = Get-Date; SteamMark = Get-SteamLogMark; Headless = [bool]$Headless }
         Start-Process -FilePath (Join-Path $dir "$script:ProductName.exe") -WorkingDirectory $dir -ArgumentList $arguments | Out-Null
