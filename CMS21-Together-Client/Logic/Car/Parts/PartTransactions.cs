@@ -74,6 +74,8 @@ public static class PartTransactions
 
 	public static bool HasOpen(int loader) => open.Any(t => t.Loader == loader) || committed.Count > 0;
 
+	public static bool HoldsInventoryChanges => open.Any(t => !t.Delta.IsEmpty) || committed.Count > 0;
+
 	public static bool SuppressAdd(string itemId)
 	{
 		var tx = Match(itemId);
@@ -190,6 +192,15 @@ public static class PartTransactions
 			InventoryHandlers.IgnoreInventoryHooks = previous;
 		}
 		InventoryHandlers.RefreshInventoryWindow();
+	}
+
+	public static void ReapplyOpen()
+	{
+		foreach (var tx in open.Where(t => t.AbortedUntil == 0f && !t.Delta.IsEmpty))
+		{
+			Log.Debug($"[Parts] Loader {tx.Loader}: reapplying the open transaction for {string.Join(",", tx.Keys)} after a full inventory sync.");
+			PartChanges.ApplyInventory(tx.Delta);
+		}
 	}
 
 	public static void FlushIdle()
