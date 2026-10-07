@@ -13,7 +13,9 @@ rest of a batch whose clients do not get back to the menu within 90 s.
 
 Lane locks: the run holds the lock of every lane it uses (lane 3: lanes 1 and 2) from start to end, waiting up to
 -LaneWaitMinutes for a busy lane. -Deploy runs Deploy-Mod.ps1 for the lane inside the locks. -ScenarioArgs is a
-hashtable splatted into the scenario after -Ctx. -Headless C,D starts those instances with -batchmode -nographics.
+hashtable splatted into the scenario after -Ctx. By default every instance runs headless (-batchmode -nographics: no
+window, no mouse capture, about 6 GB less RAM each); -Visible (or CMS21_TEST_VISIBLE=1) shows the windows, -Headless C,D
+makes only those headless, and a scenario with a "# needs: graphics" line runs visible and outside a batch.
 
 Each install has its own save folder and registry key (see TestLanes.psm1), so the real game's saves are never
 written. The run checks that with a fingerprint of the real save folder and registry key before and after.
@@ -31,7 +33,8 @@ param(
     [switch]$Deploy,
     [switch]$NoBuild,
     [double]$LaneWaitMinutes = 120,
-    [string[]]$Headless = @()
+    [string[]]$Headless = @(),
+    [switch]$Visible
 )
 
 $ErrorActionPreference = "Stop"
@@ -52,6 +55,8 @@ foreach ($name in $Headless) { if ($Instances -notcontains $name) { throw "-Head
 
 $batchMode = $Scenarios.Count -gt 0
 $names = if ($batchMode) { @($Scenarios) } else { @($Scenario) }
+$needsGraphics = @($names | Where-Object { Test-ScenarioNeedsGraphics (Join-Path $PSScriptRoot "scenarios\$_.ps1") })
+if (-not $Visible -and -not $env:CMS21_TEST_VISIBLE -and $Headless.Count -eq 0 -and $needsGraphics.Count -eq 0) { $Headless = @($Instances) }
 foreach ($name in $names) {
     if (-not (Test-Path -LiteralPath (Join-Path $PSScriptRoot "scenarios\$name.ps1"))) { throw "Unknown scenario: $name" }
 }

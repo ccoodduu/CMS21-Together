@@ -183,7 +183,12 @@ function Get-LaneGameProcesses($LaneInfo) {
 # "# run-all: fresh" line.
 function Test-ScenarioNeedsFreshGame([string]$ScenarioFile) {
     if (Test-Path -LiteralPath ([System.IO.Path]::ChangeExtension($ScenarioFile, ".launch.psd1"))) { return $true }
+    if (Test-ScenarioNeedsGraphics $ScenarioFile) { return $true }
     return [bool](Select-String -LiteralPath $ScenarioFile -Pattern '^\s*#\s*run-all:\s*fresh\b' -Quiet)
+}
+
+function Test-ScenarioNeedsGraphics([string]$ScenarioFile) {
+    (Test-Path -LiteralPath $ScenarioFile) -and [bool](Select-String -LiteralPath $ScenarioFile -Pattern '^\s*#\s*needs:\s*graphics\b' -Quiet)
 }
 
 function Get-InstanceGameProcess([string]$Instance) {
@@ -358,6 +363,6 @@ function Get-LaneDeployedBuilds($LaneInfo) {
 
 Export-ModuleMember -Function Get-TestLane, Get-TestLanes, Get-InstanceCompany, Get-InstanceSaveDir, Get-InstanceRegistryKey,
     Set-InstanceCompany, Assert-InstanceIsolated, New-ProfileSeed, Reset-InstanceProfile, Get-RealProfileFingerprint,
-    Get-LaneGameProcesses, Set-LaneServerConfig, Remove-ReleaseOnlyFiles, Test-ScenarioNeedsFreshGame,
+    Get-LaneGameProcesses, Set-LaneServerConfig, Remove-ReleaseOnlyFiles, Test-ScenarioNeedsFreshGame, Test-ScenarioNeedsGraphics,
     Get-InstanceGameProcess, Enter-LaneLocks, Exit-LaneLocks, Get-MemoryHeadroom, Wait-MemoryHeadroom, Get-SteamLogMark,
     Test-SteamKick, Start-HarnessInstance, Wait-HarnessInstances, Get-DeployedBuild, Get-LaneDeployedBuilds

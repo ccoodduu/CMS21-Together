@@ -118,7 +118,8 @@ function Wait-HarnessDumpsAllEqual {
 
 function Save-HarnessScreenshot {
     param([string]$Instance, [string]$RunDir, [string]$Label)
-    Send-HarnessCommand -Instance $Instance -Verb screenshot -Arguments (Join-Path $RunDir "shot_${Label}_$Instance.png") | Out-Null
+    try { Send-HarnessCommand -Instance $Instance -Verb screenshot -Arguments (Join-Path $RunDir "shot_${Label}_$Instance.png") | Out-Null }
+    catch { Write-Host "No screenshot from $Instance ($Label): $($_.Exception.Message.Split("`n")[0])" }
 }
 
 # Returns the names of the shared-state sections (stats, inventory, cars) that differ between two dumps.
