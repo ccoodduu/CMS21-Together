@@ -307,6 +307,33 @@ halves are still open and marked there.
   along local +Y; no work clips. No wrench or ratchet mesh exists by name in the game data (only sounds), so part work
   has no prop unless the runtime check finds one. Both are confirmed by `vfx-trace report` in a game run.
 
+Runtime half (task 1.3/1.4, 2026-10-07, lane 1, headless; runs `20261007-181727_L1_visual-probe`,
+`20261007-182206_L1_visual-parts`):
+
+- **Time per bolt:** about 0.9 s (exhaust manifold `v8_kolektor_wydechowy_stary_1`, 8 bolts in 7.1 s; valve cover
+  `v8_pokrywa_glowicy_stara_1`, 5 of 10 bolts in 4.6 s; fan `wentylator_2`, 4 bolts). The actor sends 16 progress
+  steps per part, two per second, well under the 4/s cap.
+- **Packet order:** on the receiver the release (`CarPartClaimUpdate`, owner -1) arrives **before** the
+  `CarPartsChange` that commits the part, in the same frame. `BoltEffect`'s 0.5 s release grace covers it (the commit
+  finishes the bolts instead of running them back).
+- **Game modes:** `ActionUnMount` → `GameScript.SelectToUnMount` → `SetCurrentMode(PartUnMount)`, which sets
+  `GameMode.mountUnMountMode`; `MountObject.Update` resets a bolt's `canBeUnmount` while that flag is off. After the
+  part comes off the mode is `PartSelect`. The examine tools leave the mode at `Garage`. D5's mapping holds.
+- **Commit point:** `PartScript.Update` hides the part (`Hide()`, stat `stat_unscrew`) when the sum of its bolts'
+  `mountState` reaches 0, and shows it mounted (`ShowMounted()`) when it reaches the bolt count in mount mode.
+  `PartScript.Update` also refreshes `canBeUnmount = blockedNo == 0`.
+- **Disabled parts on test games:** in the headless test games the probed `PartScript`s and their renderers are
+  disabled (`enabled = false`; most likely `PartScriptCuller`, not proven), so their `Update` never runs: `canBeUnmount` stays false and nothing commits.
+  `vfx-unscrew` therefore sets `canBeUnmount` for an unblocked culled part and starts `Hide()`/`ShowMounted()` itself
+  when the bolts are done, as `PartScript.Update` would. Ghosts ignore `Renderer.enabled` for the same reason.
+- **Dissolve:** a mounted part's materials have no `_AlphaDissolve`; Off/On ghosts use the shrink fallback
+  (`fade = shrink`).
+- **Rig and props (1.4):** the bones are as in the static half (`mixamorig:RightArm` …); no loaded mesh is named
+  wrench, ratchet or spanner (no part-work prop). `ToolsManager.CurrentUsedTool` stays null while the OBD scanner is
+  in use; the prop comes from `ToolsManager.ObdScanner` as designed.
+- A fast mount (`part-fast-mount`) leaves the actor's bolts at `mountState` 0 on a mounted part; a following
+  `vfx-unscrew` then reports full progress at once. Scenarios use parts nobody has fast-mounted for the bolt steps.
+
 ## Measurements
 
 Filled by tasks 1.3 (bolt timing, packet order), 7.3 (bytes per type, frame time) and 12.2 (driving bytes).

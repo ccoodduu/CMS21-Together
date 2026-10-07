@@ -200,7 +200,7 @@ Verbs are globally unique (`Commands.Discover` throws on a duplicate). Existing:
 | 14a | `guard-trace` (spike only), `guard-set`, `guard-allow`, `guard-try`, `guard-log`, `guard-rules` |
 | 14 | `digest-show`, `inv-corrupt`, `digest-hold`, `resync [force]` (5a uses it instead of its former `tool-resync`), `bug-report [list]` |
 | 11 | `perf` (frame time over 10 s, managed and IL2CPP heap, scene, `syncAcked`), `fps-cap <n>` |
-| 17 | `vfx-trace` (spike), `vfx-unscrew`, `vfx-tool`, `vfx-hold`, `vfx-enable`, `vfx-parts`, `vfx-switch`, `vfx-stand`; dump section `visuals` (part 2 adds `drive-*` and `remoteCars`) |
+| 17 | `vfx-trace`, `vfx-probe` (spike), `vfx-unscrew`, `vfx-tool`, `vfx-hold`, `vfx-enable`, `vfx-parts`, `vfx-switch`, `vfx-stand`; dump section `visuals` (part 2 adds `drive-*` and `remoteCars`) |
 
 | PowerShell helper / server command | Owner (first to land) |
 |---|---|
@@ -223,7 +223,7 @@ Scenarios (unique): 7 `server-restart`, `profile-safety`, `rejoin`, `latejoin`, 
 `jobs-restart`; 4 `car-details`, `car-details-latejoin`; 5a `tools-slots`, `tools-race`, `tools-latejoin`;
 5b `tools-car-effects`; 8 `join-ui`, `join-coldstart`, `host-from-game`, `session-admin`; 9 `compat-refusal`, `compat-mods-probe` (run-all: skip; needs real mods copied into A);
 12 `release-smoke` (marked `# run-all: skip`, run after `Install-ReleaseToTestEnv.ps1`); 14a `guard`; 14
-`desync-autofix`, `resync-key`, `bug-report`; 17 `visual-parts`, `visual-activity`, `visual-latejoin`, `visual-screens` (`# needs: graphics`, `# run-all: skip`); 11 `scale-connect`, `soak`, `latejoin-full`, `storm` (all
+`desync-autofix`, `resync-key`, `bug-report`; 17 `visual-parts`, `visual-activity`, `visual-latejoin`, `visual-screens` (`# needs: graphics`, `# run-all: skip`), `visual-probe` (spike, `# run-all: skip`); 11 `scale-connect`, `soak`, `latejoin-full`, `storm` (all
 `# run-all: lane 3`), `full-garage-fixture` and `perf-probe` (`# run-all: skip`).
 
 Scale lane and long runs (owner 11, design `multiplayer-soak-and-scale` D1-D9):
