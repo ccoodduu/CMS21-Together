@@ -202,7 +202,7 @@ Verbs are globally unique (`Commands.Discover` throws on a duplicate). Existing:
 | server commands `players` / `cars` / `placement` / `jobs` / `cardetails` | 7 / 1 / 2 / 3 / 4 |
 | `Start-TestServer -Arguments` (optional, additive), `scenarios\<name>.launch.psd1` (per-instance launch arguments read by `Run-Session.ps1`) | 8 (tasks 2.3, 4.3) |
 | harness status `Status.joinStatus`, `Status.lastDisconnect { reason, message }` (polled with `Wait-HarnessStatus`) | 8 (task 1.3); user 9 (replaces its former `session.lastError`) |
-| `Run-All.ps1` skips scenarios whose first line is `# run-all: skip` unless named in `-Scenarios` | 12 (task 2.5) |
+| `Run-All.ps1` skips scenarios with a `# run-all: skip` header line unless named in `-Scenarios` | 12 (task 2.5) |
 | `tools/release/Build-Release.ps1`, `Install-ReleaseToTestEnv.ps1 -Lane`, `Collect-Logs.ps1` (+ `.bat`); `Deploy-Mod.ps1` removes release-only files | 12 |
 | `tools/test-env/Compare-Database.ps1`, `tools/test-env/fixtures/mod-targets/` | 9 |
 | server commands `password`, `serverinfo` (8); `compat` (9); `desync`, `bugreport` (14); existing `kick`, `stop` (`kick` moves to `Server.Refuse`) | as listed |
@@ -214,6 +214,24 @@ Scenarios (unique): 7 `server-restart`, `profile-safety`, `rejoin`, `latejoin`, 
 5b `tools-car-effects`; 8 `join-ui`, `join-coldstart`, `host-from-game`, `session-admin`; 9 `compat-refusal`;
 12 `release-smoke` (marked `# run-all: skip`, run after `Install-ReleaseToTestEnv.ps1`); 14a `guard`; 14
 `desync-autofix`, `resync-key`, `bug-report`.
+
+## Test areas
+
+Policy (user, 2026-10-07): a change merges after the scenarios of its areas plus the smoke set, not a full
+regression; the full set runs when a change touches mod code the path table cannot place or harness core, and
+before a release. Every scenario, skipped ones included, carries a `# areas: a, b` header line (vocabulary and the
+path → area table in `tools/test-env/TestAreas.psm1`: `connect`, `presence`, `guard`, `cars`, `parts`,
+`placement`, `details`, `jobs`, `economy`, `tools`, `testdrive`, `persistence`, `resync`, `hosting`, `bugreport`,
+`release`); `smoke` in the list puts it in the smoke set (`latejoin`, `car-live`, `junkyard-trip`, `guard`,
+`tools-latejoin`). **A new scenario must carry `# areas:`**; a new source folder needs a row in the table, or its
+changes run the full set.
+
+| `Run-All.ps1` switch | Runs |
+|---|---|
+| `-Changed [<ref>]` | files changed since the merge base with `<ref>` (default `origin/main`, plus uncommitted and untracked files) mapped to areas, plus the smoke set; a changed scenario adds itself and its areas; docs alone run nothing |
+| `-Areas a,b` | scenarios with any of these areas, plus the smoke set (`-NoSmoke` leaves it out) |
+| `-Smoke` | the smoke set |
+| `-List` | prints the changed files with their areas and each selected scenario with its reason, then exits |
 
 ## Settled in this pass (main ones)
 
