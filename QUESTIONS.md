@@ -3,6 +3,18 @@
 Open questions that block a decision. Each has the default we work with until answered.
 Answered ones move to the bottom with the answer.
 
+## Open — row 17 remote visual feedback (2026-10-07)
+
+1. **Collisions** between players' cars and walking players while driving. **Default:** none (others' cars pass
+   through).
+2. **Seeing a test drive** only when you are at the test track too. **Default:** yes, no spectator view from the
+   garage.
+3. **Real animation clips** for the remote avatar need the Unity project behind `playermodel.bundle`. Do you have it?
+   **Default:** a simple procedural work pose.
+4. **Remote visuals** (parts moving, bolts turning) on by default, with a local off switch. **Default:** yes.
+5. **Driving** as part 2 of this change (merged separately) or a change of its own. **Default:** part 2.
+6. **A garage drive** that ends somewhere other than a car place. **Default:** the car goes back to its place.
+
 ## Accepted defaults (user, 2026-10-06)
 
 - Remote players see only the finished part state, not the bolt animation, while a part is reserved.
