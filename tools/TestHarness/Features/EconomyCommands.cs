@@ -268,7 +268,11 @@ public static partial class EconomyCommands
                 result["shown"] = true;
                 break;
             case "wash-tint":
-                result["shown"] = WindowManager.Instance.Show(WindowID.Tinting, false);
+                var tintingWindow = Window<TintingWindow>(WindowID.Tinting, false);
+                var tintManager = UnityEngine.Object.FindObjectOfType<CMS.Managers.WindowTintManager>() ?? throw new InvalidOperationException("no window tint manager in this scene");
+                tintManager.SetCarLoader(carLoader);
+                tintManager.StartCoroutine(tintingWindow.ShowCoroutine(true));
+                result["shown"] = true;
                 break;
             case "tint":
                 if (parts.Length != 3) throw new ArgumentException("usage: econ-fee tint <loader> <windows>");

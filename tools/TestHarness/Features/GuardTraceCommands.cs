@@ -20,6 +20,12 @@ public static class GuardTraceCommands
         if (tracing) MelonLogger.Msg($"[Harness] guard-trace {text}");
     }
 
+    internal static void Reset(List<string> changed)
+    {
+        if (tracing) changed.Add("guard-trace");
+        tracing = false;
+    }
+
     [HarnessCommand("guard-trace")]
     private static object GuardTrace(string args)
     {

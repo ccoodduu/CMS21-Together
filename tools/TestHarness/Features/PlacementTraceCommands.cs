@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using HarmonyLib;
 using MelonLoader;
 
@@ -20,6 +21,12 @@ public static class PlacementTraceCommands
     {
         tracing = (args ?? "").Trim() == "on";
         return tracing ? "tracing" : "not tracing";
+    }
+
+    internal static void Reset(List<string> changed)
+    {
+        if (tracing) changed.Add("placement-trace");
+        tracing = false;
     }
 
     private static string Loader(CarLoader carLoader) => carLoader == null ? "null" : $"{CarLoaderPlaces.Get()?.GetCarLoaderId(carLoader)}({carLoader.carToLoad}, placeNo {carLoader.GetPlaceNo()})";

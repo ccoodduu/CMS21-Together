@@ -63,6 +63,17 @@ public static class CarCommands
         return PartChanges.TestHoldRemote;
     }
 
+    internal static void Reset(List<string> changed)
+    {
+        if (CarPartsSync.TestSnapshotDelaySeconds > 0f) changed.Add($"car-hold-snapshot {CarPartsSync.TestSnapshotDelaySeconds}");
+        CarPartsSync.TestSnapshotDelaySeconds = 0f;
+        var heldRemote = HarmonyLib.AccessTools.Field(typeof(PartChanges), "heldForTest")?.GetValue(null) as System.Collections.IList
+            ?? throw new MissingFieldException(nameof(PartChanges), "heldForTest");
+        if (PartChanges.TestHoldRemote || heldRemote.Count > 0) changed.Add($"part-hold-remote (dropped {heldRemote.Count} held changes)");
+        PartChanges.TestHoldRemote = false;
+        heldRemote.Clear();
+    }
+
     [HarnessCommand("car-dlc-cars")]
     private static object CarDlcCars(string args)
     {

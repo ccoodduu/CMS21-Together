@@ -25,6 +25,22 @@ public static partial class EconomyCommands
         return Result(before, new Dictionary<string, object> { ["unattributed"] = EconomyAudit.Unattributed });
     }
 
+    internal static void Reset(List<string> changed)
+    {
+        if (tracing) changed.Add("econ-trace");
+        tracing = false;
+        counts.Clear();
+        lines.Clear();
+        running.Clear();
+        withoutCaller = 0;
+        if (EconomyAudit.Unattributed > 0) changed.Add($"economy audit ({EconomyAudit.Unattributed} unattributed)");
+        EconomyAudit.ResetUnattributed();
+        EconomyAudit.Sent.Clear();
+        EconomyAudit.CoveredCalls.Clear();
+        EconomyAudit.SuppressedCalls.Clear();
+        EconomyAudit.Refused.Clear();
+    }
+
     [HarnessCommand("econ-ledger")]
     private static object Ledger(string args)
     {
