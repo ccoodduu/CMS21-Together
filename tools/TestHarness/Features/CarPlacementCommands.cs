@@ -21,6 +21,9 @@ public static class CarPlacementCommands
     private static object CarMove(string args)
     {
         var (carLoader, place) = LoaderAndPlace(args, "usage: car-move <loader> <CarPlace>");
+        var mode = GameMode.Get();
+        // ChangeCarPos ends with SetCurrentMode(previousMode), which the skipped pie menu sets; a stale Interior throws.
+        mode.previousMode = mode.currentMode;
         var center = NotificationCenter.Get();
         center.StartCoroutine(center.ChangeCarPos(carLoader, place, false));
         return "moving";
@@ -205,6 +208,8 @@ public static class CarPlacementCommands
             ["state"] = lifter.GetState().ToString(),
             ["isMoving"] = lifter.isMoving,
             ["connectedLoader"] = connected == null ? -1 : places.GetCarLoaderId(connected),
+            ["connectedObject"] = lifter.connectedGameObject != null,
+            ["active"] = lifter.gameObject.activeInHierarchy,
             ["nearestPlace"] = nearest,
             ["distance"] = Mathf.Round(best * 100f) / 100f,
         };

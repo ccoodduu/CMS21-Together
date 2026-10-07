@@ -106,6 +106,8 @@ public static class SeatEngineCommands
         if (parts.Length != 2 || parts[1] != "left" && parts[1] != "right") throw new ArgumentException("usage: sit <carLoaderId> left|right");
         var carLoader = LoadedCar(parts[0]);
         var game = GameScript.Get() ?? throw new InvalidOperationException("no GameScript");
+        // SetCurrentMode(Interior) reads the car under the mouse and throws without one.
+        game.IOMouseOverCarLoader = carLoader;
         game.StartCoroutine(game.SitInside(carLoader, parts[1] == "left", gameMode.Interior));
         return new { loader = int.Parse(parts[0]), side = parts[1] };
     }

@@ -69,7 +69,7 @@ public static class CarCommands
     {
         var carLoader = Loader(args);
         if (string.IsNullOrEmpty(carLoader.carToLoad)) return "empty";
-        carLoader.DeleteCar();
+        carLoader.DeleteCar(true);
         return "deleted";
     }
 
@@ -219,6 +219,8 @@ public static class CarCommands
         var memberKeys = script.GetUnmountWith().ToArray()
             .Select(m => registry.TryGetSubPath(m, out var path) ? CMS21_Together_Core.Network.Packets.PartKeys.Sub(path) : null)
             .Where(k => k != null).ToList();
+        // Hide reads the car under the mouse for fluid and suspension parts and throws without one.
+        GameScript.Get().IOMouseOverCarLoader = carLoader;
         script.FastUnmount();
         return new Dictionary<string, object> { ["key"] = key, ["id"] = script.id, ["members"] = memberKeys };
     }
