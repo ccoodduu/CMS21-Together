@@ -80,7 +80,14 @@ $dumpB = Save-HarnessDump -Instance $b -RunDir $Ctx.RunDir -Label "after-latejoi
 Check ($dumpA.stats.scrap -eq $aBefore.stats.scrap -and $dumpA.stats.exp -eq $aBefore.stats.exp) "the dropped change did not reach the shared stats (scrap $($aBefore.stats.scrap) -> $($dumpA.stats.scrap), exp $($aBefore.stats.exp) -> $($dumpA.stats.exp))"
 $diff = Compare-HarnessDumps $dumpA $dumpB -Sections @("stats", "inventory", "cars")
 Check ($diff.Count -eq 0) "B's stats, inventory and cars equal A's (differ: $($diff -join ', '))"
-Check ($readyB.stateHash -eq $readyA.stateHash) "same part state on A and B ($($readyA.stateHash) / $($readyB.stateHash))"
+$finalA = Wait-Ready $a
+$finalB = Wait-Ready $b
+Write-Host "part state hashes: A before the join $($readyA.stateHash), A now $($finalA.stateHash), B when ready $($readyB.stateHash), B now $($finalB.stateHash)"
+if ($finalB.stateHash -ne $finalA.stateHash) {
+    foreach ($name in $a, $b) { Send-HarnessCommand -Instance $name -Verb part-state -Arguments "$loader $(Join-Path $Ctx.RunDir "parts_$name.txt")" | Out-Null }
+}
+Check ($finalB.stateHash -eq $finalA.stateHash) "same part state on A and B ($($finalA.stateHash) / $($finalB.stateHash))"
+Check ($readyB.stateHash -eq $finalB.stateHash) "B had the final part state when its car was ready ($($readyB.stateHash) / $($finalB.stateHash))"
 Check ($dumpA.syncAcked -and $dumpB.syncAcked) "both acknowledged their snapshot"
 
 foreach ($pair in @(@($a, $b), @($b, $a))) {
