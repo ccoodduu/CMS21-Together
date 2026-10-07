@@ -89,6 +89,16 @@ public static class AuctionSync
 		return lot?.Index ?? -1;
 	}
 
+	public static AuctionBidding FindBidding()
+	{
+		var manager = UnityEngine.Object.FindObjectOfType<AuctionManager>();
+		var bidding = manager == null ? null : manager.auctionWindow?.auctionBidding;
+		if (bidding != null) return bidding;
+		return Resources.FindObjectsOfTypeAll(UnhollowerRuntimeLib.Il2CppType.Of<AuctionBidding>())
+			.Select(o => o.TryCast<AuctionBidding>())
+			.FirstOrDefault(b => b != null && b.gameObject.scene.IsValid());
+	}
+
 	public static int CurrentLot(AuctionBidding bidding) => bidding == null ? -1 : LotOf(bidding.auctionManager?.CurrentCarData);
 
 	[HarmonyPatch(typeof(AuctionManager), nameof(AuctionManager.GenerateCars))]
@@ -236,7 +246,7 @@ public static class AuctionSync
 	public static void OnBidRequest(AuctionBidRequestPacket packet)
 	{
 		if (!Active || packet.InstanceId != OutdoorSession.InstanceId || !owned.Contains(packet.Lot)) return;
-		var bidding = UnityEngine.Object.FindObjectOfType<AuctionBidding>();
+		var bidding = FindBidding();
 		if (bidding == null || CurrentLot(bidding) != packet.Lot || !bidding.startedAuction || bidding.lastBidByPlayer)
 		{
 			Log.Info($"[Outdoor] Raise on lot {packet.Lot} from {packet.RequesterId} not applied (bidding {(bidding == null ? "closed" : bidding.startedAuction ? "team leads" : "not started")}).");

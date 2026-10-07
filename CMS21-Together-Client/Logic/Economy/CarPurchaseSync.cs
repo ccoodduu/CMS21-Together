@@ -97,12 +97,22 @@ public static class CarPurchaseSync
 
 	[HarmonyPatch(typeof(AuctionBidding), nameof(AuctionBidding.ReceiveCarAction))]
 	[HarmonyPrefix]
-	private static bool BeforeReceiveCar(AuctionBidding __instance, out EconomyScopeEntry __state) =>
-		Begin("Auction", __instance.auctionManager?.playerCarLoader, __instance.currentBid, out __state, AuctionSync.CurrentLot(__instance));
+	private static bool BeforeReceiveCar(AuctionBidding __instance, out EconomyScopeEntry __state)
+	{
+		bool run = Begin("Auction", __instance.auctionManager?.playerCarLoader, __instance.currentBid, out __state, AuctionSync.CurrentLot(__instance));
+		if (run && __state != null) locationBypass = FeatureGuard.Bypass();
+		return run;
+	}
 
 	[HarmonyPatch(typeof(AuctionBidding), nameof(AuctionBidding.ReceiveCarAction))]
-	[HarmonyPostfix]
-	private static void AfterReceiveCar(EconomyScopeEntry __state) => EconomyScope.Pop(__state);
+	[HarmonyFinalizer]
+	private static Exception AfterReceiveCar(Exception __exception, EconomyScopeEntry __state)
+	{
+		EconomyScope.Pop(__state);
+		locationBypass?.Dispose();
+		locationBypass = null;
+		return __exception;
+	}
 
 	private static bool Begin(string source, CarLoader carLoader, int price, out EconomyScopeEntry scope, int sourceLot = -1)
 	{

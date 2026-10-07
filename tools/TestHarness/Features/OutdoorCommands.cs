@@ -303,7 +303,7 @@ public static class OutdoorCommands
 			yield return null;
 		}
 		StartStep($"car loaded: {manager.CarLoader?.carToLoad}");
-		var bidding = UnityEngine.Object.FindObjectsOfType<AuctionBidding>().FirstOrDefault();
+		var bidding = AuctionSync.FindBidding();
 		if (bidding == null)
 		{
 			StartStep("failed: no AuctionBidding");
@@ -328,7 +328,7 @@ public static class OutdoorCommands
 	[HarnessCommand("auction-state")]
 	private static object AuctionStateCommand(string args)
 	{
-		var bidding = UnityEngine.Object.FindObjectsOfType<AuctionBidding>().FirstOrDefault();
+		var bidding = AuctionSync.FindBidding();
 		int lot = AuctionSync.CurrentLot(bidding);
 		return new
 		{
@@ -350,11 +350,12 @@ public static class OutdoorCommands
 	{
 		string who = (args ?? "").Trim().ToLowerInvariant();
 		if (who != "team" && who != "ai") throw new ArgumentException("usage: auction-finish team|ai");
-		var bidding = UnityEngine.Object.FindObjectsOfType<AuctionBidding>().FirstOrDefault(b => b.startedAuction)
+		var bidding = new[] { AuctionSync.FindBidding() }.FirstOrDefault(b => b != null && b.startedAuction)
 		              ?? throw new InvalidOperationException("no bidding runs here");
 		bidding.lastBidByPlayer = who == "team";
 		bidding.AIMaxBid = bidding.currentBid;
 		bidding.auctionTimer = 0f;
+		if (!bidding.isActiveAndEnabled) bidding.Update();
 		lastAuctionStart.Clear();
 		if (who == "team") MelonCoroutines.Start(ReceiveWonCar(bidding));
 		return new { who, bid = bidding.currentBid, lot = AuctionSync.CurrentLot(bidding) };
