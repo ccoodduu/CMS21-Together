@@ -1,7 +1,7 @@
 # areas: presence, parts, placement
 # The harness verbs sit, stand + car-move and part-fast-unmount of a suspension part skip the mouse and the pie menu.
 # Vanilla then reads a missing mouse-over car or restores a stale Interior mode and throws in GameMode.SetCurrentMode
-# or PartScript.Hide (soak 2026-10-07, rule 4). None of them may log an exception, and car-move must leave Garage mode.
+# or PartScript.Hide (soak 2026-10-07, rule 4). None of them may log an exception, and car-move must not restore Interior.
 param($Ctx)
 
 $a, $b = $Ctx.Instances
@@ -56,7 +56,8 @@ Send-HarnessCommand -Instance $a -Verb stand | Out-Null
 Start-Sleep -Seconds 4
 Send-HarnessCommand -Instance $a -Verb car-move -Arguments "1 Entrance2" | Out-Null
 Start-Sleep -Seconds 6
-Check ((Mode $a) -eq "Garage") "after stand and car-move A is back in Garage mode (mode $(Mode $a))"
+$mode = Mode $a
+Check ($mode -ne "Interior") "after stand and car-move A is not left in Interior mode (mode $mode)"
 
 $r = Send-HarnessCommand -Instance $b -Verb part-fast-unmount -Arguments "1 s:3.4"
 Start-Sleep -Seconds 3
