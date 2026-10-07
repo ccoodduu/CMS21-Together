@@ -3,9 +3,11 @@ using System.Collections.Generic;
 using System.Linq;
 using CMS21_Together_Core.Data;
 using CMS21_Together_Core.Data.Enum;
+using CMS21_Together_Core.Data.Outdoor;
 using CMS21_Together_Core.Logging;
 using CMS21_Together_Core.Network.Packets;
 using CMS21Together.Data;
+using CMS21Together.Logic.Outdoor;
 using CMS21Together.Managers;
 using CMS21Together.Network;
 using CMS21Together.Session;
@@ -119,7 +121,7 @@ public static class PresenceManager
 		var record = player.Record;
 
 		bool visible = record.Scene == ClientScene.LocalScene
-		               && GameSceneInfo.ShowsAvatars(record.Scene)
+		               && SharesScene(record)
 		               && record.LastMovement != null
 		               && record.LastMovement.Scene == record.Scene;
 		if (!visible)
@@ -134,6 +136,12 @@ public static class PresenceManager
 			if (player.Avatar == null) return;
 		}
 		player.Avatar.gameObject.SetActive(record.SeatCarLoaderId == PlayerPresenceRecord.NoCar);
+	}
+
+	private static bool SharesScene(PlayerPresenceRecord record)
+	{
+		if (!OutdoorScenes.IsOutdoor(record.Scene) || !OutdoorSession.IsSharedScene(record.Scene)) return GameSceneInfo.ShowsAvatars(record.Scene);
+		return OutdoorSession.IsShared && record.OutdoorInstanceId == OutdoorSession.InstanceId;
 	}
 
 	public static PlayerPresenceRecord CaptureLocalRecord()

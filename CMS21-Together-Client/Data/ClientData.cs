@@ -42,6 +42,8 @@ public static class ClientData
 		Logic.Economy.EconomyRequests.Reset();
 		Logic.Economy.CarPurchaseSync.Reset();
 		Logic.Tools.ToolSync.Reset();
+		Logic.Outdoor.OutdoorSession.Reset();
+		Logic.Outdoor.CatalogReporter.Reset();
 	}
 
 	public static void Update()

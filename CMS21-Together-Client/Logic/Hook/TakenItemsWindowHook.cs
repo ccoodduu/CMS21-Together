@@ -36,7 +36,8 @@ namespace CMS21Together.Logic.Hook
                 var packet = new ItemsExchangePacket
                 {
                     IsJunkyard = GameScript.Get().CurrentSceneType == SceneType.Junkyard,
-                    ItemsToBuy = new List<ModItem>()
+                    ItemsToBuy = new List<ModItem>(),
+                    InstanceId = Logic.Outdoor.LootSync.SharedPiles ? Logic.Outdoor.OutdoorSession.InstanceId : 0
                 };
                 Log.Warn($"[BuyPartsActionPrefix] List size:{items.Count} , _items size:{items._items.Count}.");
                 foreach (var baseItem in items)

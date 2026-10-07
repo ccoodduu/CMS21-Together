@@ -243,7 +243,7 @@ namespace CMS21_Together_Server.Data.Outdoor
 			foreach (var digest in instance.Digests.Where(d => d.Value != instance.ReferenceDigest && !instance.DigestCompared.Contains(d.Key)).ToList())
 			{
 				instance.DigestCompared.Add(digest.Key);
-				var differences = OutdoorDigestRow.Compare(instance.ReferenceDigest, digest.Value);
+				var differences = OutdoorDigestRow.Compare(WithoutSold(instance, instance.ReferenceDigest), WithoutSold(instance, digest.Value));
 				if (differences.Count == 0)
 				{
 					Logger.Info($"[Outdoor] {instance.Label}: digest of {digest.Key} equals the reference.");
@@ -258,6 +258,9 @@ namespace CMS21_Together_Server.Data.Outdoor
 				}
 			}
 		}
+
+		private static List<string> WithoutSold(OutdoorInstance instance, List<string> rows) =>
+			rows.Where(r => !instance.Sold.Any(i => OutdoorDigestRow.Parse(r).Key == OutdoorDigestRow.CarPrefix + i)).ToList();
 
 		private static void TrimHistory(OutdoorInstance instance, List<string> rows)
 		{
