@@ -1,4 +1,5 @@
-﻿# sync-car-parts live changes: both clients have the same car; A unmounts a mechanical part through the game's own
+﻿# areas: cars, parts, smoke
+# sync-car-parts live changes: both clients have the same car; A unmounts a mechanical part through the game's own
 # path (FastUnmount -> Hide: inventory item, XP), B sees the same part state and inventory within a few seconds;
 # A mounts it back (FastMount) and both match again.
 param($Ctx)

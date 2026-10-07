@@ -1,3 +1,4 @@
+# areas: jobs, connect, persistence
 # sync-orders-and-jobs 7.2/7.3: A alone generates orders and takes one; B joins late and sees the same orders, the active
 # job and its customer car; a job car spawn without a claim is refused; B accepts an order and leaves at once, so the
 # claim is released; after a server restart both see the same orders and active job as before.

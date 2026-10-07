@@ -1,3 +1,4 @@
+# areas: connect
 # Cold start from a join string (what a Steam invite with the game closed does): B is launched with
 # +connect CMS21Together:ip:<lane address> (see join-coldstart.launch.psd1) and joins by itself once the menu
 # is ready; A, started without it, stays in the menu.

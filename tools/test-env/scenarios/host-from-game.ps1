@@ -1,4 +1,5 @@
 # run-all: fresh
+# areas: hosting, persistence
 # Hosting from the game: A starts the lane's server through mp-host (new session on Expert, old save moved aside),
 # joins it as admin, B joins and plays on Expert; mp-host stop saves, B sees the shutdown and the process is gone;
 # a second start continues on Expert; quitting A stops the server.

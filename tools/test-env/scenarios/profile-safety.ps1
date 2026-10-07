@@ -1,4 +1,5 @@
 # run-all: fresh
+# areas: persistence
 # A multiplayer session never writes the player's own profiles: the save folder and the selected-profile
 # pref are unchanged after connect, a menu exit with saving, a reconnect and quit; each install made a backup.
 param($Ctx)

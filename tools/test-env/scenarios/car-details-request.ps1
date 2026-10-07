@@ -1,3 +1,4 @@
+# areas: details, cars
 # sync-car-details 4.7 (D7): A holds its spawn snapshot and spawns a car. The server has no details for the car, so
 # after the 10 s grace it sends A a CarDetailsRequest; A answers with a full snapshot, which the server stores.
 param($Ctx)

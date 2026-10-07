@@ -1,3 +1,4 @@
+# areas: testdrive, jobs, connect, persistence
 # sync-test-drive-and-diagnostics 8.2: A takes a job and test-drives the customer car; B joins while A is on the track,
 # sees the claim and cannot end the job; after the return B has the kilometres. A disconnects on a second drive: the
 # claim is released and the car is unchanged. After a server restart A's cars and details are as before.

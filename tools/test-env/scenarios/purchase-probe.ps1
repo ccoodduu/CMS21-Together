@@ -1,4 +1,5 @@
 # run-all: skip
+# areas: economy
 # Probe for row 6 part 2: which windows the junkyard registers, and what GameScript.BuyCar needs there.
 param($Ctx)
 

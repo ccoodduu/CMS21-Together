@@ -1,4 +1,5 @@
 # run-all: skip
+# areas: testdrive
 # sync-test-drive-and-diagnostics spike 1.3 (instance A only, connected): hold the departure coroutine to the test
 # track for a second, then release it; then hold and cancel it, and check what the cancel leaves behind; then depart
 # again without a hold. Results in departure-hold.json and the client_A.log "testdrive-hold" lines.

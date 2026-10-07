@@ -1,3 +1,4 @@
+# areas: placement, economy
 # sync-car-placement-and-lifts full parking: A fills 9 of the 10 slots, then A and B park one car each at the same
 # time (net-hold). One gets the last slot, the other is refused and its car comes back into the garage for both.
 # A priced arrival into the full parking is refused and costs nothing.

@@ -1,3 +1,4 @@
+# areas: economy, cars, placement, guard
 # sync-players-and-scenes 6.5 (row 6 part 2), guard enforcing: A buys 3 parts in the junkyard (both get them once and
 # the same money); A buys a junkyard car, which lands in the shared parking of both with the money down exactly once;
 # a second car through the location window's Garage button still goes to the parking; with too little money the

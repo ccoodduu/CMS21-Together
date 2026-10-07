@@ -1,3 +1,4 @@
+# areas: economy, connect, persistence
 # economy-audit 7.3: A alone sells a car, resets the skills, uses a barn map and pays a travel fee; B joins later and
 # gets the same money, scrap, level, XP, barn count and skills. After a server restart both get them back.
 param($Ctx)

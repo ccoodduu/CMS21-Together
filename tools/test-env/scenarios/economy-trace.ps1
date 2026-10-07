@@ -1,3 +1,4 @@
+# areas: economy
 # economy-audit 1.2 (spike): A alone, connected, drives every money path once with econ-trace on. The trace report
 # (every mutator call with the traced caller that was running), the economy ledger and the guard log go to the run
 # folder for design.md "Runtime trace results". Steps that fail are noted, not failed: this run collects facts.

@@ -1,3 +1,4 @@
+# areas: connect, persistence, cars, parts, smoke
 # session-persistence-and-rejoin 7.3 (and 5.1, 5.2): A connects alone, changes the shared stats, spawns a car and
 # unmounts a part. B joins late and, while its garage is still loading, sends a stats change that the server must drop.
 # B must end with A's stats, inventory and cars, both must see each other and the server must drop nothing else.

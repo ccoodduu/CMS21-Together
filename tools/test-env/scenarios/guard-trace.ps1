@@ -1,4 +1,5 @@
 # run-all: skip
+# areas: guard
 # Spike for multiplayer-guard task 1.1: dumps the pie menu ini and machine entries, and walks windows, modes, scenes
 # and pie options with guard-try so the trace log shows what each entry point reaches.
 param($Ctx)
