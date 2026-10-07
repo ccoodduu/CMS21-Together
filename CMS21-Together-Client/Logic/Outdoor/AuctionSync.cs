@@ -39,6 +39,8 @@ public static class AuctionSync
 
 	public static IReadOnlyDictionary<int, AuctionBidSnapshot> Watched => watched;
 
+	public static bool IsClosed(int lot) => closed.Contains(lot);
+
 	public static void Reset()
 	{
 		owned.Clear();
@@ -70,7 +72,10 @@ public static class AuctionSync
 
 	public static void OnInstance(OutdoorInstancePacket packet)
 	{
-		if (!Active || packet.LotsPending) return;
+		if (!Active) return;
+		foreach (var state in packet.LotStates.Where(s => s.Status == AuctionLotStatus.Bidding && s.OwnerId != Client.Instance.ID))
+			watched[state.Lot] = state.LastBid ?? new AuctionBidSnapshot { Lot = state.Lot, OwnerId = state.OwnerId };
+		if (packet.LotsPending) return;
 		var manager = UnityEngine.Object.FindObjectOfType<AuctionManager>();
 		if (manager == null) return;
 		if (localKinds.Remove(AuctionKind.Normal)) manager.normalCarsGenerated = false;

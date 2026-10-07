@@ -135,6 +135,7 @@ public static class OutdoorSession
 			Log.Info($"[Outdoor] OutdoorInstance {packet.Scene} #{packet.InstanceId} after {Time.realtimeSinceStartup - EnterSentAt:0.00} s: seed {packet.Seed}, {(packet.Generator ? "generator" : "joining")}, " +
 			         $"{packet.Picks.Count} picks, {packet.Sold.Count} sold, piles {(packet.Piles == null ? "not recorded" : packet.Piles.Count.ToString())}, {packet.Lots.Count} lots.");
 			OutdoorCarSync.OnInstance(packet);
+			AuctionSync.OnInstance(packet);
 			return;
 		}
 

@@ -73,6 +73,7 @@ public static class StateDump
         dump["players"] = PresenceManager.Roster.Where(p => p.Value.HasAvatar).ToDictionary(
             p => p.Key.ToString(),
             p => (object)Vec(p.Value.Avatar.transform.position));
+        dump["outdoor"] = Features.OutdoorCommands.Dump();
         dump["local"] = Local();
         dump["session"] = Features.JoinCommands.Session();
         dump["roster"] = PresenceManager.Roster.ToDictionary(p => p.Key.ToString(), p => (object)new

@@ -4,7 +4,10 @@
 # a second car through the location window's Garage button still goes to the parking; with too little money the
 # summary tab refuses the purchase, and past that check the server refuses it NoMoney; nothing changes. Cars are
 # bought through the car info window, its summary tab and the ask window, as the player does.
+# Runs with shared_outdoor_scenes empty: the local junkyard path (outdoor-junkyard covers the shared one).
 param($Ctx)
+
+Import-Module (Join-Path $PSScriptRoot "..\ScaleSession.psm1")
 
 $a, $b = $Ctx.Instances
 $part = "tuleja_1"
@@ -88,6 +91,8 @@ function Check-Unattributed([string]$What) {
     }
 }
 
+Set-ServerConfigValues $Ctx.ServerDir @{ shared_outdoor_scenes = "" }
+Restart-TestServer
 foreach ($name in $Ctx.Instances) {
     Wait-HarnessStatus -Instance $name -TimeoutSec 300 -What "main menu" -Condition { param($s) $s.scene -eq "Menu" -and $s.playable } | Out-Null
 }

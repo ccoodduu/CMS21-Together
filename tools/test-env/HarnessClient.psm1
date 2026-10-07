@@ -127,6 +127,12 @@ function Compare-HarnessDumps {
     param($Left, $Right, [string[]]$Sections = @("stats", "inventory", "cars"))
     $differences = @()
     foreach ($section in $Sections) {
+        if ($section -eq "outdoor") {
+            $a = $Left.outdoor | Select-Object instanceId, picks, piles, lots | ConvertTo-Json -Depth 10 -Compress
+            $b = $Right.outdoor | Select-Object instanceId, picks, piles, lots | ConvertTo-Json -Depth 10 -Compress
+            if ($a -ne $b) { $differences += $section }
+            continue
+        }
         $a = $Left.$section | ConvertTo-Json -Depth 10 -Compress
         $b = $Right.$section | ConvertTo-Json -Depth 10 -Compress
         if ($a -ne $b) { $differences += $section }
