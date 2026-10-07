@@ -108,23 +108,23 @@ Cmd $a drive-input "0.4 0.5 3" | Out-Null
 $err2 = Follow-Error $b $a $idA 4
 $inputA = Wait-InputDone $a
 Check ($err1 -le 1.5 -and $err2 -le 1.5) "B follows A's path within 1.5 m (straight $err1 m, turning $err2 m; A input mode $($inputA.mode))"
-$moved = Distance (Cmd $a drive-history "0").position (Cmd $a drive-probe).bodyPosition
+$moved = Distance (Cmd $a drive-history "0").position (Cmd $a drive-probe).capturePosition
 Check ($moved -gt 5) "A's car moved ($([math]::Round($moved, 1)) m)"
 
 Cmd $a drive-stop | Out-Null
 Wait-InputDone $a | Out-Null
 Start-Sleep -Seconds 2
-$finalA = (Cmd $a drive-probe).bodyPosition
+$finalA = (Cmd $a drive-probe).capturePosition
 $carA = RemoteCar $b $idA
 Save "observer_B_stopped" $carA
 $rest = Distance $carA.position $finalA
 Check ($rest -le 0.3) "B's view of A's car rests where A stopped ($([math]::Round($rest, 3)) m)"
 Check ($carA.snaps -eq 0) "no snaps on B (snaps $($carA.snaps), late $($carA.late), max extrapolation $($carA.maxExtrapolatedMs) ms)"
 
-$beforeB = (Cmd $b drive-probe).bodyPosition
+$beforeB = (Cmd $b drive-probe).capturePosition
 Cmd $b drive-input "0.6 0 3" | Out-Null
 Wait-InputDone $b | Out-Null
-$afterB = (Cmd $b drive-probe).bodyPosition
+$afterB = (Cmd $b drive-probe).capturePosition
 Check ((Distance $beforeB $afterB) -gt 2) "B's own car drives normally while A's car is shown ($([math]::Round((Distance $beforeB $afterB), 1)) m)"
 Cmd $b drive-stop | Out-Null
 

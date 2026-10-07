@@ -262,6 +262,7 @@ public static class DriveCommands
             ["velocity"] = body == null ? null : Vec(body.velocity),
             ["kinematic"] = body != null && body.isKinematic,
             ["captureBody"] = PathOf(DriveCapture.BodyOf(physics)),
+            ["capturePosition"] = Vec(DriveCapture.BodyOf(physics).position),
             ["firstPart"] = carLoader != null && carLoader.carParts != null && carLoader.carParts.Count > 0 && carLoader.carParts[0].handle != null
                 ? PathOf(carLoader.carParts[0].handle.transform) : null,
             ["wheelHandles"] = carLoader == null ? null : new[] { carLoader.GetWheelFLHandle(), carLoader.GetWheelFRHandle(), carLoader.GetWheelRLHandle(), carLoader.GetWheelRRHandle() }
