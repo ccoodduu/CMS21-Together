@@ -17,7 +17,7 @@ the vocabulary and the path table are in TestAreas.psm1, and "smoke" in the list
   -Smoke             the smoke set (alone: only the smoke set)
   -Changed [<ref>]   maps the files changed since the merge base with <ref> (default origin/main; committed,
                      uncommitted and untracked) to areas and runs those plus the smoke set; a changed scenario file
-                     adds that scenario and its areas; a file outside the table runs every scenario; only docs and
+                     adds only that scenario; a file outside the table runs every scenario; only docs and
                      other non-mod files run nothing
 Without -Areas, -Smoke or -Changed every scenario runs; -Scenarios adds named scenarios to any selection.
 #>
@@ -72,7 +72,7 @@ if ($Changed) {
     foreach ($file in $diff.Files) {
         $hit = Resolve-ChangedFile $file $headers
         $why = switch ($hit.Kind) {
-            "scenario" { "scenario $($hit.Scenario) + its areas ($($hit.Areas -join ', '))" }
+            "scenario" { "scenario $($hit.Scenario)" }
             "areas" { $hit.Areas -join ', ' }
             "full" { "full set (harness core)" }
             "smoke" { "smoke set" }
