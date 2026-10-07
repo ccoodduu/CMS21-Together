@@ -7,6 +7,7 @@ using CMS21_Together_Core;
 using CMS21_Together_Core.Data.Enum;
 using CMS21_Together_Core.Network;
 using CMS21_Together_Core.Network.Packets;
+using CMS21_Together_Server.Diagnostics.Perf;
 using CMS21_Together_Server.Log;
 using Steamworks;
 using Steamworks.Data;
@@ -174,6 +175,7 @@ namespace CMS21_Together_Server.Network.Transport
                 using (Packet packet = new Packet(packetBytes))
                 {
                     int packetId = packet.ReadInt();
+                    TrafficCounters.CountReceived(id, packetId, PerfTransport.Steam, packetLength + 4);
 
                     try 
                     {

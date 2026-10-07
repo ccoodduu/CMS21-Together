@@ -62,6 +62,7 @@ namespace CMS21_Together_Server.Network
 					Logger.Info("  password set <pw> - Set the DirectIP password until the server stops; password clear removes it");
 					Logger.Info("  serverinfo        - Show the settings and each player's ping and admin flag");
 					Logger.Info("  players           - Show the stored player records (identity, name, last seen, last place)");
+					Logger.Info("  perf [top <n>|reset] - Show traffic per player and packet type, CPU, memory and handler times");
 					Logger.Info("  money add <val>   - Add money");
 					Logger.Info("  money set <val>   - Set money");
 					Logger.Info("  level set <val>   - Set player level");
@@ -192,6 +193,21 @@ namespace CMS21_Together_Server.Network
 						var record = Data.Presence.PresenceRegistry.Get(client.ID);
 						Logger.Info($"  Client[{client.ID}] '{record?.Username ?? "?"}' {client.ConnectionType}, {client.SyncState}, RTT {client.RttMs:F0} ms, admin {client.IsAdmin}");
 					}
+					break;
+
+				case "perf":
+					string perfArg = args.Length > 1 ? args[1].ToLower() : "";
+					if (perfArg == "reset")
+					{
+						Diagnostics.Perf.PerfSummary.Reset(byCommand: true);
+						Logger.Info("[Perf] Counters reset.");
+						break;
+					}
+					var perfLines = perfArg == "top"
+						? Diagnostics.Perf.PerfSummary.DescribeTop(args.Length > 2 && int.TryParse(args[2], out int perfTop) && perfTop > 0 ? perfTop : 10)
+						: Diagnostics.Perf.PerfSummary.Describe();
+					foreach (string line in perfLines)
+						Logger.Info($"[Perf] {line}");
 					break;
 
 				case "players":

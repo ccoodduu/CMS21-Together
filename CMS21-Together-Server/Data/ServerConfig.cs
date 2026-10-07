@@ -30,6 +30,7 @@ namespace CMS21_Together_Server.Data
 		public bool TravelFees { get; private set; } = true;
 		public int MaxCarSalePrice { get; private set; } = 5000000;
 		public int MaxCarPurchasePrice { get; private set; } = 5000000;
+		public int PerfLogIntervalSeconds { get; private set; }
 
 		public string Password { get; private set; } = string.Empty;
 		public bool PasswordSteam { get; private set; }
@@ -58,6 +59,13 @@ namespace CMS21_Together_Server.Data
 			new[] { "max_car_sale_price", "# Highest price a player may sell a car for", "max_car_sale_price = 5000000" },
 			new[] { "max_car_purchase_price", "# Highest price a player may pay for a car", "max_car_purchase_price = 5000000" },
 		};
+
+		private static readonly string[][] DiagnosticsKeyLines =
+		{
+			new[] { "perf_log_interval_seconds", "# Seconds between lines of Log/perf_<start>.jsonl (traffic, CPU, memory, handler times). 0 = off", "perf_log_interval_seconds = 0" },
+		};
+
+		private static string[][] OptionalKeyLines => HostingKeyLines.Concat(CompatibilityKeyLines).Concat(EconomyKeyLines).Concat(DiagnosticsKeyLines).ToArray();
 
 		public void ApplyArguments(string[] args)
 		{
@@ -116,7 +124,7 @@ namespace CMS21_Together_Server.Data
 		public string Describe() =>
 			$"name '{ServerName}', port {Port}, max players {MaxPlayers}, steam {UseSteam}, public address '{PublicAddress}', autosave {AutosaveIntervalSeconds}s, backups {BackupCount}, " +
 			$"password {Masked(Password)}{(PasswordSteam ? " (also Steam)" : "")}, admin key {Masked(AdminKey)}, new sessions {NewSessionDifficulty}, " +
-			$"travel fees {TravelFees}, max car sale {MaxCarSalePrice}, max car purchase {MaxCarPurchasePrice}, game version {GameVersion}, mods required [{string.Join(", ", ModsRequired)}], ignored [{string.Join(", ", ModsIgnored)}], gameplay [{string.Join(", ", ModsGameplay)}]";
+			$"travel fees {TravelFees}, max car sale {MaxCarSalePrice}, max car purchase {MaxCarPurchasePrice}, perf log {(PerfLogIntervalSeconds > 0 ? $"{PerfLogIntervalSeconds}s" : "off")}, game version {GameVersion}, mods required [{string.Join(", ", ModsRequired)}], ignored [{string.Join(", ", ModsIgnored)}], gameplay [{string.Join(", ", ModsGameplay)}]";
 
 		public static ServerConfig LoadOrCreate()
 		{
@@ -172,7 +180,7 @@ namespace CMS21_Together_Server.Data
 					sw.WriteLine("# Resend a section automatically when a player's state is confirmed out of sync");
 					sw.WriteLine("desync_autofix = True");
 					sw.WriteLine("");
-					foreach (var lines in HostingKeyLines.Concat(CompatibilityKeyLines).Concat(EconomyKeyLines))
+					foreach (var lines in OptionalKeyLines)
 					{
 						sw.WriteLine(lines[1]);
 						sw.WriteLine(lines[2]);
@@ -280,6 +288,9 @@ namespace CMS21_Together_Server.Data
 						case "admin_key":
 							config.AdminKey = Unquote(value);
 							break;
+						case "perf_log_interval_seconds":
+							if (int.TryParse(value, out int perfInterval) && perfInterval >= 0) config.PerfLogIntervalSeconds = perfInterval;
+							break;
 						case "new_session_difficulty":
 							if (TryParseDifficulty(value, out var difficulty)) config.NewSessionDifficulty = difficulty;
 							break;
@@ -308,7 +319,7 @@ namespace CMS21_Together_Server.Data
 
 		private static void AppendMissingKeys(string path, HashSet<string> seenKeys)
 		{
-			var missing = HostingKeyLines.Concat(CompatibilityKeyLines).Concat(EconomyKeyLines).Where(k => !seenKeys.Contains(k[0])).ToList();
+			var missing = OptionalKeyLines.Where(k => !seenKeys.Contains(k[0])).ToList();
 			if (missing.Count == 0) return;
 
 			var lines = new List<string>();

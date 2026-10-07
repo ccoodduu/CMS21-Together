@@ -1,4 +1,6 @@
+using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using CMS21_Together_Core;
 using CMS21_Together_Core.Data.Enum;
@@ -7,6 +9,7 @@ using CMS21_Together_Core.Network.Packets;
 using CMS21_Together_Server.Data;
 using CMS21_Together_Server.Data.Persistence;
 using CMS21_Together_Server.Data.Presence;
+using CMS21_Together_Server.Diagnostics.Perf;
 using CMS21_Together_Server.Log;
 using CMS21_Together_Server.Network.Transport;
 
@@ -95,11 +98,14 @@ namespace CMS21_Together_Server.Network.Handlers
 		[AllowBeforeSync]
 		public static void OnAskForSync(long clientId, AskForSync packet)
 		{
+			long waitStart = Stopwatch.GetTimestamp();
 			lock (GameDataManager.StateLock)
 			{
+				long acquired = Stopwatch.GetTimestamp();
 				var client = Server.Clients[(int)clientId];
 				int snapshotId = ++lastSnapshotId;
 				client.SnapshotId = snapshotId;
+				long sentBefore = TrafficCounters.SlotBytes(client.ID, PerfDirection.Sent);
 
 				Server.SendToClient(new SyncBegin { snapshotId = snapshotId }, client.ID);
 
@@ -110,7 +116,14 @@ namespace CMS21_Together_Server.Network.Handlers
 				Server.SendToClient(new SyncEnd { snapshotId = snapshotId, Items = items }, client.ID);
 				client.SyncState = SyncState.Syncing;
 
-				Logger.Info($"Client[{client.ID}] snapshot {snapshotId}: {string.Join(", ", items.Select(i => $"{i.Key}={i.Value}"))}");
+				long built = Stopwatch.GetTimestamp();
+				HandlerTimings.Record(HandlerTimings.SnapshotBuild, acquired - waitStart, built - acquired);
+				client.SnapshotRequestedAt = waitStart;
+				client.SnapshotBytes = TrafficCounters.SlotBytes(client.ID, PerfDirection.Sent) - sentBefore;
+				client.SnapshotBuildMs = HandlerTimings.TicksToMs(built - acquired);
+				client.SnapshotItems = string.Join(", ", items.Select(i => $"{i.Key}={i.Value}"));
+
+				Logger.Info($"Client[{client.ID}] snapshot {snapshotId}: {client.SnapshotItems}");
 			}
 		}
 
@@ -128,6 +141,8 @@ namespace CMS21_Together_Server.Network.Handlers
 			client.SyncState = SyncState.InSession;
 			Data.Jobs.JobsService.OnInSession(client.ID);
 			Logger.Info($"Client[{client.ID}] joined (snapshot {packet.snapshotId}).");
+			Logger.Info(FormattableString.Invariant($"Client[{client.ID}] snapshot {packet.snapshotId} acked after {HandlerTimings.TicksToMs(Stopwatch.GetTimestamp() - client.SnapshotRequestedAt):0} ms, ") +
+			            FormattableString.Invariant($"{client.SnapshotBytes} bytes, built in {client.SnapshotBuildMs:0.0} ms ({client.SnapshotItems})"));
 		}
 	}
 }

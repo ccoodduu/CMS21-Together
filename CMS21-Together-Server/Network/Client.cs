@@ -28,6 +28,10 @@ namespace CMS21_Together_Server.Network
 		public bool IsConnected;
 		public SyncState SyncState = SyncState.Connected;
 		public int SnapshotId;
+		public long SnapshotRequestedAt;
+		public long SnapshotBytes;
+		public double SnapshotBuildMs;
+		public string SnapshotItems;
 		public Action OnConnectedSuccessfully;
 
 		public bool IsAdmin { get; set; }

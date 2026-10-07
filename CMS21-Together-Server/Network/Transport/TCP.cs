@@ -2,6 +2,7 @@
 using System.Net.Sockets;
 using CMS21_Together_Core;
 using CMS21_Together_Core.Network;
+using CMS21_Together_Server.Diagnostics.Perf;
 using CMS21_Together_Server.Log;
 
 namespace CMS21_Together_Server.Network.Transport
@@ -77,6 +78,7 @@ namespace CMS21_Together_Server.Network.Transport
                 using (Packet packet = new Packet(packetBytes))
                 {
                     int packetId = packet.ReadInt();
+                    TrafficCounters.CountReceived(id, packetId, PerfTransport.Tcp, packetLength + 4);
 
                     try 
                     {

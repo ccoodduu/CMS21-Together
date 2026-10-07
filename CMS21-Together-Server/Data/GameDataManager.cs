@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Security.Cryptography;
@@ -7,6 +8,7 @@ using System.Text;
 using System.Threading;
 using CMS21_Together_Core.Data;
 using CMS21_Together_Server.Data.Persistence;
+using CMS21_Together_Server.Diagnostics.Perf;
 using CMS21_Together_Server.Log;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
@@ -157,10 +159,19 @@ namespace CMS21_Together_Server.Data
 			{
 				try
 				{
+					long waitStart = Stopwatch.GetTimestamp();
 					JObject envelope;
 					lock (StateLock)
 					{
-						envelope = BuildEnvelope();
+						long acquired = Stopwatch.GetTimestamp();
+						try
+						{
+							envelope = BuildEnvelope();
+						}
+						finally
+						{
+							HandlerTimings.Record(HandlerTimings.SaveBuild, acquired - waitStart, Stopwatch.GetTimestamp() - acquired);
+						}
 					}
 
 					string hash = Hash(envelope["Sections"].ToString(Formatting.None));
@@ -184,6 +195,7 @@ namespace CMS21_Together_Server.Data
 					}
 
 					lastSavedHash = hash;
+					PerfLog.RecordSave(new FileInfo(DefaultSavePath).Length, HandlerTimings.TicksToMs(Stopwatch.GetTimestamp() - waitStart));
 					Logger.Info($"Session successfully saved to: {DefaultSavePath}");
 					return true;
 				}

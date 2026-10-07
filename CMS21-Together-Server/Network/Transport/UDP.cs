@@ -2,6 +2,7 @@ using System;
 using System.Net;
 using CMS21_Together_Core;
 using CMS21_Together_Core.Network;
+using CMS21_Together_Server.Diagnostics.Perf;
 using CMS21_Together_Server.Log;
 
 namespace CMS21_Together_Server.Network.Transport
@@ -40,6 +41,8 @@ namespace CMS21_Together_Server.Network.Transport
 			using (Packet _packet = new Packet(_packetBytes))
 			{
 				int _packetId = _packet.ReadInt();
+				// The datagram also carries the client id in front of the length.
+				TrafficCounters.CountReceived(id, _packetId, PerfTransport.Udp, _packetLength + 8);
 				try 
 				{
 					object dataObject = _packet.Read<object>();

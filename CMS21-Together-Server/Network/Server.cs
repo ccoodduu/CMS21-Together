@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Net;
 using System.Net.Sockets;
@@ -8,6 +9,7 @@ using CMS21_Together_Core.Data.Compatibility;
 using CMS21_Together_Core.Data.Enum;
 using CMS21_Together_Core.Network;
 using CMS21_Together_Core.Network.Packets;
+using CMS21_Together_Server.Diagnostics.Perf;
 using CMS21_Together_Server.Log;
 using CMS21_Together_Server.Network.Transport;
 
@@ -36,6 +38,7 @@ namespace CMS21_Together_Server.Network
             Port = port;
 
             Logger.Debug("Starting TCP socket...");
+            TrafficCounters.Initialize(maxPlayers);
             InitializeServerData();
 
             tcpListener = new TcpListener(IPAddress.Any, Port);
@@ -150,14 +153,23 @@ namespace CMS21_Together_Server.Network
 
         public static void Dispatch(int clientId, PacketTypes id, object data)
         {
+            long waitStart = Stopwatch.GetTimestamp();
             lock (Data.GameDataManager.StateLock)
             {
-                if (PacketRouter.RequiresSync(id) && Clients.TryGetValue(clientId, out var client) && client.SyncState != SyncState.InSession)
+                long acquired = Stopwatch.GetTimestamp();
+                try
                 {
-                    Logger.Warn($"Client[{clientId}] is not in session ({client.SyncState}): dropped {id}.");
-                    return;
+                    if (PacketRouter.RequiresSync(id) && Clients.TryGetValue(clientId, out var client) && client.SyncState != SyncState.InSession)
+                    {
+                        Logger.Warn($"Client[{clientId}] is not in session ({client.SyncState}): dropped {id}.");
+                        return;
+                    }
+                    PacketRouter.Dispatch(id, data, clientId);
                 }
-                PacketRouter.Dispatch(id, data, clientId);
+                finally
+                {
+                    HandlerTimings.Record(HandlerTimings.KeyFor((int)id), acquired - waitStart, Stopwatch.GetTimestamp() - acquired);
+                }
             }
         }
 
@@ -181,6 +193,7 @@ namespace CMS21_Together_Server.Network
                 packet.WriteLength();
                 if (Clients[clientID].ConnectionType == NetworkType.DirectIP)
                 {
+                    TrafficCounters.CountSent(clientID, (int)id, reliable ? PerfTransport.Tcp : PerfTransport.Udp, packet.Length());
                     if (reliable)
                         Clients[clientID].Tcp.SendData(packet);
                     else
@@ -188,7 +201,9 @@ namespace CMS21_Together_Server.Network
                 }
                 else
                 {
-                    steamTransport.SendData(Clients[clientID].SteamConnection, packet.ToArray(), reliable);
+                    byte[] bytes = packet.ToArray();
+                    TrafficCounters.CountSent(clientID, (int)id, PerfTransport.Steam, bytes.Length);
+                    steamTransport.SendData(Clients[clientID].SteamConnection, bytes, reliable);
                 }
             }
         }
@@ -227,6 +242,7 @@ namespace CMS21_Together_Server.Network
                     packet.Write(new DisconnectPacket { playerID = -1, reason = reason, message = message });
                     packet.WriteLength();
                     byte[] bytes = packet.ToArray();
+                    TrafficCounters.CountSent(0, (int)PacketTypes.Disconnect, PerfTransport.Tcp, bytes.Length);
                     socket.GetStream().Write(bytes, 0, bytes.Length);
                 }
             }
@@ -299,31 +315,45 @@ namespace CMS21_Together_Server.Network
             if (Program.Config.UseSteam && steamTransport != null)
                 steamTransport.Update();
             
+            long waitStart = Stopwatch.GetTimestamp();
             lock (Data.GameDataManager.StateLock)
             {
-                float now = Data.ServerTime.Time;
-                if (lastUpdateTime >= 0f && now - lastUpdateTime > StallSeconds)
+                long acquired = Stopwatch.GetTimestamp();
+                try
                 {
-                    Logger.Warn($"Server loop stalled for {now - lastUpdateTime:0.0} s; heartbeat deadlines moved by that much.");
-                    foreach (var stalled in Clients.Values) stalled.LastHeartbeatTime += now - lastUpdateTime;
+                    UpdateLocked();
                 }
-                lastUpdateTime = now;
-                ProcessRefusals();
-                Data.Cars.CarClaims.Expire(Data.ServerTime.Time);
-                Data.Tools.ToolsStore.Expire(Data.ServerTime.Time);
-                Data.Reconciliation.ReconciliationService.Tick(Data.ServerTime.Time);
-                Data.Jobs.JobsService.Tick(Data.ServerTime.Time);
-                Data.Cars.CarDetailsStore.Tick(Data.ServerTime.Time);
-                Data.Cars.CarAwayRegistry.Tick(Data.ServerTime.Time);
-                foreach (var client in Clients.Values)
+                finally
                 {
-                    if (client.IsConnected)
-                    {
-                        client.Update();
-                    }
+                    HandlerTimings.Record(HandlerTimings.Tick, acquired - waitStart, Stopwatch.GetTimestamp() - acquired);
                 }
-                BroadcastPings();
             }
+        }
+
+        private static void UpdateLocked()
+        {
+            float now = Data.ServerTime.Time;
+            if (lastUpdateTime >= 0f && now - lastUpdateTime > StallSeconds)
+            {
+                Logger.Warn($"Server loop stalled for {now - lastUpdateTime:0.0} s; heartbeat deadlines moved by that much.");
+                foreach (var stalled in Clients.Values) stalled.LastHeartbeatTime += now - lastUpdateTime;
+            }
+            lastUpdateTime = now;
+            ProcessRefusals();
+            Data.Cars.CarClaims.Expire(Data.ServerTime.Time);
+            Data.Tools.ToolsStore.Expire(Data.ServerTime.Time);
+            Data.Reconciliation.ReconciliationService.Tick(Data.ServerTime.Time);
+            Data.Jobs.JobsService.Tick(Data.ServerTime.Time);
+            Data.Cars.CarDetailsStore.Tick(Data.ServerTime.Time);
+            Data.Cars.CarAwayRegistry.Tick(Data.ServerTime.Time);
+            foreach (var client in Clients.Values)
+            {
+                if (client.IsConnected)
+                {
+                    client.Update();
+                }
+            }
+            BroadcastPings();
         }
 
         private const float PingInterval = 3f;

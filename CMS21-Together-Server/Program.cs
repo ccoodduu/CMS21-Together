@@ -128,6 +128,7 @@ namespace CMS21_Together_Server
 				CommandFile.Configure(commandFile);
 
 			Server.Start(Config.MaxPlayers, Config.Port);
+			Diagnostics.Perf.PerfLog.Initialize(Config.PerfLogIntervalSeconds);
 			Logger.Info($"Server started. Listening port {Config.Port}");
 			
 			Terminal.Gui.Application.Run(window);

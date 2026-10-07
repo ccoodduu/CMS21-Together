@@ -100,6 +100,7 @@ namespace CMS21_Together_Server.Log
             CommandFile.Poll(ServerTime.Time);
             Network.Server.Update();
             GameDataManager.Tick(ServerTime.Time);
+            Diagnostics.Perf.PerfLog.Tick();
         }
 
         private void UpdateDashboard()
