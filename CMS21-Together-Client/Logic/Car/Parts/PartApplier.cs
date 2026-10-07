@@ -13,6 +13,15 @@ public static class PartApplier
 {
 	private const float MountSettleSeconds = 0.5f;
 
+	// TunePart on a tire or rim rewrites its id as well, so a wheel swap changes the part's id on the actor.
+	public static bool IsWheelPart(PartScript script)
+	{
+		var property = script.partProperty;
+		return property != null && (property.SpecialGroup == SpecialGroup.Tire || property.SpecialGroup == SpecialGroup.Rim);
+	}
+
+	public static string EffectiveId(PartScript script) => PartKeys.EffectiveId(script.id, script.tunedID);
+
 	public static bool Apply(CarLoader carLoader, PartRegistry registry, CarBodyPartUpdatePacket record)
 	{
 		var part = registry.Body(record.Key);
@@ -42,13 +51,13 @@ public static class PartApplier
 	public static bool Apply(CarLoader carLoader, PartRegistry registry, CarSubPartUpdatePacket record)
 	{
 		var script = registry.Sub(record.Key);
-		if (script == null || script.id != record.PartId)
+		if (script == null || (script.id != record.PartId && !IsWheelPart(script)))
 		{
 			Log.Warn($"[Parts] {carLoader?.carToLoad ?? "engine stand"}: part {record.Key} '{record.PartId}' does not resolve (found '{script?.id}').");
 			return false;
 		}
 
-		if (!string.IsNullOrEmpty(record.TunedID) && script.tunedID != record.TunedID) script.TunePart(record.TunedID);
+		if (EffectiveId(script) != record.EffectiveId) script.TunePart(record.EffectiveId);
 		// SetConditionNormal throws after storing Condition while the part's highlighter is not set up yet.
 		if (script.ho != null) script.SetConditionNormal(record.Condition);
 		else

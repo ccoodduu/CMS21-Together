@@ -124,7 +124,7 @@ namespace CMS21_Together_Server.Data.Tools
 				var reject = new ToolPartChangeResultPacket { Tool = change.Tool, EngineUid = change.EngineUid, TxId = change.TxId, Accepted = false, Reason = conflict };
 				foreach (var record in change.SubParts)
 					if (slot.Parts.TryGetValue(record.Key, out var stored)) reject.SubParts.Add(stored);
-				reject.RestoreUids.AddRange(change.Delta.RemovedItemUids.Concat(change.Delta.RemovedGroupUids));
+				reject.RestoreUids.AddRange(InventoryChanges.StillHeld(change.Delta));
 				Server.SendToClient(reject, clientId);
 				Logger.Info($"[Tools] {change.Tool}: part change {change.TxId} from client {clientId} rejected: {conflict}");
 				return;

@@ -2,6 +2,18 @@
 
 Newest first. One entry per work session.
 
+## 2026-10-07 (21:00–22:00) — playtest findings 3, 4 and 5 fixed
+
+- Lane 2. Each fix has a scenario that fails without it; with the fixes, the three scenarios and the smoke set pass.
+  - `c369763` tire desync: the game stores a tire's tuned id in two ways and TunePart also rewrites a rim's or
+    tire's id, so a wheel with another rim or tire made later records fail to resolve. Digests compare the effective
+    id; the car-details wheel apply keeps the rim and tire ids (`car-wheel-swap`; harness `wheel-parts`,
+    `wheel-mount`).
+  - `f9557c0` a rejected mount ("item ... is gone") gave the loser back the other player's item; now only items the
+    server still has (`car-mount-race`; harness `part-twins`, `part-fast-mount ... [itemUid]`).
+  - `c81fd05` world-state packets during a garage reload threw in the UI refresh (`resync-key`). Packet handler
+    errors now log their stack trace.
+
 ## 2026-10-07 (20:30–22:00) — driving merged, part-locks drafted and reviewed, harness guards
 
 - `main` = `d85243c`. Row 17 part 2 (remote driving on the test track) merged (`310cb3a`): `drive-track`,

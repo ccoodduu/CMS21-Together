@@ -44,7 +44,7 @@ public static class PartRecords
 		&& Close(a.State?.Condition, b.State?.Condition) && Close(a.State?.Dent, b.State?.Dent) && a.State?.Quality == b.State?.Quality;
 
 	public static bool SameState(CarSubPartUpdatePacket a, CarSubPartUpdatePacket b) =>
-		a != null && b != null && a.Unmounted == b.Unmounted && a.TunedID == b.TunedID && a.IsExamined == b.IsExamined
+		a != null && b != null && a.Unmounted == b.Unmounted && a.EffectiveId == b.EffectiveId && a.IsExamined == b.IsExamined
 		&& Close(a.Condition, b.Condition) && a.Quality == b.Quality && Close(a.Dust, b.Dust);
 
 	private static bool Close(float? a, float? b) => a.HasValue == b.HasValue && (!a.HasValue || System.Math.Abs(a.Value - b.Value) < 0.001f);
