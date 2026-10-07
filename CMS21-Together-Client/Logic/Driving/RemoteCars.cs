@@ -35,6 +35,8 @@ public class RemoteCar
 	public bool CollidersOff;
 	public int DisabledScripts;
 	public bool Stopped;
+	public float StartedAt = Time.realtimeSinceStartup;
+	public float ShownAfter = -1f;
 
 	public int DriveId => Start.DriveId;
 	public bool Ready => Root != null && Root;
@@ -62,7 +64,11 @@ public static class RemoteCars
 	{
 		if (subscribed) return;
 		subscribed = true;
-		ClientScene.LeavingScene += (from, to) => Clear($"left {from}");
+		ClientScene.LeavingScene += (from, to) =>
+		{
+			localReadySince = -1f;
+			Clear($"left {from}");
+		};
 		PresenceManager.PlayerRemoved += (record, reason) => Remove(record.PlayerId, "player left");
 	}
 
@@ -332,6 +338,7 @@ public static class RemoteCars
 			if (!car.Ready || car.Stopped) continue;
 			if (!car.Interpolator.Sample(now, Time.deltaTime)) continue;
 			if (!car.Root.gameObject.activeSelf) car.Root.gameObject.SetActive(true);
+			if (car.ShownAfter < 0f) car.ShownAfter = Time.realtimeSinceStartup - car.StartedAt;
 			car.Root.SetPositionAndRotation(car.Interpolator.Position, car.Interpolator.Rotation);
 
 			var newest = car.Interpolator.Newest;

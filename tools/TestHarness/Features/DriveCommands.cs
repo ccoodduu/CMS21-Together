@@ -140,6 +140,7 @@ public static class DriveCommands
             ["rpm"] = car.Engine != null && car.Engine.IsAlive ? Round(car.Engine.Res.engineCurrentRPM) : 0,
             ["buildSeconds"] = Round(car.BuildSeconds),
             ["longestFrame"] = Round(car.LongestFrame),
+            ["shownAfter"] = Round(car.ShownAfter),
             ["buildMb"] = Round(car.BuildBytes / 1048576f),
         };
     }

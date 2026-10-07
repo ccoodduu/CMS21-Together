@@ -45,7 +45,7 @@ function Arrive([string]$What) {
         Start-Sleep -Milliseconds 200
     } while (((Get-Date) - $arrived).TotalSeconds -lt 20)
     $seconds = [math]::Round(((Get-Date) - $arrived).TotalSeconds, 2)
-    Check ($car -and $car.visible) "$What`: B shows A's car ($seconds s after B's track was playable; build $($car.buildSeconds) s, mode $($car.mode))"
+    Check ($car -and $car.visible) "$What`: B shows A's car ($($car.shownAfter) s after the drive reached B, build $($car.buildSeconds) s, mode $($car.mode))"
     Start-Sleep -Milliseconds 800
     $car = RemoteCar $b $idA
     $local = (Cmd $a dump).remoteCars.local
@@ -53,7 +53,7 @@ function Arrive([string]$What) {
     $offPath = Distance $car.position $truth.position
     $behind = $local.time - $car.renderTime
     Check ($offPath -le 1.5 -and $behind -le 1.0) "$What`: A's car on B is where A is now ($([math]::Round($offPath, 2)) m from A's path, $([math]::Round($behind, 2)) s behind A)"
-    $Ctx.Result.notes += "$What`: car visible $seconds s after arrival (build $($car.buildSeconds) s)"
+    $Ctx.Result.notes += "$What`: car shown $($car.shownAfter) s after the drive reached B (spec: 2 s; build $($car.buildSeconds) s, longest frame $($car.longestFrame) s)"
 }
 
 foreach ($name in $Ctx.Instances) {
