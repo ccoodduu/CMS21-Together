@@ -1,7 +1,8 @@
 # sync-players-and-scenes 6.5 (row 6 part 2), guard enforcing: A buys 3 parts in the junkyard (both get them once and
 # the same money); A buys a junkyard car, which lands in the shared parking of both with the money down exactly once;
 # a second car through the location window's Garage button still goes to the parking; with too little money the
-# purchase is refused NoMoney and nothing changes.
+# summary tab refuses the purchase, and past that check the server refuses it NoMoney; nothing changes. Cars are
+# bought through the car info window, its summary tab and the ask window, as the player does.
 param($Ctx)
 
 $a, $b = $Ctx.Instances
@@ -48,7 +49,7 @@ function Wait-SlotCount([string]$What, [int]$Expected) {
     $deadline = (Get-Date).AddSeconds(20)
     do {
         Start-Sleep -Milliseconds 500
-        $na = (Slots $a).Count; $nb = (Slots $b).Count
+        $na = @(Slots $a).Count; $nb = @(Slots $b).Count
     } while (-not ($na -eq $Expected -and $nb -eq $Expected) -and (Get-Date) -lt $deadline)
     Check ($na -eq $Expected -and $nb -eq $Expected) "$What`: $Expected parked cars on A and B (A $na, B $nb)"
     Check ((Slots-Json $a) -eq (Slots-Json $b)) "$What`: A and B have the same parking (A $(Slots-Json $a), B $(Slots-Json $b))"
@@ -66,6 +67,17 @@ function Wait-Cars([string]$Name, [int]$Count) {
         Start-Sleep -Seconds 1
     } while ((Get-Date) -lt $deadline)
     return $cars
+}
+
+function Wait-Buy([string]$Name) {
+    $deadline = (Get-Date).AddSeconds(15)
+    do {
+        Start-Sleep -Milliseconds 500
+        $steps = @(Send-HarnessCommand -Instance $Name -Verb buy-car-last)
+    } while (-not ($steps -match "^(pressed|failed|no ask window)") -and (Get-Date) -lt $deadline)
+    Write-Host "buy-car-here steps: $($steps -join ' | ')"
+    Check (-not ($steps -match "^failed")) "buy-car-here ran without a failed step"
+    return $steps
 }
 
 function Check-Unattributed([string]$What) {
@@ -107,22 +119,21 @@ Check ($paid -gt 0) "the parts cost money ($paid)"
 if ($paid -ne $buy.price) { Write-Host "note: the server charged $paid, the window showed $($buy.price)" -ForegroundColor Yellow }
 Check-Unattributed "after the junkyard parts"
 
-# A junkyard car to the shared parking.
+# A junkyard car to the shared parking, through the car info window, its summary tab and the ask window.
 Send-HarnessCommand -Instance $a -Verb travel -Arguments "Junkyard" | Out-Null
 Wait-InJunkyard $a
-$cars = Wait-Cars $a 2
+$cars = Wait-Cars $a 4
 Write-Host "junkyard cars: $($cars | ForEach-Object { $_.carToLoad })"
 if ($cars.Count -lt 1) {
     Check $false "the junkyard has cars to buy"
 } else {
     $moneyBefore = Money $a
-    $slotsBefore = (Slots $a).Count
+    $slotsBefore = @(Slots $a).Count
     $suppressedBefore = [int](Dump $a).economy.suppressed.CarPurchase
     $mark = Get-ServerLogMark
     $r = Send-HarnessCommand -Instance $a -Verb buy-car-here -Arguments "0 $price"
-    Write-Host "buy-car-here: $($r | ConvertTo-Json -Compress)"
-    Check ($r.captureOpen) "the purchase was captured"
-    Check ($r.moneyAfter -eq $r.moneyBefore) "the local money did not change at BuyCar ($($r.moneyBefore) -> $($r.moneyAfter))"
+    $steps = Wait-Buy $a
+    Check ([bool]($steps -match "^pressed parking")) "A chose the parking in the location window"
     $arrived = try { Wait-ServerLog -Pattern "\[Parking\] .* arrived in slot \d+ from client \d+ for $price\." -After $mark -TimeoutSec 20 } catch { $null }
     Check ([bool]$arrived) "the server took the car into the parking ($arrived)"
     Wait-Money "after the car" ($moneyBefore - $price)
@@ -139,11 +150,12 @@ if ($cars.Count -lt 1) {
     if ($cars.Count -lt 1) { Skip "garage button (no car left in the junkyard)" }
     else {
         $moneyBefore = Money $a
-        $slotsBefore = (Slots $a).Count
+        $slotsBefore = @(Slots $a).Count
         $carsB = @((Dump $b).cars).Count
         $mark = Get-ServerLogMark
-        $r = Send-HarnessCommand -Instance $a -Verb buy-car-here -Arguments "0 $price garage"
-        Write-Host "buy-car-here (garage button): $($r | ConvertTo-Json -Compress)"
+        Send-HarnessCommand -Instance $a -Verb buy-car-here -Arguments "0 $price garage" | Out-Null
+        $steps = Wait-Buy $a
+        Check ([bool]($steps -match "^pressed garage")) "A pressed the Garage button"
         $arrived = try { Wait-ServerLog -Pattern "arrived in slot \d+ from client \d+ for $price\." -After $mark -TimeoutSec 20 } catch { $null }
         Check ([bool]$arrived) "the Garage button also parks the car ($arrived)"
         Wait-Money "after the garage-button car" ($moneyBefore - $price)
@@ -151,21 +163,26 @@ if ($cars.Count -lt 1) {
         Check (@((Dump $b).cars).Count -eq $carsB) "no car appeared in B's garage"
     }
 
-    # Too little money: refused, nothing changes.
+    # Too little money: the game refuses it in the summary tab; past that check (another player spent the money in
+    # the meantime) the server refuses it NoMoney. Nothing changes either way.
     $cars = Wait-Cars $a 1
     if ($cars.Count -lt 1) { Skip "NoMoney (no car left in the junkyard)" }
     else {
         Send-ServerCommand "money set $($price - 1)"
         Wait-Money "money set below the price" ($price - 1)
-        $slotsBefore = (Slots $a).Count
+        $slotsBefore = @(Slots $a).Count
         $mark = Get-ServerLogMark
-        $r = Send-HarnessCommand -Instance $a -Verb buy-car-here -Arguments "0 $price"
-        Write-Host "buy-car-here (no money): $($r | ConvertTo-Json -Compress)"
+        Send-HarnessCommand -Instance $a -Verb buy-car-here -Arguments "0 $price" | Out-Null
+        $steps = Wait-Buy $a
+        Check ([bool]($steps -match "^no ask window")) "the summary tab refuses the purchase locally"
+        Send-HarnessCommand -Instance $a -Verb buy-car-here -Arguments "0 $price parking direct" | Out-Null
+        $steps = Wait-Buy $a
         $refused = try { Wait-ServerLog -Pattern "Arrival of .* from client \d+ refused: NoMoney" -After $mark -TimeoutSec 20 } catch { $null }
-        Check ([bool]$refused) "the purchase is refused NoMoney ($refused)"
+        Check ([bool]$refused) "past the local check the server refuses NoMoney ($refused)"
         Start-Sleep -Seconds 3
         Wait-Money "after the refusal" ($price - 1)
         Wait-SlotCount "after the refusal" $slotsBefore
+        Check (@(Server-Lines $mark "arrived in slot").Count -eq 0) "no car was stored"
         Check-Unattributed "after the refusal"
     }
 }
