@@ -115,7 +115,7 @@ function Invoke-FullGarageFill {
         $loader = Get-FreeLoader $Filler $loaderCount
         if ($null -eq $loader) { $notes.Add("no free loader to fill the parking"); break }
         $model = $Models[$modelIndex++ % $Models.Count]
-        Send-HarnessCommand -Instance $Filler -Verb car-spawn -Arguments "$loader $model 0" | Out-Null
+        Send-HarnessCommand -Instance $Filler -Verb car-spawn -Arguments "$loader $model 0 auto" | Out-Null
         if (-not (Wait-LoaderReady $Filler $loader)) { $notes.Add("parking car $model on loader $loader not Ready"); Send-HarnessCommand -Instance $Filler -Verb car-delete -Arguments "$loader" | Out-Null; continue }
         try { Send-HarnessCommand -Instance $Filler -Verb cardetails-randomize -Arguments "$loader" | Out-Null } catch { }
         $before = @($parking.slots).Count
@@ -131,7 +131,7 @@ function Invoke-FullGarageFill {
         $occupied = @(Send-HarnessCommand -Instance $Filler -Verb placement | Where-Object { [int]$_.loader -eq $loader }).Count -gt 0
         if (-not $occupied) {
             $model = $Models[$modelIndex++ % $Models.Count]
-            Send-HarnessCommand -Instance $Filler -Verb car-spawn -Arguments "$loader $model 0" | Out-Null
+            Send-HarnessCommand -Instance $Filler -Verb car-spawn -Arguments "$loader $model 0 auto" | Out-Null
         }
         if (-not (Wait-LoaderReady $Filler $loader)) { $notes.Add("garage loader $loader not Ready"); continue }
         $filled++

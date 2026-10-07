@@ -182,7 +182,7 @@ function Invoke-Cars([string]$Actor) {
     $used = @($placement | ForEach-Object { [int]$_.loader })
     $free = @($garageLoaders | Where-Object { $used -notcontains $_ })
     if ($free.Count -gt 0 -and ($placement.Count -lt 2 -or ($placement.Count -lt 4 -and $rng.NextDouble() -lt 0.6))) {
-        Invoke-Step $Actor car-spawn "$(Pick $free) $(Pick $models) 0" -Action "cars" | Out-Null
+        Invoke-Step $Actor car-spawn "$(Pick $free) $(Pick $models) 0 auto" -Action "cars" | Out-Null
         return $true
     }
     if ($placement.Count -le 2) { return $false }

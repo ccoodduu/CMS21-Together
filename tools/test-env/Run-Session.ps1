@@ -296,8 +296,9 @@ function Invoke-BatchScenario([string]$Name, $HarnessReset) {
         & (Join-Path $PSScriptRoot "scenarios\$Name.ps1") -Ctx $ctx @ScenarioArgs
     }
     catch {
-        $result.notes += "ERROR: $($_.Exception.Message)"
-        Write-Host "ERROR: $($_.Exception.Message)" -ForegroundColor Red
+        $where = @($_.ScriptStackTrace -split "`n" | Select-Object -First 2) -join " <- "
+        $result.notes += "ERROR: $($_.Exception.Message) (at $where)"
+        Write-Host "ERROR: $($_.Exception.Message) (at $where)" -ForegroundColor Red
     }
     finally {
         Stop-TestServer
@@ -340,8 +341,9 @@ try {
             & $scenarioFile -Ctx $ctx @ScenarioArgs
         }
         catch {
-            $result.notes += "ERROR: $($_.Exception.Message)"
-            Write-Host "ERROR: $($_.Exception.Message)" -ForegroundColor Red
+            $where = @($_.ScriptStackTrace -split "`n" | Select-Object -First 2) -join " <- "
+            $result.notes += "ERROR: $($_.Exception.Message) (at $where)"
+            Write-Host "ERROR: $($_.Exception.Message) (at $where)" -ForegroundColor Red
         }
         finally {
             if (-not $KeepRunning) { Stop-LaneSession }

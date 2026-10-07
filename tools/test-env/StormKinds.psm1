@@ -112,7 +112,7 @@ function Wait-ReadyCar($Ctx, [string[]]$Names, [string]$Spawner) {
     $car = @(Send-HarnessCommand -Instance $Spawner -Verb placement) | Select-Object -First 1
     if (-not $car) {
         $loaders = 0..3
-        Send-HarnessCommand -Instance $Spawner -Verb car-spawn -Arguments "$($loaders[0]) car_boltatlanta 0" | Out-Null
+        Send-HarnessCommand -Instance $Spawner -Verb car-spawn -Arguments "$($loaders[0]) car_boltatlanta 0 auto" | Out-Null
         $car = [pscustomobject]@{ loader = 0 }
     }
     $problems = @(Wait-CarsReady $Names 180)

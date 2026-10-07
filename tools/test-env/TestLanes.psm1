@@ -302,7 +302,7 @@ function Start-HarnessInstance {
         )
         if (-not $Sound) { $arguments += "--harness.mute" }
         if ($Headless) { $arguments += @("-batchmode", "-nographics") }
-        $arguments += @($ExtraArguments | ForEach-Object { $_.Replace("{port}", "$($laneInfo.Port)") })
+        $arguments += @($ExtraArguments | Where-Object { $_ } | ForEach-Object { $_.Replace("{port}", "$($laneInfo.Port)") })
         $launch = [pscustomobject]@{ Instance = $Instance; Started = Get-Date; SteamMark = Get-SteamLogMark; Headless = [bool]$Headless }
         Start-Process -FilePath (Join-Path $dir "$script:ProductName.exe") -WorkingDirectory $dir -ArgumentList $arguments | Out-Null
         Write-Host "Started instance $Instance$(if ($Headless) { ' (headless)' })"

@@ -31,7 +31,7 @@ foreach ($name in $names) {
 
 $first = $names[0]
 $second = if ($names.Count -gt 1) { $names[1] } else { $first }
-Send-HarnessCommand -Instance $first -Verb car-spawn -Arguments "0 car_boltatlanta 0" | Out-Null
+Send-HarnessCommand -Instance $first -Verb car-spawn -Arguments "0 car_boltatlanta 0 auto" | Out-Null
 $notReady = @(Wait-CarsReady $names 180)
 Check ($notReady.Count -eq 0) "the car is Ready on every client ($($notReady -join '; '))"
 $part = Send-HarnessCommand -Instance $second -Verb part-fast-unmount -Arguments "0"

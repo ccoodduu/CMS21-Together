@@ -33,7 +33,7 @@ $clientMarks = Get-ClientLogMarks $names
 Wait-AllInMenu $names
 Connect-ScaleInstances $names | Out-Null
 Send-ServerCommand "money add 100000"
-Send-HarnessCommand -Instance $names[0] -Verb car-spawn -Arguments "0 car_boltatlanta 0" | Out-Null
+Send-HarnessCommand -Instance $names[0] -Verb car-spawn -Arguments "0 car_boltatlanta 0 auto" | Out-Null
 $notReady = @(Wait-CarsReady $names 180)
 Check ($notReady.Count -eq 0) "the starting car is Ready everywhere ($($notReady -join '; '))"
 $start = Invoke-ScaleCheckpoint -Ctx $Ctx -Index 0 -Label "start" -Instances $names
