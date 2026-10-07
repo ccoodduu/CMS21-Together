@@ -145,24 +145,6 @@ if ($cars.Count -lt 1) {
     Check ([int](Dump $a).economy.suppressed.CarPurchase -eq $suppressedBefore + 1) "A suppressed the vanilla debit once"
     Check-Unattributed "after the car"
 
-    # The Garage button still sends the car to the parking.
-    $cars = Wait-Cars $a 1
-    if ($cars.Count -lt 1) { Skip "garage button (no car left in the junkyard)" }
-    else {
-        $moneyBefore = Money $a
-        $slotsBefore = @(Slots $a).Count
-        $carsB = @((Dump $b).cars).Count
-        $mark = Get-ServerLogMark
-        Send-HarnessCommand -Instance $a -Verb buy-car-here -Arguments "0 $price garage" | Out-Null
-        $steps = Wait-Buy $a
-        Check ([bool]($steps -match "^pressed garage")) "A pressed the Garage button"
-        $arrived = try { Wait-ServerLog -Pattern "arrived in slot \d+ from client \d+ for $price\." -After $mark -TimeoutSec 20 } catch { $null }
-        Check ([bool]$arrived) "the Garage button also parks the car ($arrived)"
-        Wait-Money "after the garage-button car" ($moneyBefore - $price)
-        Wait-SlotCount "after the garage-button car" ($slotsBefore + 1)
-        Check (@((Dump $b).cars).Count -eq $carsB) "no car appeared in B's garage"
-    }
-
     # Too little money: the game refuses it in the summary tab; past that check (another player spent the money in
     # the meantime) the server refuses it NoMoney. Nothing changes either way.
     $cars = Wait-Cars $a 1
@@ -184,6 +166,26 @@ if ($cars.Count -lt 1) {
         Wait-SlotCount "after the refusal" $slotsBefore
         Check (@(Server-Lines $mark "arrived in slot").Count -eq 0) "no car was stored"
         Check-Unattributed "after the refusal"
+    }
+
+    # The Garage button still sends the car to the parking.
+    Send-ServerCommand "money set 200000"
+    Wait-Money "money set back" 200000
+    $cars = Wait-Cars $a 1
+    if ($cars.Count -lt 1) { Skip "garage button (no car left in the junkyard)" }
+    else {
+        $moneyBefore = Money $a
+        $slotsBefore = @(Slots $a).Count
+        $carsB = @((Dump $b).cars).Count
+        $mark = Get-ServerLogMark
+        Send-HarnessCommand -Instance $a -Verb buy-car-here -Arguments "0 $price garage" | Out-Null
+        $steps = Wait-Buy $a
+        Check ([bool]($steps -match "^pressed garage")) "A pressed the Garage button"
+        $arrived = try { Wait-ServerLog -Pattern "arrived in slot \d+ from client \d+ for $price\." -After $mark -TimeoutSec 20 } catch { $null }
+        Check ([bool]$arrived) "the Garage button also parks the car ($arrived)"
+        Wait-Money "after the garage-button car" ($moneyBefore - $price)
+        Wait-SlotCount "after the garage-button car" ($slotsBefore + 1)
+        Check (@((Dump $b).cars).Count -eq $carsB) "no car appeared in B's garage"
     }
 }
 
