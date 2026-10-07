@@ -65,6 +65,7 @@ namespace CMS21_Together_Server.Network.Handlers
 
 			CarClaims.ReleaseCommitted((int)clientId, change.CarLoaderID,
 				change.BodyParts.Select(b => PartKeys.Body(b.PartIndex)).Concat(change.SubParts.Select(s => PartKeys.Sub(s.PartIndexPath))));
+			CarLocks.ReleaseCommitted((int)clientId, entry, change.CarLoaderID);
 			change.Revision = entry.Revision;
 			Server.SendToClient(new CarPartsChangeResultPacket
 			{
@@ -106,6 +107,14 @@ namespace CMS21_Together_Server.Network.Handlers
 				if (stored.Value != precondition.WasUnmounted) return $"{precondition.Key} changed already";
 			}
 
+			foreach (string key in FlippedKeys(entry, change))
+			{
+				int holder = CarLocks.ExclusiveOwner(change.CarLoaderID, key, clientId);
+				if (holder >= 0) return $"{key} is locked by player {holder}";
+				holder = CarLocks.SharedOwner(change.CarLoaderID, key, clientId);
+				if (holder >= 0) CarLocks.CountUnlockedFlip(clientId, change.CarLoaderID, key, holder);
+			}
+
 			var inventory = GameDataManager.CurrentState.InventoryState;
 			foreach (long uid in change.InventoryDelta.RemovedItemUids)
 				if (inventory.InventoryItems.All(i => i.UID != uid))
@@ -120,6 +129,14 @@ namespace CMS21_Together_Server.Network.Handlers
 					Logger.Info($"[Cars] Change {change.TxId} removes group {uid}, which the server does not have and no other player took; ignored.");
 				}
 			return null;
+		}
+
+		private static IEnumerable<string> FlippedKeys(CMS21_Together_Core.Data.CarLoaderEntry entry, CarPartsChangePacket change)
+		{
+			foreach (var record in change.BodyParts)
+				if (entry.BodyParts.TryGetValue(record.PartIndex, out var stored) && stored.Unmounted != record.Unmounted) yield return record.Key;
+			foreach (var record in change.SubParts)
+				if (entry.SubParts.TryGetValue(CarSubPartIdentity.BuildKey(record.PartIndexPath), out var stored) && stored.Unmounted != record.Unmounted) yield return record.Key;
 		}
 
 		[PacketHandler(PacketTypes.CarPartClaim)]

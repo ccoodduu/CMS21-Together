@@ -20,7 +20,8 @@ namespace CMS21_Together_Core.Network.Packets
         NoMoney,
         Invalid,
         JobCar,
-        Taken
+        Taken,
+        Busy
     }
 
     [Serializable]

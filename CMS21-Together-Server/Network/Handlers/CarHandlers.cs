@@ -62,7 +62,8 @@ namespace CMS21_Together_Server.Network.Handlers
         {
             Logger.Debug($"[CarHandlers] Received CarSpawnDelete from client {clientId} for Loader {packet.CarLoaderID}");
             var entry = CarPartsStore.Get(packet.CarLoaderID);
-            if (entry?.Spawn != null && CarAwayRegistry.Blocks(packet.CarLoaderID, (int)clientId, "delete"))
+            bool busy = entry?.Spawn != null && CarLocks.RefuseBusy(packet.CarLoaderID, (int)clientId, CarLocks.BusyDelete);
+            if (entry?.Spawn != null && (busy || CarAwayRegistry.Blocks(packet.CarLoaderID, (int)clientId, "delete")))
             {
                 Server.SendToClient(entry.Spawn, (int)clientId);
                 if (entry.HasBaseline) CarPartsStore.SendSnapshot(packet.CarLoaderID, entry, CarPartsSnapshotPacket.LiveSnapshot, only: (int)clientId);

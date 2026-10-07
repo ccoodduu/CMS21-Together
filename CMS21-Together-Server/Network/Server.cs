@@ -341,6 +341,7 @@ namespace CMS21_Together_Server.Network
             lastUpdateTime = now;
             ProcessRefusals();
             Data.Cars.CarClaims.Expire(Data.ServerTime.Time);
+            Data.Cars.CarLocks.Tick(Data.ServerTime.Time);
             Data.Tools.ToolsStore.Expire(Data.ServerTime.Time);
             Data.Reconciliation.ReconciliationService.Tick(Data.ServerTime.Time);
             Data.Jobs.JobsService.Tick(Data.ServerTime.Time);

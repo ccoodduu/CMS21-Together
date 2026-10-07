@@ -36,6 +36,8 @@ namespace CMS21_Together_Server.Data.Cars
 				var entry = pair.Value;
 				var held = CarClaims.Held(pair.Key).ToList();
 				string claims = held.Count == 0 ? "none" : string.Join(", ", held.Select(c => $"{c.Key} by {c.Owner}"));
+				var locked = CarLocks.HeldPartKeys(pair.Key).ToList();
+				if (locked.Count > 0) claims += $", locks: {string.Join(", ", locked.Select(c => $"{c.Key} by {c.Owner}"))}";
 				yield return $"loader {pair.Key}: {entry.Spawn?.CarToLoad} SpawnSeq {entry.SpawnSeq}, revision {entry.Revision}, baseline {entry.HasBaseline}, {entry.BodyParts.Count} body, {entry.SubParts.Count} mechanical ({entry.SubParts.Values.Count(s => s.Unmounted)} unmounted), claims: {claims}";
 			}
 		}

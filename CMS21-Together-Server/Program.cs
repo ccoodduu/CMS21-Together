@@ -53,6 +53,12 @@ namespace CMS21_Together_Server
 				return;
 			}
 
+			if (Array.IndexOf(args, "--check-locks") >= 0)
+			{
+				Environment.Exit(Data.Cars.CarLocksCheck.Run());
+				return;
+			}
+
 			if (Array.IndexOf(args, "--check-digest") >= 0)
 			{
 				Environment.Exit(Data.Reconciliation.DigestCheck.Run());
@@ -97,6 +103,7 @@ namespace CMS21_Together_Server
 			Data.Presence.PresenceEvents.Left += Data.Reconciliation.ReconciliationService.OnLeft;
 			Data.Jobs.JobsService.Initialize();
 			Data.Cars.CarAwayRegistry.Initialize();
+			Data.Cars.CarLocks.Initialize(Config.LockScope, Config.LockExpirySeconds);
 			Data.Tools.ToolsStore.Initialize();
 			Network.Handlers.VisualHandlers.Initialize();
 			Network.Handlers.DriveHandlers.Initialize();

@@ -18,7 +18,7 @@ namespace CMS21_Together_Server.Network.Handlers
 			bool oneStep = request.ToState >= PlacementRules.OnFloor && request.ToState <= PlacementRules.Up && System.Math.Abs(request.ToState - request.FromState) == 1;
 			bool hasCar = PlacementRules.LoaderAtPlace(PlacementRules.PlaceOfLifter(lifter)) != null;
 			int? liftedCar = PlacementRules.LoaderAtPlace(PlacementRules.PlaceOfLifter(lifter));
-			if (liftedCar.HasValue && CarAwayRegistry.Blocks(liftedCar.Value, (int)clientId, $"lift {lifter}"))
+			if (liftedCar.HasValue && (CarAwayRegistry.Blocks(liftedCar.Value, (int)clientId, $"lift {lifter}") || BusyWithoutCarLock(liftedCar.Value, (int)clientId, CarLocks.BusyLift)))
 			{
 				PlacementRules.SendLifter(lifter, instant: false, only: (int)clientId);
 				return;
@@ -49,6 +49,8 @@ namespace CMS21_Together_Server.Network.Handlers
 			string refusal = null;
 			if (CarAwayRegistry.Blocks(request.CarLoaderID, (int)clientId, "move")) refusal = "the car is away";
 			else if (other.HasValue && CarAwayRegistry.Blocks(other.Value, (int)clientId, "swap")) refusal = $"the car on place {request.ToPlace} is away";
+			else if (BusyWithoutCarLock(request.CarLoaderID, (int)clientId, CarLocks.BusyMove)) refusal = "another player works on the car";
+			else if (other.HasValue && BusyWithoutCarLock(other.Value, (int)clientId, CarLocks.BusyMove)) refusal = $"another player works on the car on place {request.ToPlace}";
 			else if (request.FromPlace != stored) refusal = $"the car is at place {stored}";
 			else if (request.ToPlace == stored) refusal = "the car is already there";
 			else if (other.HasValue && IsRaised(request.FromPlace)) refusal = "a swap with a car on a raised lift";
@@ -76,6 +78,9 @@ namespace CMS21_Together_Server.Network.Handlers
 			}
 			Server.SendToClients(new CarPlaceChangedPacket { CarLoaderID = request.CarLoaderID, Place = request.ToPlace });
 		}
+
+		private static bool BusyWithoutCarLock(int loader, int clientId, string what) =>
+			!CarLocks.HoldsCar(loader, clientId) && CarLocks.RefuseBusy(loader, clientId, what);
 
 		private static bool IsRaised(int place)
 		{

@@ -55,7 +55,7 @@ namespace CMS21_Together_Server.Data.Cars
 			var refusal = CarAwayRefusal.None;
 			if (entry == null || entry.SpawnSeq != packet.SpawnSeq || !entry.HasBaseline) refusal = CarAwayRefusal.NotReady;
 			else if (current != null && current.Owner != clientId) refusal = CarAwayRefusal.Busy;
-			else if (CarClaims.Held(packet.CarLoaderID).Any(h => h.Owner != clientId)) refusal = CarAwayRefusal.InUse;
+			else if (CarClaims.Held(packet.CarLoaderID).Any(h => h.Owner != clientId) || CarLocks.HeldByOther(packet.CarLoaderID, clientId)) refusal = CarAwayRefusal.InUse;
 
 			if (refusal != CarAwayRefusal.None)
 			{
@@ -70,6 +70,7 @@ namespace CMS21_Together_Server.Data.Cars
 
 			var ownKeys = CarClaims.Held(packet.CarLoaderID).Where(h => h.Owner == clientId).Select(h => h.Key).ToList();
 			if (ownKeys.Count > 0) CarClaims.ReleaseCommitted(clientId, packet.CarLoaderID, ownKeys);
+			CarLocks.ReleaseOwnerOnLoader(clientId, packet.CarLoaderID, $"{packet.Kind} granted to the owner");
 			claims[packet.CarLoaderID] = new Away { SpawnSeq = packet.SpawnSeq, Owner = clientId, Kind = packet.Kind, Since = now };
 			Logger.Info($"[Away] {packet.Kind} on loader {packet.CarLoaderID} granted to client {clientId}.");
 			var update = new CarAwayUpdatePacket { CarLoaderID = packet.CarLoaderID, SpawnSeq = packet.SpawnSeq, Kind = packet.Kind, OwnerPlayerId = clientId };

@@ -201,7 +201,8 @@ namespace CMS21_Together_Server.Data.Jobs
 				Server.SendToClient(world, clientId);
 				return;
 			}
-			if (active.CarLoaderId >= 0 && CarAwayRegistry.Blocks(active.CarLoaderId, clientId, $"end of job {packet.JobId}"))
+			if (active.CarLoaderId >= 0 && (CarAwayRegistry.Blocks(active.CarLoaderId, clientId, $"end of job {packet.JobId}")
+				|| ClearsCar(active, packet.JobId) && CarLocks.RefuseBusy(active.CarLoaderId, clientId, CarLocks.BusyJobEnd)))
 			{
 				Server.SendToClient(world, clientId);
 				return;
@@ -218,6 +219,9 @@ namespace CMS21_Together_Server.Data.Jobs
 			Server.SendToClients(new JobRemovedPacket { JobId = packet.JobId, Reason = JobRemovedReason.Ended, CarLoaderId = loader, IsCompleted = packet.IsCompleted, Missions = State.Missions });
 			Server.SendToClients(world);
 		}
+
+		private static bool ClearsCar(ActiveJobEntry active, int jobId) =>
+			GameDataManager.CurrentState.CarState.LoadedCars.TryGetValue(active.CarLoaderId, out var car) && car.Spawn?.JobID == jobId;
 
 		private static void OnLoaderCleared(int loader, CarLoaderEntry removed, ClearReason reason)
 		{

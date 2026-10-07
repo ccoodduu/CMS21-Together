@@ -40,6 +40,8 @@ namespace CMS21_Together_Server.Data
 
 		public static ModGameState CurrentState { get; private set; }
 
+		internal static void UseStateForCheck(ModGameState state) => CurrentState = state;
+
 		public static int BackupCount { get; set; } = 5;
 		public static int AutosaveIntervalSeconds { get; set; } = 300;
 
