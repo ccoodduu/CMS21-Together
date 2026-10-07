@@ -43,6 +43,11 @@ using `GameDataManager.CurrentState.X`, the section only moves that object in an
 
 `SyncOrder` keys and values are append-only. Do not renumber.
 
+Save section `players` (`PlayerRecordsSection`, `Data/Presence/`) is save-only: one `PlayerRecord` per identity
+(`steam:<id>` or `guid:<player key>`) with name, last seen and the last place. Live positions are copied into it on
+leave and before every save. The `self` provider sends `PlayerRestore` from it on the first snapshot of a connection,
+only when the last place was the garage.
+
 ## Items
 
 An *item* is whatever unit the client reports with `SyncTracker.Applied(key, snapshotId)`. `SendSnapshot` returns
@@ -55,6 +60,13 @@ and every count is met, and only then sets `ClientData.IsInitialSyncFinished`.
 - Snapshot handlers never wait for `IsInitialSyncFinished`; that would deadlock the counts.
 - Do not add "synced" flags or a provider-specific end packet. Count items instead.
 - Do not send from `OnAskForSync`; add a provider.
+
+## Packets before the ack
+
+`Server.Dispatch` drops (with a warning) every packet from a client that is not `InSession` unless its handler has
+`[AllowBeforeSync]` (design D9). Only mark handlers that do not change shared state or that the join itself needs
+(heartbeat, connect, sync, movement, presence, resync requests). On the client, a send path triggered by game events
+checks `ClientData.IsInitialSyncFinished` so snapshot application is never echoed.
 
 ## Versions
 

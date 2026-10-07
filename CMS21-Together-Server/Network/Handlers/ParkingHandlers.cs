@@ -136,6 +136,7 @@ namespace CMS21_Together_Server.Network.Handlers
 		}
 
 		[PacketHandler(PacketTypes.ParkingResyncRequest)]
+		[AllowBeforeSync]
 		public static void OnResync(long clientId, ParkingResyncRequestPacket request)
 		{
 			Logger.Info($"[Parking] Resync for client {clientId}.");

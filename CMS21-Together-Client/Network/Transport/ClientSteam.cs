@@ -75,6 +75,7 @@ public class ClientSteam : ConnectionManager
 	public override void OnMessage(IntPtr data, int size, long messageNum, long recvTime, int channel)
 	{
 		base.OnMessage(data, size, messageNum, recvTime, channel);
+		ServerWatchdog.MarkReceived();
 
 		//MelonLogger.Msg("Received a packet from server!");
 		

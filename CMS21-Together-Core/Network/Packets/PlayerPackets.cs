@@ -36,3 +36,11 @@ public class PlayerRosterPacket : INetworkData
 {
 	public List<PlayerPresenceRecord> Records = new List<PlayerPresenceRecord>();
 }
+
+[Serializable]
+[NetworkPacket(PacketTypes.PlayerRestore)]
+public class PlayerRestorePacket : INetworkData
+{
+	public Vector3Serializable Position;
+	public QuaternionSerializable Rotation;
+}

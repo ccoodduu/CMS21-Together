@@ -105,6 +105,7 @@ public static class StateDump
         return new
         {
             position = new { x = Round(movement.Position.X), y = Round(movement.Position.Y), z = Round(movement.Position.Z) },
+            yaw = Round(PresenceManager.LocalMotor.transform.eulerAngles.y),
             scene = ClientScene.LocalScene.ToString(),
             name = PlayerSettings.PlayerName,
             seat = SeatEngine.SeatCarLoaderId,

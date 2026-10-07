@@ -17,6 +17,8 @@ $ErrorActionPreference = "Stop"
 Import-Module (Join-Path $PSScriptRoot "TestLanes.psm1") -Force
 $dataDirName = "Car Mechanic Simulator 2021_Data"
 $copiedDirs = @("MelonLoader", "UserData")
+# UserData\CMS21Together holds the per-install player key (player.json): a copy would give two installs one identity.
+$instanceOwnedDirs = @("CMS21Together")
 $extraMods = @("CMS21LoadOptimizer.dll", "LoadOptimizer.cfg")
 
 Add-Type -Namespace Native -Name Fs -MemberDefinition @'
@@ -61,8 +63,17 @@ foreach ($name in $Instances) {
     foreach ($sub in $copiedDirs) {
         $target = Join-Path $dir $sub
         if (-not (Test-Path -LiteralPath $target)) {
-            Copy-Item -LiteralPath (Join-Path $GameDir $sub) -Destination $target -Recurse
+            New-Item -ItemType Directory -Force -Path $target | Out-Null
+            Get-ChildItem -LiteralPath (Join-Path $GameDir $sub) | Where-Object { $_.Name -notin $instanceOwnedDirs } |
+                Copy-Item -Destination $target -Recurse
         }
+    }
+    $copiedKey = Join-Path $dir "UserData\CMS21Together\player.json"
+    $realKey = Join-Path $GameDir "UserData\CMS21Together\player.json"
+    if ((Test-Path -LiteralPath $copiedKey) -and (Test-Path -LiteralPath $realKey) -and
+        (Get-FileHash -LiteralPath $copiedKey).Hash -eq (Get-FileHash -LiteralPath $realKey).Hash) {
+        Remove-Item -LiteralPath $copiedKey -Force
+        Write-Host "   removed the player key copied from the game install; the mod creates its own"
     }
     $loaderLogs = Join-Path $dir "MelonLoader\Logs"
     if (Test-Path -LiteralPath $loaderLogs) { Get-ChildItem -LiteralPath $loaderLogs -File | Remove-Item -Force }

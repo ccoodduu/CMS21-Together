@@ -106,7 +106,8 @@ namespace CMS21_Together_Server.Data
 				$"world: money {state.WorldState.Money}, level {state.WorldState.Level}, exp {state.WorldState.Exp}, scraps {state.WorldState.Scraps}, barns {state.WorldState.Barns}",
 				$"garage: {state.GarageState.GarageUpgradeLevels.Count} garage upgrades, {state.GarageState.PlayerUpgradeLevels.Count} skills",
 				$"inventory: {inventory.InventoryItems?.Count ?? 0} items, {inventory.InventoryGroupItems?.Count ?? 0} groups, warehouse {inventory.WarehouseItems?.Count ?? 0} items, {inventory.WarehouseGroupItems?.Count ?? 0} groups",
-				$"cars: {state.CarState.LoadedCars.Count} loaded"
+				$"cars: {state.CarState.LoadedCars.Count} loaded",
+				$"players: {state.PlayerRecords.Count} records"
 			};
 			if (unknownSections.Count > 0)
 				summary.Add($"unknown sections: {string.Join(", ", unknownSections.Keys)}");

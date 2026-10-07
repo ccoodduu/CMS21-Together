@@ -11,6 +11,7 @@ namespace CMS21_Together_Server.Network.Handlers
 	public static class PlayerHandlers
 	{
 		[PacketHandler(PacketTypes.Movement)]
+		[AllowBeforeSync]
 		public static void OnMovementUpdate(long clientId, MovementPacket packet)
 		{
 			var record = PresenceRegistry.Get((int)clientId);
@@ -30,6 +31,7 @@ namespace CMS21_Together_Server.Network.Handlers
 		}
 
 		[PacketHandler(PacketTypes.PlayerPresence)]
+		[AllowBeforeSync]
 		public static void OnPlayerPresence(long clientId, PlayerPresencePacket packet)
 		{
 			var record = PresenceRegistry.Get((int)clientId);

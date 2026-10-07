@@ -1,4 +1,7 @@
+using CMS21_Together_Core.Data;
 using CMS21_Together_Core.Logging;
+using CMS21_Together_Core.Network.Packets;
+using CMS21Together.Data;
 using CMS21Together.Network;
 using UnityEngine;
 
@@ -11,11 +14,32 @@ public static class SpawnPlacement
 	private const float MinAvatarDistance = 0.8f;
 	private const int BlockingLayerMask = -4194305;
 
-	public static bool RestoreApplied { get; set; }
+	private const float FallbackGroundOffset = 0.72f;
+	private const float RestoreLift = 0.05f;
+
+	private static PlayerRestorePacket pendingRestore;
+
+	public static void QueueRestore(PlayerRestorePacket packet, int snapshotId)
+	{
+		pendingRestore = packet?.Position == null || packet.Rotation == null ? null : packet;
+		Log.Info(pendingRestore == null
+			? "[Presence] Empty position restore ignored."
+			: $"[Presence] Last garage position ({packet.Position.X:F2},{packet.Position.Y:F2},{packet.Position.Z:F2}) will be restored.");
+		SyncTracker.Applied(SyncOrder.SelfKey, snapshotId);
+	}
+
+	public static void ClearRestore() => pendingRestore = null;
 
 	public static void PlaceLocalPlayer()
 	{
-		if (RestoreApplied || !PresenceManager.HasLocalMotor) return;
+		if (!PresenceManager.HasLocalMotor) return;
+		if (pendingRestore != null)
+		{
+			var restore = pendingRestore;
+			pendingRestore = null;
+			ApplyRestore(restore);
+			return;
+		}
 
 		var transform = PresenceManager.LocalMotor.transform;
 		var controller = PresenceManager.LocalMotor.GetComponent<CharacterController>();
@@ -43,6 +67,30 @@ public static class SpawnPlacement
 		{
 			if (controller != null) controller.enabled = controllerWasEnabled;
 		}
+	}
+
+	private static void ApplyRestore(PlayerRestorePacket restore)
+	{
+		var transform = PresenceManager.LocalMotor.transform;
+		var controller = PresenceManager.LocalMotor.GetComponent<CharacterController>();
+		float groundOffset = Physics.Raycast(transform.position, Vector3.down, out RaycastHit hit, 3f, BlockingLayerMask)
+			? transform.position.y - hit.point.y
+			: FallbackGroundOffset;
+		var target = new Vector3(restore.Position.X, restore.Position.Y + groundOffset + RestoreLift, restore.Position.Z);
+		float yaw = new Quaternion(restore.Rotation.X, restore.Rotation.Y, restore.Rotation.Z, restore.Rotation.W).eulerAngles.y;
+
+		bool controllerWasEnabled = controller != null && controller.enabled;
+		if (controller != null) controller.enabled = false;
+		try
+		{
+			transform.position = target;
+			transform.rotation = Quaternion.Euler(0f, yaw, 0f);
+		}
+		finally
+		{
+			if (controller != null) controller.enabled = controllerWasEnabled;
+		}
+		Log.Info($"[Presence] Restored the last garage position ({target.x:F2},{target.y:F2},{target.z:F2}), yaw {yaw:F0}.");
 	}
 
 	private static Vector3 SlotPosition(Vector3 spawn, Quaternion frame, int slot)
