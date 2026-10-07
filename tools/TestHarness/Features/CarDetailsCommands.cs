@@ -75,4 +75,10 @@ public static class CarDetailsCommands
         CarDetailsSync.HoldSpawnSnapshots = (args ?? "").Trim() == "on";
         return new { held = CarDetailsSync.HoldSpawnSnapshots };
     }
+
+    internal static void Reset(List<string> changed)
+    {
+        if (CarDetailsSync.HoldSpawnSnapshots) changed.Add("cardetails-hold");
+        CarDetailsSync.HoldSpawnSnapshots = false;
+    }
 }

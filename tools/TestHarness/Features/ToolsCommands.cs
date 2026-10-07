@@ -498,6 +498,16 @@ public static class ToolsCommands
         return $"replayed {replay.Count}";
     }
 
+    internal static void Reset(List<string> changed)
+    {
+        if (holding || held.Count > 0) changed.Add($"tool-hold{(holdingInventory ? " inventory" : "")} (dropped {held.Count} held packets)");
+        if (ToolSync.Trace) changed.Add("tool-trace");
+        holding = false;
+        holdingInventory = false;
+        held.Clear();
+        ToolSync.Trace = false;
+    }
+
     [HarmonyPatch(typeof(PacketRouter), nameof(PacketRouter.Dispatch))]
     [HarmonyPrefix]
     private static bool BeforeDispatch(PacketTypes id, object deserializedData, long senderId)

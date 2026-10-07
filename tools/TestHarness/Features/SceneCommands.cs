@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using CMS21_Together_Core.Data.Enum;
 using CMS21_Together_Core.Network.Packets;
 using CMS21Together.Data;
 using CMS21Together.Network;
@@ -12,6 +13,8 @@ namespace TogetherTestHarness.Features;
 [HarmonyPatch]
 public static class SceneCommands
 {
+    private static readonly List<Action<GameScene, GameScene>> armedLeaveMarks = new List<Action<GameScene, GameScene>>();
+
     [HarnessCommand("travel")]
     private static object Travel(string args)
     {
@@ -39,11 +42,20 @@ public static class SceneCommands
         handler = (from, to) =>
         {
             ClientScene.LeavingScene -= handler;
+            armedLeaveMarks.Remove(handler);
             Client.Instance.Send(new StatsActionPacket { ScrapsDelta = scrap });
             MelonLogger.Msg($"[Harness] leave-mark sent {scrap} scrap while leaving {from} for {to}");
         };
         ClientScene.LeavingScene += handler;
+        armedLeaveMarks.Add(handler);
         return $"armed: {scrap} scrap on the next scene change";
+    }
+
+    internal static void Reset(List<string> changed)
+    {
+        if (armedLeaveMarks.Count > 0) changed.Add($"leave-mark ({armedLeaveMarks.Count} armed)");
+        foreach (var handler in armedLeaveMarks) ClientScene.LeavingScene -= handler;
+        armedLeaveMarks.Clear();
     }
 
     [HarmonyPatch(typeof(NotificationCenter), nameof(NotificationCenter.SelectSceneToLoad),

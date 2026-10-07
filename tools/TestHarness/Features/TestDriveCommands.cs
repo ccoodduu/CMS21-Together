@@ -109,6 +109,16 @@ public static class TestDriveCommands
     private static bool holdPatched;
     private static int heldFrames;
 
+    internal static void Reset(List<string> changed)
+    {
+        if (tracing) changed.Add("testdrive-trace");
+        if (holdMode != HoldMode.Off) changed.Add($"testdrive-hold {holdMode}");
+        tracing = false;
+        counts.Clear();
+        holdMode = HoldMode.Off;
+        heldFrames = 0;
+    }
+
     [HarnessCommand("testdrive-hold")]
     private static object Hold(string args)
     {

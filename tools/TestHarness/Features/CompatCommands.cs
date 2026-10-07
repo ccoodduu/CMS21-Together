@@ -96,6 +96,12 @@ public static class CompatCommands
         return Overrides();
     }
 
+    internal static void Reset(List<string> changed)
+    {
+        if (CompatOverrides.Any) changed.Add("compat-override");
+        CompatOverrides.Reset();
+    }
+
     private static Dictionary<string, object> Overrides() => new Dictionary<string, object>
     {
         ["game"] = CompatOverrides.GameVersion,
