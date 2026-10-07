@@ -16,6 +16,8 @@ public class ModGameState
 	public JobsState JobsState = new JobsState();
 	public ToolsState ToolsState = new ToolsState();
 	
+	public Dictionary<string, PlayerRecord> PlayerRecords = new Dictionary<string, PlayerRecord>();
+
 	[NonSerialized] public PlayerState PlayerState = new PlayerState();
 }
 

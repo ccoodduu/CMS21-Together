@@ -3,6 +3,14 @@
 Open questions that block a decision. Each has the default we work with until answered.
 Answered ones move to the bottom with the answer.
 
+## Open — row 11 soak and scale (2026-10-07)
+
+1. **Budgets.** The soak warns (does not fail) above: 50 kB/s download per client, 25 % of one core for the server,
+   late join over 60 s (fail over 120 s), memory growth over 200 MB/h. **Default:** these numbers, warnings only.
+2. **Overnight soaks on your PC.** A 4-hour soak with four games keeps the PC busy. **Default:** only when you
+   start one or say yes for that night, never while you are at the PC.
+3. **C and D headless in long soaks** (to save memory). **Default:** yes, if a spike shows it works.
+
 ## Accepted defaults (user, 2026-10-06)
 
 - Remote players see only the finished part state, not the bolt animation, while a part is reserved.

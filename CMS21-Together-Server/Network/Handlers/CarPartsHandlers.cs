@@ -121,6 +121,7 @@ namespace CMS21_Together_Server.Network.Handlers
 		}
 
 			[PacketHandler(PacketTypes.CarPartsResyncRequest)]
+			[AllowBeforeSync]
 		public static void OnResyncRequest(long clientId, CarPartsResyncRequestPacket packet)
 		{
 			var entry = CarPartsStore.Get(packet.CarLoaderID);

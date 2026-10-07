@@ -9,6 +9,7 @@ public static class PacketRouter
 {
 	private static Dictionary<PacketTypes, MethodInfo> _handlers = new Dictionary<PacketTypes, MethodInfo>();
 	private static Dictionary<Type, PacketTypes> _packetMap = new Dictionary<Type, PacketTypes>();
+	private static HashSet<PacketTypes> _allowedBeforeSync = new HashSet<PacketTypes>();
 
 	/// <summary>
 	/// Initializes the router by scanning the Core assembly (for Packets) 
@@ -19,6 +20,7 @@ public static class PacketRouter
 	{
 		_handlers.Clear();
 		_packetMap.Clear();
+		_allowedBeforeSync.Clear();
 			
 		ScanAssembly(Assembly.GetAssembly(typeof(PacketRouter)));
 
@@ -59,6 +61,8 @@ public static class PacketRouter
 						continue;
 					}
 					_handlers.Add(handlerAttr.Type, method);
+					if (method.GetCustomAttribute<AllowBeforeSync>() != null)
+						_allowedBeforeSync.Add(handlerAttr.Type);
 				}
 			}
 		}
@@ -71,6 +75,8 @@ public static class PacketRouter
 		throw new Exception($"packet {packetData.GetType().Name} don't have attribute [NetworkPacket] !");
 	}
 		
+	public static bool RequiresSync(PacketTypes id) => _handlers.ContainsKey(id) && !_allowedBeforeSync.Contains(id);
+
 	public static void Dispatch(PacketTypes id, object deserializedData, long senderId)
 	{
 		if (_handlers.TryGetValue(id, out MethodInfo method))

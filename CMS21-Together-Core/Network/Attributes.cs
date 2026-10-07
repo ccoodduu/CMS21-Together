@@ -16,4 +16,7 @@ public class PacketHandler : Attribute
 	public PacketHandler(PacketTypes type) => Type = type;
 }
 
+[AttributeUsage(AttributeTargets.Method)]
+public class AllowBeforeSync : Attribute { }
+
 public interface INetworkData { }

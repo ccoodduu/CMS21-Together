@@ -26,3 +26,11 @@ The harness verb `profile-pref` returns the pref, the field, the number of profi
   `PlatformManager.DeleteSave(string)`, logging each once with the call stack. On end it shrinks `ProfileData`
   back to 4 slots and restores `selectedProfile`.
 - `profile4.cms21b` written by older mod versions is never deleted, only logged.
+
+## Player identity
+
+`PlayerIdentity` creates `UserData/CMS21Together/player.json` (`{ "PlayerKey": "<Guid N>" }`) once per install
+and sends the key as `ConnectPacket.playerKey` (design D8). On DirectIP the server knows the player by it, so never
+copy the file between installs (`Setup-TestInstalls.ps1` skips `UserData/CMS21Together`) and never put it in a bug
+report. On Steam the server uses the Steam ID and ignores the key. The harness verb `player-key [<key>|reset]`
+overrides it in memory.

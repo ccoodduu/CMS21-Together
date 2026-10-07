@@ -12,7 +12,7 @@ public static class EconomyHooks
 {
 	public static bool Connected => Client.Instance != null && Client.Instance.IsConnected;
 
-	private static bool Active => Connected && !ClientData.IsServerUpdating;
+	private static bool Active => Connected && !ClientData.IsServerUpdating && ClientData.IsInitialSyncFinished;
 
 	[HarmonyPatch(typeof(GlobalData), nameof(GlobalData.AddPlayerMoney))]
 	[HarmonyPrefix]

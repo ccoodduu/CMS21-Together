@@ -26,6 +26,7 @@ public static class ClientData
 		IsServerUpdating = false;
 		SyncTracker.Reset();
 		PresenceManager.Clear();
+		SpawnPlacement.ClearRestore();
 		SeatEngine.Reset();
 		ClientScene.ClearPending();
 		CarPartsSync.Reset();

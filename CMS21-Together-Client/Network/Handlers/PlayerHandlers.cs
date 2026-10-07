@@ -25,4 +25,10 @@ public static class PlayerHandlers
 	{
 		PresenceManager.ApplyRoster(packet, SyncTracker.ReceivingSnapshotId);
 	}
+
+	[PacketHandler(PacketTypes.PlayerRestore)]
+	public static void OnPlayerRestore(long senderId, PlayerRestorePacket packet)
+	{
+		SpawnPlacement.QueueRestore(packet, SyncTracker.ReceivingSnapshotId);
+	}
 }

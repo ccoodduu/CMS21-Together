@@ -102,5 +102,6 @@ public enum PacketTypes
 	ToolClaimUpdate,
 	ToolPartChangeResult,
 
-	ToolAction
+	ToolAction,
+	PlayerRestore
 }
