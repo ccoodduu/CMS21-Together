@@ -33,7 +33,21 @@ Answered ones move to the bottom with the answer.
 
 ## Decide later
 
-Nothing open.
+Row 15 `shared-outdoor-scenes` (drafted 2026-10-07, M7; design.md "Open Questions"). Each has a default the
+draft works with:
+
+1. **Asking LvxMagick** for permission to adapt LvxBetterCarSpawns' car selection (and how to credit them) is your
+   step. Default: not asked yet; the server uses its own simple selector (`BasicCarSelector`: unique models per
+   visit, no repeat of the last visit) and the Lvx-based selector (task 11.2) waits for a yes.
+2. **One junkyard (barn, auction) at a time:** everyone who travels there joins the open one; it closes when the
+   last player leaves (60 s grace after a crash), and the next trip gets a new one, as in the game. Default: yes.
+3. **Joining a friend in an open barn** uses no barn from the shared barn count; the barn travel fee is still charged
+   per trip (server rule `travel_fees`). Default: yes.
+4. **Auction:** money is shared, so the players bid as one team; one player runs the bidding on a lot, the others
+   see it and can raise the team's bid (view-only if the game's bid cannot be driven from outside). Default: yes.
+5. **Items taken but not paid for** go back to their pile when the player leaves or disconnects. Default: yes.
+6. **Fill every junkyard spawn point** (what your single-player mod does): off by default (vanilla car count), one
+   server setting (`outdoor_fill_all_spawn_points`) turns it on.
 
 ## Answered
 
