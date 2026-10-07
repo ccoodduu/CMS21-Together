@@ -3,6 +3,20 @@
 Open questions that block a decision. Each has the default we work with until answered.
 Answered ones move to the bottom with the answer.
 
+## Open — row 18 part-locks (2026-10-07)
+
+Details and reasons in `openspec/changes/part-locks/proposal.md` (reviewed, see `review.md`).
+
+1. **Sibling parts** (two caps on one crankshaft) can be worked on at the same time. **Default:** yes.
+2. **Idle holder:** the holder's own game cancels after 60 s in the item chooser without a choice, or 5 min in the
+   bolt view without progress. **Default:** yes; the server expiry only covers crashes.
+3. **Engine-stand parts** stay on today's path. **Default:** yes, follow-up if the next playtest shows races.
+4. **Welder, paint, wash, detailing** take no lock. **Default:** no lock.
+5. **Hover look** of a part in use: no highlight plus the label. **Default:** that.
+6. **Message** for a connected part: "<name> is working on the <part name>". **Default:** that.
+7. **Split:** this change ships the locks, the click-time refusal and the hover label; mount-mode previews, item
+   chooser filtering and pie greying move to `part-locks-2` (clicks there are still refused). **Default:** split.
+
 ## Playtest findings (2026-10-07)
 
 Not questions for the user; open bugs from the first playtest, fixed one by one.
