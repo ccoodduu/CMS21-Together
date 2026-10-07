@@ -27,11 +27,23 @@ Work towards 1.0.0 (milestones M5 "Robust sessions" and M6 "Release 1.0").
   [docs/bug-reports.md](docs/bug-reports.md); this changelog and [docs/versioning.md](docs/versioning.md).
 - `tools/release/Build-Release.ps1 -Release` builds a release only from a clean, tagged commit with a changelog entry.
 
+### Changed
+
+- The mod check names each refused mod with one plain line and says how to join. `LvxOwnedCarsOnly` and
+  `AutosaveMod` are now refused too (the host can allow a mod with `mods_ignored`).
+
 ### Fixed
 
 - Item ids handed out by the server always increase.
 - A car on a lift could lose its lift for the other players when a new car arrived in a loader whose car had been
   deleted or parked from that lift; the lift buttons then did nothing for them.
+- After a late join the players' inventories could stay different: a new part was wiped by the joiner's inventory
+  load, or by a resend of the inventory while the part was still being taken off.
+- When another player mounted a part, parts that belong with it (for example the bushings of a control arm) were
+  mounted too.
+- Taking a car out of the parking could stop the window tint and other paint details from being applied for the
+  other players.
+- Mounting a part with nothing selected logged an error.
 
 ## M4: The full workshop - 2026-10-06/07
 
