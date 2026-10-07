@@ -21,9 +21,17 @@ rollback of part, fluid or inventory state SHALL be needed for it.
 - **WHEN** player A and player B try to mount the same inventory item into two slots at once
 - **THEN** exactly one mount starts, the other player is told the item is being mounted, and the item exists exactly once on the car or in the inventory
 
+#### Scenario: Part with a sub-part built while mounting
+- **WHEN** player A and player B both try to mount the same brake caliper with its piston, which the game combines into a new group while mounting
+- **THEN** exactly one mount starts, and the caliper and the piston each exist exactly once afterwards
+
 #### Scenario: Grant arrives after a delay
 - **WHEN** player A's connection adds 150 ms of delay and player A clicks a free part to unmount it
 - **THEN** the unmount starts once the grant arrives and nothing else about the action changes
+
+#### Scenario: Hold to unmount hides the delay
+- **WHEN** player A's connection adds 80 ms of delay and player A holds the button on a free part until the ring fills
+- **THEN** the unmount starts as soon as the ring is full, without an extra wait
 
 ### Requirement: A lock covers what belongs together
 A lock on a part SHALL also cover the part's unmount group, the parts it is fixed to (the part it is mounted on and
@@ -55,14 +63,19 @@ lock ends, the fluid level SHALL already be on the server before another player 
 - **WHEN** player B is unscrewing the coolant reservoir and player A tries to fill coolant
 - **THEN** player A's fill does not start
 
+#### Scenario: Reservoir unmount drains before the next fill
+- **WHEN** player B finishes unmounting the coolant reservoir, which drains the coolant, and player A starts filling coolant right after
+- **THEN** player A's fill starts from an empty level
+
 #### Scenario: Next player sees the final level
 - **WHEN** player A finishes filling brake fluid and player B starts filling brake fluid right after
 - **THEN** player B starts from the level player A left
 
 ### Requirement: The car does not move while someone works on it
-A car SHALL NOT be moved to another place, swapped, or lifted or lowered while another player holds a lock on any
-part or fluid of it. Nobody SHALL be able to start work on a car while its lift or the car itself is moving, or while
-it is away on a test drive, test path or dyno run of another player.
+A car SHALL NOT be moved to another place, swapped, lifted or lowered, parked, deleted, or removed by the end of its
+job while another player holds a lock on any part or fluid of it. Nobody SHALL be able to start work on a car while
+its lift or the car itself is moving on that player's own screen, or while it is away on a test drive, test path or
+dyno run of another player.
 
 #### Scenario: Lift while another player mounts a part
 - **WHEN** player B is mounting a brake caliper and player A tries to raise the lift the car stands on
@@ -70,7 +83,11 @@ it is away on a test drive, test path or dyno run of another player.
 
 #### Scenario: Part work while the lift moves
 - **WHEN** player A's lift is moving and player B tries to unmount a part of the car on it
-- **THEN** player B's action does not start until the lift has stopped
+- **THEN** player B's action does not start until the lift has stopped on player B's screen
+
+#### Scenario: Parking or finishing the job while another player works
+- **WHEN** player B is unscrewing a part and player A tries to park the car or finish its job
+- **THEN** the car stays, player B's work continues, and player A is told player B is working on this car
 
 #### Scenario: Test drive while a part is in work
 - **WHEN** player B is unscrewing a part and player A tries to take the car on a test drive
@@ -78,18 +95,18 @@ it is away on a test drive, test path or dyno run of another player.
 
 ### Requirement: A part in use cannot be selected
 While another player holds a lock that a player's action would conflict with, that player's game SHALL NOT
-highlight the part as selectable on hover. It SHALL show "<name> is working on this part" (or names the connected
-part, fluid system or car), SHALL hide the part's slot in mount mode, SHALL show the matching pie-menu options as
-unavailable, and SHALL grey out inventory items another player is mounting. A click on such a part SHALL be refused
-without asking the server. When the lock ends, everything SHALL return to normal without any action by the player.
+highlight the part as selectable on hover, and SHALL show "<name> is working on this part" (or name the connected
+part, fluid system or car) in the hover label. A click on such a part, slot or car option SHALL be refused without
+asking the server. The player's own locked parts SHALL behave as usual. When the lock ends, everything SHALL return
+to normal without any action by the player.
 
 #### Scenario: Hovering a part in use
 - **WHEN** player A is unscrewing a wheel and player B points at that wheel in disassembly mode
 - **THEN** player B sees no selection highlight and reads that player A is working on this part
 
-#### Scenario: Mount mode
-- **WHEN** player A is mounting a brake disc and player B enters mount mode with another brake disc
-- **THEN** player B sees no mount preview on the slot player A is using
+#### Scenario: Clicking a part in use
+- **WHEN** player B clicks the wheel player A is unscrewing
+- **THEN** player B hears the error sound, reads that player A is working on this part, and no request reaches the server
 
 #### Scenario: Lock ends
 - **WHEN** player A finishes the wheel
@@ -110,9 +127,25 @@ released without starting the action.
 - **THEN** player A's action is cancelled with a message, and when the connection recovers the server holds no lock for player A
 
 ### Requirement: Locks always end
-A lock SHALL end when its work is finished or cancelled, when its owner disconnects or leaves the garage, when the
-car is removed or replaced, and when its owner's game has not renewed it for 90 seconds. A player who holds a part
-without progress for 5 minutes SHALL have that action cancelled by their own game.
+A lock SHALL end:
+- when its work is finished or cancelled;
+- within 1 second when the game did not start the action after the grant;
+- within 1 second when the player backs out (closes the item chooser without choosing, leaves the bolt view, changes
+  mode);
+- when its owner disconnects or leaves the garage;
+- when the car is removed or replaced;
+- when its owner's game has not renewed it within the server's lock expiry (90 seconds by default).
+
+A player who has the item chooser open without choosing for 60 seconds, or who holds a part in the bolt view without
+progress for 5 minutes, SHALL have that action cancelled by their own game.
+
+#### Scenario: Item chooser closed without choosing
+- **WHEN** player A opens the item chooser on a missing part and closes it without choosing an item
+- **THEN** the server holds no lock for player A within 1 second, and player B can lift the car
+
+#### Scenario: Action that the game refuses
+- **WHEN** player A is granted a lock for a part the game then refuses to unmount
+- **THEN** the lock is released within 1 second
 
 #### Scenario: Holder disconnects
 - **WHEN** player A disconnects while unscrewing a part
@@ -120,7 +153,7 @@ without progress for 5 minutes SHALL have that action cancelled by their own gam
 
 #### Scenario: Holder stops renewing
 - **WHEN** player A's game stops renewing a held lock
-- **THEN** the server ends the lock within 90 seconds
+- **THEN** the server ends the lock within its lock expiry
 
 ### Requirement: Locks reach a joining player
 A player who joins or returns to the garage SHALL receive every active lock before the initial sync ends, SHALL be
@@ -135,5 +168,5 @@ With four players working on the same car, the server SHALL never hold two confl
 at the same time, and no part change SHALL be rejected for a conflict that a lock should have prevented.
 
 #### Scenario: Four players on one car
-- **WHEN** four players repeatedly try the same part, connected parts, a fluid and the lift for several minutes
+- **WHEN** four players repeatedly mount and unmount the same part and connected parts, fill a fluid and move the lift for several minutes
 - **THEN** the server reports no overlapping locks, no part change is rejected, and every client's view of the locks equals the server's at the end

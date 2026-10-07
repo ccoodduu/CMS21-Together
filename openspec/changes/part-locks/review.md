@@ -314,3 +314,63 @@ alone fix the bearing-cap, coolant and lift races. The parts of group 8 that nee
 previews, chooser greying, pie greying: three spikes' worth of hooks and verbs) could move to a `part-locks-2`. Keep
 only "no highlight + label" from group 8, if spike 1.1 shows that both hooks fire. The user asked to be "blocked at
 selection", so this is a scope choice for the user, not a recommendation to drop it silently.
+
+---
+
+## Resolution (2026-10-07, author)
+
+proposal.md, design.md, tasks.md and the spec are revised. Design decisions carry the item IDs in brackets.
+
+**Blockers:**
+
+| Item | Resolution |
+|---|---|
+| B1 | Accepted. D5 step 2: an unknown item UID is logged and left out of the lock, never refused (rule of `035887c`). D3: the item step locks the `BaseItem`, or for a `GroupItem` its group UID and the member UIDs the server knows. Spike 1.2 logs the UIDs at `Show`, `SubmitGroupItem` and `SelectPartToMount`. Task 6.1 and the caliper-with-piston step in `locks-race` (6.2) test it, and so does a spec scenario. |
+| B2 | Accepted. D5 has a lifecycle table per kind: "started" predicate (checked right after the re-invoked call; a lock that did not start is released at once), normal end, back-out signals (chooser close without `SelectPartToMount`, ESC out of the bolt view, mode changes not set by the action itself), and idle cancels (60 s chooser, 5 min bolts). Spikes 1.2/1.4 confirm each entry. New scenario `locks-leak` (task 5.3) asserts an empty server `locks` within 1 s for each path. The spec's "Locks always end" covers it. |
+| B3 | Accepted. `CarLocks` runs beside `CarClaims` (fed only by `lock-take`) until one switch-over commit (task 5.1), which turns the gates on and removes the claims on both sides. The harness group moved before the client gate (group 3), and 4.3 uses a test hook plus a server-log check. |
+
+**Majors:**
+
+| Item | Resolution |
+|---|---|
+| M1 | Accepted. A repeated call for the same kind and target while pending is swallowed; a block calls `Cursor3D.ResetButton()`; "button held" is in `Context` only for the refill pour. Prefetch at hold start is now the main design for hold actions (D10, task 10.1), and spike 1.6 measures the fill time. |
+| M2 | Accepted. `SetPartMouseOver` is left alone. Only the highlight is suppressed (`PartScript.SetMouseOver(bool)`, `InteractiveObject.SetMouseOver(bool, Color)`), the label is overridden, and own locks are exempt. Spike 1.1's "Done when" states it. |
+| M3 | Accepted. D7: a local check refuses part work while a local lifter of that car `isMoving`, or while `LifterSync`/`CarPlacementSync` applies a remote step or move. `locks-car` runs with `net-delay 150` on B. |
+| M4 | Accepted. Park from the garage, car delete and the clearing job end are refused with `Busy` while another player holds a lock (task 2.3, client messages 8.2, steps in `locks-car`, spec scenario). |
+| M5 | Accepted. New `CarDetailsSync.FlushNow(loader, sections) → Sent/Deferred` (task 4.4). `PartChangeTracker.Send` flushes `Fluids` before a change that flips a part whose lock holds an `f:` key; fills flush before their release (task 7.1). `locks-fluid` checks the level right after a reservoir unmount, before the release reaches B. The proposal no longer calls `FlushNow` an existing API. |
+| M6 | Accepted. Rule in D1 with an audit table; `EngineCraneHooks.AfterUnMountGroup` is fixed in the switch-over (5.1). |
+| M7 | Accepted. Changes: `lock-try … finish` (real commits, used in race/latejoin/scale); `lock_expiry_seconds` server setting (latency scenario under 2 min); `lock-idle` test override; `lock-chooser`; new `locks-leak`; job end, park, delete and the fluid order in scenarios. Spike 1.7 tries a `lock-click` input shim (button state + aimed camera) so the game's own raycast and hold paths run. A manual Steam-playtest checklist is in D13 and task 11.3. |
+
+**Minors:**
+
+| Item | Resolution |
+|---|---|
+| 1 | Accepted. Only flips of another player's X keys are rejected; S flips are counted (`unlockedFlip`) and logged. |
+| 2 | Accepted. Blocking relation from `unblockOnUnmount` plus a reverse index; `blockedBy` is not used. |
+| 3 | Accepted. The server releases on commit only when every X key reached its target state; the client also releases after its tracker sent the last X flip. |
+| 4 | Accepted. Own-lock pass only for a prefetched lock of the same kind and target, or the chained item step, which is an `ExtendLockId` request (D1 and D3 now agree). A lock is marked "ending" once a change with an X flip was sent. |
+| 5 | Accepted. A swap is two linked records (`LinkedLockId`), granted or denied together. |
+| 6 | Accepted. Moved to `part-locks-2` (open question 7): one shared owner of pie option state with the guard (`PrepareIcons`/`CheckSelectedOption`); `GetIsAvailable` is not wrapped. |
+| 7 | Accepted. Moved to `part-locks-2`: filter the input of `ChoosePartUpWindow.Show(List<BaseItem>, …)`, and reopen the chooser after a denied item step if it has closed. |
+| 8 | Accepted. Mode-change releases ignore the modes the action sets itself and run after the guard. Spike 1.2 lists them. |
+| 9 | Accepted. The away grant releases the requester's own locks on that car. |
+| 10 | Accepted. Leaving the garage drops the pending request and own bookkeeping on the client (D6, task 4.1). |
+| 11 | Accepted. Digests skip a car only while this client holds a lock on it or has an unconfirmed change. |
+| 12 | Accepted. Spike 1.1 includes `InteriorDisassemble`, `InteriorAssemble` and `PartUnMountPartMount`. |
+| 13 | Accepted. A bare `lock-take` replaces `part-claim` for `car-live`, `economy-trades` and `test-drive`; the `economy` and `jobs` areas are in verification. |
+| 14 | Accepted. New size: L ≈ 9–10 sessions with the split of open question 7 (default), plus `part-locks-2` M ≈ 3; XL ≈ 12–13 without the split. |
+
+**Nits:**
+
+| Item | Resolution |
+|---|---|
+| Segment-based ancestry | Accepted (D3, D5, `--check-locks` case). |
+| X order | Accepted (main object first). |
+| `lock_scope = part` drops fluid S keys | Accepted, stated in the risk row. |
+| `[OptionalField]` moot | Accepted as noted; kept for consistency. |
+| `harness-mouse-over` reference | Accepted; D13 no longer refers to it. |
+| `CanTakeOffCarPart` reason | **Rejected.** `TakePartOffLockReason` has no "another player" value, so the game would show one of its own reasons, which would be wrong. The postfix returns `false` without a reason, and the gate shows the mod's message. |
+
+**Simpler path:** added as open question 7 in proposal.md. Default: split. This change ships the locks, the click
+refusal and the hover highlight and label; mount-mode previews, item-chooser filtering and pie greying go to
+`part-locks-2`. Tasks group 12 holds them if the user answers "no".
