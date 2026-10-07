@@ -60,6 +60,7 @@ public class HarnessMod : MelonMod
         if (!Application.runInBackground) Application.runInBackground = true;
         if (mute && AudioListener.volume > 0f) AudioListener.volume = 0f;
 
+        Features.PerfCommands.RecordFrame();
         SceneState.Update();
         CommandChannel.Poll();
 
