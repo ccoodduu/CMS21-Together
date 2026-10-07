@@ -6,3 +6,4 @@ Exception in Harmony patch of method void Inventory::Delete\(Item item\) | NullR
 Exception in Harmony patch of method void CarLoader::ChangeLicencePlateTexture | plate texture hook throws when a car is loaded or deleted (2026-10-07 runs); open | 4 (car details)
 Erreur sending TCP data to \d+ : Unable to write data to the transport connection | server writes to a client a storm has just killed; expected during storms | 11 (storms)
 Error ConnectCallback : No connection could be made because the target machine actively refused it | a client reconnects while a storm has the server stopped; expected during storms K6-K8 | 11 (storms)
+Disconnected from server during loading! | a storm stops or kills the server while a client is still loading the garage; expected during storms K6-K8 | 11 (storms)

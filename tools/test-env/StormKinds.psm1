@@ -252,7 +252,9 @@ function Invoke-K5($Ctx, $Record, $Rng) {
     $id = [int](Get-HarnessStatus $victim).playerId
     $car = @((Send-HarnessCommand -Instance $victim -Verb dump).cars | Where-Object { $_.index -eq $loader })[0]
     $key = @($car.subParts | Where-Object { -not $_.unmounted -and -not $_.blocked } | ForEach-Object { $_.key }) | Select-Object -First 1
-    try { Send-HarnessCommand -Instance $helper -Verb tool-take -Arguments "WheelBalancer" | Out-Null } catch { }
+    if ((Send-HarnessCommand -Instance $helper -Verb dump).tools.WheelBalancer.uid) {
+        try { Send-HarnessCommand -Instance $helper -Verb tool-take -Arguments "WheelBalancer" | Out-Null } catch { }
+    }
     Send-HarnessCommand -Instance $victim -Verb part-claim -Arguments "$loader $key" | Out-Null
     $wheel = (Send-HarnessCommand -Instance $victim -Verb give-group -Arguments "wheel").UID
     Send-HarnessCommand -Instance $victim -Verb tool-put -Arguments "WheelBalancer $wheel" | Out-Null
