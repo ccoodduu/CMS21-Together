@@ -25,6 +25,7 @@ public class HarnessMod : MelonMod
         Log = LoggerInstance;
         Dir = Path.Combine(MelonUtils.UserDataDirectory, "TestHarness");
         Directory.CreateDirectory(Dir);
+        Features.InputGuard.Install(HarmonyInstance);
         foreach (var file in Directory.GetFiles(Dir, "reply_*.json")) File.Delete(file);
         File.Delete(Path.Combine(Dir, CommandChannel.CommandFile));
 
@@ -60,6 +61,7 @@ public class HarnessMod : MelonMod
         if (!Application.runInBackground) Application.runInBackground = true;
         if (mute && AudioListener.volume > 0f) AudioListener.volume = 0f;
         if (Application.isBatchMode && Cursor.lockState != CursorLockMode.None) Cursor.lockState = CursorLockMode.None;
+        Features.InputGuard.Update();
 
         Features.PerfCommands.RecordFrame();
         SceneState.Update();
