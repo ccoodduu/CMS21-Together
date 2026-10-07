@@ -35,6 +35,8 @@ namespace CMS21Together.Logic.Hook
         [HarmonyPrefix]
         public static bool DeleteItemPrefix(Item item)
         {
+            // PartScript.ShowMounted passes null when no Item is selected to mount; the original throws on null.
+            if (item == null) return false;
             if (ToolSync.BlockInventoryCall(item.UID, "Delete", item.ID)) return false;
             if (!ClientScene.IsGarageReady) return true;
             if (Client.Instance.IsConnected && !InventoryHandlers.IgnoreInventoryHooks && !PartTransactions.CaptureDelete(item.ToModItem()))
