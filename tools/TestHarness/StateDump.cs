@@ -149,7 +149,7 @@ public static class StateDump
             var car = new Dictionary<string, object>
             {
                 ["index"] = i,
-                ["placeNo"] = loader.placeNo,
+                ["placeNo"] = string.IsNullOrEmpty(loader.carToLoad) ? -1 : loader.placeNo,
                 ["carToLoad"] = string.IsNullOrEmpty(loader.carToLoad) ? null : loader.carToLoad,
                 ["customerCar"] = loader.customerCar,
                 ["spawnSeq"] = sync?.SpawnSeq ?? 0,
