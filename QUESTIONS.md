@@ -35,7 +35,7 @@ Not questions for the user; open bugs from the first playtest, fixed one by one.
    UIManager is missing while the garage reloads; the refresh is skipped then. `resync-key` sends money changes
    during the reload.
 6. **Car state "not ready"** in the host's bug report while the car was being worked on (`be9b`).
-7. **Version check too strict for a playtest:** every commit changes `dev.N`, so friends must reinstall for
+7. **Version check too strict for a playtest:** **Fixed** (this commit: same version and build kind, e.g. `dev.892` and `dev.894`, join when the protocol hash matches; releases must match exactly; `compat-refusal` proves both).   every commit changes `dev.N`, so friends must reinstall for
    server-only fixes. Proposal: compare the base version and the protocol hash, not the build number.
 
 ## Open — row 17 remote visual feedback (2026-10-07)
