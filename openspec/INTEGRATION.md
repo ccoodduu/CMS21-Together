@@ -34,6 +34,7 @@ part 2. "Owner" defines it; "Users" only call or subscribe.
 | `StateDigestRequest`, `StateDigest`, `StateDetailRequest`, `StateDetail`, `DesyncNotice` | both | 14 (b, c) | — |
 | `BugReportRequest`, `BugReportCollect`, `BugReportResult` | both | 14 (d) | — |
 | `PlayerActivity { PlayerId, State }` (`PlayerActivityState { Kind, CarLoaderID, PartKey, ToolType, ModTool, Progress }`); `PlayerPresenceRecord.Activity` (`[OptionalField]`, never saved) | C→S→same scene | 17 | 6 (roster carries it to late joiners); server drops more than 8/s per client and clears it on scene change |
+| `CarDriveStart { PlayerId, DriveId, Scene, CarLoaderID, CarToLoad, CarBlob, CarBlobVersion }`, `CarDriveState { PlayerId, DriveId, Seq, Payload }` (36-byte `DriveStateCodec`, unreliable, ≤ 15/s, server cap 20/s), `CarDriveStop { PlayerId, DriveId, FinalPose }` | C→S→same scene | 17 (part 2) | 13 (`CarLoaderID` = the away car; a start for a car away with someone else is dropped), 2 (`NewCarDataCodec` blob), 6 (scene relay; running drives sent on scene entry; stopped on scene change and leave). Test track only (no garage driving, spike 8.1); no `CarAwayKind.Driving` |
 
 Rows 12 and 14a add no packets.
 
@@ -85,6 +86,7 @@ row 8's client enum `JoinFailure` and never travel.
 | client | `PartChanges.RemoteChangeApplying/RemoteChangeApplied(loader, body, sub)` (live remote changes only), `PartClaims.ClaimChanged(loader, keys, owner, fromSnapshot)` (added to row 1's code) | 17 | 17 (`PartGhosts`, `BoltReplay`, `ActivityCapture`) |
 | client | `VisualScope.CheckLeak(what)` (called from 1's `PartChangeTracker.MarkDirty` and 4's `CarDetailsSync.MarkDirty`), `CancelLoader` (1's snapshot apply and car delete), `CancelFor` (1's `OnResult`) | 17 | 1, 4 |
 | client | `CarToolActions.LocalWork`, `ToolSync.OwnClaims` (read-only views added to 5b/5a) | 17 | 17 (`ActivityCapture`) |
+| client | `RemoteEngines.Create(carLoader, playerId, loader)` made public (row 6's engine sound prefab for an observer car); `TestDriveSync` reads the track car through `PrepareCarPhysics.Get().CarLoader` | 17 (part 2) | 17 (`RemoteCars`) |
 | Core | `Diagnostics/Redaction` (shared redaction rule, below) | 14 | 12 (`Collect-Logs.ps1` mirrors it) |
 
 Prefix rule on guarded game methods: row 14a's prefixes run at `Priority.First`; every other prefix of this mod on the
@@ -200,7 +202,7 @@ Verbs are globally unique (`Commands.Discover` throws on a duplicate). Existing:
 | 14a | `guard-trace` (spike only), `guard-set`, `guard-allow`, `guard-try`, `guard-log`, `guard-rules` |
 | 14 | `digest-show`, `inv-corrupt`, `digest-hold`, `resync [force]` (5a uses it instead of its former `tool-resync`), `bug-report [list]` |
 | 11 | `perf` (frame time over 10 s, managed and IL2CPP heap, scene, `syncAcked`), `fps-cap <n>` |
-| 17 | `vfx-trace`, `vfx-probe` (spike), `vfx-unscrew`, `vfx-tool`, `vfx-hold`, `vfx-enable`, `vfx-parts`, `vfx-switch`, `vfx-stand`; dump section `visuals` (part 2 adds `drive-*` and `remoteCars`) |
+| 17 | `vfx-trace`, `vfx-probe` (spike), `vfx-unscrew`, `vfx-tool`, `vfx-hold`, `vfx-enable`, `vfx-parts`, `vfx-switch`, `vfx-stand`; dump section `visuals`; part 2: `drive-trace`, `drive-pie`, `drive-probe`, `drive-input`, `drive-input-state`, `drive-stop`, `drive-history`, `drive-codec-check`, `drive-blob`, `drive-ghost-test`, `drive-start`; dump section `remoteCars` (`local`, `cars[]`) |
 
 | PowerShell helper / server command | Owner (first to land) |
 |---|---|
@@ -223,7 +225,7 @@ Scenarios (unique): 7 `server-restart`, `profile-safety`, `rejoin`, `latejoin`, 
 `jobs-restart`; 4 `car-details`, `car-details-latejoin`; 5a `tools-slots`, `tools-race`, `tools-latejoin`;
 5b `tools-car-effects`; 8 `join-ui`, `join-coldstart`, `host-from-game`, `session-admin`; 9 `compat-refusal`, `compat-mods-probe` (run-all: skip; needs real mods copied into A);
 12 `release-smoke` (marked `# run-all: skip`, run after `Install-ReleaseToTestEnv.ps1`); 14a `guard`; 14
-`desync-autofix`, `resync-key`, `bug-report`; 17 `visual-parts`, `visual-activity`, `visual-latejoin`, `visual-screens` (`# needs: graphics`, `# run-all: skip`), `visual-probe` (spike, `# run-all: skip`); 11 `scale-connect`, `soak`, `latejoin-full`, `storm` (all
+`desync-autofix`, `resync-key`, `bug-report`; 17 `visual-parts`, `visual-activity`, `visual-latejoin`, `visual-screens` (`# needs: graphics`, `# run-all: skip`), `visual-probe` (spike, `# run-all: skip`), `drive-track`, `drive-latejoin`, `drive-probe` (spike, `# run-all: skip`); 11 `scale-connect`, `soak`, `latejoin-full`, `storm` (all
 `# run-all: lane 3`), `full-garage-fixture` and `perf-probe` (`# run-all: skip`).
 
 Scale lane and long runs (owner 11, design `multiplayer-soak-and-scale` D1-D9):
