@@ -2,6 +2,23 @@
 
 Newest first. One entry per work session.
 
+## 2026-10-07 (17:00–18:00) — headless tests, release smoke, M7 designs, branch cleanup
+
+- Test games run headless by default (`-Visible` or `CMS21_TEST_VISIBLE=1` to see them; `# needs: graphics` for
+  scenarios that need a window); test servers start hidden. The game moved the Windows cursor through `ProMouse`
+  (its setters are inlined, so the harness stops the move coroutine) and Unity re-centred it on cursor lock; both are
+  off in test games, so the user can use the PC during runs.
+- Daily regression on `main` headless: all game scenarios pass (`car-live`, `economy-trades` flaky in the batch);
+  `server-saves`' window-close check now starts its server minimized.
+- `release-smoke` passes with a real release zip (`0.6.0-dev.878`) installed in lane 1; `Build-Release -Release`
+  dry run passes (refuses without changelog section or tag). M6 now waits only for the user (friend install test,
+  publishing).
+- M7: OpenSpec changes `remote-visual-feedback` (row 17) and `shared-outdoor-scenes` (row 15) are on `main`; agents
+  write their code (no game runs yet). Row 15's car selection uses our own selector; the LvxBetterCarSpawns-based
+  one waits for the user to ask LvxMagick.
+- GitHub cleanup (user): 33 merged branches deleted (kept `main`, `Dev`, `MainMod`, `dev-0.4.x`); 20 local worktrees
+  and 30 local branches removed.
+
 ## 2026-10-07 (16:30–17:00) — row 9 part 2: mod check tuned on the user's mod list
 
 - `main` = `d2b5f8a`: the user's eight mods were loaded in test install A (copied from the real game folder, read
