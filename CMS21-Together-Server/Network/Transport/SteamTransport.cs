@@ -16,6 +16,8 @@ namespace CMS21_Together_Server.Network.Transport
 {
 	public class SteamTransport : SocketManager
     {
+        private const int SteamLoginTimeoutSeconds = 20;
+
         public static SteamTransport Initialize(int port)
         {
             try 
@@ -33,7 +35,11 @@ namespace CMS21_Together_Server.Network.Transport
                 {
                     isConnectedToSteam = true;
                 };
+                Action<Result, bool> onFailure = (result, stillRetrying) =>
+                    Logger.Warn($"Steam login failed: {result}{(stillRetrying ? ", Steam keeps trying" : "")}.");
                 SteamServer.OnSteamServersConnected += onConnected;
+                SteamServer.OnSteamServerConnectFailure += onFailure;
+                var loginTimer = System.Diagnostics.Stopwatch.StartNew();
                 int timeout = 0;
                 
                 if (Program.Config.GsltToken != string.Empty)
@@ -47,7 +53,7 @@ namespace CMS21_Together_Server.Network.Transport
                 }
                 
                 Logger.DebugNoNL("Waiting for Steam Response", "DEBUG");
-                while (timeout < 50 && !isConnectedToSteam)
+                while (timeout < SteamLoginTimeoutSeconds * 10 && !isConnectedToSteam)
                 {
                     SteamServer.RunCallbacks();
                     Thread.Sleep(100);
@@ -57,15 +63,16 @@ namespace CMS21_Together_Server.Network.Transport
                 }
                 Console.WriteLine("");
                 SteamServer.OnSteamServersConnected -= onConnected;
+                SteamServer.OnSteamServerConnectFailure -= onFailure;
                 
                 if (isConnectedToSteam)
                 {
                     ulong steamID = GetServerSteamID();
-                    Logger.Success($"Steam connection established! SteamID: {steamID}");
+                    Logger.Success($"Steam connection established after {loginTimer.Elapsed.TotalSeconds:F1} s! SteamID: {steamID}");
                 }
                 else
                 {
-                    Logger.Warn("Timeout reached. Steam connection could not be established in time.");
+                    Logger.Warn($"Timeout reached. Steam connection could not be established within {SteamLoginTimeoutSeconds} s.");
                     Logger.Warn("Server will continue over DirectIp.");
                     SteamServer.Shutdown();
                     return null;
@@ -135,6 +142,7 @@ namespace CMS21_Together_Server.Network.Transport
                 client.ConnectionType = NetworkType.Steam;
                 client.SteamConnection = connection;
                 client.SteamID = (long)clientID;
+                if (clientID == 0) Logger.Warn($"Client[{client.ID}] connected over Steam without a Steam ID (identity {info.Identity}); its player key identifies it.");
                 Server.SendToClient(Server.WelcomePacket(client.ID), client.ID);
             }
         }

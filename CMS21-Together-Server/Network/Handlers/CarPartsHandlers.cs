@@ -25,7 +25,7 @@ namespace CMS21_Together_Server.Network.Handlers
 
 			string conflict = !OnlyExamines(entry, change) && CarAwayRegistry.Blocks(change.CarLoaderID, (int)clientId, $"change {change.TxId}")
 				? "the car is away"
-				: FindConflict(entry, change);
+				: FindConflict(entry, change, (int)clientId);
 			if (conflict != null)
 			{
 				var reject = new CarPartsChangeResultPacket
@@ -61,7 +61,7 @@ namespace CMS21_Together_Server.Network.Handlers
 				record.Revision = entry.Revision;
 				entry.SubParts[key] = record;
 			}
-			InventoryChanges.Apply(change.InventoryDelta);
+			InventoryChanges.Apply(change.InventoryDelta, (int)clientId);
 
 			CarClaims.ReleaseCommitted((int)clientId, change.CarLoaderID,
 				change.BodyParts.Select(b => PartKeys.Body(b.PartIndex)).Concat(change.SubParts.Select(s => PartKeys.Sub(s.PartIndexPath))));
@@ -93,7 +93,7 @@ namespace CMS21_Together_Server.Network.Handlers
 			return true;
 		}
 
-		private static string FindConflict(CMS21_Together_Core.Data.CarLoaderEntry entry, CarPartsChangePacket change)
+		private static string FindConflict(CMS21_Together_Core.Data.CarLoaderEntry entry, CarPartsChangePacket change, int clientId)
 		{
 			foreach (var precondition in change.Preconditions)
 			{
@@ -108,9 +108,17 @@ namespace CMS21_Together_Server.Network.Handlers
 
 			var inventory = GameDataManager.CurrentState.InventoryState;
 			foreach (long uid in change.InventoryDelta.RemovedItemUids)
-				if (inventory.InventoryItems.All(i => i.UID != uid)) return $"item {uid} is gone";
+				if (inventory.InventoryItems.All(i => i.UID != uid))
+				{
+					if (InventoryChanges.RemovedByOther(uid, clientId)) return $"item {uid} is gone";
+					Logger.Info($"[Cars] Change {change.TxId} removes item {uid}, which the server does not have and no other player took; ignored.");
+				}
 			foreach (long uid in change.InventoryDelta.RemovedGroupUids)
-				if (inventory.InventoryGroupItems.All(g => g.UID != uid)) return $"group {uid} is gone";
+				if (inventory.InventoryGroupItems.All(g => g.UID != uid))
+				{
+					if (InventoryChanges.RemovedByOther(uid, clientId)) return $"group {uid} is gone";
+					Logger.Info($"[Cars] Change {change.TxId} removes group {uid}, which the server does not have and no other player took; ignored.");
+				}
 			return null;
 		}
 
