@@ -23,7 +23,7 @@ function Wait-InGarage([string]$Name) {
 function Wait-Ready([string]$Name) {
     $deadline = (Get-Date).AddSeconds(120)
     do {
-        $r = Cmd $Name car-ready "$loader"
+        $r = try { Cmd $Name car-ready "$loader" } catch { $null }
         if ($r.state -eq "Ready" -and $r.loaded) { return $r }
         Start-Sleep -Milliseconds 500
     } while ((Get-Date) -lt $deadline)
@@ -83,6 +83,7 @@ Check ($candidates.Count -gt 0) "the car has unscrewable parts with bolts ($($ca
 $part = @($candidates | Where-Object { $_.id -match "wheel|rim|tire|caliper|disc" } | Select-Object -First 1)[0]
 if (-not $part) { $part = $candidates[0] }
 $key = $part.key
+$others = @($candidates | Where-Object { $_.key -ne $part.key })
 Write-Host "part: $key ($($part.id), $($part.bolts) bolts)"
 
 # 4.3 Off: A unscrews the part the way a player does; B shows bolts, then the Off ghost, then nothing.
@@ -105,7 +106,8 @@ Wait-Same "mount"
 Cmd $b vfx-hold "on" | Out-Null
 $before = Visuals $b
 Cmd $a part-fast-unmount "$loader $key" | Out-Null
-Wait-Visuals $b "an Off ghost is held" { param($v) @($v.ghostsActive | Where-Object { $_.key -eq $key -and $_.kind -eq "Off" }).Count -eq 1 } | Out-Null
+$held = Wait-Visuals $b "an Off ghost is held" { param($v) @($v.ghostsActive | Where-Object { $_.key -eq $key -and $_.kind -eq "Off" }).Count -eq 1 }
+if ($held) { $Ctx.Result.notes += "Off ghost fade: $(@($held.ghostsActive)[0].fade)" }
 Wait-Same "while the ghost is held" 15
 Check (@((Visuals $b).ghostsActive | Where-Object { $_.key -eq $key }).Count -eq 1) "the ghost is still held after the state matched"
 Cmd $b vfx-hold "off" | Out-Null
@@ -130,9 +132,9 @@ Start-Sleep -Seconds 2
 Wait-Ready $b | Out-Null
 Wait-Same "resync"
 $after = Visuals $b
-$startedBefore = ($before.ghostsStarted | ConvertTo-Json -Compress)
-$startedAfter = ($after.ghostsStarted | ConvertTo-Json -Compress)
-Check ($startedBefore -eq $startedAfter) "B's resync started no ghost ($startedBefore / $startedAfter)"
+# The resync resets the session state, counters included, so no kind may count more than before.
+$grown = @($after.ghostsStarted.PSObject.Properties | Where-Object { $_.Value -gt (Count $before.ghostsStarted $_.Name) } | ForEach-Object { $_.Name })
+Check ($grown.Count -eq 0) "B's resync started no ghost (before $($before.ghostsStarted | ConvertTo-Json -Compress), after $($after.ghostsStarted | ConvertTo-Json -Compress))"
 
 # 4.3 switch off: the change applies without a visual.
 Cmd $b vfx-enable "off" | Out-Null
@@ -146,7 +148,10 @@ Cmd $a part-fast-mount "$loader $key" | Out-Null
 Wait-Quiet "after visuals back on"
 Wait-Same "mount after visuals off"
 
-# 5.2 bolts: A stops halfway; B shows about half the bolts out and the real bolts hidden.
+# 5.2 bolts, on parts not touched yet (a fast mount leaves the bolts unscrewed on the actor): A stops halfway; B shows
+# about half the bolts out and the real bolts hidden.
+$key = $others[0].key
+Write-Host "bolt part: $key ($($others[0].id))"
 Cmd $a vfx-unscrew "$loader $key pause 0.5" | Out-Null
 Wait-Unscrew "paused"
 $bolts = Wait-Visuals $b "about half of the bolts out" { param($v)
@@ -162,9 +167,8 @@ Wait-Quiet "after resume"
 Wait-Same "unmount after resume"
 
 # 5.2 undo: the bolts run back and the part stays mounted for both.
-Cmd $a part-fast-mount "$loader $key" | Out-Null
-Wait-Quiet "after the mount for undo"
-Wait-Same "mount for undo"
+$key = $others[1].key
+Write-Host "undo part: $key ($($others[1].id))"
 Cmd $a vfx-unscrew "$loader $key pause 0.5" | Out-Null
 Wait-Unscrew "paused"
 Wait-Visuals $b "bolt ghosts before the undo" { param($v) @($v.boltsActive | Where-Object { $_.key -eq $key }).Count -eq 1 } 15 | Out-Null

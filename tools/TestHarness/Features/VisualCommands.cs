@@ -156,13 +156,16 @@ public static class VisualCommands
         if (mount != script.IsUnmounted) throw new InvalidOperationException(mount ? $"{key} is already mounted" : $"{key} is already unmounted");
 
         bool blocked = PartClaims.HeldByOther(loader, new[] { key }, out int owner);
+        // A disabled PartScript (seen on headless test games) never refreshes canBeUnmount in its Update (spike 1.3).
+        bool forced = !mount && !script.enabled && !script.canBeUnmount && !script.IsBlocked();
+        if (forced) script.canBeUnmount = true;
         GameScript.Get().IOMouseOverCarLoader = carLoader;
         if (mount) script.ActionMount(false);
         else script.ActionUnMount();
         if (blocked) return new Dictionary<string, object> { ["blocked"] = true, ["owner"] = owner };
 
         unscrew = new Unscrew { Loader = loader, Key = key, Script = script, Mount = mount, PauseAt = pauseAt, Started = Time.time };
-        Note($"unscrew {loader} {key} mount={mount} bolts={script.MountObjects?.Length ?? 0} mode={GameMode.Get()?.currentMode}");
+        Note($"unscrew {loader} {key} mount={mount} forcedCanBeUnmount={forced} partCanUpdate={script.canUpdate} bolts={script.MountObjects?.Length ?? 0} mode={GameMode.Get()?.currentMode}");
         MelonCoroutines.Start(Drive(unscrew));
         return Status(unscrew);
     }
@@ -200,6 +203,60 @@ public static class VisualCommands
             .OrderBy(p => p.Key, StringComparer.Ordinal)
             .Select(p => (object)new { key = p.Key, id = p.Part.id, bolts = p.Part.MountObjects.Length })
             .ToList();
+    }
+
+    [HarnessCommand("vfx-probe")]
+    private static object Probe(string args)
+    {
+        var parts = Args(args);
+        if (parts.Length != 2) throw new ArgumentException("usage: vfx-probe <loader> <key>");
+        var carLoader = CarLoaderPlaces.Get().GetCarLoaderByIndex(int.Parse(parts[0])) ?? throw new ArgumentException($"no car loader {parts[0]}");
+        var script = PartRegistry.Build(carLoader).Sub(parts[1]) ?? throw new ArgumentException($"no part {parts[1]}");
+        var mode = GameMode.Get();
+        return new Dictionary<string, object>
+        {
+            ["id"] = script.id,
+            ["unmounted"] = script.IsUnmounted,
+            ["canBeUnmount"] = script.canBeUnmount,
+            ["partCanUpdate"] = script.canUpdate,
+            ["partEnabled"] = script.enabled,
+            ["blockedNo"] = script.blockedNo,
+            ["skipPartsAwake"] = GameSettings.SkipPartsAwake,
+            ["active"] = script.gameObject.activeInHierarchy,
+            ["mode"] = mode == null ? null : mode.currentMode.ToString(),
+            ["mountUnMountMode"] = mode != null && mode.mountUnMountMode,
+            ["selected"] = PartGhosts.PartRenderers(script).Count,
+            ["renderers"] = script.GetComponentsInChildren<Renderer>(true).ToArray().Select(r => (object)new
+            {
+                name = r.name,
+                type = r.GetIl2CppType().Name,
+                enabled = r.enabled,
+                active = r.gameObject.activeInHierarchy,
+                forceOff = r.forceRenderingOff,
+                layer = r.gameObject.layer,
+                filter = r.GetComponent<MeshFilter>() != null,
+                path = PathTo(script.transform, r.transform),
+            }).ToList(),
+            ["bolts"] = (script.MountObjects ?? new UnhollowerBaseLib.Il2CppReferenceArray<MountObject>(0)).ToArray().Where(m => m != null).Select(m => (object)new
+            {
+                name = m.name,
+                state = Round(m.GetMountState()),
+                unmounted = m.IsUnmounted(),
+                canBeUnmount = m.GetCanBeUnmount(),
+                canAction = m.GetCanAction(),
+                canUpdate = m.canUpdate,
+                reverse = m.reverseMode,
+                renderers = m.renderers?.Length ?? -1,
+            }).ToList(),
+        };
+    }
+
+    private static string PathTo(Transform root, Transform t)
+    {
+        var names = new List<string>();
+        for (var c = t; c != null && c != root; c = c.parent) names.Add(c.name);
+        names.Reverse();
+        return string.Join("/", names);
     }
 
     [HarnessCommand("vfx-switch")]
@@ -291,7 +348,9 @@ public static class VisualCommands
             if (unscrew != job) yield break;
 
             job.State = "bolts done";
-            Note($"bolts done {job.Key}");
+            Note($"bolts done {job.Key} partEnabled={job.Script.enabled}");
+            // PartScript.Update commits the part once its bolts are done, but it does not run while the script is disabled.
+            if (!job.Script.enabled) job.Script.StartCoroutine(job.Mount ? job.Script.ShowMounted() : job.Script.Hide());
             float deadline = Time.time + FinishTimeoutSeconds;
             while (unscrew == job && job.Script.IsUnmounted != !job.Mount && Time.time < deadline) yield return null;
             job.State = job.Script.IsUnmounted == !job.Mount ? "finished" : "part not committed";
@@ -428,6 +487,7 @@ public static class VisualCommands
     {
         if (!tracing) return;
         trace.Add($"{Time.frameCount} {Time.realtimeSinceStartup:F3} {text}");
+        CMS21_Together_Core.Logging.Log.Info($"[VisualTrace] {text}");
         if (trace.Count > TraceLimit) trace.RemoveAt(0);
     }
 

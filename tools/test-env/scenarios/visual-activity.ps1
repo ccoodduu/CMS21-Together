@@ -114,8 +114,10 @@ Cmd $a vfx-tool "OBD $loader" | Out-Null
 Wait-A "examining before the travel" { param($p) $p.activity.kind -eq "Examine" } | Out-Null
 Cmd $a vfx-tool "none" | Out-Null
 Cmd $a travel "Junkyard" | Out-Null
+Wait-HarnessStatus -Instance $a -TimeoutSec 120 -What "A in the junkyard" -Condition { param($s) $s.scene -ne "garage" -and $s.playable -and $s.connectionValid } | Out-Null
 Wait-A "no activity after A left the garage" { param($p) $p.activity.kind -eq "None" } 60 | Out-Null
 Cmd $a travel "Garage" | Out-Null
+Start-Sleep -Seconds 3
 Wait-InGarage $a
 Wait-Same "after the trip"
 
