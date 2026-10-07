@@ -112,7 +112,6 @@ namespace CMS21Together
 			if (Client.Instance.IsConnectionValid) Logic.Visuals.ActivityCapture.Update();
 			Logic.Visuals.VisualScope.Update();
 			Logic.Driving.DriveCapture.Update();
-			Logic.Driving.RemoteCars.Update();
 			ConnectionStatus.Update();
 			ServerWatchdog.Update();
 			LocalServerHost.Update();
@@ -128,7 +127,10 @@ namespace CMS21Together
 			ThreadManager.UpdateThread();
 		}
 
-		public override void OnLateUpdate() { }
+		public override void OnLateUpdate()
+		{
+			if (isModInitialized) Logic.Driving.RemoteCars.Update();
+		}
 
 		public override void OnGUI()
 		{

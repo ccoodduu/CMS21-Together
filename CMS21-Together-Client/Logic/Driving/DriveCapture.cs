@@ -151,9 +151,11 @@ public static class DriveCapture
 
 	public static Transform BodyOf(BaseCarPhysics car)
 	{
+		var root = car.CarLoader == null ? null : car.CarLoader.GetRootTransform();
+		var body = car.rigidBody;
+		if (root != null && root && body != null && body && root.IsChildOf(body.transform)) return root;
 		var model = car.carModel;
 		if (model != null && model) return model;
-		var root = car.CarLoader == null ? null : car.CarLoader.GetRootTransform();
 		return root != null && root ? root : car.transform;
 	}
 

@@ -120,6 +120,7 @@ public static class RemoteCars
 		car.Stopped = true;
 		if (car.Engine?.Sound != null && car.Engine.Sound) Object.Destroy(car.Engine.Sound);
 		car.Engine = null;
+		if (car.Root != null && car.Root && (car.Holder == null || !car.Holder || !car.Root.IsChildOf(car.Holder.transform))) Object.Destroy(car.Root.gameObject);
 		if (car.Holder != null && car.Holder) Object.Destroy(car.Holder);
 		car.Holder = null;
 		car.Root = null;
@@ -236,6 +237,7 @@ public static class RemoteCars
 	{
 		car.Root = car.Loader.GetRootTransform();
 		if (car.Root == null || !car.Root) car.Root = car.Holder.transform;
+		if (!car.Root.IsChildOf(car.Holder.transform)) car.Root.SetParent(car.Holder.transform, true);
 		var bodies = car.Holder.GetComponentsInChildren<Rigidbody>(true);
 		foreach (var body in bodies)
 		{
@@ -271,6 +273,7 @@ public static class RemoteCars
 		for (int i = 0; i < handles.Length; i++)
 		{
 			if (handles[i] == null || !handles[i]) continue;
+			if (!handles[i].transform.IsChildOf(car.Root)) handles[i].transform.SetParent(car.Root, true);
 			car.Wheels.Add(handles[i].transform);
 			car.WheelRest.Add(Quaternion.Inverse(rootRotation) * handles[i].transform.rotation);
 			car.WheelSteers.Add(i < 2);
