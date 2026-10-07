@@ -182,7 +182,7 @@ public static class StateDump
                 car["subParts"] = sub.OrderBy(s => s.Key, StringComparer.Ordinal).Select(s => new
                 {
                     key = s.Key,
-                    id = s.PartId,
+                    id = s.EffectiveId,
                     unmounted = s.Unmounted,
                     condition = Round(s.Condition),
                     quality = s.Quality,

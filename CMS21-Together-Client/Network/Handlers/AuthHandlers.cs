@@ -4,6 +4,7 @@ using CMS21_Together_Core.Data.Enum;
 using CMS21_Together_Core.Logging;
 using CMS21_Together_Core.Network;
 using CMS21_Together_Core.Network.Packets;
+using CMS21_Together_Core.Data.Compatibility;
 using CMS21Together.Compatibility;
 using CMS21Together.Data;
 using CMS21Together.Logic.Player;
@@ -50,7 +51,7 @@ public static class AuthHandler
 
 	private static string WelcomeMismatch(ConnectPacket welcome)
 	{
-		if (welcome.modVersion != ClientVersion.Current)
+		if (!ModVersions.Compatible(welcome.modVersion, ClientVersion.Current))
 			return $"This server runs Together {welcome.modVersion}; you have {ClientVersion.Current}.";
 		if (welcome.protocolHash != LocalEnvironment.ProtocolHashValue)
 			return $"You and the server both run Together {welcome.modVersion}, but the builds differ (server protocol {welcome.protocolHash ?? "none"}, yours {LocalEnvironment.ProtocolHashValue}). Install the host's build.";

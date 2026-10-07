@@ -77,6 +77,9 @@ the game, click **Multiplayer** in the main menu.
   back to the garage always loads the shared garage from the server.
 - **Test drive together:** players who are on the test track at the same time see each other's car drive (it
   appears a few seconds after you arrive). Cars pass through each other and through players.
+- **See each other work:** when another player takes a part off or puts it on, you see the bolts turn and the part
+  slide off or on, and their avatar holds the tool. This is only a picture of what they do: the change itself
+  arrives as before. Turn it off with `RemoteVisuals = false` in `UserData\MelonPreferences.cfg`.
 - **DLC:** players may own different DLC. DLC cars and parts that not every connected player owns are blocked while
   connected.
 - **Keys:** **F7** reloads the garage from the server, **F8** saves a bug report, **F9** opens the session panel.

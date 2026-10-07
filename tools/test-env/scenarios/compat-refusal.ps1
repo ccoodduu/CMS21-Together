@@ -128,6 +128,21 @@ $r = Join-Refused "VersionMismatch" "mod version 0.0.1"
 Check ($r.Status.lastDisconnect.message -match "0\.0\.1" -and $r.Status.lastDisconnect.message -match "you have") "version message names both versions: $($r.Status.lastDisconnect.message)"
 Send-HarnessCommand -Instance $b -Verb mp-fake-version -Arguments "reset" | Out-Null
 
+# Playtest finding 7: another build number of the same version and build kind joins when the protocol matches, so
+# server-only fixes need no reinstall; a release-style version without the build label is still refused.
+$own = [regex]::Match((Get-Content -LiteralPath (Join-Path $Ctx.ServerDir "Log\Latest.txt") -Raw), "Together (\d+\.\d+\.\d+)-(\w+)[^ ]* \(protocol").Groups
+Check ($own.Count -eq 3 -and $own[1].Success) "the server log names A's version with a build label"
+Send-HarnessCommand -Instance $b -Verb mp-fake-version -Arguments "$($own[1].Value)-$($own[2].Value).9999" | Out-Null
+$mark = Get-ServerLogMark
+Send-HarnessCommand -Instance $b -Verb mp-join -Arguments $address | Out-Null
+Wait-InGarage $b
+Write-Host "ok: B joins as $($own[1].Value)-$($own[2].Value).9999"
+Send-HarnessCommand -Instance $b -Verb to-menu | Out-Null
+Wait-Menu $b
+Send-HarnessCommand -Instance $b -Verb mp-fake-version -Arguments $own[1].Value | Out-Null
+$r = Join-Refused "VersionMismatch" "release version $($own[1].Value)"
+Send-HarnessCommand -Instance $b -Verb mp-fake-version -Arguments "reset" | Out-Null
+
 Compat $b "protocol-sent x"
 $r = Join-Refused "VersionMismatch" "sent protocol x"
 Check ($r.Status.lastDisconnect.message -match "builds differ") "protocol message says the builds differ"

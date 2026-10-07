@@ -37,7 +37,7 @@ namespace CMS21_Together_Server.Network.Handlers
 					if (entry.BodyParts.TryGetValue(record.PartIndex, out var stored)) reject.BodyParts.Add(stored);
 				foreach (var record in change.SubParts)
 					if (entry.SubParts.TryGetValue(CarSubPartIdentity.BuildKey(record.PartIndexPath), out var stored)) reject.SubParts.Add(stored);
-				reject.RestoreUids.AddRange(change.InventoryDelta.RemovedItemUids.Concat(change.InventoryDelta.RemovedGroupUids));
+				reject.RestoreUids.AddRange(InventoryChanges.StillHeld(change.InventoryDelta));
 				Server.SendToClient(reject, (int)clientId);
 				Logger.Info($"[Cars] Change {change.TxId} from client {clientId} on loader {change.CarLoaderID} rejected: {conflict}");
 				return;

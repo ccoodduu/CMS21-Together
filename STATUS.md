@@ -2,6 +2,36 @@
 
 Newest first. One entry per work session.
 
+## 2026-10-07 (21:00–22:00) — playtest findings 3, 4 and 5 fixed
+
+- Lane 2. Each fix has a scenario that fails without it; with the fixes, the three scenarios and the smoke set pass.
+  - `c369763` tire desync: the game stores a tire's tuned id in two ways and TunePart also rewrites a rim's or
+    tire's id, so a wheel with another rim or tire made later records fail to resolve. Digests compare the effective
+    id; the car-details wheel apply keeps the rim and tire ids (`car-wheel-swap`; harness `wheel-parts`,
+    `wheel-mount`).
+  - `f9557c0` a rejected mount ("item ... is gone") gave the loser back the other player's item; now only items the
+    server still has (`car-mount-race`; harness `part-twins`, `part-fast-mount ... [itemUid]`).
+  - `c81fd05` world-state packets during a garage reload threw in the UI refresh (`resync-key`). Packet handler
+    errors now log their stack trace.
+
+## 2026-10-07 (20:30–22:00) — driving merged, part-locks drafted and reviewed, harness guards
+
+- `main` = `d85243c`. Row 17 part 2 (remote driving on the test track) merged (`310cb3a`): `drive-track`,
+  `drive-latejoin` and the smoke set pass on lane 1; the other player's car appears after about 10 s (QUESTIONS row
+  17 #8); garage driving does not exist in the game (#7).
+- Row 18 `part-locks` (strict server-granted locks on connected parts, fluids and the car; refusal at click time and
+  on hover) drafted from the playtest, reviewed by a second agent (3 blockers, 7 majors, all resolved in the
+  documents), merged as documents (`b9bd13a`); implementation started on lane 1 with the defaults of QUESTIONS
+  "Open — row 18".
+- Harness: test games never open URLs and headless ones get no UI navigation (`b6779dc`; Enter in another window
+  opened the CMS 2026 page); Steam stats and achievements are blocked in test games (`0ee1ba0`; four were unlocked
+  on the user's account). `visual-lift` (playtest finding 1) passes apart from a lift state name, fixed (`07faf20`).
+- Row 15 (shared outdoor scenes): all two-player scenarios and the smoke set pass on lane 2; `outdoor-scale` on lane
+  3 waits for free lanes, then merge.
+- Playtest findings 3–5 (tire tunedId desync, rollback after a rejected mount, WorldState error on F7) are fixed by
+  an agent on lane 2. The user's game is restored (mods back, Together moved to `Desktop\CMS21-Together-removed`;
+  the save was unchanged).
+
 ## 2026-10-07 (19:00–21:15) — row 17 part 2 (driving) on `change/remote-driving`
 
 - Spike 8.1: the pie option `car_drive` only opens the map; there is no driving inside the garage, so garage driving
