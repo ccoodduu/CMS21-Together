@@ -72,13 +72,11 @@ public static class PartApplier
 		return true;
 	}
 
-	// The game's own ShowMounted also deletes the inventory item, adds XP and switches the game mode.
+	// The game's own ShowMounted also deletes the inventory item, adds XP and switches the game mode. It mounts the
+	// unmountWith members only when a group item is mounted; here the members follow their own records.
 	private static IEnumerator ShowMounted(PartScript script)
 	{
 		script.IsUnmounted = false;
-		if (script.ShouldUnmountWith())
-			foreach (var member in script.unmountWith)
-				member.MountByGroup(true);
 		yield return new WaitForSeconds(MountSettleSeconds);
 		if (script == null) yield break;
 

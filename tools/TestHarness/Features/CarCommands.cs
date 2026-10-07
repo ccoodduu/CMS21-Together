@@ -208,10 +208,19 @@ public static class CarCommands
         var parts = (args ?? "").Split(new[] { ' ' }, StringSplitOptions.RemoveEmptyEntries);
         var carLoader = Loader(parts[0]);
         var registry = PartRegistry.Build(carLoader);
-        string key = parts.Length > 1 ? parts[1] : registry.SubKeys.First(k => !registry.Sub(k).IsUnmounted && registry.Sub(k).GetUnmountWith().Count == 0 && !registry.Sub(k).IsBlocked());
+        bool group = parts.Length > 1 && parts[1] == "group";
+        string key = parts.Length > 1 && !group ? parts[1] : registry.SubKeys.First(k =>
+        {
+            var part = registry.Sub(k);
+            int members = part.GetUnmountWith().Count;
+            return !part.IsUnmounted && !part.IsBlocked() && (group ? members > 0 && part.GetUnmountWith().ToArray().All(m => !m.IsUnmounted) : members == 0);
+        });
         var script = registry.Sub(key) ?? throw new ArgumentException($"no part {key}");
+        var memberKeys = script.GetUnmountWith().ToArray()
+            .Select(m => registry.TryGetSubPath(m, out var path) ? CMS21_Together_Core.Network.Packets.PartKeys.Sub(path) : null)
+            .Where(k => k != null).ToList();
         script.FastUnmount();
-        return new Dictionary<string, object> { ["key"] = key, ["id"] = script.id };
+        return new Dictionary<string, object> { ["key"] = key, ["id"] = script.id, ["members"] = memberKeys };
     }
 
     [HarnessCommand("part-corrupt")]

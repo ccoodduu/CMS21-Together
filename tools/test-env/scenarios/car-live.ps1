@@ -95,6 +95,34 @@ $same = Wait-Same "mount"
 Check ($same[0].unmounted -eq $readyA.unmounted) "A's part is mounted again ($($same[0].unmounted))"
 Check ($same[0].stateHash -eq $same[1].stateHash) "B sees A's mount ($($same[0].stateHash) / $($same[1].stateHash))"
 
+# Soak 2026-10-07 (cars:1 desync): A unmounts a part with unmountWith members (the members come off with it), B
+# mounts only that part, as a player does with a single new part. The members must stay unmounted on A too; the
+# remote apply used to mount them along with it.
+$beforeGroup = $same[0].unmounted
+$group = Send-HarnessCommand -Instance $a -Verb part-fast-unmount -Arguments "$loader group"
+$members = @($group.members)
+Write-Host "A unmounts $($group.key) ($($group.id)) with members $($members -join ', ')"
+$same = Wait-Same "group-unmount"
+Check ($same[0].unmounted -eq $beforeGroup + 1 + $members.Count) "A's part and its $($members.Count) members are unmounted ($beforeGroup -> $($same[0].unmounted))"
+Check ($same[0].stateHash -eq $same[1].stateHash) "B sees the group unmount ($($same[0].stateHash) / $($same[1].stateHash))"
+$mark = Get-ServerLogMark
+Send-HarnessCommand -Instance $b -Verb part-fast-mount -Arguments "$loader $($group.key)" | Out-Null
+# Read A as soon as the mount arrives: the server's desync repair would otherwise resend the members a few seconds later.
+$deadline = (Get-Date).AddSeconds(15)
+do {
+    Start-Sleep -Milliseconds 250
+    $ra = Send-HarnessCommand -Instance $a -Verb car-ready -Arguments "$loader"
+} while ($ra.unmounted -eq $beforeGroup + 1 + $members.Count -and (Get-Date) -lt $deadline)
+Check ($ra.unmounted -eq $beforeGroup + $members.Count) "A applies B's mount of the part alone ($($beforeGroup + 1 + $members.Count) -> $($ra.unmounted), expected $($beforeGroup + $members.Count))"
+$same = Wait-Same "group-leader-mount"
+Check ($same[1].unmounted -eq $beforeGroup + $members.Count) "B mounted only the part, its members stay unmounted on B ($($same[1].unmounted))"
+Check ($same[0].unmounted -eq $same[1].unmounted -and $same[0].stateHash -eq $same[1].stateHash) "A keeps the members unmounted after B's mount (A $($same[0].unmounted) $($same[0].stateHash) / B $($same[1].unmounted) $($same[1].stateHash))"
+foreach ($member in $members) { Send-HarnessCommand -Instance $b -Verb part-fast-mount -Arguments "$loader $member" | Out-Null }
+$same = Wait-Same "group-members-mount"
+Check ($same[0].unmounted -eq $beforeGroup -and $same[0].stateHash -eq $same[1].stateHash) "B mounts the members and both match ($($same[0].unmounted), $($same[0].stateHash) / $($same[1].stateHash))"
+$desync = Get-ServerLogLines | Select-Object -Skip $mark | Select-String "\[Desync\] cars:$loader .* differ"
+Check (-not $desync) "the server found no part desync during the group steps ($($desync.Line))"
+
 # D8 queue: A unmounts right after its own baseline, while B is still loading the car; B applies the queued change
 # once its snapshot is in. car-hold-snapshot keeps B loading for 8 s; a second load of the same car is too fast otherwise.
 Send-HarnessCommand -Instance $a -Verb car-delete -Arguments "$loader" | Out-Null
