@@ -1,4 +1,5 @@
 # run-all: skip
+# areas: tools
 # Tool move probe (instance A only): move each movable tool to a few places before anything else happens.
 param($Ctx)
 

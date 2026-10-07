@@ -1,3 +1,4 @@
+# areas: placement, connect, persistence
 # sync-car-placement-and-lifts late join and restart: A alone spawns three cars, puts car 0 on lift 1 and raises it to
 # Up, moves car 1 to Entrance3 and parks car 2. B joins and must see the same placement; B lowers the lift one step.
 # Then the server is saved, killed and restarted; after both reconnect, the placement equals the state before.

@@ -1,3 +1,4 @@
+# areas: connect, hosting
 # Joining with readable failures: unreachable server, wrong version, invalid input, server full, kick; the server
 # reports its settings, the join panel and the failure message render (screenshots), command-line overrides work.
 param($Ctx)

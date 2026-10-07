@@ -1,3 +1,4 @@
+# areas: connect, persistence
 # session-persistence-and-rejoin 7.5 (and 4.2): A connects; B takes A's player key and connects. B must be refused
 # with the duplicate reason and stay in the menu while A stays in the session. With its own key B then joins normally.
 param($Ctx)

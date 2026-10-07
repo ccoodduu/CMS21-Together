@@ -1,3 +1,4 @@
+# areas: economy, cars
 # economy-audit 7.2: Trades ask the server first; the effect and the money or scrap change happen once for everyone.
 # Car sale (refused while B works on the car, a race of two sellers, a job car), skill reset, scrapping, scrap per
 # condition, the quality upgrade (and too little scrap), license plates (and too little money), a barn map, and crates
@@ -203,10 +204,10 @@ else {
     $mark = Get-ServerLogMark
     Send-HarnessCommand -Instance $b -Verb econ-map-travel -Arguments "Barn" | Out-Null
     Check ([bool](Economy-Line $mark "TravelFee\(7\) money")) "the server applied the barn trip"
-    Wait-Shared "after the barn trip" { param($d) $d.stats.barns -eq $barns } | Out-Null
     try { Wait-HarnessStatus -Instance $b -TimeoutSec 120 -What "B in the barn" -Condition { param($s) $s.scene -ne "garage" -and $s.playable } | Out-Null } catch { }
     Send-HarnessCommand -Instance $b -Verb travel -Arguments "Garage" | Out-Null
     Wait-InGarage $b
+    Wait-Shared "after the barn trip" { param($d) $d.stats.barns -eq $barns } | Out-Null
 }
 
 # Crates (upstream #94).

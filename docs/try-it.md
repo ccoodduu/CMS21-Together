@@ -48,19 +48,27 @@ time. In a session, **F9** shows the players with their ping, your Steam friends
 
 ## What works
 
-- Joining a running server, also late; everyone loads the same garage.
+- Joining a running server, also late; leaving and rejoining; everyone loads the same garage.
 - Shared money, XP, level, scrap and skills; shop, warehouse and inventory; garage upgrades.
-- Seeing each other walk around, with name tags; spawning and deleting cars in the garage.
+- Seeing each other walk around, with name tags; sitting in cars and starting engines.
+- Working on cars together: parts, fluids, wheels, paint, tint, lifts, moving cars, parking, engine crane.
+- Orders and jobs, test drive, test path and dyno, and the workshop machines and car tools.
+- Trips to the junkyard, barns, auction and car salon; bought cars go to the shared parking.
+- **F7** reloads the garage from the server if something looks wrong.
 
 ## Not yet
 
-Working on cars (parts, fluids, wheels, paint), lifts and parking, orders and jobs, workshop machines, and trips to
-the junkyard, barn or auction are not shared yet. While connected, the game refuses them with "... is not supported
-in multiplayer yet", so the garages cannot drift apart.
+Driving around, the race tracks, tuning, bonus parts, building a new engine, the showroom and the separate Parking
+scene are not shared yet. While connected, the game refuses them with "... is not supported in multiplayer yet", so
+the garages cannot drift apart. The junkyard, barns and auction are each player's own (not shared).
 
 ## Logs for a bug report
 
-- Game: `MelonLoader\Latest.log` (earlier runs in `MelonLoader\Logs\`).
-- Server: `Log\Latest.txt` in the server folder (earlier runs: `Log\Log_<date>.txt`).
+- In the game: press **F8**. The zip is in `UserData\CMS21Together\BugReports\`; the host also sends the server's
+  `BugReports\<id>.zip`.
+- After a crash: double-click `Collect-Logs.bat` in the game folder (or in the server folder). The zip lands on your
+  Desktop.
+- By hand: `MelonLoader\Latest.log` (earlier runs in `MelonLoader\Logs\`) and the server's `Log\Latest.txt`.
 
-Send both, with what you did, what you expected, what happened and roughly when.
+Send them with what you did, what you expected, what happened and roughly when. More in `docs/bug-reports.md` on
+the project's GitHub page.

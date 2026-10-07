@@ -1,3 +1,4 @@
+# areas: details, cars, connect
 # sync-car-details: A spawns a car; B gets A's details snapshot (fluids, wheels, alignment, tuning, paint, cosmetics,
 # plates, info). A changes fluids, alignment, mileage, dust and a plate locally; B follows within a few seconds. B then
 # leaves and rejoins and still has A's details (late join through the car-details snapshot).

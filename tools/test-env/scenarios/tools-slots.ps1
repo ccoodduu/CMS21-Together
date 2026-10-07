@@ -1,3 +1,4 @@
+# areas: tools
 # sync-workshop-machines: each machine is loaded by A and changed or emptied by B; after every step both dumps have the
 # same tools, inventory and toolPositions. Covers the balancer lock (refused take, release on cancel and disconnect),
 # an item left on the lathe by a player who leaves, the engine stand (angle, one unmounted part), tool positions,

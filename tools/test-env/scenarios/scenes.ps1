@@ -1,3 +1,4 @@
+# areas: presence
 # Scene tracking: who is where, avatars only in the same scene, leaving the garage and coming back is a late join,
 # results sent while leaving reach the return snapshot. (Car spawn while away needs sync-car-parts' car verbs.)
 param($Ctx)

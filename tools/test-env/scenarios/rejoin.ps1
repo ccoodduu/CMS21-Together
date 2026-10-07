@@ -1,3 +1,4 @@
+# areas: persistence, presence, connect
 # session-persistence-and-rejoin 7.2 (and 4.1, 4.3, 4.4): A and B connect; A changes the shared stats and walks to
 # another spot; A goes to the menu and reconnects. A must come back at that spot, with the same player key (created
 # once in UserData\CMS21Together\player.json), and A's and B's stats and inventory must be equal.

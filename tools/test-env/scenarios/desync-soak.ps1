@@ -1,4 +1,5 @@
 # run-all: skip
+# areas: resync, parts, economy
 # desync-detection-and-resync task 2.6 false-alarm check: A and B work on one car for 10 minutes (unmount/mount on
 # alternating clients, scrap/XP changes, B with 250 ms incoming latency) while the server compares digests every 5 s;
 # no desync may be confirmed.

@@ -1,3 +1,4 @@
+# areas: persistence, presence
 # session-persistence-and-rejoin 7.4 (and 5.3): A and B connect and change the shared stats, A walks to another spot,
 # B leaves (the server saves). The server is killed with A in the garage: A must reach the menu within 12 s. After a
 # restart both reconnect and get the state and A's position from before the kill. Then "stop" with both connected

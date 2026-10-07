@@ -1,4 +1,5 @@
 # run-all: skip
+# areas: placement
 # Runtime spike for sync-car-placement-and-lifts group 1 (docs/spikes/car-placement.md "Still needs a runtime check"):
 # A alone, connected, with the placement trace on. Records lift mapping, lift movement, the quiet place apply, the
 # vanilla ChangeCarPos coroutine, park/unpark order, carsOnParking access and the NewCarData codec round trip.

@@ -1,3 +1,4 @@
+# areas: hosting, connect
 # Session admin over DirectIP: the server has a password and an admin key. A joins with both and is admin; B is
 # refused without and with a wrong password, then joins; toasts, the player list with ping, a refused kick from B
 # and A kicking B (B in the menu with "kicked", A told "was kicked"); B rejoins with the remembered password.

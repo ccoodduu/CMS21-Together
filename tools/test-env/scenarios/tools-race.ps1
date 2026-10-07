@@ -1,3 +1,4 @@
+# areas: tools
 # sync-workshop-machines races, made deterministic with tool-hold (incoming tool packets, and for the shared wheel also
 # inventory packets, are buffered, so both players act on a stale view): two puts on the tire changer, two takes, the
 # same wheel on two machines, two balancer minigames, and two take-offs of the same engine. The server decides; no item

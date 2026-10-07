@@ -1,3 +1,4 @@
+# areas: presence, connect
 # The reported bug: a player who joins late must see a player who stands still. A connects and never moves,
 # B connects; both see the other's avatar where the other stands, with names; B leaves and A's roster empties;
 # B comes back and both see each other again.

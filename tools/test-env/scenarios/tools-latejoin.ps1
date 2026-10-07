@@ -1,3 +1,4 @@
+# areas: tools, connect, persistence, smoke
 # sync-workshop-machines late join, own save, return and restart: A alone loads the machines (wheel on the changer,
 # balanced wheel on the balancer with the minigame open, rotated engine with one part off, welder at a lifter). B joins
 # and must see the same. B's own save then puts a battery on its charger and B resyncs: the charger is empty again and
