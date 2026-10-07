@@ -135,6 +135,7 @@ namespace CMS21_Together_Server.Network.Transport
                 client.ConnectionType = NetworkType.Steam;
                 client.SteamConnection = connection;
                 client.SteamID = (long)clientID;
+                if (clientID == 0) Logger.Warn($"Client[{client.ID}] connected over Steam without a Steam ID (identity {info.Identity}); its player key identifies it.");
                 Server.SendToClient(Server.WelcomePacket(client.ID), client.ID);
             }
         }
