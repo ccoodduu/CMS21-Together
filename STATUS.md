@@ -2,6 +2,25 @@
 
 Newest first. One entry per work session.
 
+## 2026-10-07 (11:10–14:00) — playtest build; row 11 runs with four players; two inventory bugs fixed
+
+- Playtest build for the user (Steam join): `0.6.0-dev.846` zips with a Danish quick start
+  (`docs/playtest-quickstart-da.md`, also in the client zip) in `Desktop\CMS21-Together-playtest`.
+- `main` = `4529315` after a full batch regression on both lanes (46 passed, about 30 min) and lane 3:
+  - row 11: lane 3 (A–D against `Server3`) works. `scale-connect` (joins 5.5–17 s), `storm` K1–K8 and
+    `latejoin-full` (about 7.5 s to playable with a full garage and parking, snapshot 0.75 MB) pass.
+  - fixed, found by lane 3: (1) the inventory digest counted changes still held in an open part transaction, so the
+    server resent the inventory, the client wiped its own new item and then sent it to everyone else; (2) live
+    inventory packets that arrived during a full inventory sync were wiped by the queued snapshot (could hit every
+    late join). Live inventory packets are now held during a full sync and replayed by UID afterwards.
+  - fixed: our `Inventory.Delete` prefix threw on `Delete(null)` when the game mounts with nothing selected. The
+    `DeleteCar` error at game quit is vanilla (`CarLoader.OnDestroy` after `GameManager` is gone) and harmless; the
+    plate-texture error was already fixed on 2026-10-06.
+  - harness: `car-spawn` takes a place (`auto` = first free), like the game's spawn; scenario errors name the script
+    line.
+- Running: a 15-minute soak with four players. Waits for the user: the long 4-hour soak (QUESTIONS.md), the Steam
+  playtest.
+
 ## 2026-10-07 — row 11 (soak and scale) groups 1, 4–6 in code, waiting for game runs
 
 - Branch `change/soak-and-scale`. In code, not run (both lanes were busy with the regression): lane 3 (A–D,

@@ -9,7 +9,8 @@ by a friend from a release zip and joinable without typing IDs by hand.
 M0–M2 done; M3 done in code (rows 3, 4, 13 merged). M4: rows 5a, 5b, 6 part 2, 8 part 2 and 10 merged (2026-10-06 evening;
 the engine stand of row 5a is a hand check). The M2 and M3 playtests are the user's. The guard is open for them (2026-10-07).
 M4 is done in code (car purchases merged 2026-10-07; barn, salon and auction purchases are hand
-checks). M5: rows 7 and 14d done; row 11 has its metrics, the rest (lane 3, soak, storms) is in progress. M6: row 12
+checks). M5: rows 7 and 14d done; row 11 runs with four players (storms and full-garage late join green); the soak runs
+and the long soak waits for the user. M6: row 12
 part 2 docs merged; the release itself waits for the user. Two test lanes can run in parallel since the pagefile was
 raised (commit limit 64 GB); until the user answers QUESTIONS.md, one lane at a time because of Claude Code's memory
 guard.
