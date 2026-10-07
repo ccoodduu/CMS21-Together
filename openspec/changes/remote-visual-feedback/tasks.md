@@ -8,7 +8,8 @@ same commit. Every scenario carries `# areas:` (new areas `visuals`, `driving`, 
 
 ## 1. Spikes: work visuals
 
-- [ ] 1.1 Static decompile (setup in `docs/spikes/native-decompile.md`) of `CarLoader.SwitchCarPart(CarPart, bool)`
+- [x] 1.1 **Done (2026-10-07):** `docs/spikes/remote-visuals.md` (side effects per method), design.md "Spike results"
+      (D3 door route, dissolve, D4 bolt formula and speed). Static decompile (setup in `docs/spikes/native-decompile.md`) of `CarLoader.SwitchCarPart(CarPart, bool)`
       (coroutine) and `SwitchCarPart(CarPart, bool, bool)`, `PartScript.ShowMountAnimation` and its LeanTween lambda,
       `PartScript.GetUnmountDir`/`CalcUnmountDir`, `TweenHelper.TweenAlphaDissolve`, `MountObject.Update`/`Action`/
       `SetPosition` (bolt speed per second, what `mountState` runs between), `ToolsManager.Use(ToolType)` and
@@ -16,7 +17,8 @@ same commit. Every scenario carries `# areas:` (new areas `visuals`, `driving`, 
       `docs/spikes/remote-visuals.md` with a side-effect list per method (inventory, money, XP, mode, sound, state
       fields). Done when every method above has its side effects listed, and D3 (dissolve usable on a ghost, door swing
       route) and D4 (bolt speed) name the answer.
-- [ ] 1.2 Door, hood and trunk route: if 1.1 shows `SwitchCarPart(part, instant: false, switched)` has no inventory,
+- [x] 1.2 **Done (2026-10-07):** static: ghost swing (the animated call keeps `InProgress` for 1 s and can leave
+      `Switched` inverted), D3 updated; the route needs no game run. Door, hood and trunk route: if 1.1 shows `SwitchCarPart(part, instant: false, switched)` has no inventory,
       money, XP or mode side effects, confirm it in a game run (`vfx-trace` on, A opens and closes the hood on loader 0,
       B applies the change with the animated call: B's `stats`, `inventory` and game mode unchanged, no `[Visuals]
       state leak`); else record the ghost swing. Done when D3 states one route and the reason.
