@@ -1,3 +1,4 @@
+# areas: cars, connect
 # sync-car-parts DLC rule: a car that needs a DLC is only shared when every connected player owns that DLC (DLC ids
 # are positions in the game's DLC list). A connects alone and claims the DLC, so its spawn request is accepted; once
 # B joins without it, the same request is refused and A gets CarSpawnRejected. Requests are sent without loading the

@@ -1,4 +1,5 @@
 # run-all: skip
+# areas: presence
 # Which engine audio clips a client has loaded before and after starting an engine (for the remote engine sound).
 param($Ctx)
 

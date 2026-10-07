@@ -1,3 +1,4 @@
+# areas: resync, parts
 # desync-detection-and-resync (c): B's car part state is corrupted locally (no packet), B resyncs (the F7 path) and
 # the garage reload brings B back to the server's state; a second resync right away is refused by the cooldown.
 param($Ctx)

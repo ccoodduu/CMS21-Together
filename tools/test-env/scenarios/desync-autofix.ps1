@@ -1,3 +1,4 @@
+# areas: resync, parts
 # desync-detection-and-resync (b): both clients match the server on every section; B's car and inventory are then
 # changed locally without a packet (part-corrupt, inv-corrupt); the server confirms each mismatch over two rounds,
 # writes a diff record and resends the section to B, after which B matches A again.

@@ -1,3 +1,4 @@
+# areas: guard, smoke
 # Multiplayer feature guard: while connected, features that do not sync yet are refused with a message and logged
 # (windows, modes, scenes, pie options); LogOnly lets them through with a "would block" entry; after leaving the
 # session everything is allowed again. The pause menu offers no save while connected and does not stop the game.

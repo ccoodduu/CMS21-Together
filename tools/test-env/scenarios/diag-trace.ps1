@@ -1,4 +1,5 @@
 # run-all: skip
+# areas: testdrive
 # sync-test-drive-and-diagnostics spike 1.4 (instance A only, connected, guard LogOnly): dyno (measure and cancel),
 # test path (full and early exit) and an OBD examine, with the test drive trace on. The step results in
 # diag-trace.json and the client_A.log "testdrive-trace" lines answer the spike questions.

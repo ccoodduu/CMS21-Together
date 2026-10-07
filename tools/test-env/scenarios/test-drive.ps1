@@ -1,3 +1,4 @@
+# areas: testdrive, cars
 # sync-test-drive-and-diagnostics 8.1: A test-drives a car both players see. While A is away, B sees the claim and
 # cannot edit the car; after the return both have the driven kilometres and the claim is gone. Then a refused
 # departure (B holds a part claim), an aborted drive, and the fallback when the result is not sent.

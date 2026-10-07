@@ -1,3 +1,4 @@
+# areas: testdrive, cars, connect
 # sync-test-drive-and-diagnostics 8.3: dyno (cancel, then measure), test path and examine tools on a car both players
 # see. While A has the car on the dyno or the path, B sees the claim and cannot edit it; the measured result,
 # specialState and examined flags reach B and a late join.

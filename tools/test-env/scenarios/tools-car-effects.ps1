@@ -1,3 +1,4 @@
+# areas: tools, details, cars
 # sync-workshop-car-tools: A uses the car tools on a car both players see (paint shop, car wash, stationary and portable
 # interior detailing, welder, oil bin, engine crane out/in, a refused engine swap, the map dyno). After every step A and
 # B have equal stats, inventory, cars and car details; B saw each tool's action once, stays playable and keeps its lift

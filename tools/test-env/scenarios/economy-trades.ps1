@@ -1,3 +1,4 @@
+# areas: economy, cars
 # economy-audit 7.2: Trades ask the server first; the effect and the money or scrap change happen once for everyone.
 # Car sale (refused while B works on the car, a race of two sellers, a job car), skill reset, scrapping, scrap per
 # condition, the quality upgrade (and too little scrap), license plates (and too little money), a barn map, and crates

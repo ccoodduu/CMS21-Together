@@ -1,3 +1,4 @@
+# areas: economy, presence, guard, smoke
 # M2 junkyard trip (parts only), with the guard enforcing: A travels to the junkyard; picking a part up there is local
 # only (nothing reaches the server or B); buying parts (the BuyPartsAction packet) costs money once and adds them for
 # both; after A's return to the garage, A and B have the same inventory and money.

@@ -1,3 +1,4 @@
+# areas: placement, economy
 # sync-car-placement-and-lifts races (net-hold on both clients, so each acts before seeing the other):
 # both raise the same lift (it moves one step), both park a car into the same preferred slot (different slots),
 # both take the same parked car onto the same loader (one copy), a parking swap, a priced arrival and a level unlock.

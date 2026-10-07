@@ -1,3 +1,4 @@
+# areas: parts, cars
 # sync-car-parts race: A and B unmount the same part at the same moment (FastUnmount, which skips the claim). The
 # server accepts the first change and rejects the second; the loser reverts its own inventory item, so both
 # clients end with the part unmounted and exactly one copy of its item.

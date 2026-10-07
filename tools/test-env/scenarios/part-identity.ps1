@@ -1,4 +1,5 @@
 # run-all: skip
+# areas: parts, cars
 # Spike for sync-car-parts: does every client build the same part hierarchy for a car? A spawns each car model on
 # loader 0, B gets it through the server; both dump body part indices/names and mechanical part sibling paths/ids,
 # and the files are compared. Optional: $env:PART_IDENTITY_LIMIT limits the number of cars (default all).

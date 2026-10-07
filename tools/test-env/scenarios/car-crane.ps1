@@ -1,3 +1,4 @@
+# areas: parts, cars, tools
 # sync-car-parts engine crane: A takes the engine out with the crane (NotificationCenter.ActionUnMountGroup), B sees
 # every engine part unmounted and gets the engine group in its inventory; A puts the same engine back
 # (InsertEngineToCar), B sees the parts mounted and the group gone. The group travels inside the part change.

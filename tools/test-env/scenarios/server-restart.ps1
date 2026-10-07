@@ -1,3 +1,4 @@
+# areas: persistence
 # Shared state survives a server save, a hard kill and a restart: A changes stats, the server saves and is
 # killed, A goes back to the menu, the server starts again, A and B connect and both see A's state.
 param($Ctx)

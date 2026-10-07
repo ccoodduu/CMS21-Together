@@ -1,3 +1,4 @@
+# areas: connect
 # Steam rich presence join strings and warm join requests, without Steam: the join string comes from the server's
 # public address (else no string, with the reason), and a join request while in a session waits for confirmation.
 param($Ctx)

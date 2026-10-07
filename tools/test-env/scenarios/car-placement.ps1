@@ -1,3 +1,4 @@
+# areas: placement, cars
 # sync-car-placement-and-lifts: A spawns a car and moves it onto lift 1 (vanilla ChangeCarPos coroutine), A and B
 # raise the lift one step each, A moves the car off the raised lift (the lift goes back to the floor), A parks the
 # car, B takes it out of parking onto another loader. After each step both clients' placement dumps must match.

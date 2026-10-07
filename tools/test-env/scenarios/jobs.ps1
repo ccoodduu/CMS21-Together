@@ -1,3 +1,4 @@
+# areas: jobs, economy
 # sync-orders-and-jobs 7.1: the elected generator's orders reach both clients with server ids; an order with a 20 s
 # TTL expires on both; B declines one; A and B accept the same order at once (net-hold), the server approves one;
 # the taker's customer car appears for both, the taker finishes the job, the payout is applied once for both and the

@@ -1,4 +1,5 @@
 # run-all: skip
+# areas: jobs
 # sync-orders-and-jobs spike 1.3 (instance A only, connected; the job code is still vanilla): generate, decline,
 # expire, accept, examine, check and finish orders and a story mission with the jobs trace on. Each step's trace
 # report goes to jobs-trace.json in the run folder; the call order is in client_A.log ("jobs-trace" lines).

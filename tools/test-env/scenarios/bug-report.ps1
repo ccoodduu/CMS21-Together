@@ -1,3 +1,4 @@
+# areas: bugreport, resync, hosting
 # desync-detection-and-resync (d): B reports a bug while not connected (client-only bundle). Then the server runs with
 # a GSLT token, a password and an admin key, A and B join, B's car drifts (a desync record), A sets
 # CMS21Together.AdminKey and reports: A, B and the server each write a bundle with the same id, the secrets are

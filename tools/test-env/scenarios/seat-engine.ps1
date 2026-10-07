@@ -1,3 +1,4 @@
+# areas: presence, cars
 # sync-players-and-scenes 5.2-5.4: A sits in a car both players see; B sees A seated with the body hidden, also after
 # B rejoins. A starts the engine and B plays it on that car; A stops it and the sound ends. With the engine running
 # again, B deletes the car and A is put out of the seat without an error.

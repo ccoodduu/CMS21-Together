@@ -1,4 +1,5 @@
 # run-all: skip
+# areas: presence
 # sync-players-and-scenes spike 5.1 (instance A only, connected, guard off): spawn a car, trace on, sit left, start
 # and stop the engine, stand up, then sit right and stand up. The trace (client_A.log "seat-trace" lines) and the
 # counts in seat-engine-trace.json show which hooks fire once per action. The vanilla UI paths (door click, pie menu)

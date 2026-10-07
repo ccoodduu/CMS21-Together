@@ -1,3 +1,4 @@
+# areas: connect
 # Compatibility checks at join: a different game version, a gameplay mod, a different mod version or build is refused
 # with a readable reason while A stays in the session; a visual mod and a different DLC set are accepted, and the
 # server tracks the DLC set shared by all players; an operator can ignore a gameplay mod in server_config.ini.

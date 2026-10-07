@@ -1,4 +1,5 @@
 # run-all: skip
+# areas: testdrive
 # sync-test-drive-and-diagnostics spike 1.2 (instance A only, connected, guard enforcing with the test track allowed):
 # spawn a car, take it to the test track, drive 5000 m, finish the tests and return; then the same with an abort.
 # The trace (client_A.log "testdrive-trace" lines) and the reports in test-drive-trace.json answer the spike questions.

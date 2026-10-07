@@ -1,3 +1,4 @@
+# areas: economy
 # economy-audit 7.1: every fee is applied once by the server, with its amount, and A and B end with the same money.
 # Steps whose window is still guarded or whose verb belongs to a row that is not merged are skipped with a note.
 # Also: Expert doubles work XP once, two fees paid in a race are both applied, an unclaimed money change is dropped,
