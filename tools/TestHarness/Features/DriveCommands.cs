@@ -372,7 +372,7 @@ public static class DriveCommands
             else
             {
                 SetExternal(vehicle, run.Throttle, 0f, run.Steer);
-                if (run.Mode == "external" && elapsed > 1.5f && speed < 0.5f && Mathf.Abs(run.Throttle) > 0.01f) run.Mode = "push";
+                if (run.Mode == "external" && elapsed > 1.5f && speed < 2f && Mathf.Abs(run.Throttle) > 0.01f) run.Mode = "push";
                 if (run.Mode == "push" && body != null)
                 {
                     float dt = Time.time - lastPush;
