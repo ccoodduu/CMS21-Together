@@ -169,7 +169,7 @@ public static class CarCommands
     private static string StateHash(List<CMS21_Together_Core.Network.Packets.CarBodyPartUpdatePacket> body, List<CMS21_Together_Core.Network.Packets.CarSubPartUpdatePacket> sub)
     {
         var lines = body.Select(b => $"{b.Key}|{b.Unmounted}|{b.Switched}|{b.TunedID}|{b.State?.Condition:F3}|{b.State?.Dent:F3}|{b.State?.Quality}")
-            .Concat(sub.Select(s => $"{s.Key}|{s.Unmounted}|{s.TunedID}|{s.Condition:F3}|{s.Quality}|{s.IsExamined}"))
+            .Concat(sub.Select(s => $"{s.Key}|{s.Unmounted}|{s.EffectiveId}|{s.Condition:F3}|{s.Quality}|{s.IsExamined}"))
             .OrderBy(l => l, StringComparer.Ordinal);
         using (var sha = System.Security.Cryptography.SHA1.Create())
             return BitConverter.ToString(sha.ComputeHash(System.Text.Encoding.UTF8.GetBytes(string.Join("\n", lines)))).Replace("-", "").Substring(0, 12);
