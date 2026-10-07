@@ -195,7 +195,9 @@ Late join: a claim seen in a snapshot (`SyncTracker.InSnapshot`) starts no bolt 
 - Snapshot packets never start visuals; live packets before `IsInitialSyncFinished` are dropped for visuals (the
   state apply still runs).
 - A late joiner or returning player gets `Activity` in the roster (D5) and shows the pose and prop at once; it plays
-  no ghost and no bolt animation for anything that happened before.
+  no ghost and no bolt animation for anything that happened before. Because activity is relayed per scene, the server
+  sends a player who enters a scene one `PlayerActivity` per player already there (idle included), so a returning
+  player never keeps an activity it missed the end of.
 - On `PresenceManager.Remove`, a car delete (`CarSpawnDelete`, row 1's `ClearLoader` on the client) or a car snapshot
   for a loader, all visuals of that player or loader are cancelled with their renderers restored.
 

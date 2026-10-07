@@ -59,6 +59,8 @@ public static class VisualScope
 
 	public static IDisposable Enter() => new ScopeHandle();
 
+	public static PartRegistry RegistryOf(int loader) => CarPartsSync.All.FirstOrDefault(s => s.Loader == loader)?.Registry;
+
 	public static void CheckLeak(string what)
 	{
 		if (depth == 0) return;

@@ -45,7 +45,7 @@ public static class BoltReplay
 
 		string key = keys[0];
 		if (!key.StartsWith("s:") || Active.Any(e => e.Loader == loader && e.Key == key)) return;
-		var script = CarPartsSync.Get(loader).Registry?.Sub(key);
+		var script = VisualScope.RegistryOf(loader)?.Sub(key);
 		if (script == null || script.MountObjects == null || script.MountObjects.Length == 0) return;
 		if (VisualScope.Admit(VisualKind.Bolts, loader, script.transform.position) != null) return;
 

@@ -88,10 +88,18 @@ namespace CMS21_Together_Server.Network.Handlers
 			return false;
 		}
 
+		// Activity is relayed only within a scene, so a player entering a scene has missed the changes made there.
 		private static void OnSceneChanged(int clientId, GameScene from, GameScene to)
 		{
 			var record = PresenceRegistry.Get(clientId);
-			if (record != null) record.Activity = null;
+			if (record == null) return;
+			record.Activity = null;
+			if (!GameSceneInfo.ShowsAvatars(to) || !Server.Clients.TryGetValue(clientId, out var client) || !client.IsConnected || client.SyncState == SyncState.Connected) return;
+			foreach (var other in PresenceRegistry.All)
+			{
+				if (other.PlayerId == clientId || other.Scene != to) continue;
+				Server.SendToClient(new PlayerActivityPacket { PlayerId = other.PlayerId, State = other.Activity?.Clone() ?? PlayerActivityState.Idle() }, clientId);
+			}
 		}
 	}
 }

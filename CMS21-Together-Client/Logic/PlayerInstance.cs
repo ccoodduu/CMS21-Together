@@ -68,7 +68,7 @@ public class PlayerInstance : MonoBehaviour
 	public void UpdateNetworkState(Vector3 pos, Quaternion rot, Vector3 vel, float pitch, bool grounded, bool crouching, bool running)
 	{
 		lastPosition = transform.position;
-		lastRotation = transform.rotation;
+		lastRotation = Work != null ? Work.WithoutYaw(transform.rotation) : transform.rotation;
 		targetPosition = pos;
 		targetRotation = rot;
 		

@@ -318,7 +318,7 @@ public static class VisualCommands
             {
                 int loader = unscrew?.Loader ?? current.CarLoaderID;
                 string key = unscrew?.Key ?? current.PartKey;
-                var script = CarPartsSync.Get(loader).Registry?.Sub(key);
+                var script = VisualScope.RegistryOf(loader)?.Sub(key);
                 if (script?.MountObjects != null)
                 {
                     string bolts = string.Join(",", script.MountObjects.Where(m => m != null).Select(m => m.GetMountState().ToString("F2", CultureInfo.InvariantCulture)));

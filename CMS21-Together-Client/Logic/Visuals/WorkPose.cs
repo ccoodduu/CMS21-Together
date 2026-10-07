@@ -53,6 +53,8 @@ public class WorkPose
 		props = new ToolProps(rightHand != null ? rightHand : root);
 	}
 
+	public Quaternion WithoutYaw(Quaternion rotation) => Quaternion.AngleAxis(-yaw, Vector3.up) * rotation;
+
 	public void ApplyYaw(PlayerActivityState activity, Vector3 velocity, float dt)
 	{
 		var target = Target(activity);
@@ -146,7 +148,7 @@ public class WorkPose
 	private static Vector3? PartPosition(int loader, string key)
 	{
 		if (loader < 0 || string.IsNullOrEmpty(key)) return null;
-		var registry = CarPartsSync.Get(loader).Registry;
+		var registry = VisualScope.RegistryOf(loader);
 		if (registry == null) return null;
 		if (key.StartsWith("b:")) return registry.Body(key)?.handle?.transform.position;
 		var script = registry.Sub(key);
