@@ -20,6 +20,14 @@ namespace CMS21_Together_Server.Data.Cars
 			lock (removedBy) return removedBy.TryGetValue(uid, out int remover) && remover != clientId;
 		}
 
+		public static IEnumerable<long> StillHeld(InventoryDelta delta)
+		{
+			var inventory = GameDataManager.CurrentState.InventoryState;
+			return delta.RemovedItemUids.Where(uid => inventory.InventoryItems.Any(i => i.UID == uid))
+				.Concat(delta.RemovedGroupUids.Where(uid => inventory.InventoryGroupItems.Any(g => g.UID == uid)))
+				.ToList();
+		}
+
 		public static void Apply(InventoryDelta delta, int clientId)
 		{
 			if (delta == null || delta.IsEmpty) return;

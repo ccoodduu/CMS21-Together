@@ -245,11 +245,25 @@ public static class CarCommands
     private static object PartFastMount(string args)
     {
         var parts = (args ?? "").Split(new[] { ' ' }, StringSplitOptions.RemoveEmptyEntries);
-        if (parts.Length != 2) throw new ArgumentException("usage: part-fast-mount <loader> <key>");
+        if (parts.Length != 2 && parts.Length != 3) throw new ArgumentException("usage: part-fast-mount <loader> <key> [itemUid]");
         var registry = PartRegistry.Build(Loader(parts[0]));
         var script = registry.Sub(parts[1]) ?? throw new ArgumentException($"no part {parts[1]}");
+        if (parts.Length == 3)
+            GameScript.Get().SelectedToMount = Singleton<GameManager>.Instance.Inventory.GetItem(long.Parse(parts[2])) ?? throw new ArgumentException($"no item {parts[2]}");
         script.FastMount();
         return new Dictionary<string, object> { ["key"] = parts[1], ["id"] = script.id };
+    }
+
+    [HarnessCommand("part-twins")]
+    private static object PartTwins(string args)
+    {
+        var registry = PartRegistry.Build(Loader((args ?? "").Trim()));
+        var twins = registry.SubKeys.OrderBy(k => k, StringComparer.Ordinal)
+            .Select(k => (Key: k, Script: registry.Sub(k)))
+            .Where(p => !p.Script.IsUnmounted && !p.Script.IsBlocked() && p.Script.GetUnmountWith().Count == 0)
+            .GroupBy(p => p.Script.id)
+            .FirstOrDefault(g => g.Count() >= 2) ?? throw new ArgumentException("no two free parts share an id");
+        return new Dictionary<string, object> { ["id"] = twins.Key, ["keys"] = twins.Take(2).Select(p => p.Key).ToList() };
     }
 
     [HarnessCommand("part-claim")]
