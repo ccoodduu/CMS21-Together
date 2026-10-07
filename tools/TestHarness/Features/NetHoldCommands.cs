@@ -1,16 +1,23 @@
 using System.Collections.Generic;
+using System.Net.Sockets;
 using CMS21_Together_Core;
 using CMS21_Together_Core.Network;
+using CMS21Together.Network;
+using CMS21Together.Network.Transport;
 using HarmonyLib;
 
 namespace TogetherTestHarness.Features;
 
 // Holds incoming packets (except heartbeat and movement) and replays them in order, so a scenario can make two
-// clients act on the same thing before either sees the other's change.
+// clients act on the same thing before either sees the other's change. "net-hold out" is a full stall: every incoming
+// packet is held (so heartbeats are not echoed), outgoing TCP data is held and UDP dropped, until "net-hold off".
+// Held or delayed packets are dropped instead of replayed once the connection is gone, as data in flight would be.
 [HarmonyPatch]
 public static class NetHoldCommands
 {
     private static bool holding;
+    private static bool stalling;
+    private static readonly List<byte[]> heldOutgoing = new List<byte[]>();
     private static bool replaying;
     private static readonly List<(PacketTypes Id, object Data, long Sender)> held = new List<(PacketTypes, object, long)>();
     private static float delaySeconds;
@@ -33,6 +40,7 @@ public static class NetHoldCommands
     {
         while (delaySeconds > 0f || delayed.Count > 0)
         {
+            if (delayed.Count > 0 && !Connected) delayed.Clear();
             while (delayed.Count > 0 && (delayed.Peek().Due <= UnityEngine.Time.realtimeSinceStartup || delaySeconds <= 0f))
             {
                 var packet = delayed.Dequeue();
@@ -48,14 +56,21 @@ public static class NetHoldCommands
     [HarnessCommand("net-hold")]
     private static object NetHold(string args)
     {
-        if ((args ?? "").Trim() == "on")
+        string mode = (args ?? "").Trim();
+        if (mode == "on" || mode == "out")
         {
             holding = true;
-            return "holding";
+            stalling = mode == "out";
+            return stalling ? "stalling both directions" : "holding";
         }
         holding = false;
+        stalling = false;
         var replay = new List<(PacketTypes Id, object Data, long Sender)>(held);
+        var outgoing = new List<byte[]>(heldOutgoing);
         held.Clear();
+        heldOutgoing.Clear();
+        if (!Connected) return $"dropped {replay.Count} incoming and {outgoing.Count} outgoing (not connected)";
+        int sent = SendHeld(outgoing);
         replaying = true;
         try
         {
@@ -65,15 +80,27 @@ public static class NetHoldCommands
         {
             replaying = false;
         }
-        return $"replayed {replay.Count}";
+        return outgoing.Count > 0 ? $"replayed {replay.Count}, sent {sent} held outgoing" : $"replayed {replay.Count}";
+    }
+
+    private static bool Connected => Client.Instance != null && Client.Instance.IsConnected;
+
+    private static int SendHeld(List<byte[]> outgoing)
+    {
+        var stream = Client.Instance.Tcp == null ? null : Traverse.Create(Client.Instance.Tcp).Field("stream").GetValue<NetworkStream>();
+        if (stream == null) return 0;
+        foreach (var buffer in outgoing) stream.Write(buffer, 0, buffer.Length);
+        return outgoing.Count;
     }
 
     internal static void Reset(List<string> changed)
     {
-        if (holding || held.Count > 0) changed.Add($"net-hold (dropped {held.Count} held packets)");
+        if (holding || held.Count > 0 || heldOutgoing.Count > 0) changed.Add($"net-hold{(stalling ? " out" : "")} (dropped {held.Count} held packets, {heldOutgoing.Count} outgoing)");
         if (delaySeconds > 0f || delayed.Count > 0) changed.Add($"net-delay {delaySeconds * 1000f:0} ms (dropped {delayed.Count} delayed packets)");
         holding = false;
+        stalling = false;
         held.Clear();
+        heldOutgoing.Clear();
         delaySeconds = 0f;
         delayed.Clear();
     }
@@ -87,8 +114,22 @@ public static class NetHoldCommands
             delayed.Enqueue((UnityEngine.Time.realtimeSinceStartup + delaySeconds, id, deserializedData, senderId));
             return false;
         }
-        if (!holding || replaying || id == PacketTypes.Heartbeat || id == PacketTypes.Movement) return true;
+        if (!holding || replaying) return true;
+        if (!stalling && (id == PacketTypes.Heartbeat || id == PacketTypes.Movement)) return true;
         held.Add((id, deserializedData, senderId));
         return false;
     }
+
+    [HarmonyPatch(typeof(ClientTCP), nameof(ClientTCP.SendData))]
+    [HarmonyPrefix]
+    private static bool BeforeTcpSend(Packet packet)
+    {
+        if (!stalling) return true;
+        heldOutgoing.Add(packet.ToArray());
+        return false;
+    }
+
+    [HarmonyPatch(typeof(ClientUDP), nameof(ClientUDP.SendData))]
+    [HarmonyPrefix]
+    private static bool BeforeUdpSend() => !stalling;
 }

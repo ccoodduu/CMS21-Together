@@ -41,10 +41,10 @@ change needs a lane, and never start the long soak (7.2) without the user's go-a
 
 ## 6. Disconnect storms (after row 7 part 2 is merged)
 
-- [ ] 6.1 Check what `net-hold` stops (incoming only or both directions) on a scratch run; if incoming only, add `net-hold out` (holds outgoing too) in `NetHoldCommands.cs` and note the extension under row 2's verbs in INTEGRATION.md. Done when a client under `net-hold` (or `net-hold out`) for 15 s is timed out by the server and reaches the menu by itself.
-- [ ] 6.2 `scenarios/storm.ps1` (`# run-all: lane 3`): kinds K1–K4 of D8 with their checks, log copies of killed games, `DuplicateIdentity` retry, `storms.jsonl`, a checkpoint after each kind. Done when K1–K4 pass on lane 3, and K1, K2, K3 pass with two instances on lane 1.
-- [ ] 6.3 Kinds K5–K8 (claims and balancer lock released, test-drive car back, graceful stop exact, hard kill exact to the last save and no fallback, kill mid-join). Done when `storm` passes with all eight kinds on lane 3 twice with different seeds.
-- [ ] 6.4 `soak -StormEveryMinutes`: a seeded storm kind every N minutes followed by a checkpoint; rule 5 of D6. Done when a 30-minute lane-3 soak with `-StormEveryMinutes 5` passes and its report lists six storms.
+- [ ] 6.1 **In code (2026-10-07):** needs a game run. Check what `net-hold` stops (incoming only or both directions) on a scratch run; if incoming only, add `net-hold out` (holds outgoing too) in `NetHoldCommands.cs` and note the extension under row 2's verbs in INTEGRATION.md. Done when a client under `net-hold` (or `net-hold out`) for 15 s is timed out by the server and reaches the menu by itself.
+- [ ] 6.2 **In code (2026-10-07):** needs a game run. `scenarios/storm.ps1` (`# run-all: lane 3`): kinds K1–K4 of D8 with their checks, log copies of killed games, `DuplicateIdentity` retry, `storms.jsonl`, a checkpoint after each kind. Done when K1–K4 pass on lane 3, and K1, K2, K3 pass with two instances on lane 1.
+- [ ] 6.3 **In code (2026-10-07):** needs a game run. Kinds K5–K8 (claims and balancer lock released, test-drive car back, graceful stop exact, hard kill exact to the last save and no fallback, kill mid-join). Done when `storm` passes with all eight kinds on lane 3 twice with different seeds.
+- [ ] 6.4 **In code (2026-10-07):** needs a game run. `soak -StormEveryMinutes`: a seeded storm kind every N minutes followed by a checkpoint; rule 5 of D6. Done when a 30-minute lane-3 soak with `-StormEveryMinutes 5` passes and its report lists six storms.
 
 ## 7. Baselines, long run, documentation
 
