@@ -224,7 +224,7 @@ public static class JobsSync
 		var carLoader = CarLoaderPlaces.Get()?.GetCarLoaderByIndex(loader);
 		if (carLoader == null || string.IsNullOrEmpty(carLoader.carToLoad)) return;
 		CarSpawnHooks.Suppress(loader);
-		try { carLoader.DeleteCar(); }
+		try { carLoader.DeleteCar(true); }
 		finally { CarSpawnHooks.Release(loader); }
 		CarPartsSync.OnCarDeleted(loader);
 	}

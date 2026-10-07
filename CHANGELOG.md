@@ -30,6 +30,8 @@ Work towards 1.0.0 (milestones M5 "Robust sessions" and M6 "Release 1.0").
 ### Fixed
 
 - Item ids handed out by the server always increase.
+- A car on a lift could lose its lift for the other players when a new car arrived in a loader whose car had been
+  deleted or parked from that lift; the lift buttons then did nothing for them.
 
 ## M4: The full workshop - 2026-10-06/07
 

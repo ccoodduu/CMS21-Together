@@ -75,7 +75,7 @@ namespace CMS21Together.Network.Handlers
             CarSpawnHooks.Suppress(packet.CarLoaderID);
             try
             {
-                carLoader.DeleteCar();
+                carLoader.DeleteCar(true);
                 Log.Info($"[CarHandlers] Deleted car from Loader {packet.CarLoaderID} as ordered by server.");
             }
             finally
@@ -134,7 +134,7 @@ namespace CMS21Together.Network.Handlers
             CarSpawnHooks.Suppress(packet.CarLoaderID);
             try
             {
-                carLoader.DeleteCar();
+                carLoader.DeleteCar(true);
             }
             finally
             {
