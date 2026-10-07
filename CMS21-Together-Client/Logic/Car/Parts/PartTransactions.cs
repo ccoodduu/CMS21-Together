@@ -74,6 +74,8 @@ public static class PartTransactions
 
 	public static bool HasOpen(int loader) => open.Any(t => t.Loader == loader) || committed.Count > 0;
 
+	public static bool HoldsInventoryChanges => open.Any(t => !t.Delta.IsEmpty) || committed.Count > 0;
+
 	public static bool SuppressAdd(string itemId)
 	{
 		var tx = Match(itemId);

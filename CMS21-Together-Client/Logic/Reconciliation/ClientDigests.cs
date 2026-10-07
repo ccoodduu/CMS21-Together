@@ -80,6 +80,7 @@ public static class ClientDigests
 
 	private static Projection Inventory()
 	{
+		if (PartTransactions.HoldsInventoryChanges) return null;
 		var inventory = Singleton<GameManager>.Instance.Inventory;
 		var items = new List<CMS21_Together_Core.Data.GameType.ModItem>();
 		var gameItems = inventory.GetItems();
