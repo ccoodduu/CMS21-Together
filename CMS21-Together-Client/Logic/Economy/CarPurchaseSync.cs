@@ -8,6 +8,7 @@ using CMS21_Together_Core.Data.Enum;
 using CMS21_Together_Core.Logging;
 using CMS21_Together_Core.Network.Packets;
 using CMS21Together.Data;
+using CMS21Together.Guard;
 using CMS21Together.Logic.Car;
 using CMS21Together.Logic.Car.Placement;
 using CMS21Together.Network;
@@ -41,6 +42,7 @@ public static class CarPurchaseSync
 
 	private static readonly Dictionary<int, Capture> sent = new Dictionary<int, Capture>();
 	private static Capture open;
+	private static IDisposable locationBypass;
 	private static int nextRequestId = FirstRequestId;
 
 	private static bool Connected => Client.Instance != null && Client.Instance.IsConnectionValid;
@@ -63,12 +65,25 @@ public static class CarPurchaseSync
 
 	[HarmonyPatch(typeof(GameScript), nameof(GameScript.BuyCar))]
 	[HarmonyPrefix]
-	private static bool BeforeBuyCar(CarLoader carLoader, int buyPrice, out EconomyScopeEntry __state) =>
-		Begin("BuyCar", carLoader, buyPrice, out __state);
+	private static bool BeforeBuyCar(CarLoader carLoader, int buyPrice, out EconomyScopeEntry __state)
+	{
+		bool run = Begin("BuyCar", carLoader, buyPrice, out __state);
+		if (run && __state != null) locationBypass = FeatureGuard.Bypass();
+		return run;
+	}
 
 	[HarmonyPatch(typeof(GameScript), nameof(GameScript.BuyCar))]
-	[HarmonyPostfix]
-	private static void AfterBuyCar(EconomyScopeEntry __state) => EconomyScope.Pop(__state);
+	[HarmonyFinalizer]
+	private static Exception AfterBuyCar(Exception __exception, EconomyScopeEntry __state)
+	{
+		EconomyScope.Pop(__state);
+		locationBypass?.Dispose();
+		locationBypass = null;
+		if (__exception == null || __state == null) return __exception;
+		// BuyCar ends with play-time bookkeeping on the selected profile, which has no profile data in a session slot.
+		Log.Debug($"[Purchase] BuyCar threw after showing the location window: {__exception.Message.Split('\n')[0]}");
+		return null;
+	}
 
 	[HarmonyPatch(typeof(AuctionBidding), nameof(AuctionBidding.ReceiveCarAction))]
 	[HarmonyPrefix]
@@ -139,9 +154,10 @@ public static class CarPurchaseSync
 		Log.Error($"[Purchase] Capture {capture.RequestId} ({capture.Car}): the car was not saved within {SaveTimeoutSeconds} s of choosing the parking; nothing was sent and no money moved.");
 	}
 
-	[HarmonyPatch(typeof(GameDataManager), nameof(GameDataManager.SaveCar))]
+	// Not GameDataManager.SaveCar: patching a method with the NewCarData struct by value crashes the game.
+	[HarmonyPatch(typeof(CarLoader), nameof(CarLoader.SaveCarToFile), typeof(int), typeof(bool))]
 	[HarmonyPostfix]
-	private static void AfterSaveCar(NewCarData carData, int index, bool toParking)
+	private static void AfterSaveCarToFile(int index, bool toParking)
 	{
 		var capture = open;
 		if (capture == null || !capture.Chosen) return;
@@ -150,6 +166,8 @@ public static class CarPurchaseSync
 		ParkedCar car = null;
 		try
 		{
+			var data = Singleton<GameManager>.Instance.GameDataManager;
+			var carData = toParking ? data.LoadCarInParking(index) : data.LoadCarInGarage(index);
 			if (carData != null && !carData.IsDefault()) car = NewCarDataCodec.ToParkedCar(carData);
 		}
 		catch (Exception ex)

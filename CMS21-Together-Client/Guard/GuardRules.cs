@@ -78,7 +78,7 @@ public static class GuardRules
 		Allow(GuardKind.Window, "Map", "row 1 (M2)", "The map"),
 		Planned(GuardKind.Window, "CreateEngine", "row 5a (engine stand)", "Building an engine"),
 		Allow(GuardKind.Window, "ChooseEngine", "row 1", "Choosing an engine for the crane"),
-		Allow(GuardKind.Window, "CarLocationWindow", "row 6 part 2", "Choosing where a bought car goes"),
+		Planned(GuardKind.Window, "CarLocationWindow", "row 6 part 2", "Moving cars"),
 		Planned(GuardKind.Window, "Parking", "row 6 part 2", "The parking"),
 		Allow(GuardKind.Window, "ParkingManagement", "row 2", "Parking management"),
 		Allow(GuardKind.Window, "Orders", "row 3", "Orders"),

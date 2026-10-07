@@ -121,7 +121,7 @@ if ($cars.Count -lt 1) {
     $mark = Get-ServerLogMark
     $r = Send-HarnessCommand -Instance $a -Verb buy-car-here -Arguments "0 $price"
     Write-Host "buy-car-here: $($r | ConvertTo-Json -Compress)"
-    Check ($r.windowShown) "the location window opened"
+    Check ($r.captureOpen) "the purchase was captured"
     Check ($r.moneyAfter -eq $r.moneyBefore) "the local money did not change at BuyCar ($($r.moneyBefore) -> $($r.moneyAfter))"
     $arrived = try { Wait-ServerLog -Pattern "\[Parking\] .* arrived in slot \d+ from client \d+ for $price\." -After $mark -TimeoutSec 20 } catch { $null }
     Check ([bool]$arrived) "the server took the car into the parking ($arrived)"

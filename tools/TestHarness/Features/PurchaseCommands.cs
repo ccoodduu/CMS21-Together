@@ -14,6 +14,7 @@ namespace TogetherTestHarness.Features;
 public static class PurchaseCommands
 {
     private const int DefaultCarPrice = 1000;
+    private const float WindowWaitSeconds = 3f;
     private const float PressDelaySeconds = 0.5f;
 
     [HarnessCommand("outdoor-cars")]
@@ -38,20 +39,25 @@ public static class PurchaseCommands
         result["price"] = price;
         result["moneyBefore"] = GlobalData.PlayerMoney;
         GameScript.Get().BuyCar(carLoader, price);
-        bool shown = WindowManager.Instance != null && WindowManager.Instance.IsWindowActive(WindowID.CarLocationWindow);
         result["moneyAfter"] = GlobalData.PlayerMoney;
         result["captureOpen"] = CarPurchaseSync.IsOpen;
-        result["windowShown"] = shown;
-        if (shown)
-        {
-            MelonCoroutines.Start(Press(button));
-            result["pressing"] = button == 0 ? "garage" : "parking";
-        }
+        MelonCoroutines.Start(Press(button));
+        result["pressing"] = button == 0 ? "garage" : "parking";
         return result;
     }
 
     private static IEnumerator Press(int button)
     {
+        float giveUp = Time.realtimeSinceStartup + WindowWaitSeconds;
+        while (WindowManager.Instance == null || !WindowManager.Instance.IsWindowActive(WindowID.CarLocationWindow))
+        {
+            if (Time.realtimeSinceStartup > giveUp)
+            {
+                MelonLogger.Warning("[Harness] buy-car-here: the location window did not open");
+                yield break;
+            }
+            yield return null;
+        }
         float until = Time.realtimeSinceStartup + PressDelaySeconds;
         while (Time.realtimeSinceStartup < until) yield return null;
         var window = WindowManager.Instance?.GetWindowByID<CarLocationWindow>(WindowID.CarLocationWindow);
