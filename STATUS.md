@@ -2,6 +2,19 @@
 
 Newest first. One entry per work session.
 
+## 2026-10-07 (15:45–16:30) — last soak findings fixed; plans for the long soak and the playtest
+
+- `main` = `f136eb9`: a car deleted on another client kept its loader's ground position, so the next car spawned
+  into that loader took a lift from the car standing there and the lift buttons stopped working for the other
+  players. Remote deletes now clear it like the game's own park/sell/job deletes (`car-placement-reuse` proves it).
+  The `GameMode::SetCurrentMode` and `PartScript.Hide` errors were harness-only (no car under the mouse); fixed in
+  the harness (`harness-mouse-over`).
+- Playtest build refreshed: `0.6.0-dev.859` in `Desktop\CMS21-Together-playtest`.
+- Test policy (user): a fix runs its proving scenario plus the smoke set; the full regression runs once a day on
+  `main`; a soak only answers a concrete question.
+- Plans (user): the 4-hour soak runs on 2026-10-08 while the user is at school; the Steam playtest is probably after
+  the autumn holiday; row 9 part 2 uses the user's own mod list for now (an agent tests it on lane 1).
+
 ## 2026-10-07 (14:00–15:45) — first soak with four players; two more sync bugs fixed
 
 - Four graphical games use about 6 GB RAM each and leave under 1 GB free, so the soak's watchdog stopped the first
