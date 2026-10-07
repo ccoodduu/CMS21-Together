@@ -115,15 +115,18 @@ moment, or the last owner of that key within 2 s (the release may arrive first; 
   the renderers of `unmountWith` members unmounting in the same change) into a ghost at the part's world pose. After
   the apply (the real part is now hidden by `HideBySavegame`), move the ghost along the part's unmount direction
   (`GetUnmountDir()`, else `unmountDirection` in the part's frame, around `customPivotForUnmount` and spinning when
-  `unmountSpinning`) by 0.35 m over 0.6 s and dissolve it with `TweenHelper.TweenAlphaDissolve(ghost, 0, 0.6)`; then
-  destroy it. Body panels (`CarPart`) use the panel's handle mesh and a straight 0.4 m pull away from the car centre.
+  `unmountSpinning`) by 0.35 m over 0.6 s and dissolve it (the ghost's own material copies, `_AlphaDissolve` 1 → 0,
+  the property `TweenAlphaDissolve` tweens, driven per frame so `vfx-hold` can freeze it; a ghost whose materials lack
+  the property shrinks instead); then destroy it. Body panels (`CarPart`) use the panel's handle mesh and a straight
+  0.4 m pull away from the car centre.
 - **On:** after the apply, clone the now-mounted part, set `forceRenderingOff` on the real renderers, fly the ghost
   in from the same offset over 0.5 s with the dissolve going 0 → 1, then restore the real renderers and destroy the
   ghost. `PartApplier`'s own 0.5 s `ShowMounted` replica still runs; it only touches `enabled`.
-- **Door, hood, trunk:** a ghost swing around the hinge (the panel's `handle` pivot, 70° for doors and 60° for hood
-  and trunk over 0.6 s) and `forceRenderingOff` on the real panel. The spike (1.1) ruled out the animated
-  `SwitchCarPart(part, false, switched)`: it keeps `InProgress` set for a second, and a second change inside it leaves
-  `Switched` inverted (Spike results). `PartApplier` keeps the instant call.
+- **Door, hood, trunk:** a ghost swing over 0.6 s from the panel's pose before the instant switch to its pose after
+  it, about the hinge axis those two poses imply (no hinge data needed), and `forceRenderingOff` on the real panel.
+  The spike (1.1) ruled out the animated `SwitchCarPart(part, false, switched)`: it keeps `InProgress` set for a
+  second, and a second change inside it leaves `Switched` inverted (Spike results). `PartApplier` keeps the instant
+  call.
 - Limits: at most 16 ghosts at a time per client and 4 per car; over the limit, or farther than 40 m from the camera,
   or with `RemoteVisuals` off, the change applies without a visual (counted as `skipped` with the reason). No
   `isVisible` culling (always false headless).

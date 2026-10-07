@@ -22,7 +22,7 @@ same commit. Every scenario carries `# areas:` (new areas `visuals`, `driving`, 
       money, XP or mode side effects, confirm it in a game run (`vfx-trace` on, A opens and closes the hood on loader 0,
       B applies the change with the animated call: B's `stats`, `inventory` and game mode unchanged, no `[Visuals]
       state leak`); else record the ghost swing. Done when D3 states one route and the reason.
-- [ ] 1.3 Harness verb `vfx-trace on|off|report` (logging only): on the receiver the order and times of
+- [ ] 1.3 **In code (2026-10-07):** needs a game run. `Features/VisualCommands.cs`: `vfx-trace on|off|report` (claim/change/apply order on the receiver, per-frame bolt `GetMountState()` of the claimed or unscrewed part, game mode and `ToolsManager` state on the actor; the report adds the avatar bones and wrench-like meshes), `vfx-unscrew` drives `ActionUnMount`/`ActionMount` and then `SetCanAction(true)` + `MountObject.Action()` per frame on the next unfinished bolt and reports `finished`, `part not committed` or `timeout`. Run order: this run first; it decides whether `vfx-unscrew` behaves like a click (else the scenarios that use it need a different driver). Harness verb `vfx-trace on|off|report` (logging only): on the receiver the order and times of
       `CarPartClaimUpdate`, `CarPartsChange` and the release for one part; on the actor the claimed part's
       `MountObject.GetMountState()` per frame, game mode and `ToolsManager` (`ToolIsActive`, `currentUsedTool`,
       `CurrentUsedTool` name and layer). Add `vfx-unscrew <loader> <key> [mount]` (the real
@@ -30,7 +30,7 @@ same commit. Every scenario carries `# areas:` (new areas `visuals`, `driving`, 
       caliper, an exhaust part) with A and B (needs a lane). Done when design.md D4 has the measured time per bolt, the
       packet order (and whether the release can arrive before the change), and the activity mapping in D5 is confirmed
       or corrected.
-- [ ] 1.4 Avatar rig and props: log the bone names of `model_rigged` once at `ModGameManager.LoadPlayerPrefab`; list
+- [ ] 1.4 **In code (2026-10-07):** needs a game run. Static half done: bones `mixamorig:RightArm`/`RightForeArm`/`RightHand` (UnityPy on the bundle), no wrench mesh by name in the game data (Spike results); `vfx-trace report` lists `bones` and `wrenchMeshes` at runtime instead of a log line in `LoadPlayerPrefab`. Avatar rig and props: log the bone names of `model_rigged` once at `ModGameManager.LoadPlayerPrefab`; list
       the names of loaded `Mesh` assets that look like a wrench or ratchet (`Resources.FindObjectsOfTypeAll<Mesh>()`) in
       the garage. Done when D6 names the right-arm bones (or records that only yaw is possible) and the prop source for
       part work (mesh name or "none").
@@ -50,24 +50,24 @@ same commit. Every scenario carries `# areas:` (new areas `visuals`, `driving`, 
 
 ## 3. Client visual framework and harness
 
-- [ ] 3.1 `Logic/Visuals/VisualScope.cs`: ghost creation (clone `sharedMesh`/`sharedMaterials` of `MeshRenderer`s,
+- [ ] 3.1 **In code (2026-10-07):** needs a game run. Split into `VisualScope` (effects, caps, `forceRenderingOff` refcounts restored on end/throw/cancel/reset, leak detector, counters, `Hold`), `VisualEffect`, `Ghost` (own material copies, destroyed with the ghost) and `VisualLeakHooks` (logging-only prefixes on `Inventory.Add/Delete/AddGroup/DeleteGroup` and `GameMode.SetCurrentMode`, all already patched by this mod); preference in `PlayerSettings.RemoteVisuals`; effects also end when the loader leaves `Ready` or its `SpawnSeq` changes, and on `ClientScene.LeavingScene`. `Logic/Visuals/VisualScope.cs`: ghost creation (clone `sharedMesh`/`sharedMaterials` of `MeshRenderer`s,
       no colliders or scripts, source layer), the `forceRenderingOff` record with restore in `finally`,
       `CancelFor(loader, key)`, `CancelPlayer(id)`, `CancelLoader(loader)`, `Reset()` (wired into `ClientData.Reset`,
       car delete and car snapshot), the caps of D3, the preference `CMS21Together.RemoteVisuals` (default on), and the
       D1 leak detector (a scope flag checked in `PartChangeTracker.MarkDirty`, `CarDetailsSync.MarkDirty`, the
       inventory hooks and a `GameMode.SetCurrentMode` prefix). Done when the client builds and a test effect that calls
       `MarkDirty` inside the scope logs `[Visuals] state leak MarkDirty`.
-- [ ] 3.2 Row 1 events: `PartChanges.RemoteChangeApplying(loader, body, sub)` raised in `OnRemoteChange` just before
+- [ ] 3.2 **In code (2026-10-07):** needs a game run. Plus `RemoteChangeApplied` after the apply (On ghosts hide the real part in the same frame); released test holds raise neither; handlers run in try/catch so a visual never stops the apply. Row 1 events: `PartChanges.RemoteChangeApplying(loader, body, sub)` raised in `OnRemoteChange` just before
       `Apply` (not in `OnResult`, snapshots or resync), and `PartClaims.ClaimChanged(loader, keys, owner, fromSnapshot)`
       raised in `OnUpdate` (`fromSnapshot` = `SyncTracker.InSnapshot`). Done when `car-live` and `car-parts` still pass
       and a `vfx-trace` run logs both events once per change and claim.
-- [ ] 3.3 Harness `Features/VisualCommands.cs`: dump section `visuals` (D12, plus `renderersHidden` = count of
+- [ ] 3.3 **In code (2026-10-07):** needs a game run. Verbs registered in INTEGRATION.md; helper verbs `vfx-parts`, `vfx-switch`, `vfx-stand` added; dump also has `players.<id>` (activity, pose, facing, propActive, propTool, arms), `activitySent/Dropped/Received`, `localActivity`, `unscrew`. Harness `Features/VisualCommands.cs`: dump section `visuals` (D12, plus `renderersHidden` = count of
       renderers with `forceRenderingOff` set by this change), verbs `vfx-hold on|off`, `vfx-enable on|off`,
       `vfx-tool <ToolType|none> [loader]`; `vfx-unscrew` gains `pause <fraction>` (stops the real action at that share
       of bolts and keeps the claim until `vfx-unscrew <loader> <key> resume`, or `undo`, which calls the game's
       `PartScript.UndoUnMounting`/`UndoMounting`). Register the verbs in INTEGRATION.md
       (owner row 17). Done when `dump` shows `visuals` on both clients after `connect`.
-- [ ] 3.4 `TestAreas.psm1`: areas `visuals` and `driving`; path rows for `Logic/Visuals/*`,
+- [ ] 3.4 **In code (2026-10-07):** needs a game run. Areas and path rows added (checked with `Resolve-ChangedFile`), guard owner changed; `visual-parts` holds the full group 4/5 steps rather than an empty list. `TestAreas.psm1`: areas `visuals` and `driving`; path rows for `Logic/Visuals/*`,
       `Network/Handlers/Visual*`, `Network/Packets/VisualPackets.cs` (`visuals, presence`), `Logic/Driving/*`,
       `Network/Handlers/Drive*`, `Network/Packets/DrivePackets.cs` (`driving, testdrive`),
       `tools/TestHarness/Features/Visual*` and `Drive*`. `GuardRules`: owner of `Mode:CarDrive` and `Pie:car_drive`
@@ -77,12 +77,12 @@ same commit. Every scenario carries `# areas:` (new areas `visuals`, `driving`, 
 
 ## 4. Parts moving off and on
 
-- [ ] 4.1 `Logic/Visuals/PartGhosts.cs` for `PartScript` per D3: off (clone before the apply, move along the unmount
+- [ ] 4.1 **In code (2026-10-07):** needs a game run. Off/On ghosts exclude the part's bolts (BoltReplay draws them), child parts and `enableOnUnmount` stand-ins; `GetUnmountDir()` falls back to the direction away from the car. `Logic/Visuals/PartGhosts.cs` for `PartScript` per D3: off (clone before the apply, move along the unmount
       direction with `TweenAlphaDissolve`), on (clone after the apply, real renderers `forceRenderingOff`, fly in),
       `unmountWith` members of the same change in one ghost, caps and distance skip. Done when the client builds.
-- [ ] 4.2 Body panels (`CarPart`: pull-away ghost) and doors/hood/trunk by the route chosen in 1.2 (`PartApplier`
+- [ ] 4.2 **In code (2026-10-07):** needs a game run. Swing is a ghost (spike 1.1), about the hinge implied by the poses before and after the instant switch; `PartApplier` unchanged. Body panels (`CarPart`: pull-away ghost) and doors/hood/trunk by the route chosen in 1.2 (`PartApplier`
       gets `animate` for live changes only if the animated call is used). Done when the client builds.
-- [ ] 4.3 `visual-parts` steps: A `vfx-unscrew 0 <wheel key>` → B `ghostsStarted.Off` +1, then `ghostsActive` empty and
+- [ ] 4.3 **In code (2026-10-07):** needs a game run. Written in `scenarios/visual-parts.ps1` (On uses `part-fast-mount`, the hood uses `vfx-switch 0 hood`). `visual-parts` steps: A `vfx-unscrew 0 <wheel key>` → B `ghostsStarted.Off` +1, then `ghostsActive` empty and
       `renderersHidden` 0 within 3 s; with B `vfx-hold on` during the next unmount, B's `cars` equals A's while the ghost
       is held (state applied, ghost only visual), then `vfx-hold off`; A mounts it back → `ghostsStarted.On` +1, same
       checks; A opens and closes the hood → `ghostsStarted.Swing` +2 (or the animated call counted); B `resync` → no new
@@ -91,26 +91,26 @@ same commit. Every scenario carries `# areas:` (new areas `visuals`, `driving`, 
 
 ## 5. Bolts turning
 
-- [ ] 5.1 `Logic/Visuals/BoltReplay.cs` per D4: start on `ClaimChanged` to another player (not `fromSnapshot`), ghost
+- [ ] 5.1 **In code (2026-10-07):** needs a game run. Pacing needs no bolt speed: each bolt shows `clamp(p * n - i, 0, 1)` of the actor's mean progress, extrapolated at the observed rate by at most one 1/16 step; a release waits 0.5 s for a late commit before running back. `Logic/Visuals/BoltReplay.cs` per D4: start on `ClaimChanged` to another player (not `fromSnapshot`), ghost
       bolts paced by the actor's `Progress` and the measured bolt speed (1.3), finish on the commit (hand over to 4.1),
       run back on a release without commit, restore the real bolts at the end. Done when the client builds.
-- [ ] 5.2 `visual-parts` steps: A `vfx-unscrew 0 <key> pause 0.5` → B `boltsActive` lists the key with owner A and about
+- [ ] 5.2 **In code (2026-10-07):** needs a game run. In `scenarios/visual-parts.ps1`. `visual-parts` steps: A `vfx-unscrew 0 <key> pause 0.5` → B `boltsActive` lists the key with owner A and about
       half the bolts done (±1), `renderersHidden` > 0; A `resume` → B's bolts finish, the Off ghost plays, then
       `boltsActive` empty and `renderersHidden` 0; A pauses again and `vfx-unscrew 0 <key> undo` → B's bolts run back and `cars` are unchanged on both. Done when the steps pass.
 
 ## 6. Activity and the remote avatar
 
-- [ ] 6.1 `Logic/Visuals/ActivityCapture.cs` per D5 (4 Hz poll, send on change, coalesce to ≤ 4/s, hard cap, `None` on
+- [ ] 6.1 **In code (2026-10-07):** needs a game run. Order: own claim > car tool (`CarToolActions.LocalWork`) > machine (`ToolSync.OwnClaims`) > hand tool > interior mode; the claim leader key comes from `ClaimChanged`; `vfx-trace report` lines prefixed `activity`. `Logic/Visuals/ActivityCapture.cs` per D5 (4 Hz poll, send on change, coalesce to ≤ 4/s, hard cap, `None` on
       work end, travel and seat). Done when `vfx-trace report` on A lists the activity changes of a `vfx-unscrew` and a
       `vfx-tool OBD` run with at most 4 sends per second.
-- [ ] 6.2 `Logic/Visuals/RemoteActivity.cs` + `WorkPose` on `PlayerInstance` per D6 (target resolution, yaw, arm aim
+- [ ] 6.2 **In code (2026-10-07):** needs a game run. `PlayerInstance.Work` (plain class, yaw before the pitch code, arms after); `PlayerId` set in `CreateAvatar`; poses `Idle`/`Reach`/`Wrench`/`ArmsUp`; with visuals off the pose stays `Idle`. `Logic/Visuals/RemoteActivity.cs` + `WorkPose` on `PlayerInstance` per D6 (target resolution, yaw, arm aim
       with the bones from 1.4, wrench oscillation, arms up for a lifted car), applied from the roster and from live
       packets, cleared on `None`, scene change and `Remove`. Done when the client builds and B's dump shows `pose` and
       `facing` for A.
-- [ ] 6.3 `Logic/Visuals/ToolProps.cs`: prop cloned from the receiver's own `ToolsManager` tool per `ToolType` (layer to
+- [ ] 6.3 **In code (2026-10-07):** needs a game run. Part work has no prop (no wrench mesh, spike 1.4 static); scale divides by the hand bone's lossy scale. `Logic/Visuals/ToolProps.cs`: prop cloned from the receiver's own `ToolsManager` tool per `ToolType` (layer to
       the world layer, scaled, parented to the hand bone), the part-work prop from 1.4 if any, cache per type, destroy
       with the avatar. Done when the client builds.
-- [ ] 6.4 `scenarios/visual-activity.ps1` (`# areas: visuals, presence, tools`): A stands 1.5 m from loader 0 and
+- [ ] 6.4 **In code (2026-10-07):** needs a game run. Written; reads `visuals.players.<A>`; the welder step moves the car to `CarLifter1` first like `tools-car-effects`. `scenarios/visual-activity.ps1` (`# areas: visuals, presence, tools`): A stands 1.5 m from loader 0 and
       `vfx-tool OBD 0` → B's roster `activity.kind` `Examine`, `propActive` true, `propTool` `OBD`, `facing` < 20°; A
       `vfx-tool none` → `None`, no prop; A `vfx-unscrew 0 <key>` → B `pose` `Wrench` while it runs, `Idle` after; A
       `tool-use Welder 0` (row 5b) → `activity.kind` `CarTool`, `ModTool` `Welder`, B `toolActionsSeen.Weld` 1; A
@@ -118,15 +118,15 @@ same commit. Every scenario carries `# areas:` (new areas `visuals`, `driving`, 
 
 ## 7. Late join, screenshots, budget and part-1 verification
 
-- [ ] 7.1 `scenarios/visual-latejoin.ps1` (`# areas: visuals, presence, persistence`): A `vfx-tool OBD 0`; B connects
+- [ ] 7.1 **In code (2026-10-07):** needs a game run. Written; after the rejoin a paused actor shows `Reach` (D6: the wrench motion needs moving progress), so the check accepts `Wrench` or `Reach` with kind `Unmount`. `scenarios/visual-latejoin.ps1` (`# areas: visuals, presence, persistence`): A `vfx-tool OBD 0`; B connects
       → B shows A's prop and pose at once, `ghostsStarted` and `boltsActive` empty; A `vfx-tool none`, A
       `vfx-unscrew 0 <key> pause 0.5`; B disconnects and reconnects → B shows pose `Wrench` from the roster,
       `boltsActive` empty (claim came in the snapshot), no ghost; A `resume` → B plays the Off ghost once (live);
       `cars` equal. Done when it passes.
-- [ ] 7.2 `scenarios/visual-screens.ps1` (`# needs: graphics`, `# areas: visuals`): with `vfx-hold on`, screenshots
+- [ ] 7.2 **In code (2026-10-07):** needs a game run. Written (`# run-all: skip` too, it is for the user's look); adds a hood-swing shot and notes the ghost `fade`. `scenarios/visual-screens.ps1` (`# needs: graphics`, `# areas: visuals`): with `vfx-hold on`, screenshots
       of an Off ghost mid-way, bolts half out, A's avatar holding the OBD scanner and reaching under a lifted car. Done
       when the run folder holds the four screenshots and STATUS lists them for the user's look.
-- [ ] 7.3 `scenarios/visual-budget.ps1` (`# run-all: lane 3`, `# areas: visuals`, 2–4 instances): for 3 minutes every
+- [ ] 7.3 **Open:** not written yet (needs lane 3 and the measured bytes). `scenarios/visual-budget.ps1` (`# run-all: lane 3`, `# areas: visuals`, 2–4 instances): for 3 minutes every
       client loops `vfx-unscrew`/mount on its own loader and `vfx-tool` on and off; server `perf top` before and after;
       checks: `PlayerActivity` upload ≤ 2.4 kB/s average per client, every client's total download ≤ 50 kB/s average,
       no `activityDropped` above the cap, `visuals.leaks` 0, dumps equal at the end; frame time p95 with visuals vs.
@@ -136,7 +136,7 @@ same commit. Every scenario carries `# areas:` (new areas `visuals`, `driving`, 
 - [ ] 7.4 Two-instance verification: `visual-parts`, `visual-activity`, `visual-latejoin` pass with A and B, plus the
       scenarios of the `visuals`, `parts`, `presence` and `tools` areas and the smoke set (`Run-All -Changed`); record
       run ids in STATUS. Done when all are green.
-- [ ] 7.5 Docs: INTEGRATION.md (packet, record field, row 1 events, verbs, dump sections, scenarios, areas), README
+- [ ] 7.5 **In code (2026-10-07):** INTEGRATION.md rows added (packet, record field, row 1 events, read-only views, preference, verbs, dump section, scenarios, areas); README "Playing together" waits for the screenshots. Docs: INTEGRATION.md (packet, record field, row 1 events, verbs, dump sections, scenarios, areas), README
       "Playing together" (what other players see, the `RemoteVisuals` switch). Done when `openspec validate
       remote-visual-feedback --strict` passes and part 1 is merged.
 
