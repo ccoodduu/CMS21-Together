@@ -3,6 +3,21 @@
 Open questions that block a decision. Each has the default we work with until answered.
 Answered ones move to the bottom with the answer.
 
+## Playtest findings (2026-10-07)
+
+Not questions for the user; open bugs from the first playtest, fixed one by one.
+
+1. **Ghost stuck when the lift moves (row 17):** a remote mount's ghost stayed at its world position after the lift
+   moved, and the real caliper stayed hidden (`forceRenderingOff`) until the scene was reloaded.
+2. **Server keeps running** after the host returned to the main menu (the user typed `/exit`). By design (session-hosting spec: leaving keeps hosting; Stop on the Host tab or quitting the game stops it); my advice to "go to the main menu" was wrong. Idea: a main-menu notice "your server is still running".
+3. **Persistent car desync** on wheels: `s:3.22.4.tunedId` empty on the host vs `tire_sport` on the server.
+4. **Rollback after a rejected mount** (same item taken by both players) left the loser's inventory out of sync
+   until F7.
+5. **F7 on a friend's client** logs `Error in handler WorldState: Object reference not set`.
+6. **Car state "not ready"** in the host's bug report while the car was being worked on (`be9b`).
+7. **Version check too strict for a playtest:** every commit changes `dev.N`, so friends must reinstall for
+   server-only fixes. Proposal: compare the base version and the protocol hash, not the build number.
+
 ## Open — row 17 remote visual feedback (2026-10-07)
 
 1. **Collisions** between players' cars and walking players while driving. **Default:** none (others' cars pass

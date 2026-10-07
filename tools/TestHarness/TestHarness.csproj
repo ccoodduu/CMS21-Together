@@ -23,6 +23,7 @@
         <Reference Include="UnityEngine.CoreModule" Private="false"><HintPath>$(ClientLibs)\UnityEngine.CoreModule.dll</HintPath></Reference>
         <Reference Include="UnityEngine.AudioModule" Private="false"><HintPath>$(ClientLibs)\UnityEngine.AudioModule.dll</HintPath></Reference>
         <Reference Include="UnityEngine.PhysicsModule" Private="false"><HintPath>$(ClientLibs)\UnityEngine.PhysicsModule.dll</HintPath></Reference>
+        <Reference Include="UnityEngine.UI" Private="false"><HintPath>$(ClientLibs)\UnityEngine.UI.dll</HintPath></Reference>
         <Reference Include="UnityEngine.ScreenCaptureModule" Private="false"><HintPath>$(TestManagedDir)\UnityEngine.ScreenCaptureModule.dll</HintPath></Reference>
         <Reference Include="Newtonsoft.Json" Private="false"><HintPath>$(CoreLibs)\Newtonsoft.Json.dll</HintPath></Reference>
     </ItemGroup>
