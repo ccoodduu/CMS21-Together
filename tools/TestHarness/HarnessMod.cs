@@ -59,6 +59,7 @@ public class HarnessMod : MelonMod
     {
         if (!Application.runInBackground) Application.runInBackground = true;
         if (mute && AudioListener.volume > 0f) AudioListener.volume = 0f;
+        if (Application.isBatchMode && Cursor.lockState != CursorLockMode.None) Cursor.lockState = CursorLockMode.None;
 
         Features.PerfCommands.RecordFrame();
         SceneState.Update();
@@ -73,7 +74,7 @@ public class HarnessMod : MelonMod
 
     private void ApplyWindow()
     {
-        if (windowWidth <= 0) return;
+        if (windowWidth <= 0 || Application.isBatchMode) return;
         if (Screen.fullScreenMode == FullScreenMode.Windowed && Screen.width == windowWidth && Screen.height == windowHeight) return;
         Screen.SetResolution(windowWidth, windowHeight, FullScreenMode.Windowed);
     }
