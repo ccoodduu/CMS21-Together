@@ -46,7 +46,9 @@ public static class RemoteCars
 {
 	public const float LoadTimeoutSeconds = 30f;
 	public const float LocalCarWaitSeconds = 60f;
+	public const float LocalCarSettleSeconds = 3f;
 	private static bool building;
+	private static float localReadySince = -1f;
 	private static readonly Vector3 ParkingSpot = new Vector3(0f, -500f, 0f);
 
 	private static readonly Dictionary<int, RemoteCar> cars = new Dictionary<int, RemoteCar>();
@@ -150,11 +152,20 @@ public static class RemoteCars
 		}
 	}
 
-	// Loading a second car while the game still loads the player's own track car froze the game for over 10 s.
+	// Loading a second car while the game still prepares the player's own track car froze the game for over 10 s.
 	private static bool LocalCarReady()
 	{
 		var physics = PrepareCarPhysics.Get();
-		return physics != null && physics.CarLoader != null && physics.CarLoader.IsCarLoaded() && GameMode.Get()?.GetCurrentMode() == gameMode.CarDrive;
+		var vehicle = physics == null ? null : physics.VehicleController;
+		bool ready = physics != null && physics.CarLoader != null && physics.CarLoader.IsCarLoaded()
+		             && GameMode.Get()?.GetCurrentMode() == gameMode.CarDrive && vehicle != null && vehicle.initialized;
+		if (!ready)
+		{
+			localReadySince = -1f;
+			return false;
+		}
+		if (localReadySince < 0f) localReadySince = Time.realtimeSinceStartup;
+		return Time.realtimeSinceStartup - localReadySince >= LocalCarSettleSeconds;
 	}
 
 	private static IEnumerator BuildSteps(RemoteCar car, string forceRoute)
@@ -172,6 +183,7 @@ public static class RemoteCars
 		if (!CreateLoader(car, route)) yield break;
 		car.Route = route;
 		car.Mode = data != null ? "ghost" : "ghost=base";
+		Log.Info($"[Drive] Observer car of player {car.PlayerId}: loading {car.Start.CarToLoad} on {route}.");
 		try
 		{
 			car.Loader.StartCoroutine(data != null ? car.Loader.LoadCarFromFile(data) : car.Loader.LoadCar(car.Start.CarToLoad));
