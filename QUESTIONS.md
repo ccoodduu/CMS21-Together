@@ -98,6 +98,14 @@ draft works with:
 
 ## Answered
 
+- **Answered by the user on 2026-10-07 (late evening), row 19 ledger:** S1 (two players in one seat) is fixed in
+  row 19 (server arbitrates, the second is refused and leaves the seat). For I3, I7, E4, M8, C4, J2, J4, J5 the
+  server's choice stays, but every refused, ignored or overridden action must reach the acting client with the
+  authoritative result, so the client whose action was cancelled rolls back and never stays out of sync (no silent
+  drops). The race and drift audit's rows are all either covered by rows 18/19, a later hardening change (I6, E5,
+  C1, C5) or this rule.
+- **Answered by the user on 2026-10-07 (evening):** an agent reviews every complicated OpenSpec change before it is
+  implemented; races between players get a soak contention mode after row 18.
 - **Answered by the user on 2026-10-07 (afternoon):** release questions 1–4 take the defaults (no tags for past milestones; 0.6.0 → 1.0.0 in the release commit; bug reports as GitHub issues on the fork; the new README). The Steam playtest will probably be after the autumn holiday. Mod lists: only the user's own install for now (the friends just bought the game). No need to open row 11's proposal/design. Row 11: budgets and headless C/D take the defaults; the 4-hour soak runs on 2026-10-08 while the user is at school (start after 08:00 once the PC is idle; the PC and this Claude Code session must be running).
 - **Two lanes and the memory guard (2026-10-06, 23:55):** (b). The user wants parallel lanes again; `CLAUDE_CODE_DISABLE_BG_SHELL_PRESSURE_REAP=1` is in `~/.claude/settings.json` (works after a restart of Claude Code). The second lane only starts with at least 10 GB free RAM. Also: test less (full regression only for client/server changes) and reuse the running games across scenarios (batch mode).
 Answered by the user on 2026-10-06 ("4. server rule, andre questions default"):
