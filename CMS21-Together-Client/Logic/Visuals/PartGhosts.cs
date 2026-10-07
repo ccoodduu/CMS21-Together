@@ -141,8 +141,8 @@ public static class PartGhosts
 
 	private static void StartOff(int loader, string key, PartScript script, List<PartScript> members, CarLoader carLoader)
 	{
-		var renderers = PartRenderers(script, includeHidden: false);
-		foreach (var member in members) renderers.AddRange(PartRenderers(member, includeHidden: false));
+		var renderers = PartRenderers(script);
+		foreach (var member in members) renderers.AddRange(PartRenderers(member));
 		var position = script.transform.position;
 		int actor = ActorOf(loader, key);
 		if (!AdmitRemote(VisualKind.Off, loader, position, actor)) return;
@@ -159,7 +159,7 @@ public static class PartGhosts
 
 	private static void StartOn(int loader, string key, PartScript script, CarLoader carLoader)
 	{
-		var renderers = PartRenderers(script, includeHidden: true);
+		var renderers = PartRenderers(script);
 		var position = script.transform.position;
 		int actor = ActorOf(loader, key);
 		if (!AdmitRemote(VisualKind.On, loader, position, actor)) return;
@@ -230,8 +230,9 @@ public static class PartGhosts
 	}
 
 	// The part's own renderers: not its bolts (BoltReplay draws those), not child parts, not the enableOnUnmount
-	// stand-ins. includeHidden adds the renderers PartApplier switches on 0.5 s after a mount.
-	internal static List<Renderer> PartRenderers(PartScript script, bool includeHidden)
+	// stand-ins. Renderer.enabled is ignored: it is off for culled parts (spike 1.3), and PartApplier turns
+	// some renderers on only 0.5 s after a mount.
+	public static List<Renderer> PartRenderers(PartScript script)
 	{
 		var excluded = new HashSet<int>();
 		if (script.MountObjects != null)
@@ -246,23 +247,9 @@ public static class PartGhosts
 				if (go != null)
 					foreach (var renderer in go.GetComponentsInChildren<Renderer>(true)) excluded.Add(renderer.GetInstanceID());
 
-		var late = new HashSet<int>();
-		if (includeHidden)
-		{
-			foreach (var list in new[] { script.disableOnUnmount, script.hideWhenUnmontingMounting })
-				if (list != null)
-					foreach (var go in list)
-						if (go != null)
-							foreach (var renderer in go.GetComponentsInChildren<Renderer>(true)) late.Add(renderer.GetInstanceID());
-		}
-
 		var result = new List<Renderer>();
 		foreach (var renderer in script.GetComponentsInChildren<MeshRenderer>(false))
-		{
-			int id = renderer.GetInstanceID();
-			if (excluded.Contains(id)) continue;
-			if (renderer.enabled || late.Contains(id)) result.Add(renderer);
-		}
+			if (!excluded.Contains(renderer.GetInstanceID())) result.Add(renderer);
 		return result;
 	}
 
