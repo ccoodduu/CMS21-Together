@@ -147,6 +147,8 @@ namespace CMS21Together
 			SessionNotifications.Initialize();
 			SeatEngine.Initialize();
 			Logic.Visuals.VisualScope.Initialize();
+			Logic.Visuals.PartGhosts.Initialize();
+			Logic.Visuals.BoltReplay.Initialize();
 		}
 
 		public override void OnApplicationQuit()
