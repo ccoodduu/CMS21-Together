@@ -80,6 +80,7 @@ namespace CMS21_Together_Server.Network.Handlers
 			if (request.Price > 0)
 			{
 				world.Money -= request.Price;
+				world.updateGamemode = false;
 				Server.SendToClients(world);
 			}
 			Reply(client, request, ParkRefusal.None, slot);
