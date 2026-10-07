@@ -52,4 +52,10 @@ public static class DigestCommands
         else ClientDigests.HeldWrong.Remove(parts[0]);
         return ClientDigests.HeldWrong.Keys.ToList();
     }
+
+    internal static void Reset(List<string> changed)
+    {
+        if (ClientDigests.HeldWrong.Count > 0) changed.Add($"digest-hold {string.Join(",", ClientDigests.HeldWrong.Keys)}");
+        ClientDigests.HeldWrong.Clear();
+    }
 }

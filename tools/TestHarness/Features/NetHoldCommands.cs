@@ -68,6 +68,16 @@ public static class NetHoldCommands
         return $"replayed {replay.Count}";
     }
 
+    internal static void Reset(List<string> changed)
+    {
+        if (holding || held.Count > 0) changed.Add($"net-hold (dropped {held.Count} held packets)");
+        if (delaySeconds > 0f || delayed.Count > 0) changed.Add($"net-delay {delaySeconds * 1000f:0} ms (dropped {delayed.Count} delayed packets)");
+        holding = false;
+        held.Clear();
+        delaySeconds = 0f;
+        delayed.Clear();
+    }
+
     [HarmonyPatch(typeof(PacketRouter), nameof(PacketRouter.Dispatch))]
     [HarmonyPrefix]
     private static bool BeforeDispatch(PacketTypes id, object deserializedData, long senderId)

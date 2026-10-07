@@ -1,3 +1,4 @@
+# run-all: fresh
 # Both clients reach the menu, connect to the local server one after the other, load into the garage
 # and end up with the same shared state (stats, inventory, cars).
 param($Ctx)

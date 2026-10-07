@@ -168,6 +168,13 @@ function Get-LaneGameProcesses($LaneInfo) {
     }
 }
 
+# A scenario needs its own freshly started games (no batch) when it has per-instance launch arguments or a
+# "# run-all: fresh" line.
+function Test-ScenarioNeedsFreshGame([string]$ScenarioFile) {
+    if (Test-Path -LiteralPath ([System.IO.Path]::ChangeExtension($ScenarioFile, ".launch.psd1"))) { return $true }
+    return [bool](Select-String -LiteralPath $ScenarioFile -Pattern '^\s*#\s*run-all:\s*fresh\b' -Quiet)
+}
+
 Export-ModuleMember -Function Get-TestLane, Get-InstanceCompany, Get-InstanceSaveDir, Get-InstanceRegistryKey,
     Set-InstanceCompany, Assert-InstanceIsolated, New-ProfileSeed, Reset-InstanceProfile, Get-RealProfileFingerprint,
-    Get-LaneGameProcesses, Set-LaneServerConfig, Remove-ReleaseOnlyFiles
+    Get-LaneGameProcesses, Set-LaneServerConfig, Remove-ReleaseOnlyFiles, Test-ScenarioNeedsFreshGame

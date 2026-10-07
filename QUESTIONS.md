@@ -3,16 +3,6 @@
 Open questions that block a decision. Each has the default we work with until answered.
 Answered ones move to the bottom with the answer.
 
-## Open — new (2026-10-06 evening)
-
-1. **Two lanes and Claude Code's memory guard.** At about 18:00 Claude Code stopped the full regression on both lanes
-   (four games) because the PC ran critically low on free RAM, and it tells me not to restart that run on my own.
-   The games commit memory fine now (64 GB limit), but four of them leave little free physical RAM. Options: (a) I
-   stay on one lane at a time (safe, regressions take about 40 min); (b) you start Claude Code with
-   `CLAUDE_CODE_DISABLE_BG_SHELL_PRESSURE_REAP=1` so it does not stop runs under memory pressure, and I keep two lanes
-   but only start the second when at least 10 GB RAM is free. **Default: (a)** until you answer. The stopped run was the
-   regression of `integration/m4-seat-host` (rows 6 part 2 and 8 part 2); please restart it or tell me to.
-
 ## Accepted defaults (user, 2026-10-06)
 
 - Remote players see only the finished part state, not the bolt animation, while a part is reserved.
@@ -35,6 +25,7 @@ Nothing open.
 
 ## Answered
 
+- **Two lanes and the memory guard (2026-10-06, 23:55):** (b). The user wants parallel lanes again; `CLAUDE_CODE_DISABLE_BG_SHELL_PRESSURE_REAP=1` is in `~/.claude/settings.json` (works after a restart of Claude Code). The second lane only starts with at least 10 GB free RAM. Also: test less (full regression only for client/server changes) and reuse the running games across scenarios (batch mode).
 Answered by the user on 2026-10-06 ("4. server rule, andre questions default"):
 
 1. **Moving a car onto an occupied place:** a swap request; the server swaps both cars in one change.
