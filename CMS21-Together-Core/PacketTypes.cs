@@ -107,5 +107,8 @@ public enum PacketTypes
 	BugReportRequest,
 	BugReportCollect,
 	BugReportResult,
-	PlayerActivity
+	PlayerActivity,
+	CarDriveStart,
+	CarDriveState,
+	CarDriveStop
 }
