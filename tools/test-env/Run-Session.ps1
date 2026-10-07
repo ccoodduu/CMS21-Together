@@ -190,6 +190,12 @@ function Save-ServerLogs([string]$RunDir, [datetime]$Since) {
         $target = if ($i -eq $serverLogs.Count - 1) { "server.log" } else { "server_$($i + 1).log" }
         Copy-Item -LiteralPath $serverLogs[$i].FullName -Destination (Join-Path $RunDir $target)
     }
+    $perfLogs = @(Get-ChildItem -LiteralPath (Join-Path $serverDir "Log") -Filter "perf_*.jsonl" -ErrorAction SilentlyContinue |
+        Where-Object { $_.LastWriteTime -ge $Since } | Sort-Object Name)
+    if ($perfLogs.Count -gt 0) {
+        $perfLines = [string[]]@($perfLogs | ForEach-Object { [System.IO.File]::ReadAllLines($_.FullName) })
+        [System.IO.File]::WriteAllLines((Join-Path $RunDir "perf_server.jsonl"), $perfLines)
+    }
     if (Test-Path -LiteralPath $serverSaves) { Copy-Item -LiteralPath $serverSaves -Destination (Join-Path $RunDir "server_saves_after") -Recurse }
 }
 

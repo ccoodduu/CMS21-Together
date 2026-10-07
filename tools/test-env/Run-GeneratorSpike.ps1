@@ -17,6 +17,7 @@ $TestRoot = "$env:USERPROFILE\CMS21-TestInstalls"
 $repo = Resolve-Path (Join-Path $PSScriptRoot "..\..")
 Import-Module (Join-Path $PSScriptRoot "HarnessClient.psm1") -Force
 Import-Module (Join-Path $PSScriptRoot "TestLanes.psm1") -Force
+Import-Module (Join-Path $PSScriptRoot "PerfSampler.psm1") -Force
 
 $lane = Get-TestLane 1
 $name = $lane.Instances[0]
@@ -29,13 +30,13 @@ $gameMutex = New-Object System.Threading.Mutex($false, "Global\CMS21TogetherGame
 try { if (-not $gameMutex.WaitOne([TimeSpan]::FromMinutes(30))) { throw "lane busy" } } catch [System.Threading.AbandonedMutexException] { }
 
 function Sample($Process) {
-    $Process.Refresh()
+    $perf = Get-ProcessPerf $Process
     [pscustomobject]@{
-        t = [math]::Round(((Get-Date) - $Process.StartTime).TotalSeconds)
-        commitMb = [math]::Round($Process.PagedMemorySize64 / 1MB)
-        workingMb = [math]::Round($Process.WorkingSet64 / 1MB)
-        peakCommitMb = [math]::Round($Process.PeakPagedMemorySize64 / 1MB)
-        cpuSeconds = [math]::Round($Process.TotalProcessorTime.TotalSeconds, 1)
+        t = [math]::Round(((Get-Date) - $perf.StartTime).TotalSeconds)
+        commitMb = $perf.PrivateMb
+        workingMb = $perf.WorkingMb
+        peakCommitMb = $perf.PeakPrivateMb
+        cpuSeconds = [math]::Round($perf.CpuSeconds, 1)
     }
 }
 
