@@ -287,15 +287,28 @@ function Read-AllowList([string]$Path) {
     @(Get-Content -LiteralPath $Path | Where-Object { $_.Trim() -and -not $_.TrimStart().StartsWith("#") } | ForEach-Object { ($_ -split '\|')[0].Trim() })
 }
 
-# Rule 4 of design D6: server [ERROR] lines, client [ERROR] lines and HarmonyExceptions written since the marks,
-# except those an allow-list pattern matches. Logs of killed games copied to the run folder (client_<X>_<n>.log)
-# are read whole.
+# Every server start writes its own Log\Log_<time>.txt (Latest.txt is the current one), so a scenario that restarts
+# the server reads all of them.
+function Get-ServerLogFiles([string]$ServerDir, [datetime]$Since) {
+    @(Get-ChildItem -LiteralPath (Join-Path $ServerDir "Log") -Filter "Log_*.txt" -ErrorAction SilentlyContinue |
+        Where-Object { $_.LastWriteTime -ge $Since } | Sort-Object Name)
+}
+
+function Find-ServerLogLines([string]$ServerDir, [datetime]$Since, [string]$Pattern) {
+    foreach ($file in (Get-ServerLogFiles $ServerDir $Since)) {
+        foreach ($line in @(Read-FileFrom $file.FullName 0)) { if ($line -match $Pattern) { $line } }
+    }
+}
+
+# Rule 4 of design D6: server [ERROR] lines (every server log since -Since), client [ERROR] lines and
+# HarmonyExceptions written since the client marks, except those an allow-list pattern matches. Logs of killed games
+# copied to the run folder (client_<X>_<n>.log) are read whole.
 function Find-LogErrors {
-    param($Ctx, [int]$ServerMark, $ClientMarks, [string[]]$Allow = @())
+    param($Ctx, [datetime]$Since, $ClientMarks, [string[]]$Allow = @())
     $allowed = { param($line) foreach ($pattern in $Allow) { if ($line -match $pattern) { return $true } }; return $false }
     $found = @()
-    foreach ($line in @(Get-ServerLogLines | Select-Object -Skip $ServerMark)) {
-        if ($line -match "\[ERROR\]" -and -not (& $allowed $line)) { $found += "server: $line" }
+    foreach ($line in @(Find-ServerLogLines $Ctx.ServerDir $Since "\[ERROR\]")) {
+        if (-not (& $allowed $line)) { $found += "server: $line" }
     }
     foreach ($name in $Ctx.Instances) {
         $path = Get-ClientLogPath $name
@@ -331,4 +344,4 @@ Export-ModuleMember -Function Add-JsonLine, Test-InGarage, Wait-InGarage, Wait-I
     Connect-ScaleInstance, Connect-ScaleInstances, Get-PlayerIds, Set-ServerConfigValues, Restart-TestServer,
     Wait-TestServerExit, Get-ServerPlayerRecords, Wait-CarsReady, Invoke-ForcedDigestCheck, Get-StableSections,
     Compare-StableDumps, Save-Dumps, Invoke-ScaleCheckpoint, Get-ClientLogPath, Get-ClientLogMarks, Read-FileFrom,
-    Read-AllowList, Find-LogErrors, Format-Position, Get-Distance, Get-BaseGameCars
+    Read-AllowList, Get-ServerLogFiles, Find-ServerLogLines, Find-LogErrors, Format-Position, Get-Distance, Get-BaseGameCars

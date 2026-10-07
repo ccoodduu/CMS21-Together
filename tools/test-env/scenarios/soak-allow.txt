@@ -1,0 +1,8 @@
+# Allow-list for rule 4 of multiplayer-soak-and-scale D6 (soak, storm, latejoin-full; Show-SoakReport.ps1 reads it
+# too). One entry per line: <regex> | <reason> | <owning row>. An entry hides a known error from the pass/fail
+# verdict only; it stays in the logs. Remove an entry when its owner fixes the error.
+Exception in Harmony patch of method void CarLoader::DeleteCar\(\) | NullReferenceException in the delete hook, seen in most runs since 2026-10-06 (also in connect); open | 1 (sync-car-parts)
+Exception in Harmony patch of method void Inventory::Delete\(Item item\) | NullReferenceException in the inventory delete hook (seen in economy and tools runs, 2026-10-07); open | 1 / 5a (inventory)
+Exception in Harmony patch of method void CarLoader::ChangeLicencePlateTexture | plate texture hook throws when a car is loaded or deleted (2026-10-07 runs); open | 4 (car details)
+Erreur sending TCP data to \d+ : Unable to write data to the transport connection | server writes to a client a storm has just killed; expected during storms | 11 (storms)
+Error ConnectCallback : No connection could be made because the target machine actively refused it | a client reconnects while a storm has the server stopped; expected during storms K6-K8 | 11 (storms)
