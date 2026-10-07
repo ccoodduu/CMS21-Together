@@ -12,12 +12,45 @@ namespace CMS21Together.Network.Handlers
     {
         private static System.Collections.Generic.Queue<(InventorySyncPacket Packet, int SnapshotId)> syncQueue = new System.Collections.Generic.Queue<(InventorySyncPacket, int)>();
         private static bool isProcessingSync = false;
-        
+        private static readonly System.Collections.Generic.Queue<System.Action> heldDuringFullSync = new System.Collections.Generic.Queue<System.Action>();
+        private static bool fullSyncOpen;
+
         public static bool IgnoreInventoryHooks = false;
+
+        public static bool HoldDuringFullSync(System.Action apply)
+        {
+            if (!fullSyncOpen) return false;
+            heldDuringFullSync.Enqueue(apply);
+            return true;
+        }
+
+        public static void ResetHeld()
+        {
+            heldDuringFullSync.Clear();
+            fullSyncOpen = false;
+        }
+
+        private static void ReplayHeld()
+        {
+            if (heldDuringFullSync.Count > 0) Log.Debug($"[InventoryHandlers] Replaying {heldDuringFullSync.Count} inventory changes received during the full sync.");
+            while (heldDuringFullSync.Count > 0)
+            {
+                var apply = heldDuringFullSync.Dequeue();
+                try
+                {
+                    apply();
+                }
+                catch (System.Exception ex)
+                {
+                    Log.Error($"[InventoryHandlers] Replaying an inventory change failed: {ex.Message}");
+                }
+            }
+        }
 
         [PacketHandler(PacketTypes.InventoryData)]
         public static void HandleInventorySync(long clientId, InventorySyncPacket packet)
         {
+            fullSyncOpen = true;
             syncQueue.Enqueue((packet, SyncTracker.ReceivingSnapshotId));
             SyncTracker.MarkProgress();
             if (!isProcessingSync)
@@ -110,6 +143,12 @@ namespace CMS21Together.Network.Handlers
                 {
                     Log.Success("[InventoryHandlers] Inventory sync complete!");
                     ClientData.IsInventorySynced = true;
+                    if (syncQueue.Count == 0)
+                    {
+                        fullSyncOpen = false;
+                        ReplayHeld();
+                        Logic.Car.Parts.PartTransactions.ReapplyOpen();
+                    }
                     RefreshInventoryWindow();
                     RefreshWarehouseWindow();
                 }
@@ -125,6 +164,7 @@ namespace CMS21Together.Network.Handlers
         [PacketHandler(PacketTypes.InventoryItemAction)]
         public static void HandleInventoryItemAction(long clientId, InventoryItemActionPacket packet)
         {
+            if (HoldDuringFullSync(() => HandleInventoryItemAction(clientId, packet))) return;
             IgnoreInventoryHooks = true;
             try
             {
@@ -158,6 +198,7 @@ namespace CMS21Together.Network.Handlers
         [PacketHandler(PacketTypes.InventoryGroupItemAction)]
         public static void HandleInventoryGroupItemAction(long clientId, InventoryGroupItemActionPacket packet)
         {
+            if (HoldDuringFullSync(() => HandleInventoryGroupItemAction(clientId, packet))) return;
             IgnoreInventoryHooks = true;
             try
             {
@@ -182,6 +223,7 @@ namespace CMS21Together.Network.Handlers
         [PacketHandler(PacketTypes.WarehouseAction)]
         public static void HandleWarehouseAction(long clientId, WarehouseActionPacket packet)
         {
+            if (HoldDuringFullSync(() => HandleWarehouseAction(clientId, packet))) return;
             IgnoreInventoryHooks = true;
             try
             {
@@ -191,14 +233,16 @@ namespace CMS21Together.Network.Handlers
                     if (packet.IsGroupItem)
                     {
                         Singleton<GameManager>.Instance.Inventory.DeleteGroup(packet.GroupItem.UID); 
-                        Singleton<GameManager>.Instance.Warehouse.Add(packet.GroupItem.ToGameGroupItem());
+                        if (!WarehouseHas(packet.GroupItem.UID))
+                            Singleton<GameManager>.Instance.Warehouse.Add(packet.GroupItem.ToGameGroupItem());
                     }
                     else
                     {
                         var item = Singleton<GameManager>.Instance.Inventory.GetItem(packet.Item.UID);
                         if (item != null)
                             Singleton<GameManager>.Instance.Inventory.Delete(item);
-                        Singleton<GameManager>.Instance.Warehouse.Add(packet.Item.ToGameItem());
+                        if (!WarehouseHas(packet.Item.UID))
+                            Singleton<GameManager>.Instance.Warehouse.Add(packet.Item.ToGameItem());
                     }
                 }
                 else
@@ -208,13 +252,15 @@ namespace CMS21Together.Network.Handlers
                     {
                         var grp = packet.GroupItem.ToGameGroupItem();
                         Singleton<GameManager>.Instance.Warehouse.Delete(grp);
-                        Singleton<GameManager>.Instance.Inventory.AddGroup(grp);
+                        if (Singleton<GameManager>.Instance.Inventory.GetGroup(grp.UID) == null)
+                            Singleton<GameManager>.Instance.Inventory.AddGroup(grp);
                     }
                     else
                     {
                         var item = packet.Item.ToGameItem();
                         Singleton<GameManager>.Instance.Warehouse.Delete(item);
-                        Singleton<GameManager>.Instance.Inventory.Add(item);
+                        if (Singleton<GameManager>.Instance.Inventory.GetItem(item.UID) == null)
+                            Singleton<GameManager>.Instance.Inventory.Add(item);
                     }
                 }
             }
@@ -225,6 +271,14 @@ namespace CMS21Together.Network.Handlers
             
             RefreshInventoryWindow();
             RefreshWarehouseWindow();
+        }
+
+        private static bool WarehouseHas(long uid)
+        {
+            var all = Singleton<GameManager>.Instance.Warehouse?.GetAllItemsAndGroups();
+            for (int i = 0; all != null && i < all.Count; i++)
+                if (all[i].UID == uid) return true;
+            return false;
         }
 
         public static void RefreshInventoryWindow()

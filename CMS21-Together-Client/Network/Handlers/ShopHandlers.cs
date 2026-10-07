@@ -13,6 +13,7 @@ namespace CMS21Together.Network.Handlers
         [PacketHandler(PacketTypes.ShopAction)]
         public static void HandleShopAction(long clientId, ShopActionPacket packet)
         {
+            if (InventoryHandlers.HoldDuringFullSync(() => HandleShopAction(clientId, packet))) return;
             if (!ClientData.IsGarageStateSynced) return;
 
             InventoryHandlers.IgnoreInventoryHooks = true;
@@ -25,13 +26,15 @@ namespace CMS21Together.Network.Handlers
                         if (packet.IsGroupItem)
                         {
                             var gameGrp = packet.GroupItemToBuy.ToGameGroupItem();
-                            Singleton<GameManager>.Instance.Inventory.AddGroup(gameGrp);
+                            if (Singleton<GameManager>.Instance.Inventory.GetGroup(gameGrp.UID) == null)
+                                Singleton<GameManager>.Instance.Inventory.AddGroup(gameGrp);
                             Log.Success($"[ShopHandlers] Successfully added GroupItem {gameGrp.ID} to local inventory.");
                         }
                         else
                         {
                             var gameItem = packet.ItemToBuy.ToGameItem();
-                            Singleton<GameManager>.Instance.Inventory.Add(gameItem);
+                            if (Singleton<GameManager>.Instance.Inventory.GetItem(gameItem.UID) == null)
+                                Singleton<GameManager>.Instance.Inventory.Add(gameItem);
                             Log.Success($"[ShopHandlers] Successfully added Item {gameItem.ID} to local inventory.");
                         }
                     }
@@ -79,6 +82,7 @@ namespace CMS21Together.Network.Handlers
         [PacketHandler(PacketTypes.ItemsExchange)]
         public static void HandleItemsExchange(long clientId, ItemsExchangePacket packet)
         {
+            if (InventoryHandlers.HoldDuringFullSync(() => HandleItemsExchange(clientId, packet))) return;
             if (!ClientData.IsGarageStateSynced) return;
 
             InventoryHandlers.IgnoreInventoryHooks = true;
@@ -86,7 +90,8 @@ namespace CMS21Together.Network.Handlers
             {
                 foreach (var item in packet.ItemsToBuy)
                 {
-                    Singleton<GameManager>.Instance.Inventory.Add(item.ToGameItem());
+                    if (Singleton<GameManager>.Instance.Inventory.GetItem(item.UID) == null)
+                        Singleton<GameManager>.Instance.Inventory.Add(item.ToGameItem());
                 }
             }
             finally

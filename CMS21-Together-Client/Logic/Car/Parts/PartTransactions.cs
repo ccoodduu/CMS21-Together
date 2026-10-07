@@ -194,6 +194,15 @@ public static class PartTransactions
 		InventoryHandlers.RefreshInventoryWindow();
 	}
 
+	public static void ReapplyOpen()
+	{
+		foreach (var tx in open.Where(t => t.AbortedUntil == 0f && !t.Delta.IsEmpty))
+		{
+			Log.Debug($"[Parts] Loader {tx.Loader}: reapplying the open transaction for {string.Join(",", tx.Keys)} after a full inventory sync.");
+			PartChanges.ApplyInventory(tx.Delta);
+		}
+	}
+
 	public static void FlushIdle()
 	{
 		float now = Time.realtimeSinceStartup;
