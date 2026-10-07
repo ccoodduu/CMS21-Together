@@ -74,6 +74,20 @@ Static halves of tasks 1.1-1.5 (dump, decompile, `xref.py`, the unhollowed assem
 - **1.5** `GetCarsForScene` does not depend on the loaded scene (works in the garage); `rarity` is not read yet.
   *Open:* sizes and DLC entries on two clients.
 
+### Runtime spike results (group 1, lane 2, 2026-10-07)
+
+Details in `docs/spikes/outdoor-runtime.md` "Runtime results".
+- **1.1** The hold works: a 10 s hold kept the loader waiting and the generator ran once; a late instance (after
+  15 s) gives a local visit. D2's 15 s stays.
+- **1.2 Reseed works**, with three changes to D4: one random stream per generator iterator (not a reseed per step),
+  read and written through the `get/set_state_Injected` icalls (the unhollowed `Random.State` is a 1-byte struct), a
+  `Helper.GetRandomCars` prefix that returns the server's picks without drawing, and a stream for each car's
+  `SetRandomColorPanels` coroutine. Two clients' car and barn digests are equal. Different owned cars: open.
+- **1.3** Amount ranges (30, 45) for both types; values, claim, relay and raise via `PlayerBid` work (Q3: raise kept).
+  The guard blocked the location window after an auction win (fixed: the capture opens a guard bypass).
+- **1.4** Pile keys, order and UIDs equal on two clients; `windowType`, move-all and window refresh are hand checks.
+- **1.5** Catalog readable in the garage, equal on two clients (95/101/137/95 configs).
+
 ## Goals / Non-Goals
 
 **Goals:**
@@ -152,11 +166,14 @@ list, D3), `GeneratorId` (D5), `Members`, `Sold` (car indices), `Loot` (D6), `Lo
 - *Alternative:* the catalog from an exported `Database/cars.json` (row 9's exporter, not built yet) — kept as a later
   source for the same `CarCatalog`; the client report works now and follows installed DLC and game data exactly.
 
-### D4. Same appearance and layout: reseed per generator step, digest to check
-- **Reseed:** a prefix on each generator iterator's `MoveNext` (`JunkyardGenerator.<Generate>d__18`, `<CreateCar>d__19`,
-  `ShedManager.<Generate>d__29`, `<CreateCar>d__30`) saves `Random.state` and calls
-  `Random.InitState(Hash(Seed, kind, carIndex, __1__state, stepCounter))`; the postfix restores the saved state. One
-  `MoveNext` step is synchronous, so frames in between (other scripts using `Random`) cannot shift the sequence.
+### D4. Same appearance and layout: one random stream per generator iterator, digest to check
+- **Reseed:** each generator iterator (`JunkyardGenerator.<Generate>d__18`, `<CreateCar>d__19`,
+  `ShedManager.<Generate>d__29`, `<CreateCar>d__30`, `CarLoader.<SetRandomColorPanels>d__321`) has its own random
+  stream: its first `MoveNext` seeds it with `Random.InitState(Hash(Seed, kind, carIndex))`, every `MoveNext` swaps it
+  in (prefix) and out (finalizer), the global state is restored around it. Frames in between and wait steps cannot
+  shift the sequence (spike 1.2). The state is read and written through the `get/set_state_Injected` icalls with a
+  16-byte struct, because the unhollowed `Random.State` has no fields. `Helper.GetRandomCars` returns the server's
+  picks without drawing in a shared junkyard or barn.
   Positions, counts, colours, conditions, `negotationMod`, the barn's group, floor, walls, props and spawn point all
   come out equal when the inputs are equal.
 - **Car model:** the `CreateCar` prefixes replace `ref CarsIdWithConfig` with `Picks[index]` (junkyard: index of the
