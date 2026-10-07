@@ -407,3 +407,17 @@ belong to row 18. I2 needs a warehouse verb (row 19).
 The audit's notes for row 18 are all placed: `FlushNow` per entry (row 19 D8, task 8.2; row 18's WIP already sends
 changed fluids only); stale records after the lock release (row 19 D1, with M2); clearing transactions on car delete
 (row 18's WIP `DropLoader` for open transactions; `committed` is still global: see P7).
+
+---
+
+## Resolution
+
+**Resume here (2026-10-07, work in progress):** done in the documents: B1, B2, M1–M7, minors 1–13 and 15, the nits
+(design.md D1–D17 and tasks.md rewritten; `specs/concurrent-state-merges/spec.md` rewritten), the ledger's additions
+(P7, P11, I2, I5, M4, M5, C2 in tasks and D14; I6, E5, C1, C5 named as a later change in design Non-Goals), and the
+user's decision of 2026-10-07 on the "accept" rows (S1 fixed in D17 and task 12.4; no silent drops in D16 and part 3,
+tasks 12.1–12.5 with `server-answers`). Left: proposal.md (sizes, the user's decision, the later hardening change by
+name, the final open questions, `SeatRefused` as the one new packet type, impact list), `specs/drift-detection-coverage`
+(minor 11 wording: a car key, `desync_stall_seconds`), ROADMAP row 19 (sizes part 1 ≈ 9–11, part 2 ≈ 6–7, part 3 ≈ 3),
+minor 14 (sizes, in proposal and ROADMAP), the per-item resolution list below, `openspec validate --strict`, and a
+consistency read of all files.

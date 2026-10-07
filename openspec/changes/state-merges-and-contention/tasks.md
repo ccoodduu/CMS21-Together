@@ -1,168 +1,210 @@
 # Tasks
 
-**Row 19: the race and drift audit's gaps that row 18 does not close** (gaps 3, 6, 9, 10, the rest of 7, and the
-soak contention mode).
+**Row 19: the race and drift audit's gaps that row 18 does not close** (gaps 3, 6, 9, 10, the rest of 7, the soak
+contention mode, and the review ledger's P7, P11, I2, I5, M4, M5 and C2), plus the user's decision of 2026-10-07 on
+the ledger's "accept" rows (S1 fixed; no silent drops for I3, I7, E4, M8, C4, J2, J4, J5). Revised 2026-10-07 after
+`review.md`.
 
 - **Prerequisites** (on `main`): rows 1, 2, 4, 5a, 5b, 11, 13, 14 and the gap 5 fix (`d1dd908`).
-- **Parts** (open question 5): part 1 = groups 1–7 (state merges, L ≈ 7–8 sessions), merged on its own; part 2 =
-  groups 9–11 (detection and contention, M ≈ 4–5 sessions). Group 8 holds the row 18 tie-ins and merges with
-  whichever part is open when row 18's switch-over lands.
-- **Waits for row 18** (`change/part-locks`): tasks 8.1–8.3 wait for its switch-over (its task 5.1); 8.2 also for its
-  fluid gates (its task 7.1), 8.3 also for its item step (its task 6.1); 10.4 waits for its task 5.1 (digests keep
-  running while locks are held). By open question 6, groups 3 and 4 and task 9.2's car keys start after row 18 has
-  merged; everything else can start now.
+- **Parts** (open question 5), each merged on its own:
+  - part 1 = groups 1–7 (state merges, L ≈ 9–11 sessions);
+  - part 2 = groups 9–11 (detection and contention, L ≈ 6–7 sessions);
+  - part 3 = groups 12–13 (the server answers every refusal, and seats, M ≈ 3 sessions).
+  - Group 8 holds the row 18 tie-ins and merges with whichever part is open when row 18 has merged.
+- **Order with row 18** (`change/part-locks`):
+  - Task 1.4 lands first and does not wait: row 18's `locks-fluid` needs `cardetails-fluid` (its task 7.2).
+  - Groups 3 and 4, task 6.3 and task 9.2's car keys start after row 18 has merged (open question 6; 6.3 needs its
+    `FlushNow`, 3.5 builds on its `PartTransactions.DropLoader`, 4.1 replaces its changed-fluids send).
+  - Tasks 8.1–8.3 need row 18's switch-over (its task 5.1); 8.2 also its fluid gates (7.1), 8.3 its item step (6.1).
+    Task 10.4 needs its task 5.1; task 10.5 needs row 18 merged.
+  - Everything else (spikes, Core, machines, parking groups 6.1–6.2, digests, soak harness, part 3) can start now.
 - **Scenarios:** each carries `# areas: …`. A scenario that proves a fix must fail without it; the commit message
   says so, as the gap 5 fix did.
 - **Spikes:** a spike that changes a decision updates design.md in the same commit.
 - **Commits:** one conventional commit per finished task group.
 
-## 1. Spikes
+## 1. Spikes and early harness
 
 - [ ] 1.1 Machine items (design D15.1). Log in `ToolsStore.Check` (debug level) whether each put's UID was in the
       server's inventory, removed by the putter, or never seen. Run `tools-slots`, `tools-race`, `tools-latejoin` and
-      `tools-car-effects`. Done when design.md D9 states the rule for never-seen UIDs (accept and count, or refuse)
-      with the counts, and the scenarios still pass.
+      `tools-car-effects`. Done when design.md D9 states the rule for never-seen UIDs with the counts, and the
+      scenarios still pass.
 - [ ] 1.2 Examine and condition paths (D15.2). `part-state` of the touched keys before and after `diag-examine` with
       each `ToolType`, `tool-use` with the welder on a body part, `tool-repair` and `tool-paint-part` on a part that is
-      then mounted. Done when design.md D1 lists, per path, the field groups it changes, and every changed field
-      belongs to exactly one group.
+      then mounted. Done when design.md D1 lists, per path, the groups it changes, and every changed field belongs to
+      exactly one group.
 - [ ] 1.3 Detail values that drift by themselves (D15.3). `cardetails-show 0` every 5 s for 2 minutes on an idle car,
-      with the engine running (`sit`, `engine on`), and after a `test-drive` round trip. Done when design.md D11 lists
-      the fields the `car-details` digest leaves out or rounds coarser, or states that none drift.
+      with the engine running (`sit`, `engine on`), after a `test-drive` round trip and after a `car-wheel-swap`
+      style rim and tire change. Done when design.md D11 lists the fields the `car-details` digest leaves out or
+      rounds coarser, or states that none drift.
+- [ ] 1.4 Harness, independent of row 18 [review M7]: row 4's registered setters `cardetails-fluid <loader> <type> <id>
+      <level> [cond]`, `cardetails-wheel <loader> <index> <w> <rim> <tire> <et>`, `cardetails-alignment <loader> <FL>
+      <FR> <RL> <RR>` (`-` leaves a field) and `cardetails-wash <loader> <dust> <wash> [panelIndex]`, each through the
+      game setters and `MarkDirty`; the dump section `carDetails` (rounded like `Signature`, lists sorted by key).
+      INTEGRATION.md: row 4's names marked as built by row 19. Done when each setter changes the local `carDetails`
+      dump, a `cardetails-fluid` on A shows on B within 3 s, and `car-details` passes.
 
 ## 2. Core
 
-- [ ] 2.1 Core: `PartFields`, `Changed` on both part record packets, `PartRecordMerge.Merge(stored, incoming,
-      isMount)` per D1 (the groups of 1.2); `WheelMask` and `AlignmentFields AlignmentMask` on
-      `CarDetailsUpdatePacket`; `SlotItemOutcome` on `ToolSlotRejectedPacket`. All `[OptionalField]`. Server flag
-      `--check-merges`: a stale examine keeps the stored mount, identity and bolts; a mount record is taken whole; a
-      masked condition change keeps the stored mount; `None` is whole; a body record keeps the stored `Switched`;
-      wheels merge per masked index; alignment per masked field. Done when the solution builds and
-      `CMS21_Together_Server.exe --check-merges` passes.
+- [ ] 2.1 Core: `PartFields` (with `All`), `Changed` on both part record packets, `PartRecordMerge.Normalise(stored,
+      incoming, precondition)` per design D1 (the groups of 1.2); `WheelMask` and `AlignmentFields AlignmentMask` on
+      `CarDetailsUpdatePacket`; `SlotItemOutcome` on `ToolSlotRejectedPacket`. Server flag `--check-merges` for the part
+      rules: a mount record is taken whole; an unmount copies its masked groups; a stale examine (base `Unmounted`
+      differs) is dropped; an examine on a replaced part (base `PartId` differs) is dropped; a matching base merges
+      the masked groups and keeps the rest; an `Identity`-only tune merges; `All` is whole; a 0 mask is skipped; a
+      body record keeps the stored `Switched`; the written groups are reported per record. Done when the solution
+      builds and `CMS21_Together_Server.exe --check-merges` passes.
 
-## 3. Stale part records (gap 3; starts after row 18 has merged, open question 6)
+## 3. Stale part records (gap 3; after row 18 has merged)
 
-- [ ] 3.1 Client mask: `PartChangeTracker.Send` sets `Changed` per record against `LoaderSync`'s last known record
-      (epsilon of `PartRecords.SameState`; `None` without a last record). Done when the client debug log shows
-      `Changed = Examined` for a `diag-examine` change and `Mount|Bolts` for `part-unmount`, and `car-live`,
-      `car-race` and `car-mount-race` pass.
-- [ ] 3.2 Server merge per D1 in `CarPartsHandlers.OnChange` (after `FindConflict` and row 18's lock rule): mount
-      records whole, the rest merged; store, relay the stored records, return merged records (body and mechanical) in
-      the accepted result; `staleMerged` in the `cars` output. The same merge in `ToolsStore.OnPartChange`. Done when
-      `--check-merges` passes and `car-live`, `car-race`, `car-mount-race`, `tools-slots` and `tools-race` pass.
-- [ ] 3.3 Receiving side per D2: `PartChanges.OnRemoteChange`/`Apply` abort only on a `Mount`, `Identity` or
-      `Switched` difference to `LoaderSync`; `PartApplier.Apply` writes only attribute groups for a key in local work
-      (open transaction, or an unsent local flip). Done when step 3 of `car-stale-record` (the scenario of 3.4) passes: B's transaction survives A's examine and B's commit is accepted.
-- [ ] 3.4 `scenarios/car-stale-record.ps1` (`# areas: parts, cars`), steps 1–3 of design D14. Done when it passes, and
-      it fails on `main` without 3.2 and 3.3 (recorded in the commit message).
+- [ ] 3.1 Client masks per D1: `PartChangeTracker.Send` sets `Changed` against `LoaderSync` (raw values, `All` without
+      a record, never 0); `EngineStandParts` does the same for stand changes. Done when the client debug log shows
+      `Changed = Examined` for a `diag-examine` change, `Mount|Bolts` for `part-unmount` and a mask on a
+      `tool-stand-part` change, and `car-live`, `car-race`, `car-mount-race` and `tools-slots` pass.
+- [ ] 3.2 Server per D1 and D3: normalisation before `FindConflict` and before row 18's lock check; row 18's
+      `FlippedKeys` and `unlockedFlip` use D3's flip definition; row 18's `KeepStoredMountState` removed if it reached
+      `main`; `OnlyExamines` by mask; stored records with `Changed` cleared; `staleMerged` and `staleDropped` in the
+      `cars` output. The same normalisation in `ToolsStore.OnPartChange`, and the removed-by-other item check in
+      `ToolsStore.FindConflict`. `tools-race` gains the two-player stand-part step and the stand-part-against-engine-off
+      step of design D14. Done when `--check-merges` passes and `car-live`, `car-race`, `car-mount-race`,
+      `diagnostics`, `test-drive`, `locks-race` and `tools-race` pass.
+- [ ] 3.3 Receiving side per D2: relays carry the written groups and results the differing groups; receivers write only
+      the masked groups to the game and `LoaderSync`; a transaction is aborted only for `Mount`, `Identity`,
+      `Switched` or `All`; `AbortFor` after the revision check; `PartApplier.ShowMounted` returns when the part is
+      unmounted again after its wait [P11]. Done when steps 2–4 of `car-stale-record` (written in 3.4) pass and
+      `visual-parts` passes.
+- [ ] 3.4 `scenarios/car-stale-record.ps1` (`# areas: parts, cars, visuals`), steps 1–5 of design D14, with the verbs
+      `part-condition` and `diag-examine … keys`. Done when it passes, and it fails on `main` without 3.2 and 3.3
+      (recorded in the commit message).
+- [ ] 3.5 `committed` part transactions per loader [P7]: `HasOpen(loader)` and `HoldsInventoryChanges` look at that
+      loader's entries; committed entries of a loader are dropped with row 18's `PartTransactions.DropLoader` on car
+      delete and on a `SpawnSeq` change, and a dropped transaction rolls its inventory delta back locally (design
+      D16, I7); the dump field `parts.transactions` (open and committed per loader).
+      `car-gone-inflight` gains the `park` and `job-finish` steps and checks B's `parts.transactions`. Done when
+      `car-gone-inflight` passes with all three steps.
 
-## 4. Car details as entries (gap 6; starts after row 18 has merged, open question 6)
+## 4. Car details as entries (gap 6; after row 18 has merged)
 
-- [ ] 4.1 Harness: row 4's setters `cardetails-fluid`, `cardetails-wheel`, `cardetails-alignment` (`-` leaves a field)
-      and `cardetails-wash [panelIndex]`, each through the game setters and `MarkDirty`; `cardetails-pour`; the dump
-      section `carDetails` (rounded like `Signature`). Register them in INTEGRATION.md (owner 19, row 4's names marked
-      as built by 19). Done when each setter changes the local `carDetails` dump and `car-details` passes.
-- [ ] 4.2 Client entries per D4: `lastKnown` per entry, `Flush` sends only changed entries with `WheelMask` and
-      `AlignmentMask`, remembers only the sent entries; `SendFull` unchanged. Done when one `cardetails-fluid` logs an
-      update with one fluid entry, one `cardetails-wash … 3` an update with one panel, and `car-details` and
-      `car-wheel-swap` pass.
-- [ ] 4.3 Server per D5: `CarDetailsStore.Merge` per masked wheel index and alignment field; relay unchanged. Done when
-      `--check-merges` covers it and `car-details-request` passes.
-- [ ] 4.4 Apply and remember per entry (D6): `CarDetailsIO.Apply` honours the masks; after an apply only the carried
-      entries are remembered. Done when the "unsent edit" step of `details-concurrent` passes (A's brake set within
-      its flush delay still reaches the server after B's coolant was applied on A).
-- [ ] 4.5 Own echo per `ClientSeq` (D7): keep the sent entries' signatures (16 sends or 10 s per loader), drop echoed
-      entries that equal them, apply the rest; clear on `Reset`. Done when the pour step of `details-concurrent`
-      passes (`cardetails-pour 0 Brake 0 3` with `net-delay 150` on A reports `decreases` 0).
-- [ ] 4.6 `scenarios/details-concurrent.ps1` (`# areas: details, cars`) per D14: fluid pair, panel pair, wheel pair,
-      alignment pair, same entry, unsent edit, pour. Done when it passes and fails on `main` (commit message).
+- [ ] 4.1 Client entries per D4: `lastKnown` per entry; `Flush` sends only changed entries with `WheelMask` and
+      `AlignmentMask` and remembers only the sent entries; this replaces row 18's changed-fluids `OnlyChanged`, and
+      `FlushNow` inherits it; `SendFull` unchanged. Done when one `cardetails-fluid` logs an update with one fluid
+      entry, one `cardetails-wash … 3` an update with one panel, and `car-details`, `car-wheel-swap` and `locks-fluid`
+      pass.
+- [ ] 4.2 Server per D5: the Core helper `DetailsMerge` (per masked wheel index and alignment field, plus today's
+      per-entry fluids, cosmetics and modules) used by `CarDetailsStore.Merge`; relay unchanged. `--check-merges`
+      gains the details cases [review M7]. Done when `--check-merges` and `car-details-request` pass.
+- [ ] 4.3 Apply and remember per entry (D6): `CarDetailsIO.Apply` honours the masks; after an apply only the carried
+      entries are remembered (`Present` includes `Dyno`). Done when the "unsent edit" step of `details-concurrent`
+      (written in 4.5) passes.
+- [ ] 4.4 Own echo per entry (D7): send copies with `foreignSince` (16 sends or 10 s per loader), marked by every
+      foreign apply; an own echo applies an entry the server changed or a foreign write overwrote, for every kept
+      `ClientSeq`; cleared on `Reset`. Harness `cardetails-pour` (level and condition, as `FluidRefillLogic`). Done
+      when the pour step (`decreases` 0 with `net-delay 150`) and the same-entry step in both server orders of
+      `details-concurrent` pass.
+- [ ] 4.5 `scenarios/details-concurrent.ps1` (`# areas: details, cars`) per D14: fluid pair, panel pair, wheel pair,
+      alignment pair, same entry in both orders, unsent edit, pour. Done when it passes and fails on `main` (commit
+      message).
 
-## 5. Machine items (gap 9)
+## 5. Item removals and machines (gap 9, I2, I5)
 
-- [ ] 5.1 Server per D9: `InventoryChanges` keeps remover, time and a copy of each removed item or group for 60 s (all
-      remove paths); `ToolsStore.Check` refuses a put of an item another client removed; never-seen UIDs per 1.1;
-      every put refusal carries `Returned` (the server re-adds its copy, clears the remover, relays the `Add`), `Gone`
-      or `Unchanged`; `unknownSlotItem` and `removeMissing` in the `tools` output. Done when `tools-race`, `tools-slots`
-      and `economy-trades` pass.
-- [ ] 5.2 Client per D9: `ToolSync.OnRejected`/`Compensate` follow the outcome (`Returned` re-adds with the hooks off,
-      `Gone` drops and shows "<name> used this part.", `Unchanged` as today). Harness `sell-item [uid]` and
-      `item-where <uid>`. Done when `tools-race` and `tools-latejoin` pass and `item-where` reports the machine for an
-      item on the tire changer.
-- [ ] 5.3 `scenarios/tools-item-race.ps1` (`# areas: tools, parts, economy`) per D14 without the row 18 step. Done when
-      it passes and fails on `main` (commit message).
+- [ ] 5.1 Server per D9: `InventoryChanges` keeps removers for the session (last 10 000 UIDs) and item copies for 60 s;
+      every remove path notes its remover, `EconomyService.RemoveItem` through `EconomyOutcome.Effect`;
+      `ToolsStore.Check` refuses a put of an item another client removed; never-seen UIDs per 1.1; `Returned`, `Gone`
+      or `Unchanged` on every put refusal; `unknownSlotItem` and `removeMissing` in the `tools` output. Done when
+      `tools-race`, `tools-slots` and `economy-trades` pass.
+- [ ] 5.2 Client per D9 (`OnRejected`/`Compensate` follow the outcome, "<name> used this part."). Harness:
+      `sell-item [uid]` for items and groups, `item-where <uid>`, `warehouse-move <uid> to|from`. Done when
+      `tools-race` and `tools-latejoin` pass, `item-where` reports the machine for an item on the brake lathe, and a
+      `warehouse-move` on A shows the item in B's warehouse.
+- [ ] 5.3 `scenarios/tools-item-race.ps1` (`# areas: tools, parts, economy`) per D14 without the row 18 step,
+      including the mount-against-sale round [I5] and a step in which both players `warehouse-move` the same UID
+      (moved once, the same on both, the warehouse digest-free check through `item-where`) [I2]. Done when it passes
+      and fails on `main` (commit message).
 
 ## 6. Parking keeps the server's record (gap 10)
 
 - [ ] 6.1 Server per D10: `ParkedRecord` in `PlacementState.Parking.Records` at park (body, mechanical, engine swap,
-      valid details); kept through slot swaps, dropped when the car leaves parking; `car-placement` section v2 with a
-      v1 migration (no records); never broadcast. Done when `car-parking-full`, `car-placement` and
-      `persistence-restart` pass and `Test-ServerSaves.ps1` loads a v1 save.
+      valid details), kept through slot swaps, dropped when the car leaves parking, never broadcast, no section bump.
+      Done when `car-parking-full`, `car-placement` and `persistence-restart` pass and `Test-ServerSaves.ps1` loads a
+      save written before the change.
 - [ ] 6.2 Unpark per D10: the record moves to the loader entry; the unparker's first baseline is overlaid with the
-      parked records (`parkedRecordsDropped` counted) and the live snapshot goes to every client, the unparker
-      included; parked details are stored and sent full, and the unparker's first full details for that `SpawnSeq`
-      are dropped; `SpawnerLeft` puts the car back with its record. Done when `car-placement`, `car-placement-reuse`
-      and `latejoin-full` pass.
-- [ ] 6.3 `scenarios/park-stale.ps1` (`# areas: placement, parts, persistence`) per D14, including the details step and
-      the restart step. Done when it passes and fails on `main` (commit message).
+      differing parked records (`parkedRecordsDropped` counted); the live snapshot goes to every client, the unparker
+      included, only when something was replaced; parked details are stored and sent full, the unparker's first full
+      details for that `SpawnSeq` dropped; `SpawnerLeft` puts the car back with its record [C2]. Done when
+      `car-placement`, `car-placement-reuse` and `latejoin-full` pass.
+- [ ] 6.3 (after row 18 has merged: `FlushNow`; after 3.5) Drain before a park request and before a car delete per D10:
+      at most 1 s for the tracker and the loader's transactions, then `FlushNow(loader, All)`, else "Try again in a
+      moment." Done when the "own unsent change" step of `park-stale` passes.
+- [ ] 6.4 `scenarios/park-stale.ps1` (`# areas: placement, parts, persistence`) per D14: the other player's change, the
+      details step, the own unsent change, the unparker who leaves before its baseline, the restart. Done when it
+      passes and fails on `main` (commit message).
 
 ## 7. Part 1: verification and docs
 
 - [ ] 7.1 Two-instance verification of part 1:
-      - `car-stale-record`, `details-concurrent`, `tools-item-race`, `park-stale`;
-      - the `parts`, `cars`, `details`, `tools`, `placement`, `economy`, `persistence` and `visuals` areas;
+      - `car-stale-record`, `details-concurrent`, `tools-item-race`, `park-stale`, `car-gone-inflight`, `tools-race`;
+      - the `parts`, `cars`, `details`, `tools`, `placement`, `economy`, `persistence`, `visuals` and `locks` areas;
       - the smoke set (`Run-All -Changed`).
 
       Done when all are green and their run ids are in STATUS.md.
-- [ ] 7.2 Docs: INTEGRATION.md (the packet fields, `PartRecordMerge`, details masks, `SlotItemOutcome`, parked records
-      and the `car-placement` v2 section, verbs, dump sections, server counters); the audit's gaps 3, 6, 9 and 10
-      marked fixed in `docs/audits/race-and-drift-audit.md`; ROADMAP status. Done when part 1 is merged.
+- [ ] 7.2 Docs: INTEGRATION.md (the packet fields, `PartRecordMerge`, `DetailsMerge`, `SlotItemOutcome`, parked
+      records, removers for the session, verbs, dump sections, server counters); the audit's gaps 3, 6, 9, 10 and rows
+      P7, P11, I2, I5, M4, M5, C2 marked fixed in `docs/audits/race-and-drift-audit.md`; ROADMAP status. Done when part
+      1 is merged.
 
-## 8. After row 18's switch-over
+## 8. With row 18's switch-over
 
-- [ ] 8.1 (waits for row 18 task 5.1) "In local work" (D2) also covers keys in this client's own X locks
-      (`CarLockMirror`). `car-stale-record` gains step 4 of D14 (an examine during B's lock is accepted, the key stays
-      mounted, the lock stays held; B's `finish` commits). Done when the scenario passes with row 18's `locks-race`.
-- [ ] 8.2 (waits for row 18 tasks 5.1 and 7.1) Row 18's `FlushNow` uses the per-entry `Flush` (D8), whichever change
-      merged second adapting it. `locks-fluid` gains the step: A holds `f:Brake.0` and fills while B holds
-      `f:EngineCoolant.0` and fills; after both releases, the server's details and both clients have both levels.
-      Done when `locks-fluid` and `details-concurrent` pass.
-- [ ] 8.3 (waits for row 18 tasks 5.1 and 6.1) `ToolsStore.Check` refuses a put of a UID in another owner's `CarLocks`
-      item lock (`Returned`, row 18's item message). `tools-item-race` gains the lock step of D14. Done when it passes
-      and `locks-race` still passes.
+- [ ] 8.1 (needs row 18 task 5.1) If 3.2 ran before row 18 merged: row 18's lock rule uses D3's flip definition after
+      normalisation. `car-stale-record` gains step 6 of D14 (an examine during B's lock is accepted, the key stays
+      mounted, the lock stays held; a stale examine in the window before the lock's release is not rejected). Done when
+      `car-stale-record` and `locks-race` pass.
+- [ ] 8.2 (needs row 18 tasks 5.1 and 7.1) `locks-fluid` gains the step: A holds `f:Brake.0` and fills while B holds
+      `f:EngineCoolant.0` and fills; after both releases, the server's details and both clients have both levels. Done
+      when `locks-fluid` and `details-concurrent` pass.
+- [ ] 8.3 (needs row 18 tasks 5.1 and 6.1) `ToolsStore.Check` refuses a put of a UID in another owner's `CarLocks` item
+      lock (`Returned`, row 18's item message). `tools-item-race` gains the lock step of D14. Done when it passes and
+      `locks-race` still passes.
 
 ## 9. Digests (part 2)
 
-- [ ] 9.1 Core mappers `DigestMappers.Details`, `Tools`, `Warehouse`, `Garage`, `Jobs` per D11, with the exclusions of
-      1.3. Done when the solution builds and `--check-merges` gains one case per key that projects the same sample
-      from the server's stored types and from the client's DTOs to the same hash.
-- [ ] 9.2 Client projections and "not ready" rules per D11 in `ClientDigests` (`car-details:<loader>` after row 18 has
-      merged, since row 18 D6 rewrites `ClientDigests.Car`). `digest-hold <key> notready`. Done when `digest-show`
-      lists the five keys on both clients and `desync-soak` reports no mismatch for them.
-- [ ] 9.3 Server projections and resends per D11 in `ReconciliationService`; `car-details` rides with the car cursor.
+- [ ] 9.1 Core mappers `DigestMappers.Details`, `Tools`, `Warehouse`, `Garage`, `Jobs` per D11 (lists sorted by key,
+      the exclusions of 1.3). Done when `--check-merges` gains one case per key that projects the same sample from the
+      server's stored types and from the client's DTOs to the same hash.
+- [ ] 9.2 Client projections and "not ready" rules per D11 in `ClientDigests` (`workshop-tools` from
+      `ToolMachine.ReadLocal`; `car-details:<loader>` after row 18 has merged, since row 18 D6 rewrites
+      `ClientDigests.Car`). `digest-hold <key> notready`. Done when `digest-show` lists the five keys on both clients.
+- [ ] 9.3 Server projections and resends per D11, with `desync_resend_keys` (resend off by default per new key).
       `state-corrupt <car-details|workshop-tools|warehouse|garage> [loader]`. `desync-autofix` gains one corrupt step
-      per key: the server confirms, writes a record and resends, and the client matches again. Done when
-      `desync-autofix` passes.
-- [ ] 9.4 Reconciliation rules per D12: "not ready" keeps a pending mismatch, which expires after 60 s; the forced
-      round asks every car and every key. `desync-autofix` gains a step: `inv-corrupt` on B, then `digest-hold
-      inventory notready` for one round, then off: the mismatch is confirmed and repaired within three rounds. Done
-      when `desync-autofix` and `desync-soak` pass.
+      per key with that key's resend turned on for the run: the server confirms, writes a record and resends, and the
+      client matches again. Done when `desync-autofix` passes.
+- [ ] 9.4 `desync-soak` with the new keys in log-only mode; each key that stays quiet gets its resend turned on by
+      default in `desync_resend_keys` [review minor 10]. Done when `desync-soak` reports no mismatch for any new key
+      and the defaults are in the server config.
+- [ ] 9.5 Reconciliation rules per D12: "not ready" keeps a pending mismatch; expiry after four asks; the forced round
+      asks every car and every key. `desync-autofix` gains a step (forced rounds, long
+      `desync_check_interval_seconds`): `inv-corrupt` on B, one forced round with `digest-hold inventory notready`,
+      then off: the mismatch is confirmed and repaired within three forced rounds. Done when `desync-autofix` and
+      `desync-soak` pass.
 
 ## 10. Soak contention (part 2)
 
 - [ ] 10.1 Checkpoint per D13: `carDetails` in `Get-SharedDumpSections`; `Invoke-ForcedDigestCheck` expects every
-      loader's `cars` and `car-details` and the D11 keys; the "no silent stalls" check under rule 2; the dump field
-      `parts.transactions`. Done when `soak` (10 min, lane 3, no `-Contention`) passes with the new checks.
-- [ ] 10.2 `-Contention` and `-ContentionWeight` per D13: the group runner (`net-hold on`/`out` on every member, the
-      members' verbs, a seeded release order with 0–300 ms gaps), the `contend` marker, `-Replay`, the settle wait.
-      Done when a 5-minute contention run replayed with `-Replay` writes the same `contend` markers (kinds, members,
-      targets, release order).
-- [ ] 10.3 The kinds of D13, rule 7 (conservation) and rule 8 (outcome), and `scenarios/soak-contention-known.txt`
-      with the kinds whose gap is open at that time (each line: kind, gap id, the row that closes it). Done when a
-      10-minute lane-3 run with `-Contention` fails no rule except as "known gap", and a run with the gap 9 fix
-      reverted fails rule 7 on `machine-same-item`.
-- [ ] 10.4 (waits for row 18 task 5.1) Stall warning per D12: per client and key, a warning after 120 s of "not
-      ready", listed in the `desync` output and the bug report. `desync-autofix` gains a step with `digest-hold
-      inventory notready` for 130 s: one warning, and none after the hold ends. Done when `desync-autofix` passes.
+      loader's `cars` and `car-details` and the D11 keys; the "no silent stalls" check under rule 2. Done when `soak`
+      (10 min, lane 3, no `-Contention`) passes with the new checks.
+- [ ] 10.2 `-Contention`, `-ContentionWeight` and `-ContentionKinds` per D13: the group runner (`net-hold out` on every
+      member, the verbs, release one at a time in a seeded order, member i+1 only after the server logged member i's
+      packet), the observed server order in the `contend` marker, `{step:N:…}` templates for per-run values, the settle
+      wait. Done when a 5-minute contention run replayed with `-Replay` reproduces the observed server order of every
+      `contend` marker.
+- [ ] 10.3 The first-pass kinds of D13, rule 7 (conservation), rule 8 (outcome) and `scenarios/soak-contention-known.txt`
+      (kind, gap id, closing row). Done when a 10-minute lane-3 run with `-Contention` fails no rule except as "known
+      gap", and `-ContentionKinds machine-same-item` with the gap 9 fix reverted fails rule 7.
+- [ ] 10.4 (needs row 18 task 5.1) Stall warning per D12 with the server setting `desync_stall_seconds` (default 120).
+      `desync-autofix` gains a step with `desync_stall_seconds = 20` and `digest-hold inventory notready` for 25 s: one
+      warning in the server log and in `desync`, none after the hold ends. Done when `desync-autofix` passes.
+- [ ] 10.5 (after row 18 has merged) The second-pass kinds of D13 (row 18's kinds), each removed from the known list
+      when it passes. Done when a 10-minute lane-3 run with `-Contention` and every kind fails no rule, and the known
+      list holds only gaps still open.
 
 ## 11. Part 2: verification and docs
 
@@ -171,6 +213,40 @@ soak contention mode).
       - `soak` 10 minutes on lane 3 with and without `-Contention`, and `Run-All -Lanes 3`.
 
       Done when all are green and their run ids are in STATUS.md.
-- [ ] 11.2 Docs: INTEGRATION.md (digest keys, reconciliation rules, soak rules 7 and 8, the known list, verbs);
-      `docs/audits/race-and-drift-audit.md` gap 7 and the contention mode marked done; ROADMAP status; the known list
-      trimmed to the gaps still open. Done when part 2 is merged.
+- [ ] 11.2 Docs: INTEGRATION.md (digest keys, `desync_resend_keys`, `desync_stall_seconds`, reconciliation rules, soak
+      rules 7 and 8, the known list, verbs); `docs/audits/race-and-drift-audit.md` gap 7 and the contention mode
+      marked done; ROADMAP status. Done when part 2 is merged.
+
+## 12. Part 3: the server answers every refusal, and seats (user decision 2026-10-07)
+
+Independent of row 18 and of parts 1 and 2 (except that the dropped-transaction step needs task 3.5); can start now.
+
+- [ ] 12.1 Inventory and repair answers per design D16: an `Update` of a missing item answers with its `Remove`; an
+      `Add` of a present item answers with the stored copy as `Update` when it differs; a refused `PartRepair` adds the
+      item's `Remove`. Harness `inv-send <add|update|remove> <uid> [condition]`. Done when the inventory and repair
+      steps of `server-answers` (written in 12.5) pass.
+- [ ] 12.2 Upgrade, parking, delete and placement answers per D16: `GarageUpgradeHandler` sends `GarageState` and
+      `WorldState` to the requester on every refusal or no-op; the second park gets `Invalid`, the parking state and
+      the loader's `CarSpawnDelete`; a delete of an empty loader is not relayed; a move of an unknown loader answers
+      with `CarSpawnDelete`. Done when the upgrade, second-park and second-delete steps of `server-answers` pass and
+      `economy-latejoin`, `car-parking-full` and `car-placement-race` pass.
+- [ ] 12.3 Jobs answers per D16: a dropped or refused generated order answers with the jobs snapshot; an `Unknown`
+      accept adds `JobRemoved { Expired }` and the client message "This order is no longer available."; a second or
+      out-of-bounds job end adds the jobs snapshot to `WorldState`. Server console `jobs expire <id>`. Done when the
+      order, expired-accept and second-end steps of `server-answers` pass and `jobs` and `jobs-latejoin` pass.
+- [ ] 12.4 Seats per D17: `PlayerHandlers.OnPlayerPresence` keeps the first holder, stores the second record without
+      seat and engine, and sends `SeatRefused` (new packet type, appended); the client leaves the seat with
+      `GameScript.ExitFromInterior(true)` and shows "<name> is sitting there." `seat-engine` gains the two-player step
+      of D14, both orders. Done when `seat-engine` and `presence-latejoin` pass.
+- [ ] 12.5 `scenarios/server-answers.ps1` (`# areas: economy, jobs, placement, parts`) per D14, one step per D16 row
+      with a message, each checking the loser's dump against the server right after the answer without `resync`; the
+      dropped-transaction step after task 3.5. Done when it passes and fails on `main` (commit message names the steps
+      that fail there).
+
+## 13. Part 3: verification and docs
+
+- [ ] 13.1 Two-instance verification: `server-answers`, `seat-engine`, the `economy`, `jobs`, `placement`, `presence`
+      and `inventory`-touching areas, and the smoke set. Done when all are green and their run ids are in STATUS.md.
+- [ ] 13.2 Docs: INTEGRATION.md (the rule "no silent drops" with D16's table, `SeatRefused`, the verbs and the server
+      command); the audit rows I3, I7, E4, M8, C4, J2, J4, J5 marked "answered" and S1 marked fixed; ROADMAP status.
+      Done when part 3 is merged.
