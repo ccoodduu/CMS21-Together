@@ -26,6 +26,7 @@ public static class HarnessResetCommands
         JoinCommands.Reset(changed);
         PresenceCommands.Reset(changed);
         SceneCommands.Reset(changed);
+        VisualCommands.Reset(changed);
         return new Dictionary<string, object> { ["reset"] = changed };
     }
 }
