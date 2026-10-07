@@ -21,8 +21,6 @@ public sealed class LockSet
 	public override string ToString() => $"{Kind} X[{string.Join(",", X)}] S[{string.Join(",", S)}]{(Items.Count > 0 ? $" items[{string.Join(",", Items)}]" : "")}";
 }
 
-// Relations come only from the registry and serialized game fields (unblockOnUnmount, unmountWith, the CarFluid on a
-// part's parent, FluidRefillLockType, sendMessageOnHide), never from blockedBy, so the cache per SpawnSeq stays valid.
 public sealed class CarRelations
 {
 	public int SpawnSeq;

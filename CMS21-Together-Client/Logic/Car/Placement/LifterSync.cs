@@ -19,6 +19,9 @@ public static class LifterSync
 	private const float StepWaitSeconds = 15f;
 
 	private static readonly HashSet<int> applying = new HashSet<int>();
+	private static readonly Dictionary<int, int> remoteSteps = new Dictionary<int, int>();
+
+	public static bool IsApplying(int lifterIndex) => applying.Contains(lifterIndex) || remoteSteps.ContainsKey(lifterIndex);
 
 	private static bool Active => ClientScene.IsGarageReady && Client.Instance != null && Client.Instance.IsConnectionValid;
 
@@ -67,34 +70,41 @@ public static class LifterSync
 			yield break;
 		}
 		var lifter = lifters[packet.LifterIndex];
+		remoteSteps[packet.LifterIndex] = (remoteSteps.TryGetValue(packet.LifterIndex, out int running) ? running : 0) + 1;
+		try
+		{
+			float deadline = Time.realtimeSinceStartup + CarWaitSeconds;
+			while ((lifter.isMoving || lifter.GetConnectedCarLoader() == null && packet.State != 0) && Time.realtimeSinceStartup < deadline)
+				yield return new WaitForSeconds(0.25f);
 
-		float deadline = Time.realtimeSinceStartup + CarWaitSeconds;
-		while ((lifter.isMoving || lifter.GetConnectedCarLoader() == null && packet.State != 0) && Time.realtimeSinceStartup < deadline)
-			yield return new WaitForSeconds(0.25f);
-
-		if (lifter.GetConnectedCarLoader() == null && packet.State != 0)
-		{
-			Log.Error($"[Placement] Lift {packet.LifterIndex}: no car on it after {CarWaitSeconds} s; leaving it on the floor.");
-		}
-		else if (packet.Instant)
-		{
-			Set(packet.LifterIndex, lifter, packet.State);
-		}
-		else
-		{
-			while ((int)lifter.GetState() != packet.State)
+			if (lifter.GetConnectedCarLoader() == null && packet.State != 0)
 			{
-				applying.Add(packet.LifterIndex);
-				try { lifter.Action(packet.State > (int)lifter.GetState() ? 0 : 1); }
-				finally { applying.Remove(packet.LifterIndex); }
-				if (!lifter.isMoving)
-				{
-					Set(packet.LifterIndex, lifter, packet.State);
-					break;
-				}
-				deadline = Time.realtimeSinceStartup + StepWaitSeconds;
-				while (lifter.isMoving && Time.realtimeSinceStartup < deadline) yield return new WaitForSeconds(0.1f);
+				Log.Error($"[Placement] Lift {packet.LifterIndex}: no car on it after {CarWaitSeconds} s; leaving it on the floor.");
 			}
+			else if (packet.Instant)
+			{
+				Set(packet.LifterIndex, lifter, packet.State);
+			}
+			else
+			{
+				while ((int)lifter.GetState() != packet.State)
+				{
+					applying.Add(packet.LifterIndex);
+					try { lifter.Action(packet.State > (int)lifter.GetState() ? 0 : 1); }
+					finally { applying.Remove(packet.LifterIndex); }
+					if (!lifter.isMoving)
+					{
+						Set(packet.LifterIndex, lifter, packet.State);
+						break;
+					}
+					deadline = Time.realtimeSinceStartup + StepWaitSeconds;
+					while (lifter.isMoving && Time.realtimeSinceStartup < deadline) yield return new WaitForSeconds(0.1f);
+				}
+			}
+		}
+		finally
+		{
+			if (--remoteSteps[packet.LifterIndex] <= 0) remoteSteps.Remove(packet.LifterIndex);
 		}
 		SyncTracker.Applied(SyncOrder.CarPlacementKey, snapshotId);
 	}

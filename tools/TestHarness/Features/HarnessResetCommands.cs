@@ -29,6 +29,8 @@ public static class HarnessResetCommands
         VisualCommands.Reset(changed);
         DriveCommands.Reset(changed);
         LockTraceCommands.Reset(changed);
+        LockCommands.Reset(changed);
+        LockTryCommands.Reset(changed);
         return new Dictionary<string, object> { ["reset"] = changed };
     }
 }

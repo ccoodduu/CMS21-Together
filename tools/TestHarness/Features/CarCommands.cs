@@ -266,15 +266,6 @@ public static class CarCommands
         return new Dictionary<string, object> { ["id"] = twins.Key, ["keys"] = twins.Take(2).Select(p => p.Key).ToList() };
     }
 
-    [HarnessCommand("part-claim")]
-    private static object PartClaim(string args)
-    {
-        var parts = (args ?? "").Split(new[] { ' ' }, StringSplitOptions.RemoveEmptyEntries);
-        if (parts.Length < 2) throw new ArgumentException("usage: part-claim <loader> <key> [release]");
-        PartClaims.Claim(int.Parse(parts[0]), new[] { parts[1] }, release: parts.Length > 2 && parts[2] == "release");
-        return "sent";
-    }
-
     [HarnessCommand("part-action-unmount")]
     private static object PartActionUnmount(string args)
     {

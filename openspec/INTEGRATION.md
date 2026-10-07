@@ -15,7 +15,7 @@ part 2. "Owner" defines it; "Users" only call or subscribe.
 | `PlayerRestore` | S→C | 7 (g4) | 6 skips spawn placement when applied |
 | `DisconnectPacket.reason` | S→C | 7 (g3) | — |
 | `PlayerPresence`, `PlayerRoster`; `MovementPacket.Scene` | both / S→C | 6 | 7 copies name/scene/position into `PlayerRecord`; `PlayerPresence` is `[AllowBeforeSync]` |
-| `CarPartsChange`, `CarPartsChangeResult` (renamed in place), `CarPartClaim`, `CarPartClaimUpdate`, `CarPartsSnapshot`, `CarPartsResyncRequest`, `CarSpawnAck`; `CarSpawnResponse.SpawnSeq` | both | 1 | 2 (unpark ack), 4 (`SpawnSeq`), 5a (`CarSubPartUpdatePacket` record) |
+| `CarPartsChange`, `CarPartsChangeResult` (renamed in place), `CarPartClaim`, `CarPartClaimUpdate` (retired by 18: values kept, never sent), `CarPartsSnapshot`, `CarPartsResyncRequest`, `CarSpawnAck`; `CarSpawnResponse.SpawnSeq` | both | 1 | 2 (unpark ack), 4 (`SpawnSeq`), 5a (`CarSubPartUpdatePacket` record) |
 | `LifterActionRequest`, `LifterState`, `CarPlaceChangeRequest`, `CarPlaceChanged`, `CarUnparkRequest`, `ParkingMoveRequest`, `ParkingSlotUpdate`, `ParkingState`, `ParkingLevelUnlockRequest`, `ParkingResyncRequest` | both | 2 | — |
 | `CarParkRequest { RequestId, CarLoaderID, PreferredSlot, Car, Price }` → `CarParkResult { RequestId, Accepted, Reason (ParkingFull, NoMoney, Invalid), Slot }` | C→S / S→requester | 2 | 6 (purchases, `CarLoaderID = -1`); no `CarPurchase*` packets exist |
 | `CarSpawnResponse` + `CarData`, `CarDataVersion` (+ `Place`) | S→C | 2 | 1's snapshot spawn info carries them |
@@ -35,6 +35,7 @@ part 2. "Owner" defines it; "Users" only call or subscribe.
 | `BugReportRequest`, `BugReportCollect`, `BugReportResult` | both | 14 (d) | — |
 | `PlayerActivity { PlayerId, State }` (`PlayerActivityState { Kind, CarLoaderID, PartKey, ToolType, ModTool, Progress }`); `PlayerPresenceRecord.Activity` (`[OptionalField]`, never saved) | C→S→same scene | 17 | 6 (roster carries it to late joiners); server drops more than 8/s per client and clears it on scene change |
 | `CarDriveStart { PlayerId, DriveId, Scene, CarLoaderID, CarToLoad, CarBlob, CarBlobVersion }`, `CarDriveState { PlayerId, DriveId, Seq, Payload }` (36-byte `DriveStateCodec`, unreliable, ≤ 15/s, server cap 20/s), `CarDriveStop { PlayerId, DriveId, FinalPose }` | C→S→same scene | 17 (part 2) | 13 (`CarLoaderID` = the away car; a start for a car away with someone else is dropped), 2 (`NewCarDataCodec` blob), 6 (scene relay; running drives sent on scene entry; stopped on scene change and leave). Test track only (no garage driving, spike 8.1); no `CarAwayKind.Driving` |
+| `CarLockRequest { RequestId, CarLoaderID, SpawnSeq, Kind, X, S, Items, ExtendLockId, OtherLoaderID, OtherSpawnSeq }` → `CarLockResult { RequestId, LockId, Granted, Refusal, HolderPlayerId, ConflictKey }` (`RequestId = 0`: a refusal without a request, `CarBusy` for park, delete, job end, lift, move); `CarLockUpdate` (full record, `OwnerPlayerId = -1` = released, also in the `cars` snapshot), `CarLockRelease`, `CarLockRenew`; `ServerInfo` + `LockScope`, `LockExpirySeconds`; `ParkRefusal.Busy` | both | 18 | 1, 2, 3, 5b, 13, 17 (claims view) |
 
 Rows 12 and 14a add no packets.
 
@@ -58,6 +59,8 @@ row 8's client enum `JoinFailure` and never travel.
 | client | `SyncTracker.Applied(key)`, `InSnapshot`; `ClientData.IsInitialSyncFinished` | 7 | all snapshot handlers |
 | client | `ClientScene.LocalScene`, `IsGarageReady` (true from start of `CustomLoad`), `GarageBound(apply, mirrorOnly)`, `LeavingScene(from, to)` | 6 | 1, 2, 4, 5a, 5b (gate); 3 (`IsGarageReady`); 13 (`LeavingScene`) |
 | server | `CarAwayRegistry.Blocks(loader, client, what)`, `IsOwner`, `OwnerOf`, `SendActive`; `CarDetailsStore.FoldTestDrive` | 13 | 1 (claims, part changes, delete), 2 (move, lift, park), 3 (job end), 4 (details updates) |
+| server | `CarLocks` (replaces `CarClaims`): `HeldByOther(loader, client)`, `OtherOwnerOn`, `RefuseBusy(loader, client, what)`, `HoldsCar`, `ExclusiveOwner`/`SharedOwner(loader, key, except)`, `ReleaseCommitted`, `ReleaseOwnerOnLoader`, `Describe(now)` | 18 | 1 (`FindConflict`, release on commit), 2 (lift, move, park), 3 (job end), 6/10 (car sale), 13 (away `InUse`, grant releases own locks) |
+| client | `CarLockMirror` (records, `Conflict(set)`, `Request`, `Release`, renew), `LockSets.ForPart/ForBody/ForFluid/ForCrane/ForCar`, `LockGate.Enter(GatedAction)`/`Reported`, `LockLifecycle`, `LockMessages`, `CarMotion.IsMoving`; `PartClaims` is a view over the mirror (`Held`, `OwnerOf`, `HeldByOther`, `ClaimChanged`); `CarDetailsSync.FlushNow(loader, sections) → Sent/Unchanged/Deferred/NotReady` | 18 | 17 (`ClaimChanged`), 4 (fluids flushed before a release) |
 | client | `CarAwaySync.LockedForMe`, `BlockIfLocked`, `Request`, `Release`, event `Released`; `DynoSync.Commit(carLoader)`, `IsOpenOn`; `TestDriveSync.HoldDeparture` (called from `SceneHooks`) | 13 | 1 (`PartClaims`, crane), 2 (move, lift), 3 (job end), 4 (poll skip), 5b (`MeasurePower`) |
 | server | `PresenceRegistry.InScene(scene)`, `PresenceEvents.SceneChanged/Left` | 6 | 1 (claims), 3 (generator, order claims), 5a (balancer), 13 |
 | client | `PresenceManager.EnsureNotSeatedIn(loader)` | 6 | subscribed to 2's `BeforeRemoteCarMove`, called by `CarSpawnDelete` |
@@ -132,6 +135,7 @@ Server `server_config.ini` (missing keys take their defaults and are appended; e
 | `game_version` (auto), `mods_required`, `mods_ignored`, `mods_gameplay` (empty); `Database/meta.json`, `Database/mod_rules.json` | 9 |
 | `desync_check_interval_seconds` (5, 0 = off), `desync_autofix` (true) | 14 |
 | `perf_log_interval_seconds` (0 = off; > 0 writes `Log/perf_<start>.jsonl`) | 11 |
+| `lock_scope` (`connected`; `part` = only the part and `car`), `lock_expiry_seconds` (90, min 5); server `--check-locks`, console command `locks` | 18 |
 
 Client MelonPreferences — one scheme: category `CMS21Together` for everything, plus `CMS21Together_Guard` for the
 guard. Key bindings end in `Hotkey` (the redaction rule skips them).
@@ -189,7 +193,7 @@ Verbs are globally unique (`Commands.Discover` throws on a duplicate). Existing:
 |---|---|
 | 7 | `stats-add`, `to-menu` (g1); `player-key`, `send-early-stats`, `profile-pref` (later groups) |
 | 6 | `travel`, `scene-list`, `teleport`, `set-name`, `leave-mark`, `sit`, `stand`, `engine`, `seat-trace` (spike), `buy-car-here`, `junk-buy` |
-| 1 | `car-spawn`, `car-delete`, `car-loaded`, `car-list`, `car-ready`, `car-baseline`, `car-hold-snapshot`, `car-dlc-cars`, `car-request`, `part-state`, `part-keys`, `part-unmount`, `part-fast-unmount`, `part-fast-mount`, `part-action-unmount`, `part-claim`, `part-corrupt`, `part-hold-remote`, `crane-out`, `crane-in`; playtest fixes: `part-twins`, `part-fast-mount <loader> <key> [itemUid]`, `wheel-parts`, `wheel-mount` |
+| 1 | `car-spawn`, `car-delete`, `car-loaded`, `car-list`, `car-ready`, `car-baseline`, `car-hold-snapshot`, `car-dlc-cars`, `car-request`, `part-state`, `part-keys`, `part-unmount`, `part-fast-unmount`, `part-fast-mount`, `part-action-unmount`, `part-corrupt` (`part-claim` removed by 18: use `lock-take`), `part-hold-remote`, `crane-out`, `crane-in`; playtest fixes: `part-twins`, `part-fast-mount <loader> <key> [itemUid]`, `wheel-parts`, `wheel-mount` |
 | 2 | `lift`, `lifters`, `car-move`, `car-place`, `placement`, `net-hold` (`on`/`off`; `out` = full stall of both directions, heartbeats included, added by 11), `park`, `unpark`, `park-swap`, `parking`, `parking-unlock`, `park-incoming`, `dev-spawn`, `placement-trace` and `parking-probe` (spike) |
 | 3 | `jobs-trace`, `orders-generate`, `orders-mission`, `orders-autogen`, `orders-list`, `order-slots`, `orders-accept`, `orders-decline`, `orders-reload`, `job-examine`, `job-check`, `job-finish`, `tutorial-run`, `job-spawn-unclaimed`, `job-end-dup` |
 | 13 | `testdrive-trace`, `testdrive-go`, `testdrive-drive`, `testdrive-finish`, `testdrive-partnames`, `testdrive-hold`, `testdrive-skip-result`, `dyno-run`, `pathtest-run`, `diag-examine`, `away-try`; dump section `away`, car field `specialState`; scenarios `test-drive`, `test-drive-latejoin`, `diagnostics` (spikes: `test-drive-trace`, `diag-trace`, `departure-hold`) |
@@ -203,6 +207,7 @@ Verbs are globally unique (`Commands.Discover` throws on a duplicate). Existing:
 | 14 | `digest-show`, `inv-corrupt`, `digest-hold`, `resync [force]` (5a uses it instead of its former `tool-resync`), `bug-report [list]` |
 | 11 | `perf` (frame time over 10 s, managed and IL2CPP heap, scene, `syncAcked`), `fps-cap <n>` |
 | 17 | `vfx-trace`, `vfx-probe` (spike), `vfx-unscrew`, `vfx-tool`, `vfx-hold`, `vfx-enable`, `vfx-parts`, `vfx-switch`, `vfx-stand`; dump section `visuals`; part 2: `drive-trace`, `drive-pie`, `drive-probe`, `drive-input`, `drive-input-state`, `drive-stop`, `drive-history`, `drive-codec-check`, `drive-blob`, `drive-ghost-test`, `drive-start`; dump section `remoteCars` (`local`, `cars[]`) |
+| 18 | `lock-take <loader> <kind> <key...> [bare] [items <uid...>] [release]` and `lock-take result <id>`, `lock-release`, `lock-renew on|off`, `lock-counters [reset]`, `lock-try <loader> unmount|mount|body|crane-out ... [finish|hold|release]` and `lock-try result <id>`, `lock-trace` (spike: `on|off|report|state|reinvoke|relations`), `lock-probe` (spike), `lock-click <loader> <key> hold <ms>` (input shim), `cardetails-flush <loader> [applying <ms>]`; dump section `locks` (`mirror`, `pending`, `counters`, `answers`); `LockSession.psm1` (`Get-ServerLocks`, `Request-Lock`, `Wait-LockMirror`) |
 
 | PowerShell helper / server command | Owner (first to land) |
 |---|---|
@@ -251,7 +256,7 @@ regression; the full set runs when a change touches mod code the path table cann
 before a release. Every scenario, skipped ones included, carries a `# areas: a, b` header line (vocabulary and the
 path → area table in `tools/test-env/TestAreas.psm1`: `connect`, `presence`, `guard`, `cars`, `parts`,
 `placement`, `details`, `jobs`, `economy`, `tools`, `testdrive`, `persistence`, `resync`, `hosting`, `bugreport`,
-`release`, `visuals` and `driving` (row 17)); `smoke` in the list puts it in the smoke set (`latejoin`, `car-live`, `junkyard-trip`, `guard`,
+`release`, `visuals` and `driving` (row 17), `locks` (row 18)); `smoke` in the list puts it in the smoke set (`latejoin`, `car-live`, `junkyard-trip`, `guard`,
 `tools-latejoin`). A `# run-all: lane 3` line makes a scenario a scale-lane scenario (`Run-All -Lanes 3` only).
 **A new scenario must carry `# areas:`**; a new source folder needs a row in the table, or its
 changes run the full set.

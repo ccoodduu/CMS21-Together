@@ -18,6 +18,8 @@ public static class CarPlacementSync
 	public static event Action<int> BeforeRemoteCarMove;
 
 	private static readonly HashSet<int> applying = new HashSet<int>();
+
+	public static bool IsApplying(int loader) => applying.Contains(loader);
 	private static readonly Dictionary<int, int> pendingPlaces = new Dictionary<int, int>();
 
 	private static bool Active => ClientScene.IsGarageReady && Client.Instance != null && Client.Instance.IsConnectionValid;

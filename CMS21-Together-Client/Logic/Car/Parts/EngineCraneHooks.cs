@@ -25,20 +25,20 @@ public static class EngineCraneHooks
 
 	[HarmonyPatch(typeof(NotificationCenter), nameof(NotificationCenter.ActionUnMountGroup))]
 	[HarmonyPrefix]
-	private static bool BeforeUnMountGroup(InteractiveObject iO)
+	private static bool BeforeUnMountGroup(InteractiveObject iO, bool __runOriginal)
 	{
-		if (!Active || iO == null || !TryFindEngineOwner(iO.gameObject, out var sync)) return true;
+		if (!__runOriginal || !Active || iO == null || !TryFindEngineOwner(iO.gameObject, out var sync)) return true;
 		var keys = EngineKeys(sync, iO.gameObject);
-		if (!Allowed(sync.Loader, keys)) return false;
+		if (!Allowed(sync.Loader)) return false;
 		PartTransactions.Open(sync.Loader, keys, new[] { iO.gameObject.name });
 		return true;
 	}
 
 	[HarmonyPatch(typeof(NotificationCenter), nameof(NotificationCenter.ActionUnMountGroup))]
 	[HarmonyPostfix]
-	private static void AfterUnMountGroup(InteractiveObject iO)
+	private static void AfterUnMountGroup(InteractiveObject iO, bool __runOriginal)
 	{
-		if (!Active || iO == null || !TryFindEngineOwner(iO.gameObject, out var sync)) return;
+		if (!__runOriginal || !Active || iO == null || !TryFindEngineOwner(iO.gameObject, out var sync)) return;
 		var groups = Singleton<GameManager>.Instance.Inventory.GetGroups();
 		GroupItem engineGroup = null;
 		for (int i = groups.Count - 1; i >= 0 && engineGroup == null; i--)
@@ -51,10 +51,10 @@ public static class EngineCraneHooks
 
 	[HarmonyPatch(typeof(NotificationCenter), nameof(NotificationCenter.InsertEngineToCar))]
 	[HarmonyPrefix]
-	private static bool BeforeInsertEngine(GroupItem engine)
+	private static bool BeforeInsertEngine(GroupItem engine, bool __runOriginal)
 	{
 		insertingGroup = null;
-		if (!Active || engine == null) return true;
+		if (!__runOriginal || !Active || engine == null) return true;
 		var carLoader = ToolsMoveManager.Get()?.GetConnectedCarLoader(IOSpecialType.EngineCrane);
 		if (carLoader == null || carLoader.e_engine_h == null) return true;
 		int loader = CarLoaderPlaces.Get().GetCarLoaderId(carLoader);
@@ -66,7 +66,7 @@ public static class EngineCraneHooks
 			return false;
 		}
 		var keys = EngineKeys(sync, carLoader.e_engine_h);
-		if (!Allowed(loader, keys)) return false;
+		if (!Allowed(loader)) return false;
 		PartTransactions.Open(loader, keys, new[] { engine.ID });
 		insertingLoader = loader;
 		insertingGroup = engine.ToModGroupItem();
@@ -83,20 +83,14 @@ public static class EngineCraneHooks
 		return group;
 	}
 
-	private static bool Allowed(int loader, List<string> keys)
+	private static bool Allowed(int loader)
 	{
 		if (!CarPartsSync.IsReady(loader))
 		{
 			ModNotify.ShowToast("This car is still loading for multiplayer.");
 			return false;
 		}
-		if (CarAwaySync.BlockIfLocked(loader, "engine crane")) return false;
-		if (PartClaims.HeldByOther(loader, keys, out _))
-		{
-			ModNotify.ShowToast("Another player is working on this engine.");
-			return false;
-		}
-		return true;
+		return !CarAwaySync.BlockIfLocked(loader, "engine crane");
 	}
 
 	private static List<string> EngineKeys(LoaderSync sync, GameObject engine)

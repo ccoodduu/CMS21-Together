@@ -97,10 +97,16 @@ namespace CMS21Together.Network.Handlers
             ClientScene.GarageBound(() => PartChanges.OnResult(packet));
         }
 
-        [PacketHandler(PacketTypes.CarPartClaimUpdate)]
-        public static void HandleCarPartClaimUpdate(long clientId, CarPartClaimUpdatePacket packet)
+        [PacketHandler(PacketTypes.CarLockUpdate)]
+        public static void HandleCarLockUpdate(long clientId, CarLockUpdatePacket packet)
         {
-            ClientScene.GarageBound(() => PartClaims.OnUpdate(packet));
+            ClientScene.GarageBound(() => Logic.Car.Locks.CarLockMirror.OnUpdate(packet), () => Logic.Car.Locks.CarLockMirror.OnUpdate(packet));
+        }
+
+        [PacketHandler(PacketTypes.CarLockResult)]
+        public static void HandleCarLockResult(long clientId, CarLockResultPacket packet)
+        {
+            Logic.Car.Locks.CarLockMirror.OnResult(packet);
         }
 
         [PacketHandler(PacketTypes.CarSpawnAck)]

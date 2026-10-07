@@ -50,7 +50,7 @@ public static class PartGhosts
 	public static int ActorOf(int loader, string key)
 	{
 		int owner = PartClaims.OwnerOf(loader, key);
-		if (owner != CarPartClaimUpdatePacket.Released) return owner;
+		if (owner != PartClaims.Released) return owner;
 		return recentOwners.TryGetValue(OwnerKey(loader, key), out var recent) && Time.time - recent.Time <= RecentOwnerSeconds ? recent.Owner : -1;
 	}
 
@@ -59,7 +59,7 @@ public static class PartGhosts
 		foreach (string key in keys)
 		{
 			string id = OwnerKey(loader, key);
-			if (owner != CarPartClaimUpdatePacket.Released) recentOwners[id] = (owner, Time.time);
+			if (owner != PartClaims.Released) recentOwners[id] = (owner, Time.time);
 			else if (recentOwners.TryGetValue(id, out var recent)) recentOwners[id] = (recent.Owner, Time.time);
 		}
 	}

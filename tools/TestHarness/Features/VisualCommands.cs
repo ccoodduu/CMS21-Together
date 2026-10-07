@@ -325,6 +325,9 @@ public static class VisualCommands
         job.Running = true;
         try
         {
+            // ActionUnMount waits for the part lock (part-locks): the bolts only move once the re-invoked call has run.
+            float lockDeadline = Time.time + CMS21Together.Logic.Car.Locks.CarLockMirror.TimeoutSeconds + 1f;
+            while (unscrew == job && CMS21Together.Logic.Car.Locks.LockGate.HasPending && Time.time < lockDeadline) yield return null;
             while (unscrew == job)
             {
                 float progress = ActivityCapture.PartProgress(job.Script, job.Mount);

@@ -67,6 +67,7 @@ namespace CMS21_Together_Server.Network.Handlers
             {
                 Server.SendToClient(entry.Spawn, (int)clientId);
                 if (entry.HasBaseline) CarPartsStore.SendSnapshot(packet.CarLoaderID, entry, CarPartsSnapshotPacket.LiveSnapshot, only: (int)clientId);
+                CarDetailsStore.SendTo(packet.CarLoaderID, (int)clientId);
                 return;
             }
             CarPartsStore.ClearLoader(packet.CarLoaderID, ClearReason.Deleted);

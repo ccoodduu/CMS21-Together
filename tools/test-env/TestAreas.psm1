@@ -17,6 +17,7 @@ tools/test-env/TestLanes.psm1                                  full
 tools/test-env/Test-ServerSaves.ps1                            none
 tools/test-env/fixtures/mod-targets/*                          connect
 tools/test-env/fixtures/server_save_*                          persistence
+tools/test-env/LockSession.psm1                                locks
 tools/test-env/*                                               smoke
 tools/TestHarness/Features/BugReport*                          bugreport
 tools/TestHarness/Features/Build*                              release, connect
@@ -40,6 +41,7 @@ tools/TestHarness/Features/TestDrive*                          testdrive
 tools/TestHarness/Features/Tools*                              tools
 tools/TestHarness/Features/Visual*                             visuals
 tools/TestHarness/Features/Drive*                              driving
+tools/TestHarness/Features/Lock*                               locks
 tools/TestHarness/*                                            full
 tools/release/*                                                release
 CMS21-Together-*/Network/Handlers/Admin*                       hosting
@@ -47,6 +49,7 @@ CMS21-Together-*/Network/Handlers/Auth*                        connect
 CMS21-Together-*/Network/Handlers/BugReport*                   bugreport
 CMS21-Together-*/Network/Handlers/CarDetails*                  details, cars
 CMS21-Together-*/Network/Handlers/CarParts*                    parts, cars
+CMS21-Together-*/Network/Handlers/Lock*                        locks, parts, placement, economy
 CMS21-Together-*/Network/Handlers/Car*                         cars, parts
 CMS21-Together-*/Network/Handlers/Digest*                      resync
 CMS21-Together-*/Network/Handlers/Economy*                     economy
@@ -66,6 +69,7 @@ CMS21-Together-*/Network/Handlers/WorldStates*                 connect, persiste
 CMS21-Together-*/Diagnostics/*                                 bugreport
 CMS21-Together-*/Properties/*                                  smoke
 CMS21-Together-*/*.csproj                                      smoke
+CMS21-Together-Core/Network/Packets/LockPackets.cs             locks, parts, placement, economy
 CMS21-Together-Core/Network/Packets/Car*                       cars, parts, details
 CMS21-Together-Core/Network/Packets/Digest*                    resync
 CMS21-Together-Core/Network/Packets/Diagnostics*               bugreport
@@ -102,6 +106,7 @@ CMS21-Together-Core/Data/GameType/ModItem*                     parts, economy
 CMS21-Together-Core/Data/GameType/ModGroupItem*                parts, economy
 CMS21-Together-Core/Data/GameType/ModPartInfo*                 parts
 CMS21-Together-Core/Data/GameType/PartProperty*                parts
+CMS21-Together-Client/Logic/Car/Locks/*                        locks, parts, placement
 CMS21-Together-Client/Logic/Car/Parts/*                        parts, cars
 CMS21-Together-Client/Logic/Car/Details/*                      details, cars
 CMS21-Together-Client/Logic/Car/Placement/*                    placement, cars
@@ -133,6 +138,7 @@ CMS21-Together-Client/Session/ServerWatchdog.cs                persistence
 CMS21-Together-Client/Session/*                                connect, hosting
 CMS21-Together-Client/UI/*                                     connect, hosting
 CMS21-Together-Client/Data/ClientScene.cs                      presence, connect
+CMS21-Together-Server/Data/Cars/CarLocks*                      locks, parts, placement, economy
 CMS21-Together-Server/Data/Cars/CarDetails*                    details, cars
 CMS21-Together-Server/Data/Cars/CarAway*                       testdrive, cars
 CMS21-Together-Server/Data/Cars/InventoryChanges.cs            parts, economy

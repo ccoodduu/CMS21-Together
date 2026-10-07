@@ -23,6 +23,7 @@ namespace CMS21_Together_Server.Network.Handlers
 				return;
 			}
 
+			var (keptBody, keptSub) = KeepStoredMountState(entry, change, (int)clientId);
 			string conflict = !OnlyExamines(entry, change) && CarAwayRegistry.Blocks(change.CarLoaderID, (int)clientId, $"change {change.TxId}")
 				? "the car is away"
 				: FindConflict(entry, change, (int)clientId);
@@ -63,13 +64,12 @@ namespace CMS21_Together_Server.Network.Handlers
 			}
 			InventoryChanges.Apply(change.InventoryDelta, (int)clientId);
 
-			CarClaims.ReleaseCommitted((int)clientId, change.CarLoaderID,
-				change.BodyParts.Select(b => PartKeys.Body(b.PartIndex)).Concat(change.SubParts.Select(s => PartKeys.Sub(s.PartIndexPath))));
 			CarLocks.ReleaseCommitted((int)clientId, entry, change.CarLoaderID);
 			change.Revision = entry.Revision;
 			Server.SendToClient(new CarPartsChangeResultPacket
 			{
-				CarLoaderID = change.CarLoaderID, SpawnSeq = change.SpawnSeq, TxId = change.TxId, Accepted = true, Revision = entry.Revision, SubParts = merged
+				CarLoaderID = change.CarLoaderID, SpawnSeq = change.SpawnSeq, TxId = change.TxId, Accepted = true, Revision = entry.Revision,
+				BodyParts = keptBody, SubParts = merged.Concat(keptSub.Where(k => !merged.Contains(k))).ToList()
 			}, (int)clientId);
 			Server.SendToClients(change, (int)clientId);
 			Logger.Info($"[Cars] Change {change.TxId} from client {clientId} on loader {change.CarLoaderID}: revision {entry.Revision} ({change.BodyParts.Count} body, {change.SubParts.Count} mechanical, inventory +{change.InventoryDelta.AddedItems.Count + change.InventoryDelta.AddedGroups.Count} -{change.InventoryDelta.RemovedItemUids.Count + change.InventoryDelta.RemovedGroupUids.Count})."); 
@@ -131,18 +131,34 @@ namespace CMS21_Together_Server.Network.Handlers
 			return null;
 		}
 
+		private static (List<CarBodyPartUpdatePacket>, List<CarSubPartUpdatePacket>) KeepStoredMountState(CMS21_Together_Core.Data.CarLoaderEntry entry, CarPartsChangePacket change, int clientId)
+		{
+			var keptBody = new List<CarBodyPartUpdatePacket>();
+			var keptSub = new List<CarSubPartUpdatePacket>();
+			var flipping = new HashSet<string>(change.Preconditions.Select(p => p.Key));
+			foreach (var record in change.BodyParts)
+				if (!flipping.Contains(record.Key) && entry.BodyParts.TryGetValue(record.PartIndex, out var stored) && stored.Unmounted != record.Unmounted)
+				{
+					Logger.Info($"[Cars] Change {change.TxId} from client {clientId} carries a stale mount state for {record.Key}; the stored one is kept.");
+					record.Unmounted = stored.Unmounted;
+					keptBody.Add(record);
+				}
+			foreach (var record in change.SubParts)
+				if (!flipping.Contains(record.Key) && entry.SubParts.TryGetValue(CarSubPartIdentity.BuildKey(record.PartIndexPath), out var stored) && stored.Unmounted != record.Unmounted)
+				{
+					Logger.Info($"[Cars] Change {change.TxId} from client {clientId} carries a stale mount state for {record.Key}; the stored one is kept.");
+					record.Unmounted = stored.Unmounted;
+					keptSub.Add(record);
+				}
+			return (keptBody, keptSub);
+		}
+
 		private static IEnumerable<string> FlippedKeys(CMS21_Together_Core.Data.CarLoaderEntry entry, CarPartsChangePacket change)
 		{
 			foreach (var record in change.BodyParts)
 				if (entry.BodyParts.TryGetValue(record.PartIndex, out var stored) && stored.Unmounted != record.Unmounted) yield return record.Key;
 			foreach (var record in change.SubParts)
 				if (entry.SubParts.TryGetValue(CarSubPartIdentity.BuildKey(record.PartIndexPath), out var stored) && stored.Unmounted != record.Unmounted) yield return record.Key;
-		}
-
-		[PacketHandler(PacketTypes.CarPartClaim)]
-		public static void OnClaim(long clientId, CarPartClaimPacket packet)
-		{
-			CarClaims.Handle((int)clientId, packet, ServerTime.Time);
 		}
 
 			[PacketHandler(PacketTypes.CarPartsResyncRequest)]

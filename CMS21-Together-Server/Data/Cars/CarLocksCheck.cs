@@ -31,12 +31,12 @@ namespace CMS21_Together_Server.Data.Cars
 
 			var cap = Grant(A, X("s:3.22.4"));
 			Expect("same key is refused", Ask(B, X("s:3.22.4")), CarLockRefusal.Held, "s:3.22.4");
-			Expect("X on the parent of another player's part is refused", Ask(B, X("s:3.22")), CarLockRefusal.Held, "s:3.22");
+			Expect("X on the parent of another player's part is refused, naming that part", Ask(B, X("s:3.22")), CarLockRefusal.Held, "s:3.22.4");
 			Expect("a sibling is granted (S/S on the parent)", Ask(B, X("s:3.22.5")), CarLockRefusal.None, null);
 			Expect("a look-alike prefix is not an ancestor", Ask(B, X("s:3.2")), CarLockRefusal.None, null);
 			Expect("an exclusive fluid lock is granted", AskWith(B, X("f:EngineCoolant.0"), S()), CarLockRefusal.None, null);
 			Expect("an X fluid blocks a part that holds it shared", Ask(A, X("b:0"), S("f:EngineCoolant.0")), CarLockRefusal.Held, "f:EngineCoolant.0");
-			Expect("car X is refused while another player works on the car", Ask(B, X(LockKeys.Car), kind: CarLockKind.Lift), CarLockRefusal.Held, LockKeys.Car);
+			Expect("car X is refused while another player works on the car", Ask(B, X(LockKeys.Car), kind: CarLockKind.Lift), CarLockRefusal.Held, "s:3.22.4");
 			Expect("an unknown part key is invalid", Ask(B, X("s:9.9")), CarLockRefusal.Invalid, "s:9.9");
 			Expect("a stale SpawnSeq is refused", Ask(B, X("s:3"), spawnSeq: 99), CarLockRefusal.Stale, null);
 			CarLocks.ReleaseOwner(A, "check");

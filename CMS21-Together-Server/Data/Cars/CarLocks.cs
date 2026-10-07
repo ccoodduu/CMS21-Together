@@ -9,9 +9,6 @@ using CMS21_Together_Server.Network;
 
 namespace CMS21_Together_Server.Data.Cars
 {
-	// part-locks D2/D5: the runtime lock table. A lock holds exclusive keys (X), shared keys (S) and inventory items
-	// of one car; X/X and X/S of different owners conflict, S/S does not, and one item can be in one lock only.
-	// Callers hold StateLock.
 	public static class CarLocks
 	{
 		public const float CarLockSeconds = 30f;
@@ -221,8 +218,9 @@ namespace CMS21_Together_Server.Data.Cars
 				{
 					if (!keys.TryGetValue(key, out var holders)) continue;
 					int other = OtherOwner(holders.X, clientId, ownLockId);
-					if (other < 0) other = holders.S.Select(id => OtherOwner(id, clientId, ownLockId)).Where(o => o >= 0).DefaultIfEmpty(-1).First();
 					if (other >= 0) return new Refused { Refusal = CarLockRefusal.Held, Holder = other, Key = key };
+					int sharedBy = holders.S.FirstOrDefault(id => OtherOwner(id, clientId, ownLockId) >= 0);
+					if (sharedBy != 0) return new Refused { Refusal = CarLockRefusal.Held, Holder = locks[sharedBy].Owner, Key = locks[sharedBy].X.FirstOrDefault() ?? key };
 				}
 				foreach (string key in s)
 				{

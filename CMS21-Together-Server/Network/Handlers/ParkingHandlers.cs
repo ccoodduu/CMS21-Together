@@ -50,6 +50,7 @@ namespace CMS21_Together_Server.Network.Handlers
 				giveBack.CarDataVersion = (byte)request.Car.SaveVersion;
 				Server.SendToClient(giveBack, client);
 				if (entry.HasBaseline) CarPartsStore.SendSnapshot(request.CarLoaderID, entry, CarPartsSnapshotPacket.LiveSnapshot, only: client);
+				CarDetailsStore.SendTo(request.CarLoaderID, client);
 				return;
 			}
 
