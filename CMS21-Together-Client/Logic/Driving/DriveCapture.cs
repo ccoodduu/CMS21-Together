@@ -17,6 +17,9 @@ namespace CMS21Together.Logic.Driving;
 public static class DriveCapture
 {
 	public const float SendInterval = 1f / 15f;
+	public const float IdleInterval = 1f / 3f;
+	private const float IdleSpeed = 0.05f;
+	private const float IdleRpmChange = 50f;
 	public const int MaxPerSecond = 15;
 
 	private static bool subscribed;
@@ -24,6 +27,7 @@ public static class DriveCapture
 	private static int driveId = Environment.TickCount & 0xFFFF;
 	private static int seq;
 	private static float nextSend;
+	private static float lastSent;
 	private static float windowStart;
 	private static int windowCount;
 	private static PrepareCarPhysics physics;
@@ -74,12 +78,14 @@ public static class DriveCapture
 		if (Time.unscaledTime < nextSend) return;
 		nextSend = Time.unscaledTime + SendInterval;
 		if (!TryRead(physics, out var state)) return;
+		if (seq > 0 && IsIdle(state) && IsIdle(Last) && Mathf.Abs(state.Rpm - Last.Rpm) < IdleRpmChange && Time.unscaledTime - lastSent < IdleInterval) return;
 		if (!WithinBudget())
 		{
 			Dropped++;
 			return;
 		}
 		Last = state;
+		lastSent = Time.unscaledTime;
 		Client.Instance.Send(new CarDriveStatePacket { DriveId = driveId, Seq = ++seq, Payload = DriveStateCodec.Encode(state) }, false);
 		Sent++;
 	}
@@ -137,6 +143,8 @@ public static class DriveCapture
 		Log.Info($"[Drive] Drive {driveId} stopped ({why}) after {seq} states.");
 		Reset();
 	}
+
+	private static bool IsIdle(DriveState s) => s.VelX * s.VelX + s.VelY * s.VelY + s.VelZ * s.VelZ < IdleSpeed * IdleSpeed && Mathf.Abs(s.WheelRadPerSecond) < 0.1f;
 
 	private static bool WithinBudget()
 	{
