@@ -36,7 +36,8 @@ $clientFiles = @(
     "Mods/CMS21-Together.dll", "Mods/CMS21-Together.pdb",
     "UserLibs/CMS21_Together_Core.dll", "UserLibs/CMS21_Together_Core.pdb",
     "UserLibs/Facepunch.Steamworks.Win64.dll", "UserLibs/steam_api64.dll",
-    "CMS21-Together-TRY-IT.txt", "CMS21-Together-release.json", "Collect-Logs.ps1", "Collect-Logs.bat"
+    "CMS21-Together-TRY-IT.txt", "CMS21-Together-QUICKSTART-DA.txt", "CMS21-Together-release.json", "Collect-Logs.ps1",
+    "Collect-Logs.bat"
 ) + @($serverFiles | ForEach-Object { "TogetherServer/$_" })
 
 function Invoke-Git {
@@ -197,6 +198,7 @@ foreach ($project in @("CMS21-Together-Client\CMS21-Together.csproj", "CMS21-Tog
 $clientBin = Join-Path $repo "CMS21-Together-Client\bin\Release"
 $serverBin = Join-Path $repo "CMS21-Together-Server\bin\Release"
 $tryIt = Join-Path $repo "docs\try-it.md"
+$quickstartDa = Join-Path $repo "docs\playtest-quickstart-da.md"
 $steamLib = Join-Path $repo "CMS21-Together-Server\Libs\steam_api64.dll"
 
 $stage = Join-Path $OutDir "staging"
@@ -223,6 +225,7 @@ foreach ($file in @("CMS21_Together_Core.dll", "CMS21_Together_Core.pdb", "Facep
 }
 Copy-Item -LiteralPath $steamLib -Destination (Join-Path $clientStage "UserLibs")
 Set-Content -LiteralPath (Join-Path $clientStage "CMS21-Together-TRY-IT.txt") -Value $tryItText -Encoding utf8
+Copy-Item -LiteralPath $quickstartDa -Destination (Join-Path $clientStage "CMS21-Together-QUICKSTART-DA.txt")
 
 foreach ($drop in $DropFromStaging) {
     Remove-Item -LiteralPath (Join-Path $stage $drop) -Force

@@ -24,6 +24,24 @@ Newest first. One entry per work session.
 2. The host's upload: the summed server upload of that session (server `perf`) against the host's real upload speed.
 3. One join from a friend over the internet into a full garage and full parking (late-join time with real latency).
 
+## 2026-10-07 (09:40–11:10) — M4 done in code; 14d, test areas, release docs and row 11 metrics merged
+
+- New test policy (user): merge after the change's own scenarios, its test areas and the smoke set
+  (`Run-All -Changed`); the full regression runs on `main` in the background and failures are fixed forward.
+  Scenarios carry `# areas:`; the smoke set is `latejoin`, `car-live`, `junkyard-trip`, `guard`, `tools-latejoin`.
+- `main` = `2796c8a`:
+  - car purchases outside the garage (row 6 part 2 group 6): a junkyard car goes to the shared parking, money once
+    through the server, NoMoney refused. Found on the way: the server's item UIDs came from `DateTime.UtcNow.Ticks`,
+    so parts bought in one tick shared a UID (now strictly increasing). Barn, salon and auction purchases are hand
+    checks. **M4 is done in code.**
+  - row 14d (F8 bug report bundles), row 12 part 2 (install and hosting guides, README for 1.0, CHANGELOG,
+    versioning, `Collect-Logs`), test areas, and row 11 groups 2–3 (server traffic and lock-wait metrics, `perf`
+    command and log, client `perf`/`fps-cap`; `perf-probe` passes).
+  - scenario fixes: `economy-trades` compared dumps while B was in the newly opened barn; `bug-report` had two
+    PowerShell traps (`$rootS` is `$roots`; `@(... | ConvertFrom-Json)` counts an array as one).
+- Running: the full regression on `main` on both lanes. An agent writes the rest of row 11 (lane 3 with four
+  instances, soak, full-garage late join, disconnect storms).
+
 ## 2026-10-07 (07:55–) — guard opened, batch mode, two lanes again
 
 - Two lanes run in parallel again (Claude Code's memory guard is off; the second lane needs 10 GB free RAM).
