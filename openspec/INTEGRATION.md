@@ -125,6 +125,7 @@ Server `server_config.ini` (missing keys take their defaults and are appended; e
 | `password` (""), `password_steam` (False), `admin_key` (""), `new_session_difficulty` (Normal); `--password`, `--admin-key`, `--new-difficulty` | 8 part 2 |
 | `game_version` (auto), `mods_required`, `mods_ignored`, `mods_gameplay` (empty); `Database/meta.json`, `Database/mod_rules.json` | 9 |
 | `desync_check_interval_seconds` (5, 0 = off), `desync_autofix` (true) | 14 |
+| `perf_log_interval_seconds` (0 = off; > 0 writes `Log/perf_<start>.jsonl`) | 11 |
 
 Client MelonPreferences — one scheme: category `CMS21Together` for everything, plus `CMS21Together_Guard` for the
 guard. Key bindings end in `Hotkey` (the redaction rule skips them).
@@ -185,6 +186,7 @@ Verbs are globally unique (`Commands.Discover` throws on a duplicate). Existing:
 | 12 | `build-info` |
 | 14a | `guard-trace` (spike only), `guard-set`, `guard-allow`, `guard-try`, `guard-log`, `guard-rules` |
 | 14 | `digest-show`, `inv-corrupt`, `digest-hold`, `resync [force]` (5a uses it instead of its former `tool-resync`), `bug-report` |
+| 11 | `perf` (frame time over 10 s, managed and IL2CPP heap, scene, `syncAcked`), `fps-cap <n>` |
 
 | PowerShell helper / server command | Owner (first to land) |
 |---|---|
@@ -199,6 +201,7 @@ Verbs are globally unique (`Commands.Discover` throws on a duplicate). Existing:
 | `tools/release/Build-Release.ps1`, `Install-ReleaseToTestEnv.ps1 -Lane`, `Collect-Logs.ps1` (+ `.bat`); `Deploy-Mod.ps1` removes release-only files | 12 |
 | `tools/test-env/Compare-Database.ps1`, `tools/test-env/fixtures/mod-targets/` | 9 |
 | server commands `password`, `serverinfo` (8); `compat` (9); `desync`, `bugreport` (14); existing `kick`, `stop` (`kick` moves to `Server.Refuse`) | as listed |
+| server command `perf` (`perf`, `perf top <n>`, `perf reset`), snapshot line `Client[n] snapshot <id> acked after …`; `tools/test-env/PerfSampler.psm1` (`Get-PerfSample`, `Add-PerfSample`, `Test-PerfWatchdog`, `Add-FrameSample`), `Show-SoakReport.ps1` | 11 |
 
 Scenarios (unique): 7 `server-restart`, `profile-safety`, `rejoin`, `latejoin`, `persistence-restart`,
 `duplicate-identity`; 6 `presence-latejoin`, `scenes`, `seat-engine`, `seat-engine-trace` (spike), `presence`, `purchases`; 1 `car-parts`, `car-parts-latejoin`;
