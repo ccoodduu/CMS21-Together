@@ -2,6 +2,21 @@
 
 Newest first. One entry per work session.
 
+## 2026-10-08 (22:00–23:15) — row 19 part 2 and seeded job cars merged; playtest build dev.1102
+
+- `main` = `63c146e`. Row 19 part 2 merged (`23c46ef`; smoke plus touched scenarios `20261008-224024_regression.json`).
+  Seeded job cars merged (`63c146e`, option (a): extra tasks, drained fluids and plate are not seeded;
+  `20261008-225803_regression.json`).
+- User decisions: row 16 reduced to seeded job cars plus the server-owned order clock and limit (small limit table
+  allowed, no large decompiled logic). Order clock design reviewed ("ready after fixes",
+  `docs/design/server-order-clock-review.md` on `feat/server-order-clock`); being built on lane 1.
+- Features to open in multiplayer (user): race track (base game only), tuning window, bonus parts, new engines,
+  showroom, garage customization, seated avatars in the garage, achievements for everyone who worked on a job.
+  OpenSpec drafts in progress on `change/singleplayer-features`.
+- Open from row 19 part 2: two cars moved to one free place (`place-same`) leaves a swap on one client; examined
+  flags after an unpark; task 10.5 (row 18 contention kinds).
+- Playtest build `0.6.0-dev.1102` on the Desktop.
+
 ## 2026-10-08 (21:00–22:00) — story missions fixed; refused delete restore fixed; playtest build dev.1086
 
 - `main` = `04760bd`. Story missions merged (`f37602b`): only the order generator makes a mission, the first mission
