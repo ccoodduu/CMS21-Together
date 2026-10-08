@@ -6,7 +6,7 @@
 
 $script:KnownAreas = @(
     "connect", "presence", "guard", "cars", "parts", "placement", "details", "jobs", "economy", "tools",
-    "testdrive", "persistence", "resync", "hosting", "bugreport", "release", "visuals", "driving", "outdoor"
+    "testdrive", "persistence", "resync", "hosting", "bugreport", "release", "visuals", "driving", "outdoor", "shoplist"
 )
 
 $script:PathAreaTable = @'
@@ -36,6 +36,7 @@ tools/TestHarness/Features/PlacementTrace*                     placement
 tools/TestHarness/Features/Presence*                           presence
 tools/TestHarness/Features/Scene*                              presence
 tools/TestHarness/Features/SeatEngine*                         presence
+tools/TestHarness/Features/ShopList*                           shoplist
 tools/TestHarness/Features/Profile*                            persistence
 tools/TestHarness/Features/TestDrive*                          testdrive
 tools/TestHarness/Features/Tools*                              tools
@@ -58,6 +59,7 @@ CMS21-Together-*/Network/Handlers/Job*                         jobs
 CMS21-Together-*/Network/Handlers/Parking*                     placement
 CMS21-Together-*/Network/Handlers/Placement*                   placement
 CMS21-Together-*/Network/Handlers/Player*                      presence
+CMS21-Together-*/Network/Handlers/ShopList*                    shoplist
 CMS21-Together-*/Network/Handlers/Shop*                        economy
 CMS21-Together-*/Network/Handlers/Stats*                       economy, persistence
 CMS21-Together-*/Network/Handlers/TestDrive*                   testdrive
@@ -80,6 +82,7 @@ CMS21-Together-Core/Network/Packets/Job*                       jobs
 CMS21-Together-Core/Network/Packets/Placement*                 placement
 CMS21-Together-Core/Network/Packets/Player*                    presence
 CMS21-Together-Core/Network/Packets/Session*                   connect, hosting
+CMS21-Together-Core/Network/Packets/ShopList*                  shoplist
 CMS21-Together-Core/Network/Packets/Shop*                      economy
 CMS21-Together-Core/Network/Packets/Start*                     connect
 CMS21-Together-Core/Network/Packets/Stats*                     economy, persistence
@@ -92,6 +95,7 @@ CMS21-Together-Core/PacketTypes.cs                             smoke
 CMS21-Together-Core/Data/Compatibility/*                       connect
 CMS21-Together-Core/Data/Digest/*                              resync
 CMS21-Together-Core/Data/JobsState.cs                          jobs
+CMS21-Together-Core/Data/ShopListState.cs                      shoplist
 CMS21-Together-Core/Data/InventoryState.cs                     parts, economy
 CMS21-Together-Core/Data/ParkingLayout.cs                      placement
 CMS21-Together-Core/Data/Player*                               presence, persistence
@@ -121,6 +125,7 @@ CMS21-Together-Client/Logic/Hook/NotificationCenterItemsHook.cs parts
 CMS21-Together-Client/Logic/Hook/SceneHooks.cs                 presence
 CMS21-Together-Client/Logic/Hook/*WindowHook.cs                economy
 CMS21-Together-Client/Logic/Jobs/*                             jobs
+CMS21-Together-Client/Logic/ShopList/*                         shoplist
 CMS21-Together-Client/Logic/Player/*                           presence
 CMS21-Together-Client/Logic/PlayerInstance.cs                  presence
 CMS21-Together-Client/Logic/Reconciliation/*                   resync
@@ -146,6 +151,7 @@ CMS21-Together-Server/Data/Economy/*                           economy
 CMS21-Together-Server/Data/Outdoor/*                           outdoor, economy, presence
 CMS21-Together-Server/Data/PricingCalculator.cs                economy
 CMS21-Together-Server/Data/Jobs/*                              jobs
+CMS21-Together-Server/Data/ShopList/*                          shoplist
 CMS21-Together-Server/Data/Persistence/*                       persistence
 CMS21-Together-Server/Data/Placement/*                         placement
 CMS21-Together-Server/Data/Presence/*                          presence, persistence
