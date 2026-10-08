@@ -40,9 +40,9 @@ public static class DynoSync
 
 	[HarmonyPatch(typeof(DynoManager), nameof(DynoManager.RunDyno))]
 	[HarmonyPostfix]
-	private static void AfterRunDyno(DynoManager __instance)
+	private static void AfterRunDyno(DynoManager __instance, bool __runOriginal)
 	{
-		if (!Active || __instance.CarLoader == null) return;
+		if (!__runOriginal || !Active || __instance.CarLoader == null) return;
 		int loader = CarLoaderPlaces.Get().GetCarLoaderId(__instance.CarLoader);
 		if (loader < 0) return;
 		CarAwaySync.Request(loader, CarAwayKind.Dyno, null, (refusal, owner) =>
