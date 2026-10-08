@@ -74,7 +74,7 @@ public static class PartApplier
 		{
 			if (record.Unmounted)
 			{
-				script.HideBySavegame(false, carLoader);
+				HideBySavegame(script, carLoader);
 			}
 			else
 			{
@@ -83,6 +83,20 @@ public static class PartApplier
 			}
 		}
 		return true;
+	}
+
+	// The game's HideBySavegame returns at once for the oil drain plug and the fill and check caps (special group 1).
+	private static void HideBySavegame(PartScript script, CarLoader carLoader)
+	{
+		var property = script.partProperty;
+		if (property == null || property.SpecialGroup != SpecialGroup.OilDrainCheckFill)
+		{
+			script.HideBySavegame(false, carLoader);
+			return;
+		}
+		property.SpecialGroup = default;
+		try { script.HideBySavegame(false, carLoader); }
+		finally { property.SpecialGroup = SpecialGroup.OilDrainCheckFill; }
 	}
 
 	// The game's own ShowMounted also deletes the inventory item, adds XP and switches the game mode. It mounts the
