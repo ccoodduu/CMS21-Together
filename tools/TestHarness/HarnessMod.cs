@@ -64,6 +64,7 @@ public class HarnessMod : MelonMod
         if (Application.isBatchMode && Cursor.lockState != CursorLockMode.None) Cursor.lockState = CursorLockMode.None;
         Features.InputGuard.Update();
         Features.LockTraceCommands.Update();
+        Features.SeatPoseCommands.Update();
 
         Features.PerfCommands.RecordFrame();
         SceneState.Update();
@@ -75,6 +76,8 @@ public class HarnessMod : MelonMod
             StateDump.WriteStatus();
         }
     }
+
+    public override void OnLateUpdate() => Features.SeatPoseCommands.LateUpdate();
 
     private void ApplyWindow()
     {
