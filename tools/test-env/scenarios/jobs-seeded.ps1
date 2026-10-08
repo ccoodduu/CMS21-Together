@@ -3,7 +3,8 @@
 # records the job car's digest (parts, details, job tasks). The server reopens X (`jobs reopen`: the car is deleted and
 # the order opens again, the path a lost car takes). B takes X: same digest. X is reopened again with another car on
 # X's loader, so A takes X on another loader: same digest. Order Y gives another digest. First, when a story mission is
-# open, it is taken, reopened and taken again: same digest. The jobcar trace of each take is kept in the run notes.
+# open, it is taken, reopened and taken again: same digest. "Same digest" leaves out the known non-seeded rows
+# (Test-NotSeeded). The jobcar trace of each take is kept in the run notes.
 param($Ctx)
 
 $a, $b = $Ctx.Instances
@@ -60,15 +61,21 @@ function Take([string]$Name, [int]$Id, [string]$What) {
     return $digest
 }
 
+# Known non-seeded sources (not UnityEngine.Random, see docs/spikes/seeded-job-cars.md): the Additionals task picks with
+# the fluids they drain, and the licence plate number. They may differ on a retake and are left out of the comparison.
+function Test-NotSeeded([string]$Key, [string]$Value) {
+    $Key -eq "details:Fluids" -or $Key -eq "details:Plates" -or ($Key -like "job:task*" -and $Value -like "Additionals/*")
+}
+
 function Compare-Digest($Expected, $Actual, [string]$What) {
     if (-not $Expected -or -not $Actual) { Check $false "$What`: both digests exist"; return }
-    Check ($Expected.hash -eq $Actual.hash) "$What`: same job car ($($Expected.hash) / $($Actual.hash))"
-    if ($Expected.hash -eq $Actual.hash) { return }
     $left = @{}; foreach ($row in $Expected.rows) { $k, $v = $row -split "=", 2; $left[$k] = $v }
     $right = @{}; foreach ($row in $Actual.rows) { $k, $v = $row -split "=", 2; $right[$k] = $v }
     $keys = @($left.Keys + $right.Keys | Sort-Object -Unique | Where-Object { $left[$_] -ne $right[$_] })
-    Note "$What`: $($keys.Count) of $($left.Count) rows differ"
-    foreach ($key in $keys | Select-Object -First 12) { Note "  $key`n    was $($left[$key])`n    now $($right[$key])" }
+    $notSeeded = @($keys | Where-Object { Test-NotSeeded $_ "$($left[$_])$($right[$_])" })
+    $seeded = @($keys | Where-Object { $notSeeded -notcontains $_ })
+    Check ($seeded.Count -eq 0) "$What`: same job car ($($seeded.Count) of $($left.Count) rows differ; non-seeded rows that differ: $($notSeeded -join ', '))"
+    foreach ($key in $seeded | Select-Object -First 12) { Note "  $key`n    was $($left[$key])`n    now $($right[$key])" }
 }
 
 function Reopen([int]$Id) {

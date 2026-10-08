@@ -78,12 +78,13 @@ tasks.
 `20261008-220747_L1_jobs-seeded` is an earlier run of `181aa8a`; its mission step could not start (the garage was
 full), which `d8d7755` fixed by taking the mission first.
 
-## Open: making the two remaining sources deterministic
+## Decided: the two remaining sources are the known limit
 
-Not built; it needs a decision, because both are outside `UnityEngine.Random`:
+Decision 2026-10-08: option (a). `jobs-seeded` leaves out `details:Fluids`, `details:Plates` and the `Additionals`
+task row (`Test-NotSeeded`). The options considered were:
 
 - **(a) Accept them as the known limit.** The car itself is the same; the `Additionals` tasks and drained fluids and
-  the plate number may change on a retake. The digest would leave out `details:Plates` and the `Additionals` row.
+  the plate number may change on a retake.
 - **(b) Patch the two non-Unity sources during a seeded take:** a prefix on `Il2CppSystem.Guid.NewGuid` that, while a
   job stream is active, returns a Guid made of four draws from that stream; and either a prefix on
   `CarHelper.GetRandomLicensePlate` that reproduces its format from the stream, or a prefix on the `System.Random`
