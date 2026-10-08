@@ -35,6 +35,7 @@ part 2. "Owner" defines it; "Users" only call or subscribe.
 | `BugReportRequest`, `BugReportCollect`, `BugReportResult` | both | 14 (d) | — |
 | `PlayerActivity { PlayerId, State }` (`PlayerActivityState { Kind, CarLoaderID, PartKey, ToolType, ModTool, Progress }`); `PlayerPresenceRecord.Activity` (`[OptionalField]`, never saved) | C→S→same scene | 17 | 6 (roster carries it to late joiners); server drops more than 8/s per client and clears it on scene change |
 | `CarDriveStart { PlayerId, DriveId, Scene, CarLoaderID, CarToLoad, CarBlob, CarBlobVersion }`, `CarDriveState { PlayerId, DriveId, Seq, Payload }` (36-byte `DriveStateCodec`, unreliable, ≤ 15/s, server cap 20/s), `CarDriveStop { PlayerId, DriveId, FinalPose }` | C→S→same scene | 17 (part 2) | 13 (`CarLoaderID` = the away car; a start for a car away with someone else is dropped), 2 (`NewCarDataCodec` blob), 6 (scene relay; running drives sent on scene entry; stopped on scene change and leave). Test track only (no garage driving, spike 8.1); no `CarAwayKind.Driving` |
+| `ShopListChange { ClientSeq, Removed, Deltas }` → `ShopListState { Entries, Revision, SourcePlayer, SourceSeq, Refused }` (`ShopListEntry`: id, amount, the `ShopListItemDataEx` fields) | C→S / S→all (S→actor when nothing changed) | 23 | — (design `docs/design/shared-shopping-list.md`) |
 
 Rows 12 and 14a add no packets.
 
@@ -102,6 +103,7 @@ same method (row 6's `SceneHooks` on `NotificationCenter.SelectSceneToLoad`, for
 | `car-placement` | 1 | 2 | lifts, parking slots (blobs), levels |
 | `workshop-tools` | 1 | 5a | slots, positions (reservations are runtime only) |
 | `jobs` | 1 | 3 | orders, active jobs, `NextJobId`, missions |
+| `shop-list` | 1 | 23 | the shared shopping list (`Entries`, `Revision`) |
 | `players` | 1 | 7 (Part B) | `PlayerRecord { Key, Name, LastSeenUtc, Position, Rotation, Scene }` |
 
 ## SyncOrder slots
@@ -114,6 +116,7 @@ same method (row 6's `SceneHooks` on `NotificationCenter.SelectSceneToLoad`, for
 | 200 | `car-placement` | 2 | 1 + occupied slots + raised lifts |
 | 300 | `workshop-tools` | 5a | 1 |
 | 400 | `jobs` | 3 | 1 |
+| 420 | `shop-list` | 23 | 1 |
 | 450 | `self` | 7 | 0/1 (`PlayerRestore`) |
 | 500 | `players` | 6 | 1 (snapshot only) |
 
@@ -203,6 +206,7 @@ Verbs are globally unique (`Commands.Discover` throws on a duplicate). Existing:
 | 14 | `digest-show`, `inv-corrupt`, `digest-hold`, `resync [force]` (5a uses it instead of its former `tool-resync`), `bug-report [list]` |
 | 11 | `perf` (frame time over 10 s, managed and IL2CPP heap, scene, `syncAcked`), `fps-cap <n>` |
 | 17 | `vfx-trace`, `vfx-probe` (spike), `vfx-unscrew`, `vfx-tool`, `vfx-hold`, `vfx-enable`, `vfx-parts`, `vfx-switch`, `vfx-stand`; dump section `visuals`; part 2: `drive-trace`, `drive-pie`, `drive-probe`, `drive-input`, `drive-input-state`, `drive-stop`, `drive-history`, `drive-codec-check`, `drive-blob`, `drive-ghost-test`, `drive-start`; dump section `remoteCars` (`local`, `cars[]`) |
+| 23 | `shoplist` (game list, server mirror, `outstanding`, `windowManagerSame`), `shoplist-add`, `shoplist-remove`, `shoplist-clear` (item arguments `<id> [tire\|rim] [width=] [size=] [profile=] [et=] [plate=] [bonus=]`); no dump section |
 
 | PowerShell helper / server command | Owner (first to land) |
 |---|---|
@@ -216,7 +220,7 @@ Verbs are globally unique (`Commands.Discover` throws on a duplicate). Existing:
 | `Run-All.ps1` skips scenarios with a `# run-all: skip` header line unless named in `-Scenarios` | 12 (task 2.5) |
 | `tools/release/Build-Release.ps1`, `Install-ReleaseToTestEnv.ps1 -Lane`, `Collect-Logs.ps1` (+ `.bat`); `Deploy-Mod.ps1` removes release-only files | 12 |
 | `tools/test-env/Compare-Database.ps1`, `tools/test-env/fixtures/mod-targets/` | 9 |
-| server commands `password`, `serverinfo` (8); `compat` (9); `desync`, `bugreport` (14); existing `kick`, `stop` (`kick` moves to `Server.Refuse`) | as listed |
+| server commands `password`, `serverinfo` (8); `compat` (9); `desync`, `bugreport` (14); `shoplist` (23); existing `kick`, `stop` (`kick` moves to `Server.Refuse`) | as listed |
 | server command `perf` (`perf`, `perf top <n>`, `perf reset`), snapshot line `Client[n] snapshot <id> acked after …`; `tools/test-env/PerfSampler.psm1` (`Get-PerfSample`, `Add-PerfSample`, `Test-PerfWatchdog`, `Add-FrameSample`), `Show-SoakReport.ps1` | 11 |
 
 Scenarios (unique): playtest fixes `car-wheel-swap`, `car-mount-race`; 7 `server-restart`, `profile-safety`, `rejoin`, `latejoin`, `persistence-restart`,
@@ -225,7 +229,7 @@ Scenarios (unique): playtest fixes `car-wheel-swap`, `car-mount-race`; 7 `server
 `jobs-restart`; 4 `car-details`, `car-details-latejoin`; 5a `tools-slots`, `tools-race`, `tools-latejoin`;
 5b `tools-car-effects`; 8 `join-ui`, `join-coldstart`, `host-from-game`, `session-admin`; 9 `compat-refusal`, `compat-mods-probe` (run-all: skip; needs real mods copied into A);
 12 `release-smoke` (marked `# run-all: skip`, run after `Install-ReleaseToTestEnv.ps1`); 14a `guard`; 14
-`desync-autofix`, `resync-key`, `bug-report`; 17 `visual-parts`, `visual-activity`, `visual-latejoin`, `visual-screens` (`# needs: graphics`, `# run-all: skip`), `visual-probe` (spike, `# run-all: skip`), `drive-track`, `drive-latejoin`, `drive-probe` (spike, `# run-all: skip`); 11 `scale-connect`, `soak`, `latejoin-full`, `storm` (all
+`desync-autofix`, `resync-key`, `bug-report`; 17 `visual-parts`, `visual-activity`, `visual-latejoin`, `visual-screens` (`# needs: graphics`, `# run-all: skip`), `visual-probe` (spike, `# run-all: skip`), `drive-track`, `drive-latejoin`, `drive-probe` (spike, `# run-all: skip`); 23 `shopping-list`; 11 `scale-connect`, `soak`, `latejoin-full`, `storm` (all
 `# run-all: lane 3`), `full-garage-fixture` and `perf-probe` (`# run-all: skip`).
 
 Scale lane and long runs (owner 11, design `multiplayer-soak-and-scale` D1-D9):
@@ -251,7 +255,7 @@ regression; the full set runs when a change touches mod code the path table cann
 before a release. Every scenario, skipped ones included, carries a `# areas: a, b` header line (vocabulary and the
 path → area table in `tools/test-env/TestAreas.psm1`: `connect`, `presence`, `guard`, `cars`, `parts`,
 `placement`, `details`, `jobs`, `economy`, `tools`, `testdrive`, `persistence`, `resync`, `hosting`, `bugreport`,
-`release`, `visuals` and `driving` (row 17)); `smoke` in the list puts it in the smoke set (`latejoin`, `car-live`, `junkyard-trip`, `guard`,
+`release`, `visuals`, `driving` (row 17), `outdoor` (row 15) and `shoplist` (row 23)); `smoke` in the list puts it in the smoke set (`latejoin`, `car-live`, `junkyard-trip`, `guard`,
 `tools-latejoin`). A `# run-all: lane 3` line makes a scenario a scale-lane scenario (`Run-All -Lanes 3` only).
 **A new scenario must carry `# areas:`**; a new source folder needs a row in the table, or its
 changes run the full set.
