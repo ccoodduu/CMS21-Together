@@ -137,7 +137,8 @@ and row 14 (d)'s bundle includes the newest `perf_*.jsonl` (one line in its file
 ### D5. Soak driver
 
 `scenarios/soak.ps1` (`# run-all: lane 3`), parameters `-Minutes` (10), `-Seed` (from the run timestamp, printed),
-`-CheckEveryMinutes` (2; 10 when `-Minutes` ≥ 60), `-StormEveryMinutes` (0; 20 in long runs), `-Replay <actions.jsonl>`.
+`-CheckEveryMinutes` (2; 10 when `-Minutes` ≥ 60), `-StormEveryMinutes` (0; 20 in long runs), `-Replay <actions.jsonl>`,
+`-InventoryCap` (300; 0 = none).
 
 - Setup: every client connects, `fps-cap 30`, `guard-set Off` like the other scenarios (the harness calls game methods
   below the guarded UI; the guard has its own scenario). Server config for the run: `perf_log_interval_seconds = 10`,
@@ -152,7 +153,7 @@ and row 14 (d)'s bundle includes the newest `perf_*.jsonl` (one line in its file
 | 10 | spawn a car on a free loader / delete a non-job car (`car-spawn`, `car-ready`, `car-delete`) | 2–4 loaded |
 | 8 | lift up/down, move a car between places (`lift`, `car-move`) | — |
 | 8 | park / unpark (`park`, `unpark`) | ≤ unlocked slots |
-| 8 | money and items (`stats-add`, `econ-fee`, `give-item`, `sell-item`) | money stays ≥ 0 |
+| 8 | money and items (`stats-add`, `econ-fee`, `give-item`, `sell-item`) | money stays ≥ 0; after each checkpoint `sell-item` down to `-InventoryCap` single items (a fast mount makes a new part, so unmounts fill the inventory) |
 | 6 | machines (`tool-put`/`tool-take` on the tire changer, `tool-move`) | one user per machine |
 | 5 | car details (`cardetails-randomize`) | — |
 | 5 | presence (`teleport`, `sit`/`stand`, `engine`) | — |
