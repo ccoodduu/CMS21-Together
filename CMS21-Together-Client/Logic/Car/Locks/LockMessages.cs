@@ -43,6 +43,10 @@ public static class LockMessages
 
 	public static string Busy(int holder) => $"{Name(holder)} is working on this car.";
 
+	public static string ItemTag(int holder) => $"{Name(holder)} is mounting this";
+
+	public static string OtherCar(int holder) => $"{Name(holder)} is working on the car there.";
+
 	public const string Waiting = "Waiting for the server…";
 	public const string NoAnswer = "The server did not answer. Try again.";
 	public const string Loading = "This car is still loading for multiplayer.";

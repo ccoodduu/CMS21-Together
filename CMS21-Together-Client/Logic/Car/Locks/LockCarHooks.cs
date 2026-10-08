@@ -51,7 +51,7 @@ public static class LockCarHooks
 		};
 	}
 
-	private static int LoaderAtPlace(int place, CarLoader except)
+	public static int LoaderAtPlace(int place, CarLoader except)
 	{
 		var places = CarLoaderPlaces.Get();
 		for (int i = 0; places != null && i < places.GetCarLoadersCount(); i++)

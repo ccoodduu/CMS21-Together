@@ -18,7 +18,9 @@ Everyone else joins it from the main menu or through Steam. Your own single-play
 - **Shared progress.** Money, XP, level, skills, scrap, inventory and warehouse belong to the whole group. Shop,
   warehouse and garage upgrades work for everyone.
 - **Work on cars together.** Take parts off and put them on, also on the same car at the same time. A part another
-  player works on is locked for you, together with what is fixed to it and its fluids. Lifts, moving cars, the garage
+  player works on is locked for you, together with what is fixed to it and its fluids. You see it before you click:
+  no highlight and the player's name on hover, no mount preview on a slot in use, a lock mark on items another player
+  is mounting, and locked move options in the pie of a car someone works on. Lifts, moving cars, the garage
   parking, the engine crane.
 - **Car details.** Fluids, wheels, tires and alignment, plates, paint, livery, window tint, mileage, dirt and lights.
 - **Jobs.** Orders come in for the whole group. Accept a job, work on the customer car together,

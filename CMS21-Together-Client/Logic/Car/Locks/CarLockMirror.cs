@@ -248,6 +248,8 @@ public static class CarLockMirror
 		return null;
 	}
 
+	public static int ItemHolder(long uid) => uid != 0 && items.TryGetValue(uid, out int lockId) ? OtherOwner(lockId) : -1;
+
 	public static LockRecord OwnLockFor(int loader, string key) =>
 		records.Values.FirstOrDefault(r => r.Owner == Me && r.Loader == loader && !r.Ending && r.X.Contains(key));
 
