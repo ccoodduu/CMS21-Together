@@ -1,12 +1,11 @@
 # Tasks
 
-**Resume here (part 1, branch `change/state-merges-1`, worktree `CMS21-Together-wt/state-merges`, lane 1):** group 1
-done (spikes in design.md D1, D9, D11; run batch `20261008-171529_L1_batch`). Group 2 (Core, `--check-merges` for
-the part rules) done. Group 3: 3.1-3.3 code written (masks in `PartChangeTracker`/`EngineStandParts`, normalisation
-and masked relay/result in `CarPartsHandlers.OnChange` and `ToolsStore.OnPartChange`, masked apply in
-`PartChanges`/`PartApplier`, `ShowMounted` recheck, ghosts and bolt replays only for moving records),
-`car-stale-record` steps 1-5 written; next: prove them, then 3.5. Open with the user: the base check also compares
-`Quality` (design D1 step 3), needed by `car-stale-record` step 5.
+**Resume here (part 1, branch `change/state-merges-1`, worktree `CMS21-Together-wt/state-merges`, lane 1):** groups
+1-3 done and pushed (gap 3 proven: `car-stale-record` fails on main in steps 1, 2, 4 and 5, run
+`20261008-173639_L1_car-stale-record`; passes with the change, batch `20261008-173850_L1_batch`). Group 4 code written
+(per-entry flush and apply, `DetailsMerge`, own echo per entry, `cardetails-pour`, `details-concurrent`, which passes:
+`20261008-175714_L1_details-concurrent`); next: its fail-on-main check, `car-details`, `car-wheel-swap`,
+`locks-fluid`, `car-details-request`, commit group 4. User decision 2026-10-08: the base check keeps `Quality`.
 
 **Row 19: the race and drift audit's gaps that row 18 does not close** (gaps 3, 6, 9, 10, the rest of 7, the soak
 contention mode, and the review ledger's P7, P11, I2, I5, M4, M5 and C2), plus the user's decision of 2026-10-07 on
@@ -65,31 +64,36 @@ the ledger's "accept" rows (S1 fixed; no silent drops for I3, I7, E4, M8, C4, J2
 
 ## 3. Stale part records (gap 3; after row 18 has merged)
 
-- [ ] 3.1 Client masks per D1: `PartChangeTracker.Send` sets `Changed` against `LoaderSync` (raw values, `All` without
+- [x] 3.1 Client masks per D1: `PartChangeTracker.Send` sets `Changed` against `LoaderSync` (raw values, `All` without
       a record, never 0); `EngineStandParts` does the same for stand changes. Done when the client debug log shows
       `Changed = Examined` for a `diag-examine` change, `Mount|Bolts` for `part-unmount` and a mask on a
       `tool-stand-part` change, and `car-live`, `car-race`, `car-mount-race` and `tools-slots` pass.
-- [ ] 3.2 Server per D1 and D3: normalisation before `FindConflict` and before row 18's lock check; row 18's
+- [x] 3.2 Server per D1 and D3: normalisation before `FindConflict` and before row 18's lock check; row 18's
       `FlippedKeys` and `unlockedFlip` use D3's flip definition; row 18's `KeepStoredMountState` removed if it reached
       `main`; `OnlyExamines` by mask; stored records with `Changed` cleared; `staleMerged` and `staleDropped` in the
       `cars` output. The same normalisation in `ToolsStore.OnPartChange`, and the removed-by-other item check in
       `ToolsStore.FindConflict`. `tools-race` gains the two-player stand-part step and the stand-part-against-engine-off
       step of design D14. Done when `--check-merges` passes and `car-live`, `car-race`, `car-mount-race`,
       `diagnostics`, `test-drive`, `locks-race` and `tools-race` pass.
-- [ ] 3.3 Receiving side per D2: relays carry the written groups and results the differing groups; receivers write only
+- [x] 3.3 Receiving side per D2: relays carry the written groups and results the differing groups; receivers write only
       the masked groups to the game and `LoaderSync`; a transaction is aborted only for `Mount`, `Identity`,
       `Switched` or `All`; `AbortFor` after the revision check; `PartApplier.ShowMounted` returns when the part is
       unmounted again after its wait [P11]. Done when steps 2–4 of `car-stale-record` (written in 3.4) pass and
       `visual-parts` passes.
-- [ ] 3.4 `scenarios/car-stale-record.ps1` (`# areas: parts, cars, visuals`), steps 1–5 of design D14, with the verbs
+- [x] 3.4 `scenarios/car-stale-record.ps1` (`# areas: parts, cars, visuals`), steps 1–5 of design D14, with the verbs
       `part-condition` and `diag-examine … keys`. Done when it passes, and it fails on `main` without 3.2 and 3.3
       (recorded in the commit message).
-- [ ] 3.5 `committed` part transactions per loader [P7]: `HasOpen(loader)` and `HoldsInventoryChanges` look at that
+- [x] 3.5 `committed` part transactions per loader [P7]: `HasOpen(loader)` and `HoldsInventoryChanges` look at that
       loader's entries; committed entries of a loader are dropped with row 18's `PartTransactions.DropLoader` on car
       delete and on a `SpawnSeq` change, and a dropped transaction rolls its inventory delta back locally (design
       D16, I7); the dump field `parts.transactions` (open and committed per loader).
       `car-gone-inflight` gains the `park` and `job-finish` steps and checks B's `parts.transactions`. Done when
-      `car-gone-inflight` passes with all three steps.
+      `car-gone-inflight` passes with all three steps. Done 2026-10-08: the job step ends the job with
+      `job-end-direct` (the native `EndJob` never sends its end on a headless game); a dropped open or committed
+      transaction is rolled back when the car goes, so the later rejection finds nothing left to undo;
+      `server-answers` gained the I7 step. Runs: batch `20261008-173850_L1_batch` (all of 3.1-3.3's scenarios,
+      `car-stale-record`, `server-answers`) and `20261008-175605_L1_car-gone-inflight`. `tools-race`'s two new stand
+      part steps are written but skipped like every stand step there (the stand build throws on headless games).
 
 ## 4. Car details as entries (gap 6; after row 18 has merged)
 

@@ -92,6 +92,7 @@ public static class CarPartsSync
 		ownBaselinePending.Add(packet.CarLoaderID);
 		Locks.CarLockMirror.ForgetLoader(packet.CarLoaderID, packet.SpawnSeq);
 		var sync = Get(packet.CarLoaderID);
+		DropOnNewSpawn(sync, packet.SpawnSeq);
 		sync.SpawnSeq = packet.SpawnSeq;
 		sync.Revision = 0;
 		sync.State = LoaderSyncState.Loading;
@@ -104,6 +105,7 @@ public static class CarPartsSync
 	{
 		var sync = Get(spawn.CarLoaderID);
 		Locks.CarLockMirror.ForgetLoader(spawn.CarLoaderID, spawn.SpawnSeq);
+		DropOnNewSpawn(sync, spawn.SpawnSeq);
 		sync.SpawnSeq = spawn.SpawnSeq;
 		sync.CarToLoad = spawn.CarToLoad;
 		sync.Registry = null;
@@ -117,6 +119,11 @@ public static class CarPartsSync
 		ownBaselinePending.Remove(loader);
 		loaders.Remove(loader);
 		PartTransactions.DropLoader(loader);
+	}
+
+	private static void DropOnNewSpawn(LoaderSync sync, int spawnSeq)
+	{
+		if (sync.SpawnSeq != 0 && sync.SpawnSeq != spawnSeq) PartTransactions.DropLoader(sync.Loader);
 	}
 
 	private static IEnumerator UploadWhenSettled(LoaderSync sync, int spawnSeq)
@@ -193,6 +200,7 @@ public static class CarPartsSync
 
 		var sync = Get(loader);
 		bool needsLoad = carLoader.carToLoad != spawn.CarToLoad || sync.SpawnSeq != first.SpawnSeq && sync.State != LoaderSyncState.Loading;
+		DropOnNewSpawn(sync, first.SpawnSeq);
 		sync.SpawnSeq = first.SpawnSeq;
 		sync.CarToLoad = spawn.CarToLoad;
 

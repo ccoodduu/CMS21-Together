@@ -197,12 +197,15 @@ public static class VisualCommands
     [HarnessCommand("vfx-parts")]
     private static object Parts(string args)
     {
-        var carLoader = CarLoaderPlaces.Get().GetCarLoaderByIndex(int.Parse((args ?? "").Trim())) ?? throw new ArgumentException($"no car loader {args}");
+        var parts = Args(args);
+        if (parts.Length < 1) throw new ArgumentException("usage: vfx-parts <loader> [all]");
+        var carLoader = CarLoaderPlaces.Get().GetCarLoaderByIndex(int.Parse(parts[0])) ?? throw new ArgumentException($"no car loader {parts[0]}");
+        int minBolts = parts.Length > 1 && parts[1] == "all" ? 0 : 2;
         var registry = PartRegistry.Build(carLoader);
         return registry.SubKeys.Select(k => (Key: k, Part: registry.Sub(k)))
-            .Where(p => !p.Part.IsUnmounted && !p.Part.IsBlocked() && p.Part.GetUnmountWith().Count == 0 && (p.Part.MountObjects?.Length ?? 0) >= 2)
+            .Where(p => !p.Part.IsUnmounted && !p.Part.IsBlocked() && p.Part.GetUnmountWith().Count == 0 && (p.Part.MountObjects?.Length ?? 0) >= minBolts)
             .OrderBy(p => p.Key, StringComparer.Ordinal)
-            .Select(p => (object)new { key = p.Key, id = p.Part.id, bolts = p.Part.MountObjects.Length })
+            .Select(p => (object)new { key = p.Key, id = p.Part.id, bolts = p.Part.MountObjects?.Length ?? 0 })
             .ToList();
     }
 

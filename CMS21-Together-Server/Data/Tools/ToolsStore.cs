@@ -128,30 +128,52 @@ namespace CMS21_Together_Server.Data.Tools
 		public static void OnPartChange(int clientId, ToolPartChangePacket change)
 		{
 			var slot = Slot(change.Tool);
-			string conflict = slot.IsEmpty || slot.Uid != change.EngineUid ? $"engine {change.EngineUid} is not on {change.Tool}" : FindConflict(slot, change);
+			string conflict = slot.IsEmpty || slot.Uid != change.EngineUid ? $"engine {change.EngineUid} is not on {change.Tool}" : FindConflict(slot, change, clientId);
 			if (conflict != null)
 			{
 				var reject = new ToolPartChangeResultPacket { Tool = change.Tool, EngineUid = change.EngineUid, TxId = change.TxId, Accepted = false, Reason = conflict };
 				foreach (var record in change.SubParts)
-					if (slot.Parts.TryGetValue(record.Key, out var stored)) reject.SubParts.Add(stored);
+					if (slot.Parts.TryGetValue(record.Key, out var stored)) reject.SubParts.Add(PartRecordMerge.WithChanged(stored, PartFields.All));
 				reject.RestoreUids.AddRange(InventoryChanges.StillHeld(change.Delta));
 				Server.SendToClient(reject, clientId);
 				Logger.Info($"[Tools] {change.Tool}: part change {change.TxId} from client {clientId} rejected: {conflict}");
 				return;
 			}
 
-			foreach (var record in change.SubParts) slot.Parts[record.Key] = record;
+			var preconditions = change.Preconditions.GroupBy(p => p.Key).ToDictionary(g => g.Key, g => g.First());
+			var relay = new ToolPartChangePacket { Tool = change.Tool, EngineUid = change.EngineUid, TxId = change.TxId, Preconditions = change.Preconditions, Delta = change.Delta };
+			var result = new ToolPartChangeResultPacket { Tool = change.Tool, EngineUid = change.EngineUid, TxId = change.TxId, Accepted = true };
+			var dropped = new List<string>();
+			foreach (var record in change.SubParts)
+			{
+				slot.Parts.TryGetValue(record.Key, out var stored);
+				var outcome = PartRecordMerge.Normalise(stored, record, preconditions.TryGetValue(record.Key, out var pre) ? pre : null);
+				if (outcome.Record != null)
+				{
+					outcome.Record.Changed = PartFields.None;
+					slot.Parts[record.Key] = outcome.Record;
+					if (outcome.Written != PartFields.None) relay.SubParts.Add(PartRecordMerge.WithChanged(outcome.Record, outcome.Written));
+				}
+				else dropped.Add($"{record.Key} ({outcome.Outcome} {outcome.Stale})");
+				if (slot.Parts.TryGetValue(record.Key, out var now) && PartRecordMerge.Differ(now, record) is var differ && differ != PartFields.None)
+					result.SubParts.Add(PartRecordMerge.WithChanged(now, differ));
+			}
 			InventoryChanges.Apply(change.Delta, clientId);
-			Server.SendToClient(new ToolPartChangeResultPacket { Tool = change.Tool, EngineUid = change.EngineUid, TxId = change.TxId, Accepted = true }, clientId);
-			Server.SendToClients(change, clientId);
-			Logger.Info($"[Tools] {change.Tool}: part change {change.TxId} from client {clientId} ({change.SubParts.Count} parts, inventory +{change.Delta.AddedItems.Count + change.Delta.AddedGroups.Count} -{change.Delta.RemovedItemUids.Count + change.Delta.RemovedGroupUids.Count}).");
+			Server.SendToClient(result, clientId);
+			Server.SendToClients(relay, clientId);
+			Logger.Info($"[Tools] {change.Tool}: part change {change.TxId} from client {clientId} ({change.SubParts.Count} parts, relayed {relay.SubParts.Count}, returned {result.SubParts.Count}{(dropped.Count > 0 ? $", dropped {string.Join(", ", dropped)}" : "")}, inventory +{change.Delta.AddedItems.Count + change.Delta.AddedGroups.Count} -{change.Delta.RemovedItemUids.Count + change.Delta.RemovedGroupUids.Count}).");
 		}
 
-		private static string FindConflict(ToolSlotState slot, ToolPartChangePacket change)
+		private static string FindConflict(ToolSlotState slot, ToolPartChangePacket change, int clientId)
 		{
 			foreach (var precondition in change.Preconditions)
 				if (slot.Parts.TryGetValue(precondition.Key, out var stored) && stored.Unmounted != precondition.WasUnmounted)
 					return $"{precondition.Key} is already {(stored.Unmounted ? "unmounted" : "mounted")}";
+			var inventory = GameDataManager.CurrentState.InventoryState;
+			foreach (long uid in change.Delta.RemovedItemUids)
+				if (inventory.InventoryItems.All(i => i.UID != uid) && InventoryChanges.RemovedByOther(uid, clientId)) return $"item {uid} is gone";
+			foreach (long uid in change.Delta.RemovedGroupUids)
+				if (inventory.InventoryGroupItems.All(g => g.UID != uid) && InventoryChanges.RemovedByOther(uid, clientId)) return $"group {uid} is gone";
 			return null;
 		}
 

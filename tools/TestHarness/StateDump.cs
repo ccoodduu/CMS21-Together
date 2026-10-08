@@ -63,6 +63,7 @@ public static class StateDump
         dump["inventory"] = Inventory();
         dump["cars"] = Cars();
         dump["carDetails"] = Features.CarDetailsCommands.Dump();
+        dump["parts"] = new { transactions = PartTransactions.Describe() };
         dump["away"] = CMS21Together.Logic.Car.Away.CarAwaySync.All.OrderBy(a => a.Key)
             .Select(a => (object)new { loader = a.Key, kind = a.Value.Kind.ToString(), owner = a.Value.Owner }).ToList();
         dump["placement"] = Placement();

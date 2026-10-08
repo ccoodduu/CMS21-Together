@@ -43,11 +43,13 @@ public static class PartChanges
 			heldForTest.Add(change);
 			return;
 		}
-		PartTransactions.AbortFor(change.CarLoaderID, change.BodyParts.Select(r => r.Key).Concat(change.SubParts.Select(r => r.Key)));
+		var sync = CarPartsSync.Get(change.CarLoaderID);
+		bool sameCar = sync.SpawnSeq == 0 || change.SpawnSeq == sync.SpawnSeq;
+		if (sameCar && !(sync.State == LoaderSyncState.Ready && change.Revision <= sync.Revision))
+			PartTransactions.AbortFor(change.CarLoaderID, AbortKeys(change.BodyParts, change.SubParts));
 		ApplyInventory(change.InventoryDelta);
 		change.InventoryDelta = null;
-		var sync = CarPartsSync.Get(change.CarLoaderID);
-		if (sync.SpawnSeq != 0 && change.SpawnSeq != sync.SpawnSeq) return;
+		if (!sameCar) return;
 		if (sync.State != LoaderSyncState.Ready)
 		{
 			sync.Pending.Enqueue(() => OnRemoteChange(change));
@@ -56,7 +58,7 @@ public static class PartChanges
 		if (change.Revision <= sync.Revision) return;
 
 		Raise(RemoteChangeApplying, change);
-		Apply(sync, change.BodyParts, change.SubParts);
+		Apply(sync, change.BodyParts, change.SubParts, abortLocal: false);
 		sync.Revision = change.Revision;
 		Raise(RemoteChangeApplied, change);
 	}
@@ -120,21 +122,37 @@ public static class PartChanges
 		InventoryHandlers.RefreshInventoryWindow();
 	}
 
+	private const PartFields AbortGroups = PartFields.Mount | PartFields.Identity | PartFields.Switched | PartFields.All;
+
+	private static PartFields Groups(PartFields changed) => changed == PartFields.None ? PartFields.All : changed;
+
+	public static IEnumerable<string> AbortKeys(IEnumerable<CarBodyPartUpdatePacket> body, IEnumerable<CarSubPartUpdatePacket> sub) =>
+		body.Where(r => (Groups(r.Changed) & AbortGroups) != 0).Select(r => r.Key)
+			.Concat(sub.Where(r => (Groups(r.Changed) & AbortGroups) != 0).Select(r => r.Key)).ToList();
+
 	private static void Apply(LoaderSync sync, List<CarBodyPartUpdatePacket> body, List<CarSubPartUpdatePacket> sub, bool abortLocal = true)
 	{
 		var carLoader = CarLoaderPlaces.Get()?.GetCarLoaderByIndex(sync.Loader);
 		if (carLoader == null || sync.Registry == null) return;
-		if (abortLocal) PartTransactions.AbortFor(sync.Loader, body.Select(r => r.Key).Concat(sub.Select(r => r.Key)));
+		if (abortLocal) PartTransactions.AbortFor(sync.Loader, AbortKeys(body, sub));
 
 		int failed = 0;
 		using (ApplyingRemote.Scope(sync.Loader))
 		{
 			foreach (var record in body)
-				if (PartApplier.Apply(carLoader, sync.Registry, record)) sync.Body[record.Key] = record;
+			{
+				var groups = Groups(record.Changed);
+				if (PartApplier.Apply(carLoader, sync.Registry, record, groups))
+					sync.Body[record.Key] = PartRecordMerge.WithGroups(sync.Body.TryGetValue(record.Key, out var known) ? known : null, record, groups);
 				else failed++;
+			}
 			foreach (var record in sub)
-				if (PartApplier.Apply(carLoader, sync.Registry, record)) sync.Sub[record.Key] = record;
+			{
+				var groups = Groups(record.Changed);
+				if (PartApplier.Apply(carLoader, sync.Registry, record, groups))
+					sync.Sub[record.Key] = PartRecordMerge.WithGroups(sync.Sub.TryGetValue(record.Key, out var known) ? known : null, record, groups);
 				else failed++;
+			}
 		}
 		if (failed > 0) CarPartsSync.RequestResync(sync.Loader, $"{failed} records did not resolve");
 	}
