@@ -9,7 +9,7 @@ param($Ctx)
 $a, $b = $Ctx.Instances
 $sections = @("inventory", "tools", "toolPositions")
 $failures = @()
-function Check([bool]$Condition, [string]$Message) { if (-not $Condition) { $script:failures += $Message; Write-Host "FAIL: $Message" -ForegroundColor Red } else { Write-Host "ok: $Message" } }
+function Check([bool]$Condition, [string]$Message) { if (-not $Condition) { $script:failures += "FAIL: $Message"; Write-Host "FAIL: $Message" -ForegroundColor Red } else { Write-Host "ok: $Message" } }
 
 function Wait-InGarage([string]$Name) {
     Wait-HarnessStatus -Instance $Name -TimeoutSec 300 -What "garage, sync acked" -Condition {

@@ -10,7 +10,7 @@ $car = "car_boltatlanta"
 $part = "tuleja_1"
 $failures = @()
 $skipped = @()
-function Check([bool]$Condition, [string]$Message) { if (-not $Condition) { $script:failures += $Message; Write-Host "FAIL: $Message" -ForegroundColor Red } else { Write-Host "ok: $Message" } }
+function Check([bool]$Condition, [string]$Message) { if (-not $Condition) { $script:failures += "FAIL: $Message"; Write-Host "FAIL: $Message" -ForegroundColor Red } else { Write-Host "ok: $Message" } }
 function Skip([string]$Message) { $script:skipped += "skipped: $Message"; Write-Host "SKIP: $Message" -ForegroundColor Yellow }
 
 function Wait-InGarage([string]$Name) {

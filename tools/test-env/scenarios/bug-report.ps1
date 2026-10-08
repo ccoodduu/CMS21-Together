@@ -10,7 +10,7 @@ $address = $Ctx.Lane.ConnectAddress
 $car = "car_boltatlanta"
 $gslt = "gslt-5d1e"; $password = "pw-7f3a"; $adminKey = "adm-91c2"
 $failures = @()
-function Check([bool]$Condition, [string]$Message) { if (-not $Condition) { $script:failures += $Message; Write-Host "FAIL: $Message" -ForegroundColor Red } else { Write-Host "ok: $Message" } }
+function Check([bool]$Condition, [string]$Message) { if (-not $Condition) { $script:failures += "FAIL: $Message"; Write-Host "FAIL: $Message" -ForegroundColor Red } else { Write-Host "ok: $Message" } }
 
 function Wait-InGarage([string]$Name) {
     Wait-HarnessStatus -Instance $Name -TimeoutSec 300 -What "$Name in session in the garage" -Condition {
@@ -69,8 +69,16 @@ function Check-ClientFiles([string]$Root, [string]$Who, [bool]$WithState) {
 }
 
 $prefsPath = Join-Path (UserData $a) "MelonPreferences.cfg"
-$originalAdminLine = $null
+$originalPrefLines = @{}
 $utf8 = New-Object System.Text.UTF8Encoding($false)
+
+function Set-PrefLine([string]$Key, [string]$Line) {
+    $prefs = [System.IO.File]::ReadAllText($prefsPath)
+    if (-not $script:originalPrefLines.ContainsKey($Key)) {
+        $script:originalPrefLines[$Key] = [regex]::Match($prefs, "(?m)^$Key = .*$").Value.TrimEnd("`r")
+    }
+    [System.IO.File]::WriteAllText($prefsPath, [regex]::Replace($prefs, "(?m)^$Key = .*?(\r?)$", "$Line`$1"), $utf8)
+}
 $playerKeys = @()
 foreach ($name in $Ctx.Instances) {
     $identity = Join-Path (UserData $name) "CMS21Together\player.json"
@@ -120,9 +128,9 @@ try {
     $repair = Try-ServerLog "\[Desync\] cars:0 .*resending" $mark 60
     Check ([bool]$repair) "B's corrupted part $($corrupt.key) left a desync record ($repair)"
 
-    $prefs = [System.IO.File]::ReadAllText($prefsPath)
-    $originalAdminLine = [regex]::Match($prefs, '(?m)^AdminKey = .*$').Value.TrimEnd("`r")
-    [System.IO.File]::WriteAllText($prefsPath, [regex]::Replace($prefs, '(?m)^AdminKey = .*?(\r?)$', "AdminKey = `"$adminKey`"`$1"), $utf8)
+    Set-PrefLine "AdminKey" "AdminKey = `"$adminKey`""
+    # The harness sets the mod's hotkeys to None in headless games and the game saves that to this file.
+    Set-PrefLine "ResyncHotkey" 'ResyncHotkey = "F7"'
 
     # Connected: A reports, the server and B join in.
     $mark = Get-ServerLogMark
@@ -186,9 +194,8 @@ try {
     Check ([bool](Try-ServerLog ([regex]::Escape("$id.zip")) $mark 10)) "the bugreport command lists the bundle"
 }
 finally {
-    if ($originalAdminLine) {
-        $prefs = [System.IO.File]::ReadAllText($prefsPath)
-        [System.IO.File]::WriteAllText($prefsPath, [regex]::Replace($prefs, '(?m)^AdminKey = .*?(\r?)$', "$originalAdminLine`$1"), $utf8)
+    foreach ($key in @($originalPrefLines.Keys)) {
+        if ($originalPrefLines[$key]) { Set-PrefLine $key $originalPrefLines[$key] }
     }
     foreach ($folder in (Join-Path $Ctx.ServerDir "BugReports"), (Join-Path $Ctx.ServerDir "Log\desync"), (Join-Path (UserData $a) "CMS21Together\BugReports"), (Join-Path (UserData $b) "CMS21Together\BugReports")) {
         Remove-Item -LiteralPath $folder -Recurse -Force -ErrorAction SilentlyContinue
