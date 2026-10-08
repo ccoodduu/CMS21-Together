@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using CMS21_Together_Core.Data.Enum;
+using CMS21_Together_Core.Data.Outdoor;
 using CMS21_Together_Core.Network;
 using CMS21_Together_Server.Log;
 
@@ -31,6 +32,10 @@ namespace CMS21_Together_Server.Data
 		public int MaxCarSalePrice { get; private set; } = 5000000;
 		public int MaxCarPurchasePrice { get; private set; } = 5000000;
 		public int PerfLogIntervalSeconds { get; private set; }
+		public List<GameScene> SharedOutdoorScenes { get; private set; } = OutdoorScenes.Parse(OutdoorScenes.DefaultSetting);
+		public string CarSelector { get; private set; } = "basic";
+		public int OutdoorRejoinGraceSeconds { get; private set; } = 60;
+		public bool OutdoorFillAllSpawnPoints { get; private set; }
 
 		public string Password { get; private set; } = string.Empty;
 		public bool PasswordSteam { get; private set; }
@@ -65,7 +70,15 @@ namespace CMS21_Together_Server.Data
 			new[] { "perf_log_interval_seconds", "# Seconds between lines of Log/perf_<start>.jsonl (traffic, CPU, memory, handler times). 0 = off", "perf_log_interval_seconds = 0" },
 		};
 
-		private static string[][] OptionalKeyLines => HostingKeyLines.Concat(CompatibilityKeyLines).Concat(EconomyKeyLines).Concat(DiagnosticsKeyLines).ToArray();
+		private static readonly string[][] OutdoorKeyLines =
+		{
+			new[] { "shared_outdoor_scenes", "# Outdoor scenes players share (one junkyard, barn or auction for everyone), comma separated: junkyard, barn, auction. Empty = none shared", "shared_outdoor_scenes = " + OutdoorScenes.DefaultSetting },
+			new[] { "car_selector", "# How the server picks the cars of a shared junkyard, barn or auction: basic", "car_selector = basic" },
+			new[] { "outdoor_rejoin_grace_seconds", "# Seconds a shared junkyard, barn or auction stays open after its last player disconnected", "outdoor_rejoin_grace_seconds = 60" },
+			new[] { "outdoor_fill_all_spawn_points", "# Fill every car spawn point of a shared junkyard (True/False)", "outdoor_fill_all_spawn_points = False" },
+		};
+
+		private static string[][] OptionalKeyLines => HostingKeyLines.Concat(CompatibilityKeyLines).Concat(EconomyKeyLines).Concat(DiagnosticsKeyLines).Concat(OutdoorKeyLines).ToArray();
 
 		public void ApplyArguments(string[] args)
 		{
@@ -124,7 +137,7 @@ namespace CMS21_Together_Server.Data
 		public string Describe() =>
 			$"name '{ServerName}', port {Port}, max players {MaxPlayers}, steam {UseSteam}, public address '{PublicAddress}', autosave {AutosaveIntervalSeconds}s, backups {BackupCount}, " +
 			$"password {Masked(Password)}{(PasswordSteam ? " (also Steam)" : "")}, admin key {Masked(AdminKey)}, new sessions {NewSessionDifficulty}, " +
-			$"travel fees {TravelFees}, max car sale {MaxCarSalePrice}, max car purchase {MaxCarPurchasePrice}, perf log {(PerfLogIntervalSeconds > 0 ? $"{PerfLogIntervalSeconds}s" : "off")}, game version {GameVersion}, mods required [{string.Join(", ", ModsRequired)}], ignored [{string.Join(", ", ModsIgnored)}], gameplay [{string.Join(", ", ModsGameplay)}]";
+			$"travel fees {TravelFees}, max car sale {MaxCarSalePrice}, max car purchase {MaxCarPurchasePrice}, perf log {(PerfLogIntervalSeconds > 0 ? $"{PerfLogIntervalSeconds}s" : "off")}, shared outdoor scenes {OutdoorScenes.Format(SharedOutdoorScenes)}, car selector {CarSelector}, outdoor rejoin grace {OutdoorRejoinGraceSeconds}s, fill all spawn points {OutdoorFillAllSpawnPoints}, game version {GameVersion}, mods required [{string.Join(", ", ModsRequired)}], ignored [{string.Join(", ", ModsIgnored)}], gameplay [{string.Join(", ", ModsGameplay)}]";
 
 		public static ServerConfig LoadOrCreate()
 		{
@@ -290,6 +303,19 @@ namespace CMS21_Together_Server.Data
 							break;
 						case "perf_log_interval_seconds":
 							if (int.TryParse(value, out int perfInterval) && perfInterval >= 0) config.PerfLogIntervalSeconds = perfInterval;
+							break;
+						case "shared_outdoor_scenes":
+							config.SharedOutdoorScenes = OutdoorScenes.Parse(value, unknown => Logger.Warn($"Unknown scene '{unknown}' in shared_outdoor_scenes; use junkyard, barn or auction."));
+							break;
+						case "car_selector":
+							string selector = Unquote(value).Trim().ToLowerInvariant();
+							config.CarSelector = selector.Length == 0 ? "basic" : selector;
+							break;
+						case "outdoor_rejoin_grace_seconds":
+							if (int.TryParse(value, out int grace) && grace >= 0) config.OutdoorRejoinGraceSeconds = grace;
+							break;
+						case "outdoor_fill_all_spawn_points":
+							if (bool.TryParse(value, out bool fillAll)) config.OutdoorFillAllSpawnPoints = fillAll;
 							break;
 						case "new_session_difficulty":
 							if (TryParseDifficulty(value, out var difficulty)) config.NewSessionDifficulty = difficulty;

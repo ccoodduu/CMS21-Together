@@ -20,7 +20,7 @@ public static class SceneCommands
     {
         if (!Enum.TryParse((args ?? "").Trim(), true, out SceneType type) || type == SceneType.None)
             throw new ArgumentException("usage: travel <SceneType>, e.g. Junkyard or Garage");
-        string sceneName = type == SceneType.Garage ? "garage" : type.ToString();
+        string sceneName = type == SceneType.Garage ? "garage" : type == SceneType.Auction ? "Auctions" : type.ToString();
         NotificationCenter.m_instance.StartSelectSceneToLoad(sceneName, type, true, false);
         return $"travelling to {sceneName} ({type})";
     }

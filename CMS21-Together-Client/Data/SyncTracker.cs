@@ -92,6 +92,7 @@ public static class SyncTracker
 		ConnectionStatus.Set(JoinStatus.InSession);
 		JoinService.OnInSession();
 		Log.Success($"Initial synchronization finished (snapshot {CurrentSnapshotId}).");
+		Logic.Outdoor.CatalogReporter.OnInSession();
 	}
 
 	private static int Count(Dictionary<string, int> counts, string key) => counts.TryGetValue(key, out int value) ? value : 0;

@@ -6,7 +6,7 @@
 
 $script:KnownAreas = @(
     "connect", "presence", "guard", "cars", "parts", "placement", "details", "jobs", "economy", "tools",
-    "testdrive", "persistence", "resync", "hosting", "bugreport", "release", "visuals", "driving"
+    "testdrive", "persistence", "resync", "hosting", "bugreport", "release", "visuals", "driving", "outdoor"
 )
 
 $script:PathAreaTable = @'
@@ -26,6 +26,7 @@ tools/TestHarness/Features/Car*                                cars, parts
 tools/TestHarness/Features/Compat*                             connect
 tools/TestHarness/Features/Digest*                             resync
 tools/TestHarness/Features/Economy*                            economy
+tools/TestHarness/Features/Outdoor*                            outdoor, economy, presence
 tools/TestHarness/Features/Purchase*                           economy
 tools/TestHarness/Features/GeneratorProbe*                     jobs
 tools/TestHarness/Features/Jobs*                               jobs
@@ -50,6 +51,7 @@ CMS21-Together-*/Network/Handlers/CarParts*                    parts, cars
 CMS21-Together-*/Network/Handlers/Car*                         cars, parts
 CMS21-Together-*/Network/Handlers/Digest*                      resync
 CMS21-Together-*/Network/Handlers/Economy*                     economy
+CMS21-Together-*/Network/Handlers/Outdoor*                     outdoor, economy, presence
 CMS21-Together-*/Network/Handlers/GarageUpgrade*               economy, placement
 CMS21-Together-*/Network/Handlers/Inventory*                   parts, economy
 CMS21-Together-*/Network/Handlers/Job*                         jobs
@@ -70,6 +72,8 @@ CMS21-Together-Core/Network/Packets/Car*                       cars, parts, deta
 CMS21-Together-Core/Network/Packets/Digest*                    resync
 CMS21-Together-Core/Network/Packets/Diagnostics*               bugreport
 CMS21-Together-Core/Network/Packets/Economy*                   economy
+CMS21-Together-Core/Network/Packets/Outdoor*                   outdoor, economy, presence
+CMS21-Together-Core/Data/Outdoor/*                             outdoor, economy, presence
 CMS21-Together-Core/Network/Packets/Garage*                    economy, placement
 CMS21-Together-Core/Network/Packets/Inventory*                 parts, economy
 CMS21-Together-Core/Network/Packets/Job*                       jobs
@@ -109,6 +113,7 @@ CMS21-Together-Client/Logic/Car/Away/*                         testdrive, cars
 CMS21-Together-Client/Logic/Car/CarDlc.cs                      cars, connect
 CMS21-Together-Client/Logic/Car/*                              cars
 CMS21-Together-Client/Logic/Economy/*                          economy
+CMS21-Together-Client/Logic/Outdoor/*                          outdoor, economy, presence
 CMS21-Together-Client/Logic/Garage/*                           economy, placement
 CMS21-Together-Client/Logic/Hook/CarSpawnHooks.cs              cars
 CMS21-Together-Client/Logic/Hook/InventoryHook.cs              parts, economy
@@ -138,6 +143,7 @@ CMS21-Together-Server/Data/Cars/CarAway*                       testdrive, cars
 CMS21-Together-Server/Data/Cars/InventoryChanges.cs            parts, economy
 CMS21-Together-Server/Data/Cars/*                              cars, parts
 CMS21-Together-Server/Data/Economy/*                           economy
+CMS21-Together-Server/Data/Outdoor/*                           outdoor, economy, presence
 CMS21-Together-Server/Data/PricingCalculator.cs                economy
 CMS21-Together-Server/Data/Jobs/*                              jobs
 CMS21-Together-Server/Data/Persistence/*                       persistence

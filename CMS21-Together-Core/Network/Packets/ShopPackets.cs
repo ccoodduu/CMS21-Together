@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Runtime.Serialization;
 using CMS21_Together_Core.Data.GameType;
 
 namespace CMS21_Together_Core.Network.Packets;
@@ -36,6 +37,7 @@ public class ItemsExchangePacket : INetworkData
 {
     public bool IsJunkyard;
     public List<ModItem> ItemsToBuy;
+    [OptionalField] public int InstanceId;
 }
 
 [Serializable]

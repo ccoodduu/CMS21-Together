@@ -36,6 +36,17 @@ public static class SceneReady
 			yield return null;
 		}
 		if (!Client.Instance.IsConnectionValid || ClientScene.LocalScene != GameScene.Loading) yield break;
+		yield return Outdoor.OutdoorArrival.Apply();
+		while (!Outdoor.OutdoorSession.ReadyToPublish)
+		{
+			if (Time.realtimeSinceStartup > deadline)
+			{
+				Log.Warn($"[Scene] {sceneName}: the outdoor instance was not applied within {MaxWaitSeconds}s.");
+				break;
+			}
+			yield return null;
+		}
+		if (!Client.Instance.IsConnectionValid || ClientScene.LocalScene != GameScene.Loading) yield break;
 
 		var scene = ClientScene.FromSceneType(GameScript.Get().CurrentSceneType);
 		ClientScene.LocalScene = scene;

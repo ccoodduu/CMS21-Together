@@ -25,6 +25,7 @@ public class PlayerPresenceRecord
 	public bool EngineRunning;
 	public float EngineRpm;
 	public MovementPacket LastMovement;
+	[OptionalField] public int OutdoorInstanceId;
 	[OptionalField] public PlayerActivityState Activity;
 
 	public PlayerPresenceRecord Copy()

@@ -42,6 +42,8 @@ public static class ClientData
 		Logic.Economy.EconomyRequests.Reset();
 		Logic.Economy.CarPurchaseSync.Reset();
 		Logic.Tools.ToolSync.Reset();
+		Logic.Outdoor.OutdoorSession.Reset();
+		Logic.Outdoor.CatalogReporter.Reset();
 		Logic.Visuals.VisualScope.Reset();
 		Logic.Visuals.PartGhosts.Reset();
 		Logic.Visuals.ActivityCapture.Reset();

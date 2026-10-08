@@ -137,6 +137,7 @@ namespace CMS21Together
 			if (!isModInitialized) return;
 			if (Client.Instance.IsConnectionValid) NameTags.Draw();
 			if (Client.Instance.IsConnectionValid) Logic.Car.Away.AwayLabels.Draw();
+			if (Client.Instance.IsConnectionValid) Logic.Outdoor.AuctionSync.Draw();
 			ImguiView.Draw();
 		}
 
@@ -149,6 +150,7 @@ namespace CMS21Together
 			Logic.Car.Away.TestDriveSync.Initialize();
 			Logic.Car.Away.PathTestSync.Initialize();
 			Logic.Economy.CarPurchaseSync.Initialize();
+			Logic.Outdoor.OutdoorSession.Initialize();
 			SessionNotifications.Initialize();
 			SeatEngine.Initialize();
 			Logic.Visuals.VisualScope.Initialize();

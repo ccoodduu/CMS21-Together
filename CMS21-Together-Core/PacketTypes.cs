@@ -110,5 +110,20 @@ public enum PacketTypes
 	PlayerActivity,
 	CarDriveStart,
 	CarDriveState,
-	CarDriveStop
-}
+	CarDriveStop,
+
+	OutdoorCatalog,
+	OutdoorEnter,
+	OutdoorInstance,
+	OutdoorLootRecord,
+	OutdoorDigest,
+	LootTake,
+	LootPutBack,
+	LootUpdate,
+	LootTakeRefused,
+	OutdoorCarRemoved,
+	AuctionLotClaim,
+	AuctionBidState,
+	AuctionBidRequest,
+	AuctionLotClosed
+}

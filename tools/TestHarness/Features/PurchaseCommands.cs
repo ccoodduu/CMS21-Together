@@ -5,6 +5,7 @@ using System.Linq;
 using CMS.UI;
 using CMS.UI.Windows;
 using CMS21Together.Logic.Economy;
+using CMS21Together.Logic.Outdoor;
 using MelonLoader;
 using UnityEngine;
 
@@ -25,15 +26,17 @@ public static class PurchaseCommands
     [HarnessCommand("buy-car-here")]
     private static object BuyCarHere(string args)
     {
-        const string usage = "usage: buy-car-here <index> [price|-] [parking|garage] [direct]";
+        const string usage = "usage: buy-car-here <index|pick:N> [price|-] [parking|garage] [direct]";
         var parts = (args ?? "").Split(new[] { ' ' }, StringSplitOptions.RemoveEmptyEntries);
         if (parts.Length < 1 || parts.Length > 4) throw new ArgumentException(usage);
         if (parts.Length > 2 && parts[2] != "parking" && parts[2] != "garage") throw new ArgumentException(usage);
         if (parts.Length > 3 && parts[3] != "direct") throw new ArgumentException(usage);
         if (GameScript.Get().CurrentSceneType == SceneType.Garage) throw new InvalidOperationException("buy-car-here is for scenes outside the garage");
         var cars = Cars();
-        int index = int.Parse(parts[0]);
-        if (index < 0 || index >= cars.Count) throw new ArgumentException($"no car {index} here ({cars.Count} cars)");
+        int index = parts[0].StartsWith("pick:")
+            ? cars.FindIndex(car => OutdoorCarSync.IndexOf(car) == int.Parse(parts[0].Substring(5)))
+            : int.Parse(parts[0]);
+        if (index < 0 || index >= cars.Count) throw new ArgumentException($"no car {parts[0]} here ({cars.Count} cars)");
         int? price = parts.Length > 1 && parts[1] != "-" ? int.Parse(parts[1]) : (int?)null;
         int button = parts.Length > 2 && parts[2] == "garage" ? 0 : 1;
         bool direct = parts.Length > 3;
@@ -147,18 +150,34 @@ public static class PurchaseCommands
     private static object JunkBuy(string args)
     {
         var parts = (args ?? "").Split(new[] { ' ' }, StringSplitOptions.RemoveEmptyEntries);
-        if (parts.Length < 1 || parts.Length > 2) throw new ArgumentException("usage: junk-buy <itemId> [count]");
+        if (parts.Length < 1 || parts.Length > 2) throw new ArgumentException("usage: junk-buy <itemId|*> [count]");
         var scene = GameScript.Get().CurrentSceneType;
         if (scene != SceneType.Junkyard && scene != SceneType.Barn) throw new InvalidOperationException($"junk-buy needs the junkyard or a barn, not {scene}");
         int count = parts.Length > 1 ? int.Parse(parts[1]) : 1;
 
         var temp = Singleton<GameManager>.Instance.TempInventory;
         var uids = new List<long>();
-        for (int i = 0; i < count; i++)
+        if (LootSync.SharedPiles)
         {
-            var item = new Item(parts[0]) { Condition = 0.5f };
-            temp.AddItem(item);
-            uids.Add(item.UID);
+            foreach (var pile in LootSync.Scan())
+            {
+                for (int i = pile.Junk.ItemsInTrash.Count - 1; i >= 0 && uids.Count < count; i--)
+                {
+                    var candidate = pile.Junk.ItemsInTrash[i]?.TryCast<Item>();
+                    if (candidate == null || (parts[0] != "*" && candidate.ID != parts[0])) continue;
+                    uids.Add(LootSync.HarnessTake(pile.Index, pile.Key, candidate.UID, -1).UID);
+                }
+            }
+            if (uids.Count < count) throw new InvalidOperationException($"the shared piles hold only {uids.Count} of {count} '{parts[0]}' items");
+        }
+        else
+        {
+            for (int i = 0; i < count; i++)
+            {
+                var item = new Item(parts[0]) { Condition = 0.5f };
+                temp.AddItem(item);
+                uids.Add(item.UID);
+            }
         }
         var manager = WindowManager.Instance ?? throw new InvalidOperationException("no WindowManager");
         if (!manager.IsWindowActive(WindowID.TakenItems)) manager.Show(WindowID.TakenItems, false);
@@ -187,5 +206,6 @@ public static class PurchaseCommands
         ["carToLoad"] = car.carToLoad,
         ["carFrom"] = car.CarInfoData.CarFrom,
         ["buyPrice"] = car.CarInfoData.BuyPrice,
+        ["pick"] = OutdoorCarSync.IndexOf(car),
     };
 }

@@ -2,7 +2,10 @@
 # M2 junkyard trip (parts only), with the guard enforcing: A travels to the junkyard; picking a part up there is local
 # only (nothing reaches the server or B); buying parts (the BuyPartsAction packet) costs money once and adds them for
 # both; after A's return to the garage, A and B have the same inventory and money.
+# Runs with shared_outdoor_scenes empty: the local junkyard path (outdoor-junkyard covers the shared one).
 param($Ctx)
+
+Import-Module (Join-Path $PSScriptRoot "..\ScaleSession.psm1")
 
 $a, $b = $Ctx.Instances
 $part = "tuleja_1"
@@ -17,6 +20,8 @@ function Wait-InGarage([string]$Name) {
 
 function Count-Part($Dump) { @($Dump.inventory.items | Where-Object { $_.ID -eq $part }).Count }
 
+Set-ServerConfigValues $Ctx.ServerDir @{ shared_outdoor_scenes = "" }
+Restart-TestServer
 foreach ($name in $Ctx.Instances) {
     Wait-HarnessStatus -Instance $name -TimeoutSec 300 -What "main menu" -Condition { param($s) $s.scene -eq "Menu" -and $s.playable } | Out-Null
 }
