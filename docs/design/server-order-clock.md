@@ -1,7 +1,8 @@
 # Design: server-owned order clock and limit
 
-The only part kept from ROADMAP row 16 (`server-game-logic`; the rest is dropped). Size S–M (about 1–1.5 sessions).
-Status: design for review, nothing built.
+The only part kept from ROADMAP row 16 (`server-game-logic`; the rest is dropped). Size M (about 2 sessions).
+Status: reviewed (`server-order-clock-review.md`, "ready after fixes"); every fix is folded in below and marked with
+its review id.
 
 **Today** (row 3, `sync-orders-and-jobs`):
 
@@ -16,7 +17,7 @@ Status: design for review, nothing built.
 - The server owns the order timer, the open-order limit and when the next order is due.
 - The elected garage client still makes the order with the game's own `GenerateNewJob`, but only when the server
   asks. Its local timer no longer decides anything.
-- Missions stay as they are on `main` (`fix/story-missions`).
+- Missions stay as they are on `main`.
 
 ## 1. What vanilla does (static; decompiles under `%USERPROFILE%\CMS21-TestInstalls\native\out\`)
 
@@ -31,157 +32,172 @@ if (GlobalData.Jobs < max && orderTimer > nextOrderTime) { GenerateNewJob(); ord
 
 - `GlobalData.Jobs` counts every open order, missions included.
 - At the limit the timer stops but is not reset. After a decline or an expiry it continues from where it stopped.
+- The reset after `GenerateNewJob` does not depend on a job coming out. With an empty car pool (DLC or level gating),
+  vanilla waits a full 30 s before it tries again (M2).
 
 **Resets:**
 
-- Accepting an order: `<TakeJob>d__19` state 0 sets `orderTimer = 0`, `nextOrderTime = 30`.
-- Ending or cancelling a taken job: `CancelJob` of an id in `selectedJobs` sets `orderTimer = 0`.
+- Accepting a **job**: `<TakeJob>d__19` state 0 sets `orderTimer = 0`, `nextOrderTime = 30`, before the full-garage
+  check. Taking a **mission** (`<TakeMission>d__22`) does not touch the timer (M1).
+- Ending a taken job or mission: `CancelJob` of an id not in `jobs` sets `orderTimer = 0`. `nextOrderTime` is kept.
 - A decline or an expiry (`CancelJob` of an id in `jobs`) does not touch the timer.
+- Nothing else reads or writes `orderTimer`/`nextOrderTime` within the decompiled set.
 
 **`GameSettings.CanGenerateOrders`** is a difficulty setting, not a scene flag. Its writers are
-`DifficultyManager.ActivateDifficultyLevel`, `BaseDifficulty.Activate`, `DifficultySettings.*` and `Sandbox.Prepare`,
-which sets it to false. `Load` returns early when it is false.
+`DifficultyManager.ActivateDifficultyLevel`, `BaseDifficulty.Activate`, `DifficultySettings.*` (including
+`DisableMissions`) and `Sandbox.Prepare` (false). `Load` returns early when it is false.
 
 **Leaving the garage freezes the order state; returning restores it:**
 
-- Leaving: `NotificationCenter.<SelectSceneToLoad>d__34` calls `GarageLoader.Save(false)`.
-  `OrderGenerator.Save` (`0x180C65460`) writes `orderTimer`, `nextOrderTime`, `LastUId`, `CurrentMissionDone` and the
-  open orders (with `timeToEnd`) into the profile (`ProfileData+0xE0`). Then `SceneManager.LoadScene("SceneLoader")`.
-- Returning: `GarageLoader.<Load>d__14` sets `IsGameReady = false`, calls `OrderGenerator.Load` (`0x180C64250`;
-  its only caller) and sets `IsGameReady = true` at the end.
-  - `Load` reads `orderTimer`/`nextOrderTime` back and **replaces `jobs` with a new list** built from the profile.
-  - It drops non-mission orders whose `timeToEnd` is about 0, restarts their expiry timers and may regenerate the
-    mission (`CanRegenerateMission`).
-- So whatever the generator object did while the player was away is thrown away on return. Order expiry timers
-  (`Job.<Timer>` on `UIManager`, in scaled seconds) restart from the saved `timeToEnd`.
-- Whether `GameManager`/`OrderGenerator` survives the scene change does not matter for the result.
-  `Singleton<T>.Instance` only creates a `DontDestroyOnLoad` object when none exists, and `GameManager.Awake` does not
-  call it, so this is not settled statically, and nothing depends on it.
+- Leaving: when `saveGame` is set (every travel path sets it: `MapWindow.SubmitPanelAction`,
+  `SideCarsPanel.DriveAction`, `TakenItemsWindow.*`), `NotificationCenter.<SelectSceneToLoad>d__34` calls
+  `GarageLoader.Save(false)` (m1). `OrderGenerator.Save` (`0x180C65460`) writes `orderTimer`, `nextOrderTime`,
+  `LastUId`, `CurrentMissionDone` and the open orders (with `timeToEnd`) into the profile (`ProfileData+0xE0`). Then
+  `SceneManager.LoadScene("SceneLoader")`.
+- Returning: `GarageLoader.<Load>d__14` sets `IsGameReady = false`, calls `OrderGenerator.Load` (`0x180C64250`; its
+  only caller) and sets `IsGameReady = true` at the end. `Load` reads the clock back and **replaces `jobs`** with a new
+  list built from the profile; it drops non-mission orders whose `timeToEnd` is about 0 and restarts their expiry
+  timers.
 
-**Result: in single player, no order is made and no order expires while the player is away** (junkyard, barn,
-auction, salon, parking, test track: every trip goes through `SelectSceneToLoad`). On return, the clock continues from
-where it stopped. There is no catch-up and no burst.
+**Result: in single player no order is made and no order expires while the player is away**, and on return the clock
+continues from where it stopped: no catch-up, no burst.
 
-- On a new profile the first order comes 10 s after the garage is ready: the constructor sets `nextOrderTime = 10`.
-- After loading a save, the clock continues from the saved values.
+- The constructor sets `nextOrderTime = 10`, but `Load` overwrites it from the profile, and `NewJobsData..ctor` leaves
+  it at 0. What a brand-new profile starts with is not verified (m2). The server's `{0, 10}` for a new session is a
+  choice, not vanilla parity.
 
 ## 2. Server state and rules
 
-`JobsState` gains `[OptionalField] OrderClock Clock` (`OrderTimer`, `NextOrderTime`):
+`JobsState` gains `[OptionalField] public OrderClock Clock = new OrderClock();` with `OrderTimer` and
+`NextOrderTime = 10`:
 
-- It is saved in the `jobs` section without a version bump. Newtonsoft fills missing members, and a missing clock
-  means `{ 0, 10 }`, like a new profile.
-- Runtime only (`JobsService`): `pendingRequest` (id, client, sent at).
+- It is saved in the `jobs` section without a version bump. `JobsSection.Load` uses `ToObject`, which keeps the
+  initializer, so a save without the member starts at `{0, 10}`.
+- Runtime only (`JobsService`): the pending request (id, client, sent at) and the earliest retry time.
 
-`JobsService.Tick(now)` runs the vanilla rule with real seconds:
+**The limit (M6, approved by the user):** `MaxOrders(level)` is a port of `GlobalData.GetMaxOrdersAmount`
+(`0x180D7CD50`): `level < 0` → 0; 0–2 → 2; 3–4 → 3; 5–7 → 4; 8–11 → 5; 12–15 → 6; 16–19 → 7; ≥ 20 → 8. `level` is the
+server's `WorldState.Level`, which is the game's `RealPlayerLevel` (clients apply `PlayerLevel = Level - 1`). This is
+the one deliberate exception to "no server-side port of game logic": the server needs the limit continuously, to stop
+and resume the clock and to decide whether to ask at all, and the generator only reports its `MaxOpenOrders` together
+with an order. The generator's `MaxOpenOrders` stays as a cross-check; a mismatch is logged once per value pair.
 
-- **The clock runs only while a generator is elected,** that is while at least one `InSession` player is in the
-  garage. With nobody in the garage it stands still, as in single player.
-- **Limit:**
-  - `max = MaxOrders(world.Level)`, a port of `GetMaxOrdersAmount`'s table, with the RVA in the commit message. The
-    server's `WorldState.Level` is the game's `RealPlayerLevel`, because clients apply `PlayerLevel = Level - 1`.
-  - `open = State.Orders.Count`: open and claimed orders, missions included, like `GlobalData.Jobs`.
-  - The generator's `MaxOpenOrders` is still checked as today. A difference between the two is logged once.
-- **Ticking:** `if (open < max) OrderTimer += delta`.
-- **When the order is due** (`open < max && OrderTimer > NextOrderTime && pendingRequest == null`), the server asks
-  the generator for one order.
-- **When an order from the generator is accepted** (`OnOrderGenerated`, non-mission), set `OrderTimer = 0` and
-  `NextOrderTime = 30`, whether or not it was requested. Harness `orders-generate` keeps working, and the timing is
-  vanilla's.
-- **Request timeout:** if no order comes back within 10 s (the generator's pool was empty, the take of a scene was
-  in progress, or the client ignored it), the request is dropped and asked again on the next tick. Vanilla retries
-  every frame in that case.
-- **Resets:** an approved `Accept` sets `OrderTimer = 0`, `NextOrderTime = 30`. A job end (`OnJobEnd`) and a lost
-  car's reopen set `OrderTimer = 0`. Declines and expiries leave the clock alone.
-- **Expiry** (`RemainingSeconds`) is unchanged: it ticks while any client is connected.
-  - Vanilla freezes it while away, so this is **open question 1**.
-  - Recommendation: freeze expiry with the clock, that is while nobody is in the garage. It is one condition in
-    `Tick` and makes "away" fully vanilla-like.
-- **Missions are unchanged:** `OfferMission` on the generator, `HasMission` refusal, outside the limit check of
-  `OnOrderGenerated`. The clock never asks for a mission.
-- Server command `jobs` adds the line `clock 12.3 / 30 s, limit 3 (level 4), requested from client 1 2 s ago`.
+**The clock runs** while a generator is elected (at least one `InSession` player is in the garage) and
+`WorldState.Gamemode != Sandbox` (M5). Every server tick (`JobsService.Tick`), with `delta` clamped to 1 s (m7):
 
-## 3. Packets (optional fields only, no version bump)
+- `open = State.Orders.Count` (open and claimed orders, missions included, like `GlobalData.Jobs`).
+- A pending request whose client is no longer the generator is dropped (m6); one older than 10 s is dropped as lost.
+- `if (open < max) OrderTimer += delta`.
+- **Due** when `open < max && OrderTimer > NextOrderTime`, there is no pending request and the retry time has passed:
+  the server sends `OrderRequest { RequestId }` to the generator and logs `Order due: asking client N (request R)`.
 
-- `OrderGeneratorRolePacket`:
-  - `[OptionalField] public bool ServerClock;` tells the generator that the server owns the clock.
-  - `[OptionalField] public int OrderRequest;` asks for one order when it is greater than 0 (a request id).
-  - The server sends the role packet again with `OrderRequest = id` to ask.
-  - This reuses the generator's existing channel instead of a new `PacketTypes` value; a reviewer may prefer a new
-    `OrderRequest` packet type (append-only).
-- `OrderGeneratedPacket`: `[OptionalField] public int RequestId;` echoes the request (0 means unrequested). It is used
-  only for the log and the pending request.
-- Mixed builds cannot meet: the protocol hash changes with the new fields and the client refuses a different hash. So
-  there is no old-client fallback beyond "a missing field is false or 0".
+**Answers** (`OnOrderGenerated` from the generator):
 
-## 4. What the client stops doing
+- A regular order with `RequestId == pending.Id`, or `RequestId == 0` (unrequested: harness `orders-generate`):
+  - refused when `open >= MaxOrders(level)` (`refused: N open orders, the limit is M`; m5 updates `jobs-missions`) or,
+    as today, when the generator's own `MaxOpenOrders` is lower;
+  - otherwise accepted as today, then `Clock = {0, 30}` and the pending request is cleared.
+- A regular order with any other `RequestId` is **stale** (an answer to a request that timed out or was replaced):
+  refused with the jobs snapshot, as the other refusals are. The client already dropped it locally (M3).
+- `Job == null` with `RequestId == pending.Id` and a `Reason` (M2):
+  - `NoCar` (the pool made nothing) and `Disabled` (`CanGenerateOrders` is false): `Clock = {0, 30}`, as vanilla;
+  - `NotReady`, `Busy` (a take or an apply is running) and `HarnessOff`: retry after 2 s.
+  - The log line for the same reason is throttled to once per 30 s.
+- Missions are unchanged: generated by the generator's `OfferMission`, refused while one is open or active, outside
+  the limit check. The clock never asks for a mission.
 
-- The generator's `OrderGenerator.Update` still runs, so the vanilla mission branch is untouched. While connected
-  with `ServerClock`, the `JobHooks.BeforeUpdate` prefix sets `orderTimer = 0` every frame, so the local timer never
-  reaches `nextOrderTime`. Non-generators keep `Update` blocked as today.
-- `JobsSync.OnRole` with `OrderRequest > 0` (generator only, garage ready, not applying, no take pending) calls
-  `generator.GenerateNewJob()`.
-  - The existing `AfterGenerate` → `SendNew` path sends it as `OrderGenerated` with the `RequestId`.
-  - If the client cannot generate (not in the garage, a take running), it does nothing and the server asks again
-    after the timeout.
-- Harness `orders-autogen off` keeps meaning "no automatic orders": it also blocks the request handler (a harness
-  prefix). Today's scenarios that count orders exactly (`jobs`, `jobs-latejoin`, `jobs-missions` …) therefore stay
-  as they are. The server re-asks every 10 s meanwhile, and that log line is throttled.
+**Resets:**
+
+- An approved `Accept` of a regular order: `Clock = {0, 30}`. A mission accept leaves the clock alone (M1).
+- A job or mission end (`OnJobEnd`): `OrderTimer = 0`.
+- Declines, expiries and a lost car's reopen leave the clock alone (m3).
+
+**Expiry is frozen with the clock (open question 1: yes).** The `RemainingSeconds` countdown runs only while the clock
+runs (a generator is elected and not Sandbox). The claim timeout keeps running. Missions never expire.
+
+The server command `jobs` adds the line `clock 12.3 / 30 s, 2 of 8 open (level 20), running|frozen, request R to
+client N 2 s ago`.
+
+## 3. Packets (optional fields only, no version bump; open question 2: a new packet type)
+
+- `PacketTypes.OrderRequest` (appended) with `OrderRequestPacket { int RequestId; }`, server → generator. The role
+  packet stays role only.
+- `OrderGeneratedPacket` gains `[OptionalField] int RequestId` (0 = unrequested) and
+  `[OptionalField] OrderRequestReason Reason` (`None`, `NoCar`, `NotReady`, `Busy`, `Disabled`, `HarnessOff`), used
+  when `Job` is null.
+- `JobsState.Clock` (above). Mixed builds cannot meet: the protocol hash covers the new type and fields, and the client
+  refuses a different hash (m4: no `ServerClock` flag).
+
+## 4. What the client does
+
+- **Gate (M4):** `JobHooks.BeforeGenerate` returns false while connected unless `JobsSync.ServingRequest` is set. The
+  generator's `Update` keeps running for its mission branch; when its local timer fires, the blocked `GenerateNewJob`
+  makes nothing and `Update` resets its own timer, which is harmless. No local timer value can leak an order.
+- **`JobsSync.OnOrderRequest(packet)`** answers every request:
+  - not the generator, garage not ready or `NotificationCenter.IsGameReady` false → `NotReady`;
+  - `GameSettings.CanGenerateOrders` false → `Disabled` (M5);
+  - a take pending or an apply running → `Busy`;
+  - otherwise `JobsSync.GenerateOrder(requestId)`: it sets `ServingRequest`, calls the game's `GenerateNewJob()`, and
+    the existing `AfterGenerate` → `SendNew` path sends the order with the `RequestId`. If no job came out it answers
+    `NoCar`. Either way it then sets `GlobalData.Jobs = jobs.Count` (m8).
+- `GenerateOrder(0)` is also the harness's `orders-generate` path while connected (an unrequested order).
 
 ## 5. Handover, late join, server restart
 
-- **Handover:** the clock is on the server, so a new generator changes nothing. On `Elect()` changing the generator,
-  a pending request is dropped. The new generator gets the request on the next tick, because the timer is still past
-  `NextOrderTime`.
-- **Nobody in the garage:** no generator, so the clock stands. On the first garage arrival it resumes from the frozen
-  value: no order on arrival unless one was already due.
-- **Late join:** nothing new. The joiner gets the jobs snapshot as today (the clock rides along in `JobsState`, unused
-  by clients) and may become generator later.
-- **Server restart:** the clock is saved with the jobs section and resumes. A save without it starts at `{ 0, 10 }`.
-  A pending request is runtime only and is re-sent after the restart if the order is still due.
+- **Handover:** the clock is on the server. Late answers from an old generator are refused by the existing generator
+  check, with a snapshot back. A pending request to a client that is no longer generator is dropped in `Tick` (m6), and
+  the new generator is asked on the next tick, because the timer is still past `NextOrderTime`.
+- **Generator leaves mid-request:** the client publishes `Loading` presence before the scene load, so the server
+  re-elects at once; an order sent before leaving arrives first on the same connection and is accepted. A request that
+  arrives during the leave is answered `NotReady`.
+- **Nobody in the garage:** the clock and the expiry stand still. On the first garage arrival they resume from the
+  frozen values: no order on arrival unless one was already due.
+- **Late join:** nothing new. The clock rides in `JobsState`, unused by clients.
+- **Server restart:** the clock is saved with the jobs section and resumes; the pending request is runtime only.
 
-## 6. Proof scenario `jobs-clock` (two instances, fresh session as in `jobs-missions`)
+## 6. Harness
 
-Each step must fail on `main`. Times come from server log timestamps (1 s resolution), with a tolerance of ±3 s.
-New harness verb: `orders-timer <timer> <next>` sets the native `OrderGenerator.orderTimer`/`nextOrderTime` and
-returns them, so a client's local timer can be set close to due.
+- `orders-timer [<timer> <next>]` sets or reads the native `OrderGenerator.orderTimer`/`nextOrderTime`. It makes `main`
+  misbehave on cue; on the new code it changes nothing.
+- `orders-ttl <seconds>|off`: a sticky `timeToEnd` for every order this client generates, requested or not (B1).
+- `orders-autogen off` also blocks `JobsSync.OnOrderRequest` and answers `HarnessOff` (m9).
+- `orders-generate` while connected goes through `JobsSync.GenerateOrder(0)`.
 
-1. **Session start:** A and B in the garage, autogen on, the shared level at a limit of 3. The first regular order
-   comes 10 s after A's garage arrival, the second 30 s later. On `main` the timing depends on A's profile; this step
-   documents rather than proves.
-2. **The local timer does not decide:** right after an order, `orders-timer 29 30` on the generator A. No order comes
-   in the next 5 s, and the next comes 30 s after the previous one. On `main`, A makes one within about 1 s.
-3. **Handover keeps the clock:** set B's local timer to `29 30`, then A travels to the junkyard 10 s after an order.
-   B becomes generator, and the next order comes 30 s after the previous one, not at once. On `main`, B makes one
-   within about 1 s of the handover.
-4. **Nobody in the garage:** B travels too. During 45 s no order is made, and the server `jobs` clock does not move.
-   A returns, and the next order comes after the remaining time, not at arrival and not as a burst.
-5. **Limit:** at the limit no request is sent, and `jobs` shows the clock standing. B declines one order, and the next
-   comes 30 s after the last order, because the timer stood at the limit.
-6. **Restart:** `save`, stop and start the server. `jobs` shows the same clock (±1 s), and the next order comes at the
-   saved remainder.
-7. **Accept and job end reset the clock**, as vanilla does: after an accept the next order is 30 s later.
+## 7. Proof scenario `jobs-clock` (two instances, fresh session as in `jobs-missions`)
 
-Regression: `jobs`, `jobs-latejoin`, `jobs-missions`, `jobs-seeded` and the smoke set.
+Setup: `level set 20` (limit 8), `orders-ttl 900` on both, autogen on (B1). Each new regular order is declined right
+after its server log line, so the open count stays low and the clock never meets the limit before step 5 (a decline
+does not touch the clock). Times come from server log timestamps (1 s resolution), with a tolerance of ±3 s. Travels
+go to the parking scene (m11). Steps marked **regression** pass on `main` too (M7); the others must fail there.
 
-## 7. Risks
+1. **Regression:** the first regular orders come, then one every 30 s while both are in the garage.
+2. **The local timer does not decide:** right after an order, `orders-timer 29 30` on the generator A. The next order
+   comes 30 s after the previous one. On `main`, A makes one within about 1 s.
+3. **Handover keeps the clock:** 10 s after an order, B gets `orders-timer 29 30` and A travels to parking. B becomes
+   generator, and the next order comes 30 s after the previous one. On `main`, B makes one at the handover.
+4. **Nobody in the garage:** B stays generator for about 25 s after an order, then travels too. During 45 s no order
+   is made and the server's remaining time of an open order does not move (on `main` it drops by about 45 s). A
+   returns; the next order comes `30 − 25` s after A's election (`Order generator: client N`). On `main`, A's restored
+   local timer gives it about 20 s after.
+5. **Regression, the limit:** `orders-generate 900` up to the limit, no request for 40 s, then one decline: the next
+   order comes 30 s after the decline.
+6. **Restart:** 10 s after an order, `save`, stop and start the server, both reconnect; A (generator) gets
+   `orders-timer 29 30` as soon as it is in the garage. The next order comes at the saved remainder after A's
+   election. On `main`, A makes one at once.
+7. **The non-generator's accept resets the clock:** B accepts a regular order 15 s after the last order; the next
+   order comes 30 s after the accept. On `main`, B's accept resets only B's local timer.
+8. **Regression:** taking the story mission leaves the clock alone.
 
-- **Harness interplay:** 8 scenarios use `orders-autogen off` (10 use `orders-generate`). If the harness block is missed, server-requested
-  orders break their exact counts. Mitigation: the harness prefix, plus one run of every scenario that uses
-  `orders-generate`.
-- **Timing assertions under load:** the server's 1 s log resolution and loaded lanes. Mitigation: ±3 s tolerances and
-  intervals measured between server log lines, not client polls.
-- **Scaled time:** vanilla's clock pauses with `timeScale 0`; the server uses real seconds. In multiplayer the game is
-  not paused for others, so this matches what players see.
-- **`GenerateNewJob` with an empty pool** (DLC, level) makes nothing. The server then re-asks every 10 s: a small log
-  cost, no state drift. Vanilla also increments `GlobalData.Jobs` before success, which `SendNew` already corrects.
-- **The limit port** must match `GetMaxOrdersAmount` exactly (bands at 3, 5, 8, 12, 16 and 20; 0 in the tutorial,
-  which multiplayer blocks). The generator's `MaxOpenOrders` check stays as a cross-check, and mismatches are logged.
-- **The level mapping** (`WorldState.Level` = `RealPlayerLevel`) is taken from `WorldStatesPackets`
-  (`GlobalData.PlayerLevel = packet.Level - 1`). Step 1 checks the limit at a set level.
+Regression runs: `jobs`, `jobs-latejoin`, `jobs-missions`, `jobs-seeded`, every scenario that uses
+`orders-autogen off`, and the smoke set.
 
-## Open questions
+## 8. Risks
 
-1. Freeze order expiry while nobody is in the garage, as vanilla does? Recommended yes. Today the expiry ticks while
-   anyone is connected.
-2. Reuse `OrderGeneratorRolePacket` for the request (as above) or add a `PacketTypes.OrderRequest`?
+- **Harness interplay:** 8 scenarios use `orders-autogen off` and 10 use `orders-generate`. In a fresh session the
+  first server-requested order can arrive before `orders-autogen off` is sent; the current assertions tolerate that.
+  Mitigation: the harness block, and one run of every scenario that uses either verb.
+- **Timing assertions under load:** 1 s server log resolution on a loaded lane. Mitigation: ±3 s tolerances, intervals
+  between server log lines rather than client polls.
+- **Scaled time:** vanilla's clock pauses with `timeScale 0`; the server uses real seconds, which matches what players
+  see in multiplayer.
+- **The limit port** must match `GetMaxOrdersAmount`; the generator's `MaxOpenOrders` cross-check logs any mismatch.
