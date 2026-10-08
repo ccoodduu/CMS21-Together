@@ -65,6 +65,7 @@ public static class CarPartsSync
 	public static void Reset()
 	{
 		ownBaselinePending.Clear();
+		deletedSpawnSeq.Clear();
 		loaders.Clear();
 		incoming.Clear();
 	}
@@ -84,6 +85,9 @@ public static class CarPartsSync
 	public static int SpawnSeq(int loader) => loaders.TryGetValue(loader, out var sync) ? sync.SpawnSeq : 0;
 
 	private static readonly HashSet<int> ownBaselinePending = new HashSet<int>();
+	private static readonly Dictionary<int, int> deletedSpawnSeq = new Dictionary<int, int>();
+
+	private static bool DeletedSince(int loader, int spawnSeq) => deletedSpawnSeq.TryGetValue(loader, out int deleted) && spawnSeq <= deleted;
 
 	public static bool HasOwnBaselinePending => ownBaselinePending.Count > 0;
 
@@ -104,6 +108,7 @@ public static class CarPartsSync
 	public static void OnRemoteSpawn(CarSpawnResponsePacket spawn)
 	{
 		var sync = Get(spawn.CarLoaderID);
+		deletedSpawnSeq.Remove(spawn.CarLoaderID);
 		Locks.CarLockMirror.ForgetLoader(spawn.CarLoaderID, spawn.SpawnSeq);
 		DropOnNewSpawn(sync, spawn.SpawnSeq);
 		sync.SpawnSeq = spawn.SpawnSeq;
@@ -117,6 +122,8 @@ public static class CarPartsSync
 	{
 		Visuals.VisualScope.CancelLoader(loader, "car deleted");
 		ownBaselinePending.Remove(loader);
+		if (loaders.TryGetValue(loader, out var removed) && removed.SpawnSeq > 0 && !DeletedSince(loader, removed.SpawnSeq))
+			deletedSpawnSeq[loader] = removed.SpawnSeq;
 		loaders.Remove(loader);
 		PartTransactions.DropLoader(loader, keepCommitted: local);
 	}
@@ -198,6 +205,12 @@ public static class CarPartsSync
 			yield break;
 		}
 
+		if (DeletedSince(loader, first.SpawnSeq))
+		{
+			Log.Info($"[Parts] Loader {loader}: snapshot for SpawnSeq {first.SpawnSeq} dropped, that car was deleted.");
+			if (countedSnapshot != SyncTracker.NoSnapshot) SyncTracker.Applied(SyncOrder.CarsKey, countedSnapshot);
+			yield break;
+		}
 		var sync = Get(loader);
 		bool needsLoad = carLoader.carToLoad != spawn.CarToLoad || sync.SpawnSeq != first.SpawnSeq && sync.State != LoaderSyncState.Loading;
 		DropOnNewSpawn(sync, first.SpawnSeq);

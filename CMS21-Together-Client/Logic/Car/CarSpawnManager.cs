@@ -1,4 +1,5 @@
 using System.Collections;
+using System.Collections.Generic;
 using CMS21_Together_Core.Logging;
 using CMS21_Together_Core.Network.Packets;
 using CMS21Together.Network;
@@ -8,6 +9,29 @@ namespace CMS21Together.Logic.Car
     public static class CarSpawnManager
     {
         private const float PlaceSettleSeconds = 5f;
+
+        private static readonly HashSet<int> pendingSpawn = new HashSet<int>();
+        private static readonly HashSet<int> overriddenSpawn = new HashSet<int>();
+
+        public static void Reset()
+        {
+            pendingSpawn.Clear();
+            overriddenSpawn.Clear();
+        }
+
+        public static void OnSpawnAck(int loader) => pendingSpawn.Remove(loader);
+
+        public static void OnRemoteSpawn(int loader)
+        {
+            if (pendingSpawn.Remove(loader)) overriddenSpawn.Add(loader);
+        }
+
+        // Another player's car took the loader first: its spawn reached this client before the refusal of ours.
+        public static bool KeepAfterRejection(int loader)
+        {
+            pendingSpawn.Remove(loader);
+            return overriddenSpawn.Remove(loader);
+        }
 
         public static IEnumerator RequestCarSpawn(string carToLoad, CarLoader carLoader)
         {
@@ -27,7 +51,12 @@ namespace CMS21Together.Logic.Car
                 JobID = carLoader.customerCar ? carLoader.orderConnection : -1,
                 Dlc = CarDlc.For(carToLoad)
             };
-           
+
+            if (!request.IsJob)
+            {
+                overriddenSpawn.Remove(carLoaderID);
+                pendingSpawn.Add(carLoaderID);
+            }
             Client.Instance.Send(request);
             Log.Info($"[CarSpawnManager] Requested spawn for {carToLoad} on Loader {carLoaderID}");
 

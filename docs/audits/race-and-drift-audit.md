@@ -116,7 +116,7 @@ Markers: **None** = no mechanism prevents or repairs it; **Partial** = a mechani
 | I3 | Two `Update`s of one item (repair table and part paint), or an update racing a mount | **Answered (row 19 part 3, D16): an update of a gone item gets its `Remove`, an add of a stored item with other values the stored copy.** Before: Last write wins on the whole item (`InventoryHandlers.cs:41-49`); an update of a gone item is ignored | `server-answers` | Low |
 | I4 | Live inventory packets during a full inventory sync | Held during the sync and replayed by UID (client `InventoryHandlers.HoldDuringFullSync`) | `latejoin-full` | Low |
 | I5 | An item is sold or scrapped (server first) while another player mounts it | **Fixed (row 19 part 1): checked in both orders: mounted or sold, never both (`tools-item-race`).** Before: Sale and scrap note the remover (`ShopHandlers`, `EconomyService.RemoveItem`), so the later part change is rejected and rolled back | **none** (`economy-trades` races sellers, not a seller against a mount) | Low |
-| I6 | A reused player slot hands out client UIDs again | **Partial**: `UidRange` continues after the highest UID of the slot's range in the local inventory only (`UidRange.cs:20-25`); warehouse and machine items with that range are not scanned, and the server's duplicate check only looks at the inventory | **none** | Low |
+| I6 | A reused player slot hands out client UIDs again | **Fixed (row 20): the inventory snapshot carries the highest stored UID of the player's range (inventory, warehouse, machines, items in groups); `UidRange.Apply` continues after it (`race-hardening`).** Before: **Partial**: `UidRange` continues after the highest UID of the slot's range in the local inventory only (`UidRange.cs:20-25`); warehouse and machine items with that range are not scanned, and the server's duplicate check only looks at the inventory | **none** | Low |
 | I7 | A part transaction that never commits keeps its inventory change on this client for 10 s | **Answered (row 19 part 3, D16): each flushed packet is answered as I3; the dropped-transaction rollback waits for row 19 task 3.5.** Before: **Partial**: idle flush after 10 s (`PartTransactions.cs:18`); meanwhile the item exists only locally and the inventory digest is skipped | `server-answers` (dropped-transaction step after task 3.5) | Low |
 
 ### Shop, sell, scrap, economy, world state
@@ -127,7 +127,7 @@ Markers: **None** = no mechanism prevents or repairs it; **Partial** = a mechani
 | E2 | Car sale while another player works on the car; two sellers | Refused `Busy`/`Gone` (`EconomyRules.cs:196-237`, claims at `:206`) | `economy-trades` | Low |
 | E3 | Scrap, quality upgrade, barn map or crate on an item another player just used | Server first, `Gone`; crates keep a `Looted` flag | `economy-trades` | Low |
 | E4 | Two players unlock the same skill or garage upgrade | **Answered (row 19 part 3, D16): a refused or no-op unlock gets `WorldState` and `GarageState`.** Before: Server first and idempotent (`GarageUpgradeHandlers.cs:29,47`); `GarageState` is not digested | `server-answers` | Low |
-| E5 | A duplicated `EconomyRequest` (resend or replay) | **Partial**: no `RequestId` deduplication in `EconomyService.Handle`; only crates are protected. The transport is reliable, so only the harness `Resend` produces duplicates today. | `economy-trades` (crate replay only) | Low |
+| E5 | A duplicated `EconomyRequest` (resend or replay) | **Not reachable (row 20, not built): each request is sent once on a reliable connection, nothing retries or resends after a reconnect; only the harness `econ-ledger resend` duplicates (`docs/design/race-hardening.md`).** Before: **Partial**: no `RequestId` deduplication in `EconomyService.Handle`; only crates are protected. The transport is reliable, so only the harness `Resend` produces duplicates today. | `economy-trades` (crate replay only) | Low |
 | E6 | Buy, sell-single and sell-by-condition by two players | Server first (`ShopHandlers`), money checked under the lock | `purchases`, `junkyard-trip` (buys) | Low |
 
 ### Fluids and car details (wheels, tires, alignment, paint, tint, wash, detailing, welder, plates, tuning)
@@ -174,11 +174,11 @@ Markers: **None** = no mechanism prevents or repairs it; **Partial** = a mechani
 
 | # | Scenario | Code coverage | Test coverage | Risk |
 |---|---|---|---|---|
-| C1 | A spawn request for a loader that already holds a car | **Partial**: job and unpark paths check the loader; `RegisterSpawn` clears the existing car silently (`CarPartsStore.cs:45`) | `jobs-latejoin` (job path only) | Low |
+| C1 | A spawn request for a loader that already holds a car | **Fixed (row 20): refused with `CarSpawnRejected` ("Another car is already in that place."), the stored car stays and its snapshot goes to the refused client, which keeps the winner's car (`race-hardening`). Reached only by the plain spawn path (F6 developer spawn, harness).** Before: **Partial**: job and unpark paths check the loader; `RegisterSpawn` clears the existing car silently (`CarPartsStore.cs:45`) | `jobs-latejoin` (job path only) | Low |
 | C2 | The spawner or unparker leaves before the baseline | **Fixed (row 19 part 1): the car goes back with the server's parked record (`park-stale`).** Before: Loader cleared, a parked car goes back to its slot (`PlacementRules.OnLoaderCleared`) | **none** | Low |
 | C3 | Park, delete or job end while another player works on the car | **None**. Each checks only the away claim (`ParkingHandlers.cs:37`, server `CarHandlers.cs:65`, `JobsService.cs:204`). The worker's car disappears mid-action; see P7 and P8 for the follow-on drift. | **none**; planned: `locks-car` (park, delete, job end refused) | High |
 | C4 | Two players delete, or park, the same car | **Answered (row 19 part 3, D16): the second park gets the parking state and the loader's delete; the second delete is not relayed.** Before: The second is harmless (`ClearLoader` returns false; the park is refused) | `server-answers` | Low |
-| C5 | A second baseline replaces all records once one exists: any client may send it (`CarPartsHandlers.cs:160-166`), and the job take re-uploads after 0.5 s (`JobsSync.cs:151`) | **Partial**: a change by another player in that short window is overwritten | **none** | Low |
+| C5 | A second baseline replaces all records once one exists: any client may send it (`CarPartsHandlers.cs:160-166`), and the job take re-uploads after 0.5 s (`JobsSync.cs:151`) | **Not reachable (row 20, not built): the job taker's second baseline leaves 86–280 ms after the first (10 job runs), and another player can act only after the car is Ready on their client plus a lock round trip (`docs/design/race-hardening.md`).** Before: **Partial**: a change by another player in that short window is overwritten | **none** | Low |
 | C6 | Delete while a player sits in the car with the engine running | `EnsureNotSeatedIn` before the delete | `seat-engine` | Low |
 
 ### Jobs, orders, payout
@@ -434,9 +434,9 @@ mismatch (expiry after four asks); the forced check asks every car and key; a st
   `part-hold-remote`; the dump's `blocked` flags and renderers must equal the actor's.
 - M4 engine-stand parts stay optimistic (row 18 open question 3): add a two-player stand-part race to `tools-race`.
 - X4 F7 with a claim held: release own claims (row 18: locks) before the reload; add the step to `resync-key`.
-- C1 `RegisterSpawn` silently clears an occupied loader: refuse it instead (`CarSpawnRejected`).
-- E5 no `RequestId` deduplication for fees: keep the last 64 request ids per client.
-- I6 UID ranges: scan the warehouse and machine slots too, or let the server hand out UID blocks.
+- C1 `RegisterSpawn` silently clears an occupied loader: refuse it instead (`CarSpawnRejected`). **Done in row 20.**
+- E5 no `RequestId` deduplication for fees: keep the last 64 request ids per client. **Row 20: not reachable, not built.**
+- I6 UID ranges: scan the warehouse and machine slots too, or let the server hand out UID blocks. **Done in row 20 (server floor per range).**
 
 ### Notes for row 18 while it is being built
 

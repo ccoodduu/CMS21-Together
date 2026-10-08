@@ -50,19 +50,20 @@ $genB = (Get-HarnessStatus $b).isOrderGenerator
 Check ($genA -and -not $genB) "A (first in the garage) is the order generator (A $genA, B $genB)"
 $gen = if ($genB) { $b } else { $a }
 
-$base = @((Jobs $a).orders).Count
+function Regular($Jobs) { @($Jobs.orders | Where-Object { -not $_.IsMission }) }
+$base = @(Regular (Jobs $a)).Count
 Send-HarnessCommand -Instance $gen -Verb orders-generate -Arguments "20" | Out-Null
 Send-HarnessCommand -Instance $gen -Verb orders-generate | Out-Null
 Send-HarnessCommand -Instance $gen -Verb orders-generate | Out-Null
-$jobs = Wait-Jobs "three generated orders" { param($j) @($j.orders).Count -eq $base + 3 }
+$jobs = Wait-Jobs "three generated orders" { param($j) @(Regular $j).Count -eq $base + 3 }
 $ids = @($jobs.orders | ForEach-Object { $_.id })
 Write-Host "order ids: $($ids -join ', ')"
 
-$jobs = Wait-Jobs "the 20 s order expired" { param($j) @($j.orders).Count -eq $base + 2 } 40
-$open = @($jobs.orders | ForEach-Object { $_.id })
+$jobs = Wait-Jobs "the 20 s order expired" { param($j) @(Regular $j).Count -eq $base + 2 } 40
+$open = @(Regular $jobs | ForEach-Object { $_.id })
 Send-HarnessCommand -Instance $b -Verb orders-decline -Arguments "$($open[0])" | Out-Null
-$jobs = Wait-Jobs "B declined one" { param($j) @($j.orders).Count -eq $base + 1 }
-$take = @($jobs.orders)[-1].id
+$jobs = Wait-Jobs "B declined one" { param($j) @(Regular $j).Count -eq $base + 1 }
+$take = @(Regular $jobs)[-1].id
 
 $mark = Get-ServerLogMark
 Hold "on"

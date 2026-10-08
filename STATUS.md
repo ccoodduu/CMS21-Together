@@ -2,6 +2,58 @@
 
 Newest first. One entry per work session.
 
+## 2026-10-08 (21:00–22:00) — story missions fixed; refused delete restore fixed; playtest build dev.1086
+
+- `main` = `04760bd`. Story missions merged (`f37602b`): only the order generator makes a mission, the first mission
+  is no longer lost at start, missions sit outside the open-order limit, a mission decline is refused (`Mission`) with
+  the jobs state, and the server counts a finished mission itself. Proof `jobs-missions` fails on the old code
+  (`20261008-210859_L1_jobs-missions`) and passes (`20261008-211950_L1_jobs-missions`); `jobs` and four scenarios
+  that take a new order now skip the mission.
+- Regression from the snapshot-after-delete guard (`9fa5bf5`): after a refused delete or park the server sends the car
+  back, but the client dropped its snapshot as deleted and the car never became Ready. Fixed (`04760bd`): a
+  CarSpawnResponse clears the remembered delete. `locks-car` fails on `f37602b` and passes with the fix;
+  `car-snapshot-after-delete`, `economy-trades` and the smoke set pass (`20261008-215000_regression.json`).
+- Playtest build `0.6.0-dev.1086` on the Desktop; the checklist has a story mission section.
+- Row 19 part 2 still in progress on lane 2. Row 16 waits for the scope answer in QUESTIONS.md.
+
+## 2026-10-08 (20:30–21:00) — row 20 merged; row 16 reviewed; story mission bug found
+
+- `main` = `fbebf7d`. Row 20 race-hardening merged (`6d732f4`); snapshot-after-delete guard merged (`f156303`); a job
+  car refused because its place is taken now says "Another car is already in that place." (`fbebf7d`).
+- Row 16 `server-game-logic` draft reviewed: "ready after fixes". The review found that the server refuses every
+  story mission: the game never sets `MissionID`, so it stays 0 and `JobsService` treats it as the tutorial. No
+  scenario covered it. Fix in progress on `fix/story-missions` (lane 1) with proof scenario `jobs-missions`.
+- Scope question for row 16 in QUESTIONS.md (full port or smaller variant); the design waits for the answer.
+- Row 19 part 2 (digests, stall warning, soak contention) still in progress on lane 2.
+
+## 2026-10-08 (20:00–20:30) — row 20 race-hardening ready for merge
+
+- `fix/race-hardening` (lane 1), design note `docs/design/race-hardening.md`. Audit rows I6, E5, C1, C5:
+  - I6 (reachable: a player who joins again in a reused slot, or after a server restart): the inventory snapshot
+    carries the highest stored UID of the player's range (inventory, warehouse, machines, items in groups); new UIDs
+    continue after it. On the old code the new item got the warehouse item's UID and one of the two items was lost.
+  - C1 (reachable through the plain spawn path: F6 developer spawn, harness): a spawn into an occupied loader is
+    refused ("Another car is already in that place."), the stored car stays, the refused client gets its snapshot
+    and keeps the winner's car.
+  - E5 and C5 not reachable, not built: nothing resends an economy request (reliable transport, no retry, only the
+    harness `econ-ledger resend`); the job taker's second baseline comes 86–280 ms after the first (10 job runs),
+    before another player's car is Ready.
+- Proof: scenario `race-hardening` fails on the old code (`20261008-201149_L1_race-hardening`, 8 failures) and passes
+  (`20261008-201423_L1_race-hardening`); `Run-All -Lanes 1 -Smoke -Scenarios race-hardening,car-placement-race,car-dlc`
+  → `20261008-201608_regression.json`, 9/9 passed.
+
+## 2026-10-08 (17:30–20:00) — row 24 and row 19 part 1 merged; playtest build dev.1067
+
+- `main` = `9ae63c7`. Row 24 `part-locks-2` merged (`62729ad`): mount-mode previews hide parts in another player's
+  lock, the item chooser marks items being mounted, pie Move/Drive options are unavailable on a locked car; the guard's
+  pie locks now apply on the first opening.
+- Row 19 part 1 merged (`9ae63c7`): field-group masks and server merges for part records (gap 3), per-entry car
+  details with echo handling (gap 6), the removed-by-other rule for machine puts, sales, scrap and warehouse (gap 9),
+  server-side records for parked cars (gap 10); proofs `car-stale-record`, `details-concurrent`, `tools-item-race`,
+  `park-stale` fail on the old code; 25 scenarios green after the merge.
+- Soak report: rule 7 judged per server process (`ba1e757`; today's soak 1.08x, pass); soak inventory capped at 300.
+- In progress: snapshot-after-delete guard (lane 1); row 19 part 2 (digests, stall warning, soak contention; lane 2).
+- Playtest build `0.6.0-dev.1067` and checklist on the Desktop.
 ## 2026-10-08 (19:50–22:40) — row 19 part 2 (detection, soak contention) on lane 2
 
 - `change/state-merges-2` (lane 2), groups 9 and 10.1-10.4 of `state-merges-and-contention`.

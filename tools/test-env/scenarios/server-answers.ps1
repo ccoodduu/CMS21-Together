@@ -275,8 +275,8 @@ Wait-Same "jobs" "an accept of an expired order" { param($d) @($d.jobs.orders | 
 
 # J5: both end the same job.
 Cmd $gen orders-generate | Out-Null
-$jobs = Wait-Same "jobs" "an order to take" { param($d) @($d.jobs.orders).Count -ge 1 }
-$take = @($jobs.jobs.orders)[-1].id
+$jobs = Wait-Same "jobs" "an order to take" { param($d) @($d.jobs.orders | Where-Object { -not $_.IsMission }).Count -ge 1 }
+$take = @($jobs.jobs.orders | Where-Object { -not $_.IsMission })[-1].id
 Cmd $a orders-accept "$take" | Out-Null
 $jobs = Wait-Same "jobs" "the job is active for both" { param($d) @($d.jobs.active | Where-Object { $_.id -eq $take }).Count -eq 1 } 90
 $loader = @($jobs.jobs.active | Where-Object { $_.id -eq $take })[0].carLoaderID

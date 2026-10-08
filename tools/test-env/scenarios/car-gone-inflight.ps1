@@ -79,10 +79,10 @@ Wait-Ready $b | Out-Null
 Gone-Inflight "park" $loader { Cmd $a park "$loader" | Out-Null }
 
 $gen = if ((Get-HarnessStatus $a).isOrderGenerator) { $a } else { $b }
-$base = @((Cmd $a dump).jobs.orders).Count
+$base = @((Cmd $a dump).jobs.orders | Where-Object { -not $_.IsMission }).Count
 Cmd $gen orders-generate | Out-Null
 $deadline = (Get-Date).AddSeconds(30)
-do { Start-Sleep -Milliseconds 700; $orders = @((Cmd $a dump).jobs.orders) } while ($orders.Count -le $base -and (Get-Date) -lt $deadline)
+do { Start-Sleep -Milliseconds 700; $orders = @((Cmd $a dump).jobs.orders | Where-Object { -not $_.IsMission }) } while ($orders.Count -le $base -and (Get-Date) -lt $deadline)
 $take = $orders[-1].id
 Cmd $a orders-accept "$take" | Out-Null
 $deadline = (Get-Date).AddSeconds(90)
