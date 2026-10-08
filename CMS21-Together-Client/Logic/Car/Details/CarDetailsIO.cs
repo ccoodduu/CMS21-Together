@@ -139,12 +139,12 @@ public static class CarDetailsIO
 		return result;
 	}
 
-	public static void Apply(CarLoader carLoader, ModCarDetails details)
+	public static void Apply(CarLoader carLoader, ModCarDetails details, int wheelMask = DetailsMerge.AllWheels, AlignmentFields alignmentMask = DetailsMerge.AllAlignment)
 	{
-		Try("wheels", () => ApplyWheels(carLoader, details.Wheels));
+		Try("wheels", () => ApplyWheels(carLoader, details.Wheels, wheelMask));
 		Try("tuning", () => ApplyTuning(carLoader, details.Tuning));
 		Try("fluids", () => ApplyFluids(carLoader, details.Fluids));
-		Try("alignment", () => ApplyAlignment(carLoader, details.Alignment));
+		Try("alignment", () => ApplyAlignment(carLoader, details.Alignment, alignmentMask));
 		Try("paint", () => ApplyPaint(carLoader, details.Paint));
 		Try("cosmetics", () => ApplyCosmetics(carLoader, details.BodyCosmetics));
 		Try("plates", () => ApplyPlates(carLoader, details.Plates));
@@ -166,7 +166,7 @@ public static class CarDetailsIO
 			data.SetLevelAndCondition(fluid.Level, fluid.Condition, (CarFluidType)(int)fluid.Type, fluid.Id);
 	}
 
-	private static void ApplyWheels(CarLoader carLoader, ModCarWheel[] wheels)
+	private static void ApplyWheels(CarLoader carLoader, ModCarWheel[] wheels, int wheelMask)
 	{
 		if (wheels == null) return;
 		var local = carLoader.WheelsData?.Wheels;
@@ -174,6 +174,7 @@ public static class CarDetailsIO
 		for (int i = 0; local != null && i < wheels.Length && i < local.Length; i++)
 		{
 			var wheel = wheels[i];
+			if (wheel == null || !DetailsMerge.HasWheel(wheelMask, i)) continue;
 			if ((int)local[i].Width == wheel.Width && (int)local[i].Size == wheel.RimSize && (int)local[i].Profile == wheel.TireSize && local[i].ET == wheel.ET) continue;
 			carLoader.SetET((WheelType)i, wheel.ET);
 			carLoader.SetWheelSize(wheel.Width, wheel.RimSize, wheel.TireSize, (WheelType)i);
@@ -205,17 +206,20 @@ public static class CarDetailsIO
 		}
 	}
 
-	private static void ApplyAlignment(CarLoader carLoader, ModAlignment alignment)
+	private static void ApplyAlignment(CarLoader carLoader, ModAlignment alignment, AlignmentFields mask)
 	{
 		if (alignment == null) return;
+		var target = ReadAlignment(carLoader);
+		for (int field = 0; field < CarDetailEntries.AlignmentFieldNames.Length; field++)
+			if (DetailsMerge.HasAlignment(mask, field)) CarDetailEntries.SetAlignmentValue(target, field, CarDetailEntries.AlignmentValue(alignment, field));
 		var wheels = carLoader.WheelsAlignment;
-		wheels.FL = alignment.FL; wheels.FR = alignment.FR; wheels.RL = alignment.RL; wheels.RR = alignment.RR;
+		wheels.FL = target.FL; wheels.FR = target.FR; wheels.RL = target.RL; wheels.RR = target.RR;
 		carLoader.WheelsAlignment = wheels;
 		var left = carLoader.HeadlampLeftAlignment;
-		left.Horizontal = alignment.LampLH; left.Vertical = alignment.LampLV;
+		left.Horizontal = target.LampLH; left.Vertical = target.LampLV;
 		carLoader.HeadlampLeftAlignment = left;
 		var right = carLoader.HeadlampRightAlignment;
-		right.Horizontal = alignment.LampRH; right.Vertical = alignment.LampRV;
+		right.Horizontal = target.LampRH; right.Vertical = target.LampRV;
 		carLoader.HeadlampRightAlignment = right;
 	}
 

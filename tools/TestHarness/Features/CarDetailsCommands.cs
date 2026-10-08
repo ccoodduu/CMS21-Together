@@ -158,6 +158,57 @@ public static class CarDetailsCommands
         return result;
     }
 
+    private class Pour
+    {
+        public float Start;
+        public float End;
+        public int Decreases;
+        public int Frames;
+        public bool Done;
+    }
+
+    private static Pour lastPour;
+
+    // FluidRefillLogic.Update's own steps while the button is held: AddFluid on the car's field every frame, level by
+    // deltaTime * 0.1 and condition by deltaTime * 0.05, with no amount of its own.
+    [HarnessCommand("cardetails-pour")]
+    private static object PourCommand(string args)
+    {
+        if ((args ?? "").Trim() == "result")
+        {
+            if (lastPour == null) throw new InvalidOperationException("no pour");
+            return new { start = lastPour.Start, end = lastPour.End, decreases = lastPour.Decreases, frames = lastPour.Frames, done = lastPour.Done };
+        }
+        var parts = Split(args, 4, "cardetails-pour <loader> <type> <id> <seconds> | result");
+        var carLoader = Loaded(parts[0]);
+        var type = (CarFluidType)(int)(ModCarFluidType)Enum.Parse(typeof(ModCarFluidType), parts[1], true);
+        int id = int.Parse(parts[2]);
+        lastPour = new Pour { Start = carLoader.FluidsData.GetLevel(type, id, false) };
+        MelonLoader.MelonCoroutines.Start(RunPour(carLoader, type, id, Float(parts[3]), lastPour));
+        return new { start = lastPour.Start };
+    }
+
+    private static System.Collections.IEnumerator RunPour(CarLoader carLoader, CarFluidType type, int id, float seconds, Pour pour)
+    {
+        float until = UnityEngine.Time.realtimeSinceStartup + seconds;
+        float last = pour.Start;
+        CarDetailsSync.MarkDirty(carLoader, CarDetailSection.Fluids);
+        while (UnityEngine.Time.realtimeSinceStartup < until && carLoader != null)
+        {
+            var fluids = carLoader.FluidsData;
+            float level = fluids.GetLevel(type, id, false);
+            if (level < last - 0.0001f) pour.Decreases++;
+            float dt = UnityEngine.Time.deltaTime;
+            fluids.AddFluid(dt * 0.1f, dt * 0.05f, type, id);
+            last = fluids.GetLevel(type, id, false);
+            pour.Frames++;
+            yield return null;
+        }
+        pour.End = carLoader == null ? 0f : carLoader.FluidsData.GetLevel(type, id, false);
+        pour.Done = true;
+        if (carLoader != null) CarDetailsSync.MarkDirty(carLoader, CarDetailSection.Fluids);
+    }
+
     public static object Dump()
     {
         var places = CarLoaderPlaces.Get();

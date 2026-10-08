@@ -1,10 +1,12 @@
 using System;
+using System.Collections.Generic;
+using System.Linq;
 using CMS21_Together_Core.Data.GameType;
 using CMS21_Together_Core.Network.Packets;
 
 namespace CMS21_Together_Server.Data.Cars
 {
-	// --check-merges: the D1 part record rules of PartRecordMerge, in-process and without clients.
+	// --check-merges: the D1 part record rules of PartRecordMerge and the D5 details merge, in-process and without clients.
 	public static class MergeCheck
 	{
 		private static int failures;
@@ -13,6 +15,7 @@ namespace CMS21_Together_Server.Data.Cars
 		{
 			failures = 0;
 			CheckParts();
+			CheckDetails();
 			Console.WriteLine($"merges check: {(failures == 0 ? "OK" : $"FAILED ({failures})")}");
 			return failures == 0 ? 0 : 1;
 		}
@@ -87,6 +90,64 @@ namespace CMS21_Together_Server.Data.Cars
 			Check("Differ reports the groups that differ", PartRecordMerge.Differ(stored, Sub(unmounted: true, condition: 0.9f, examined: true)) == (PartFields.Mount | PartFields.Condition | PartFields.Examined));
 			Check("Differ compares bolts element-wise within 0.001", PartRecordMerge.Differ(Sub(unmounted: false, bolts: 0.5f), Sub(unmounted: false, bolts: 0.5004f)) == PartFields.None);
 		}
+
+		private static void CheckDetails()
+		{
+			var stored = Details();
+			DetailsMerge.Merge(stored, new ModCarDetails { Fluids = new List<ModFluidLevel> { new ModFluidLevel { Type = ModCarFluidType.Brake, Id = 0, Level = 0.2f } } }, 0, AlignmentFields.None);
+			DetailsMerge.Merge(stored, new ModCarDetails { Fluids = new List<ModFluidLevel> { new ModFluidLevel { Type = ModCarFluidType.EngineCoolant, Id = 0, Level = 0.7f } } }, 0, AlignmentFields.None);
+			Check("two fluids written by two updates are both kept", Level(stored, ModCarFluidType.Brake) == 0.2f && Level(stored, ModCarFluidType.EngineCoolant) == 0.7f && stored.Fluids.Count == 3);
+
+			var wheels = Details().Wheels;
+			wheels[0].ET = 99;
+			wheels[3].ET = 33;
+			DetailsMerge.Merge(stored, new ModCarDetails { Wheels = wheels }, 1 << 3, AlignmentFields.None);
+			Check("a wheel mask merges only its wheels", stored.Wheels[3].ET == 33 && stored.Wheels[0].ET == 0);
+			var all = Details().Wheels;
+			all[1].ET = 11;
+			DetailsMerge.Merge(stored, new ModCarDetails { Wheels = all }, 0, AlignmentFields.None);
+			Check("wheel mask 0 means every wheel", stored.Wheels[1].ET == 11 && stored.Wheels[3].ET == 0);
+			var grown = new ModCarWheel[6];
+			grown[5] = new ModCarWheel { ET = 55 };
+			DetailsMerge.Merge(stored, new ModCarDetails { Wheels = grown }, 1 << 5, AlignmentFields.None);
+			Check("a masked wheel beyond the stored array grows it", stored.Wheels.Length == 6 && stored.Wheels[5].ET == 55 && stored.Wheels[1].ET == 11);
+
+			DetailsMerge.Merge(stored, new ModCarDetails { Alignment = new ModAlignment { FL = 0.5f, RR = 0.9f } }, 0, AlignmentFields.FL);
+			Check("an alignment mask merges only its fields", stored.Alignment.FL == 0.5f && stored.Alignment.RR == 0.1f);
+			DetailsMerge.Merge(stored, new ModCarDetails { Alignment = new ModAlignment { FL = 0.5f, RR = 0.9f } }, 0, AlignmentFields.RR);
+			Check("a second alignment write of another field keeps the first", stored.Alignment.FL == 0.5f && stored.Alignment.RR == 0.9f);
+
+			DetailsMerge.Merge(stored, new ModCarDetails { BodyCosmetics = new List<ModBodyCosmetics> { new ModBodyCosmetics { PartIndex = 1, Dust = 0.8f } } }, 0, AlignmentFields.None);
+			Check("a body panel merges per panel", stored.BodyCosmetics.Count == 2 && stored.BodyCosmetics.First(p => p.PartIndex == 1).Dust == 0.8f && stored.BodyCosmetics.First(p => p.PartIndex == 0).Dust == 0.3f);
+
+			DetailsMerge.Merge(stored, new ModCarDetails { Tuning = new ModCarTuning { Modules = new List<ModPartTuning> { new ModPartTuning { PartKey = "s:2", EcuStage = 2 } } } }, 0, AlignmentFields.None);
+			Check("a tuning module merges per part and keeps the gearbox", stored.Tuning.Modules.Count == 2 && stored.Tuning.Gearbox != null);
+
+			var sent = Details();
+			sent.Wheels[2].ET = 22;
+			var only = DetailsMerge.Only(sent, 0, AlignmentFields.None, new HashSet<string> { "f:Brake.0", "w:2", "a:RL", "c:1" });
+			Check($"Only keeps the named entries with their masks (wheels {only.WheelMask}, alignment {only.AlignmentMask})", only.Details.Fluids.Count == 1 && only.WheelMask == 1 << 2
+				&& only.AlignmentMask == AlignmentFields.RL && only.Details.BodyCosmetics.Count == 1 && only.Details.Tuning == null && only.Details.Info == null);
+			var carried = DetailsMerge.CarriedSignatures(only.Details, only.WheelMask, only.AlignmentMask);
+			Check($"the carried entries follow the masks ({string.Join(",", carried.Keys)})", string.Join(",", carried.Keys) == "a:RL,c:1,f:Brake.0,w:2");
+		}
+
+		private static ModCarDetails Details() => new ModCarDetails
+		{
+			Fluids = new List<ModFluidLevel>
+			{
+				new ModFluidLevel { Type = ModCarFluidType.Brake, Id = 0, Level = 0.5f },
+				new ModFluidLevel { Type = ModCarFluidType.EngineCoolant, Id = 0, Level = 0.5f },
+				new ModFluidLevel { Type = ModCarFluidType.EngineOil, Id = 0, Level = 0.5f },
+			},
+			Wheels = Enumerable.Range(0, 4).Select(_ => new ModCarWheel { Width = 195, RimSize = 15, TireSize = 65 }).ToArray(),
+			Alignment = new ModAlignment { FL = 0.1f, FR = 0.1f, RL = 0.1f, RR = 0.1f },
+			BodyCosmetics = new List<ModBodyCosmetics> { new ModBodyCosmetics { PartIndex = 0, Dust = 0.3f }, new ModBodyCosmetics { PartIndex = 1, Dust = 0.3f } },
+			Tuning = new ModCarTuning { Gearbox = new ModGearboxData { FinalDriveRatio = 3f }, Modules = new List<ModPartTuning> { new ModPartTuning { PartKey = "s:1" } } },
+			Info = new ModCarInfo { Mileage = 100 },
+		};
+
+		private static float Level(ModCarDetails details, ModCarFluidType type) => details.Fluids.First(f => f.Type == type).Level;
 
 		private static PartPrecondition Pre(bool wasUnmounted) => new PartPrecondition { Key = "s:3.22.4", WasUnmounted = wasUnmounted };
 

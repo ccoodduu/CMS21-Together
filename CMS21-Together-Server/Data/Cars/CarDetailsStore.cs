@@ -59,58 +59,14 @@ namespace CMS21_Together_Server.Data.Cars
 			}
 			else
 			{
-				Merge(stored, incoming);
+				DetailsMerge.Merge(stored, incoming, packet.WheelMask, packet.AlignmentMask);
 			}
 			missingSince.Remove(packet.CarLoaderID);
+			if (!packet.IsFull)
+				Logger.Debug($"[CarDetails] Loader {packet.CarLoaderID}: update {packet.ClientSeq} from client {clientId} ({string.Join(", ", DetailsMerge.CarriedSignatures(incoming, packet.WheelMask, packet.AlignmentMask).Keys.Take(8))}).");
 			packet.Details = incoming;
 			packet.SourceClientId = clientId;
 			Server.SendToClients(packet);
-		}
-
-		private static void Merge(ModCarDetails stored, ModCarDetails incoming)
-		{
-			if (incoming.Fluids != null)
-			{
-				stored.Fluids ??= new List<ModFluidLevel>();
-				foreach (var fluid in incoming.Fluids)
-				{
-					stored.Fluids.RemoveAll(f => f.Type == fluid.Type && f.Id == fluid.Id);
-					stored.Fluids.Add(fluid);
-				}
-			}
-			if (incoming.BodyCosmetics != null)
-			{
-				stored.BodyCosmetics ??= new List<ModBodyCosmetics>();
-				foreach (var part in incoming.BodyCosmetics)
-				{
-					stored.BodyCosmetics.RemoveAll(p => p.PartIndex == part.PartIndex);
-					stored.BodyCosmetics.Add(part);
-				}
-			}
-			if (incoming.Tuning != null)
-			{
-				if (stored.Tuning == null) stored.Tuning = incoming.Tuning;
-				else
-				{
-					if (incoming.Tuning.Gearbox != null)
-					{
-						stored.Tuning.Gearbox = incoming.Tuning.Gearbox;
-						stored.Tuning.GearboxPartKey = incoming.Tuning.GearboxPartKey;
-					}
-					foreach (var module in incoming.Tuning.Modules)
-					{
-						stored.Tuning.Modules.RemoveAll(m => m.PartKey == module.PartKey);
-						stored.Tuning.Modules.Add(module);
-					}
-				}
-			}
-			if (incoming.Wheels != null) stored.Wheels = incoming.Wheels;
-			if (incoming.Alignment != null) stored.Alignment = incoming.Alignment;
-			if (incoming.Paint != null) stored.Paint = incoming.Paint;
-			if (incoming.Plates != null) stored.Plates = incoming.Plates;
-			if (incoming.Info != null) stored.Info = incoming.Info;
-			if (incoming.BonusParts != null) stored.BonusParts = incoming.BonusParts;
-			if (incoming.Dyno != null) stored.Dyno = incoming.Dyno;
 		}
 
 		private static ModCarDetails Clamp(ModCarDetails details)

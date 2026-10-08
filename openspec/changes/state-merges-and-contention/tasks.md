@@ -1,11 +1,8 @@
 # Tasks
 
 **Resume here (part 1, branch `change/state-merges-1`, worktree `CMS21-Together-wt/state-merges`, lane 1):** groups
-1-3 done and pushed (gap 3 proven: `car-stale-record` fails on main in steps 1, 2, 4 and 5, run
-`20261008-173639_L1_car-stale-record`; passes with the change, batch `20261008-173850_L1_batch`). Group 4 code written
-(per-entry flush and apply, `DetailsMerge`, own echo per entry, `cardetails-pour`, `details-concurrent`, which passes:
-`20261008-175714_L1_details-concurrent`); next: its fail-on-main check, `car-details`, `car-wheel-swap`,
-`locks-fluid`, `car-details-request`, commit group 4. User decision 2026-10-08: the base check keeps `Quality`.
+1-4 done and pushed (gap 3: `car-stale-record`; gap 6: `details-concurrent`). Group 5 (machines, item removals) in
+progress. User decision 2026-10-08: the base check keeps `Quality`.
 
 **Row 19: the race and drift audit's gaps that row 18 does not close** (gaps 3, 6, 9, 10, the rest of 7, the soak
 contention mode, and the review ledger's P7, P11, I2, I5, M4, M5 and C2), plus the user's decision of 2026-10-07 on
@@ -97,25 +94,29 @@ the ledger's "accept" rows (S1 fixed; no silent drops for I3, I7, E4, M8, C4, J2
 
 ## 4. Car details as entries (gap 6; after row 18 has merged)
 
-- [ ] 4.1 Client entries per D4: `lastKnown` per entry; `Flush` sends only changed entries with `WheelMask` and
+- [x] 4.1 Client entries per D4: `lastKnown` per entry; `Flush` sends only changed entries with `WheelMask` and
       `AlignmentMask` and remembers only the sent entries; this replaces row 18's changed-fluids `OnlyChanged`, and
       `FlushNow` inherits it; `SendFull` unchanged. Done when one `cardetails-fluid` logs an update with one fluid
       entry, one `cardetails-wash … 3` an update with one panel, and `car-details`, `car-wheel-swap` and `locks-fluid`
       pass.
-- [ ] 4.2 Server per D5: the Core helper `DetailsMerge` (per masked wheel index and alignment field, plus today's
+- [x] 4.2 Server per D5: the Core helper `DetailsMerge` (per masked wheel index and alignment field, plus today's
       per-entry fluids, cosmetics and modules) used by `CarDetailsStore.Merge`; relay unchanged. `--check-merges`
       gains the details cases [review M7]. Done when `--check-merges` and `car-details-request` pass.
-- [ ] 4.3 Apply and remember per entry (D6): `CarDetailsIO.Apply` honours the masks; after an apply only the carried
+- [x] 4.3 Apply and remember per entry (D6): `CarDetailsIO.Apply` honours the masks; after an apply only the carried
       entries are remembered (`Present` includes `Dyno`). Done when the "unsent edit" step of `details-concurrent`
       (written in 4.5) passes.
-- [ ] 4.4 Own echo per entry (D7): send copies with `foreignSince` (16 sends or 10 s per loader), marked by every
+- [x] 4.4 Own echo per entry (D7): send copies with `foreignSince` (16 sends or 10 s per loader), marked by every
       foreign apply; an own echo applies an entry the server changed or a foreign write overwrote, for every kept
       `ClientSeq`; cleared on `Reset`. Harness `cardetails-pour` (level and condition, as `FluidRefillLogic`). Done
       when the pour step (`decreases` 0 with `net-delay 150`) and the same-entry step in both server orders of
       `details-concurrent` pass.
-- [ ] 4.5 `scenarios/details-concurrent.ps1` (`# areas: details, cars`) per D14: fluid pair, panel pair, wheel pair,
+- [x] 4.5 `scenarios/details-concurrent.ps1` (`# areas: details, cars`) per D14: fluid pair, panel pair, wheel pair,
       alignment pair, same entry in both orders, unsent edit, pour. Done when it passes and fails on `main` (commit
-      message).
+      message). Done 2026-10-08: passes (`20261008-175714_L1_details-concurrent`, one entry per update in the log,
+      pour 0 setbacks); fails on the group 3 code in the panel, wheel, alignment and same-fluid steps
+      (`20261008-181145_L1_details-concurrent`; the fluid pair passes there, row 18 already sent changed fluids only).
+      `car-details`, `car-wheel-swap`, `locks-fluid`, `car-details-request` and `locks-basic` pass (batch
+      `20261008-181415_L1_batch`).
 
 ## 5. Item removals and machines (gap 9, I2, I5)
 
