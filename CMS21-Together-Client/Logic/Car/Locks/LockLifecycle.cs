@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using CMS.UI;
 using CMS.UI.Windows;
+using CMS21_Together_Core.Data.GameType;
 using CMS21_Together_Core.Logging;
 using CMS21_Together_Core.Network.Packets;
 using CMS21Together.Data;
@@ -35,6 +36,7 @@ public sealed class TrackedLock
 	public float EndingSince = -1f;
 	public Func<bool> Finished;
 	public bool ItemPicked;
+	public bool FlushFluids;
 	public readonly Dictionary<string, bool> StartUnmounted = new Dictionary<string, bool>();
 }
 
@@ -55,6 +57,7 @@ public static class LockLifecycle
 
 	public static void Initialize()
 	{
+		CarLockMirror.BusyRefused += (holder, refusal, what) => LockMessages.Refuse(LockMessages.Busy(holder));
 		LockGate.Reported += (action, report) =>
 		{
 			if (!action.EndsSlotOnFailure || report.Result == "granted") return;
@@ -104,6 +107,17 @@ public static class LockLifecycle
 		CarLockMirror.Release(t.LockId);
 	}
 
+	public static void ReleaseAfterFlush(TrackedLock t, string why)
+	{
+		if (!tracked.Remove(t.LockId)) return;
+		CarLockMirror.MarkEnding(t.LockId);
+		Details.CarDetailsSync.FlushNow(t.Loader, CarDetailSection.Fluids, () =>
+		{
+			Log.Debug($"[Locks] Lock {t.LockId} ({t.Kind} {t.MainKey}) released after the fluid flush: {why}.");
+			CarLockMirror.Release(t.LockId);
+		});
+	}
+
 	public static void MarkEnding(TrackedLock t)
 	{
 		if (t.EndingSince >= 0f) return;
@@ -144,7 +158,8 @@ public static class LockLifecycle
 			}
 			if (t.Finished != null && SafeFinished(t))
 			{
-				Release(t, "the action ended");
+				if (t.FlushFluids) ReleaseAfterFlush(t, "the action ended");
+				else Release(t, "the action ended");
 				continue;
 			}
 			switch (t.Kind)

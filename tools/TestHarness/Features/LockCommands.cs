@@ -24,6 +24,7 @@ public static class LockCommands
         LockLifecycle.ChooserIdleSeconds = 60f;
         answers.Clear();
         order.Clear();
+        watchLoader = -1;
     }
 
     public static Dictionary<string, object> Dump() => new Dictionary<string, object>
@@ -36,6 +37,7 @@ public static class LockCommands
         ["pending"] = CarLockMirror.PendingRequests.Select(p => (object)new { requestId = p.RequestId, set = p.Set.ToString(), ageMs = Math.Round(p.AgeMs) }).ToList(),
         ["counters"] = new Dictionary<string, int>(CarLockMirror.Counters.ToDictionary(c => c.Key, c => c.Value)),
         ["answers"] = order.Select(id => (object)Answer(id)).ToList(),
+        ["lastMessage"] = LockMessages.Last,
     };
 
     private static Dictionary<string, object> Answer(int requestId)
@@ -192,6 +194,75 @@ public static class LockCommands
             ["partMouseOver"] = game.partMouseOver != null && game.partMouseOver.Pointer == script.Pointer,
             ["message"] = LockSelection.BlockedMessage(script),
         };
+    }
+
+    private static int watchLoader = -1;
+    private static string watchFluid;
+    private static readonly List<object> watched = new List<object>();
+    private static bool watchSubscribed;
+
+    // locks-fluid's order check: the fluid level this client already has when another player's lock release arrives.
+    [HarnessCommand("lock-watch")]
+    private static object LockWatch(string args)
+    {
+        var parts = Args(args);
+        if (parts.Length == 1 && parts[0] == "report") return new { loader = watchLoader, fluid = watchFluid, releases = watched.ToList() };
+        if (parts.Length == 1 && parts[0] == "off")
+        {
+            watchLoader = -1;
+            return new { watching = false };
+        }
+        if (parts.Length != 2) throw new ArgumentException("usage: lock-watch <loader> <fluidKey> | off | report");
+        watchLoader = int.Parse(parts[0]);
+        watchFluid = parts[1];
+        watched.Clear();
+        if (!watchSubscribed)
+        {
+            watchSubscribed = true;
+            CarLockMirror.Changed += (record, released, snapshot) =>
+            {
+                if (!released || record.Loader != watchLoader) return;
+                watched.Add(new { lockId = record.LockId, owner = record.Owner, x = record.X, level = FluidLevel(watchLoader, watchFluid) });
+            };
+        }
+        return new { watching = true, level = FluidLevel(watchLoader, watchFluid) };
+    }
+
+    internal static float FluidLevel(int loader, string fluidKey)
+    {
+        var carLoader = CarLoaderPlaces.Get().GetCarLoaderByIndex(loader);
+        var details = CMS21Together.Logic.Car.Details.CarDetailsIO.Read(carLoader, CMS21_Together_Core.Data.GameType.CarDetailSection.Fluids);
+        var fluid = details.Fluids?.FirstOrDefault(f => LockSets.FluidKey(f.Type, f.Id) == fluidKey);
+        return fluid == null ? -1f : (float)Math.Round(fluid.Level, 3);
+    }
+
+    [HarnessCommand("lock-fluid")]
+    private static object LockFluid(string args)
+    {
+        var parts = Args(args);
+        if (parts.Length != 2) throw new ArgumentException("usage: lock-fluid <loader> <fluidKey>");
+        return new { level = FluidLevel(int.Parse(parts[0]), parts[1]) };
+    }
+
+    [HarnessCommand("lock-tool-end")]
+    private static object LockToolEnd(string args)
+    {
+        var ended = new List<string>();
+        foreach (var found in UnityEngine.Resources.FindObjectsOfTypeAll(UnhollowerRuntimeLib.Il2CppType.Of<FluidRefill>()))
+        {
+            var tool = found.TryCast<FluidRefill>();
+            if (tool == null || !tool.IsActive) continue;
+            tool.Hide();
+            ended.Add($"refill {tool.carFluidType}");
+        }
+        foreach (var found in UnityEngine.Resources.FindObjectsOfTypeAll(UnhollowerRuntimeLib.Il2CppType.Of<FluidExtractor>()))
+        {
+            var tool = found.TryCast<FluidExtractor>();
+            if (tool == null || !tool.IsActive) continue;
+            tool.Hide();
+            ended.Add("extractor");
+        }
+        return new { ended };
     }
 
     [HarnessCommand("lock-tracked")]

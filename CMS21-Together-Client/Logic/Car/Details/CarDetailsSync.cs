@@ -142,25 +142,39 @@ public static class CarDetailsSync
 
 	private static bool Busy(int loader) => awaiting.Contains(loader) || applying.Contains(loader) || Time.realtimeSinceStartup < TestApplyingUntil;
 
-	public static FlushResult FlushNow(int loader, CarDetailSection sections)
+	public static FlushResult FlushNow(int loader, CarDetailSection sections, Action done = null)
 	{
-		if (!CarPartsSync.IsReady(loader) || !lastKnown.ContainsKey(loader)) return FlushResult.NotReady;
+		if (!CarPartsSync.IsReady(loader) || !lastKnown.ContainsKey(loader))
+		{
+			done?.Invoke();
+			return FlushResult.NotReady;
+		}
 		if (Busy(loader))
 		{
 			Log.Info($"[CarDetails] Loader {loader}: flush of {sections} deferred (awaiting or applying details).");
-			MelonCoroutines.Start(FlushWhenFree(loader, sections));
+			MelonCoroutines.Start(FlushWhenFree(loader, sections, done));
 			return FlushResult.Deferred;
 		}
-		return Flush(loader, sections) ? FlushResult.Sent : FlushResult.Unchanged;
+		var result = Flush(loader, sections) ? FlushResult.Sent : FlushResult.Unchanged;
+		done?.Invoke();
+		return result;
 	}
 
-	private static IEnumerator FlushWhenFree(int loader, CarDetailSection sections)
+	public static void FlushBeforeChange(int loader)
+	{
+		if (!CarPartsSync.IsReady(loader) || !lastKnown.ContainsKey(loader)) return;
+		if (Busy(loader)) Log.Info($"[CarDetails] Loader {loader}: fluids flushed ahead of a part change although details are being applied.");
+		Flush(loader, CarDetailSection.Fluids, force: true);
+	}
+
+	private static IEnumerator FlushWhenFree(int loader, CarDetailSection sections, Action done)
 	{
 		float deadline = Time.realtimeSinceStartup + FlushNowWaitSeconds;
 		while (Busy(loader) && Time.realtimeSinceStartup < deadline) yield return null;
 		bool forced = Busy(loader);
 		bool sent = Flush(loader, sections, force: true);
 		Log.Info($"[CarDetails] Loader {loader}: deferred flush of {sections} {(sent ? "sent" : "had no change")}{(forced ? " after 1 s although still busy" : "")}.");
+		done?.Invoke();
 	}
 
 	private static bool Flush(int loader, CarDetailSection sections, bool force = false)

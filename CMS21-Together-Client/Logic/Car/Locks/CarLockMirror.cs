@@ -67,6 +67,7 @@ public static class CarLockMirror
 		public int RequestId;
 		public LockSet Set;
 		public float SentAt;
+		public int ExtendLockId;
 		public Action<LockAnswer> Done;
 	}
 
@@ -81,6 +82,7 @@ public static class CarLockMirror
 	private static readonly Dictionary<long, int> items = new Dictionary<long, int>();
 	private static readonly Dictionary<int, Pending> pending = new Dictionary<int, Pending>();
 	private static readonly HashSet<int> dropped = new HashSet<int>();
+	private static readonly HashSet<int> droppedExtends = new HashSet<int>();
 	private static readonly Dictionary<string, int> counters = new Dictionary<string, int>();
 	private static readonly HashSet<int> ownIds = new HashSet<int>();
 	private static int nextRequestId = 1;
@@ -112,6 +114,7 @@ public static class CarLockMirror
 		items.Clear();
 		pending.Clear();
 		dropped.Clear();
+		droppedExtends.Clear();
 		ownIds.Clear();
 		LockSets.Reset();
 	}
@@ -131,7 +134,7 @@ public static class CarLockMirror
 		foreach (var request in pending.Values.ToList())
 		{
 			pending.Remove(request.RequestId);
-			dropped.Add(request.RequestId);
+			Drop(request);
 			request.Done?.Invoke(new LockAnswer { Outcome = LockOutcome.Dropped });
 		}
 		foreach (var record in records.Values.Where(r => r.Owner == Me).ToList()) record.Ending = true;
@@ -250,6 +253,14 @@ public static class CarLockMirror
 
 	public static IEnumerable<LockRecord> Own(int loader) => records.Values.Where(r => r.Owner == Me && r.Loader == loader);
 
+	public static bool OwnFluidLockCovers(int loader, IEnumerable<string> flippedKeys)
+	{
+		var keys = new HashSet<string>(flippedKeys);
+		return records.Values.Any(r => r.Owner == Me && r.Loader == loader && r.X.Any(keys.Contains) && r.X.Concat(r.S).Any(LockKeys.IsFluid));
+	}
+
+	public static int OtherOwnerOn(int loader) => records.Values.Where(r => r.Loader == loader && r.Owner != Me).Select(r => r.Owner).DefaultIfEmpty(-1).First();
+
 	public static bool HoldsAny(int loader) => records.Values.Any(r => r.Owner == Me && r.Loader == loader);
 
 	public static bool AnyOnCar(int loader) => records.Values.Any(r => r.Loader == loader);
@@ -259,7 +270,7 @@ public static class CarLockMirror
 	public static int Request(LockSet set, Action<LockAnswer> done, int extendLockId = 0, int otherLoader = -1)
 	{
 		int requestId = nextRequestId++;
-		pending[requestId] = new Pending { RequestId = requestId, Set = set, SentAt = Time.realtimeSinceStartup, Done = done };
+		pending[requestId] = new Pending { RequestId = requestId, Set = set, SentAt = Time.realtimeSinceStartup, ExtendLockId = extendLockId, Done = done };
 		Count("requested");
 		var packet = new CarLockRequestPacket
 		{
@@ -272,10 +283,17 @@ public static class CarLockMirror
 		return requestId;
 	}
 
+	private static void Drop(Pending request)
+	{
+		dropped.Add(request.RequestId);
+		if (request.ExtendLockId != 0) droppedExtends.Add(request.RequestId);
+	}
+
 	public static void Cancel(int requestId)
 	{
-		if (!pending.Remove(requestId)) return;
-		dropped.Add(requestId);
+		if (!pending.TryGetValue(requestId, out var request)) return;
+		pending.Remove(requestId);
+		Drop(request);
 	}
 
 	public static void OnResult(CarLockResultPacket result)
@@ -288,7 +306,11 @@ public static class CarLockMirror
 		}
 		if (!pending.TryGetValue(result.RequestId, out var request))
 		{
-			if (result.Granted && dropped.Contains(result.RequestId))
+			if (droppedExtends.Remove(result.RequestId))
+			{
+				if (result.Granted) Log.Info($"[Locks] Late grant for dropped extension {result.RequestId} of lock {result.LockId}; the lock stays with its earlier phase.");
+			}
+			else if (result.Granted && dropped.Contains(result.RequestId))
 			{
 				Count("lateGrantsReleased");
 				Log.Info($"[Locks] Late grant {result.LockId} for dropped request {result.RequestId} released.");
@@ -336,7 +358,7 @@ public static class CarLockMirror
 		foreach (var request in pending.Values.Where(p => now - p.SentAt > TimeoutSeconds).ToList())
 		{
 			pending.Remove(request.RequestId);
-			dropped.Add(request.RequestId);
+			Drop(request);
 			Count("timeouts");
 			Log.Info($"[Locks] Request {request.RequestId} timed out after {TimeoutSeconds:0} s.");
 			try { request.Done?.Invoke(new LockAnswer { Outcome = LockOutcome.Timeout, WaitedMs = (now - request.SentAt) * 1000f }); }

@@ -145,6 +145,8 @@ public static class PartChangeTracker
 		foreach (var record in body) sync.Body[record.Key] = record;
 		foreach (var record in sub) sync.Sub[record.Key] = record;
 		sentKeys[change.TxId] = body.Select(r => r.Key).Concat(sub.Select(r => r.Key)).ToList();
+		if (change.Preconditions.Count > 0 && Locks.CarLockMirror.OwnFluidLockCovers(sync.Loader, change.Preconditions.Select(p => p.Key)))
+			Details.CarDetailsSync.FlushBeforeChange(sync.Loader);
 		Client.Instance.Send(change);
 		Locks.LockLifecycle.OnChangeSent(sync.Loader);
 		Log.Debug($"[Parts] Loader {sync.Loader}: change {change.TxId} sent ({body.Count} body, {sub.Count} mechanical, {change.Preconditions.Count} preconditions).");

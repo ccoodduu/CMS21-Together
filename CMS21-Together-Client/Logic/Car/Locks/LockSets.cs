@@ -54,6 +54,8 @@ public static class LockSets
 
 	public static string FluidKey(ModCarFluidType type, int id) => LockKeys.Fluid(type.ToString(), id);
 
+	public static string FluidKey(CarFluidType type, int id) => type == CarFluidType.EngineOil ? OilKey : FluidKey((ModCarFluidType)(int)type, id);
+
 	public static CarRelations Relations(int loader)
 	{
 		var sync = CarPartsSync.All.FirstOrDefault(s => s.Loader == loader);
