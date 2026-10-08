@@ -9,7 +9,7 @@ Newest first. One entry per work session.
   hover shows the holder, a click on a part in use is refused at once, holds prefetch their lock. Park, delete and
   job end are refused while another player works on the car. Proven by `locks-basic`, `-race`, `-leak`,
   `-connected`, `-fluid`, `-car`, `-select`, `-latency` (10 of 10 holds without a wait at 80 ms), `-latejoin`, the
-  area scenarios of 5.1 and the smoke set. Row 19 review items P8, P10 and X4 are scenario steps. Not done here:
+  area scenarios of 5.1 and the smoke set (`20261008-130716_regression.json`, 18 of 18). Row 19 review items P8, P10 and X4 are scenario steps. Not done here:
   `locks-scale` on lane 3 (with the next soak) and part of 11.4. Row 19 D16 notes the job-end refusal gap.
 - **Playtest checklist (row 18)**, also in `docs/try-it.md` with what to report: hover a friend's part (no highlight,
   label with the name); hold to unmount at normal ping (no wait after the ring); click a part in use (sound, message,
