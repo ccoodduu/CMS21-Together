@@ -1,7 +1,8 @@
 # Design: server-owned order clock and limit
 
 The only part kept from ROADMAP row 16 (`server-game-logic`; the rest is dropped). Size M (about 2 sessions).
-Status: reviewed (`server-order-clock-review.md`, "ready after fixes"); every fix is folded in below and marked with
+Status: built on `feat/server-order-clock` (runs in section 9). Reviewed (`server-order-clock-review.md`, "ready after
+fixes"); every fix is folded in below and marked with
 its review id.
 
 **Today** (row 3, `sync-orders-and-jobs`):
@@ -201,3 +202,12 @@ Regression runs: `jobs`, `jobs-latejoin`, `jobs-missions`, `jobs-seeded`, every 
 - **Scaled time:** vanilla's clock pauses with `timeScale 0`; the server uses real seconds, which matches what players
   see in multiplayer.
 - **The limit port** must match `GetMaxOrdersAmount`; the generator's `MaxOpenOrders` cross-check logs any mismatch.
+
+## 9. Runs (lane 1)
+
+| Run | Code | Result |
+|---|---|---|
+| `20261008-232825_L1_jobs-clock` | `1318433` (old code) with the final scenario | fails steps 2 (−29 s), 3 (−19 s), 4 (expiry 873 → 826 s; resume −5 s), 6 (−20 s), 7 (−11 s); step 5, a regression check, fails on the old code too (−17 s: the harness's direct `GenerateNewJob` never reset the generator's timer); steps 1 and 8 pass |
+| `20261008-231416_L1_jobs-clock` | `1318433` (old code), first version of the scenario | the same failures; step 7 measured an order made before the accept, and step 8's mission accept was refused as `Busy` (fixed in `3629ff7`) |
+| `20261008-232021_L1_jobs-clock` | `3629ff7` (new code) | passes, every timing within 1 s |
+| `20261008-233426_regression.json` | `3629ff7` | the smoke set plus `jobs`, `jobs-latejoin`, `jobs-missions`, `jobs-seeded` and every scenario that uses `orders-autogen` (`jobs-trace`, `economy-trades`, `locks-car`, `server-answers`, `test-drive-latejoin`): all pass |
