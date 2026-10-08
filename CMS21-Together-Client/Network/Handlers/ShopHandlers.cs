@@ -13,7 +13,7 @@ namespace CMS21Together.Network.Handlers
         [PacketHandler(PacketTypes.ShopAction)]
         public static void HandleShopAction(long clientId, ShopActionPacket packet)
         {
-            if (InventoryHandlers.HoldDuringFullSync(() => HandleShopAction(clientId, packet))) return;
+            if (InventoryHandlers.HoldUntilReady(() => HandleShopAction(clientId, packet))) return;
             if (!ClientData.IsGarageStateSynced) return;
 
             InventoryHandlers.IgnoreInventoryHooks = true;
@@ -82,7 +82,7 @@ namespace CMS21Together.Network.Handlers
         [PacketHandler(PacketTypes.ItemsExchange)]
         public static void HandleItemsExchange(long clientId, ItemsExchangePacket packet)
         {
-            if (InventoryHandlers.HoldDuringFullSync(() => HandleItemsExchange(clientId, packet))) return;
+            if (InventoryHandlers.HoldUntilReady(() => HandleItemsExchange(clientId, packet))) return;
             if (!ClientData.IsGarageStateSynced) return;
 
             InventoryHandlers.IgnoreInventoryHooks = true;

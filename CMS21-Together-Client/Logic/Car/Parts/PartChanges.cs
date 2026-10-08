@@ -96,7 +96,7 @@ public static class PartChanges
 	public static void ApplyInventory(InventoryDelta delta)
 	{
 		if (delta == null || delta.IsEmpty) return;
-		if (InventoryHandlers.HoldDuringFullSync(() => ApplyInventory(delta))) return;
+		if (InventoryHandlers.HoldUntilReady(() => ApplyInventory(delta))) return;
 		var inventory = Singleton<GameManager>.Instance.Inventory;
 		bool previous = InventoryHandlers.IgnoreInventoryHooks;
 		InventoryHandlers.IgnoreInventoryHooks = true;
