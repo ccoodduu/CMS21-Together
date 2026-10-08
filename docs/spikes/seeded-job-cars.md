@@ -74,6 +74,7 @@ tasks.
 |---|---|---|
 | `20261008-221308_L1_jobs-seeded` | `d8d7755` (main + test tooling) | fails: mission retake 226 of 283 rows differ, retake by B 282 of 299, retake on loader 3 282 of 299 |
 | `20261008-221514_L1_jobs-seeded` | `af49fa0` (seeded) | fails on the two sources above only: mission retake 1 row (`details:Plates`, factory plate), retake by B and retake on loader 3 3 rows each (`details:Fluids`, `details:Plates`, `job:task1` = the `Additionals` picks); body, sub, car and the other details equal |
+| `20261008-224806_L1_jobs-seeded` | `120cdde` (seeded, non-seeded rows left out) | passes: 0 rows differ on the mission retake, B's retake and the retake on loader 3; only `details:Plates` (left out) differed |
 
 `20261008-220747_L1_jobs-seeded` is an earlier run of `181aa8a`; its mission step could not start (the garage was
 full), which `d8d7755` fixed by taking the mission first.
