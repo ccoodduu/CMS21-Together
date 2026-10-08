@@ -19,11 +19,14 @@ function Wait-InGarage([string]$Name) {
     } | Out-Null
 }
 
+# Seconds of the day, continued past midnight relative to the scenario's start.
+$origin = [int](Get-Date).TimeOfDay.TotalSeconds
+function DaySeconds([int]$Seconds) { if ($Seconds -lt $origin - 3600) { $Seconds + 86400 } else { $Seconds } }
 function LogTime([string]$Line) {
-    if ($Line -match '^\[(\d\d)\.(\d\d)\.(\d\d)\]') { return [int]$Matches[1] * 3600 + [int]$Matches[2] * 60 + [int]$Matches[3] }
+    if ($Line -match '^\[(\d\d)\.(\d\d)\.(\d\d)\]') { return DaySeconds ([int]$Matches[1] * 3600 + [int]$Matches[2] * 60 + [int]$Matches[3]) }
     return -1
 }
-function Now { [int](Get-Date).TimeOfDay.TotalSeconds }
+function Now { DaySeconds ([int](Get-Date).TimeOfDay.TotalSeconds) }
 function Wait-Until([int]$Second) { $wait = $Second - (Now); if ($wait -gt 0) { Start-Sleep -Seconds $wait } }
 
 # First server log line after index $After that matches; returns @{ Line; T; Next } or $null.
