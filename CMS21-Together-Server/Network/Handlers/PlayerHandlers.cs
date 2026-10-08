@@ -48,6 +48,17 @@ namespace CMS21_Together_Server.Network.Handlers
 			record.EngineCarLoaderId = inGarage ? sent.EngineCarLoaderId : PlayerPresenceRecord.NoCar;
 			record.EngineRunning = inGarage && sent.EngineRunning;
 			record.EngineRpm = inGarage ? sent.EngineRpm : 0f;
+			var holder = SeatHolder(record);
+			if (holder != null)
+			{
+				Logger.Info($"[Presence] Seat {(record.SeatLeft ? "left" : "right")} of car {record.SeatCarLoaderId} refused for client {record.PlayerId}: client {holder.PlayerId} sits there.");
+				Server.SendToClient(new SeatRefusedPacket { CarLoaderID = record.SeatCarLoaderId, SeatLeft = record.SeatLeft, HolderPlayerId = holder.PlayerId }, record.PlayerId);
+				record.SeatCarLoaderId = PlayerPresenceRecord.NoCar;
+				record.SeatLeft = false;
+				record.EngineCarLoaderId = PlayerPresenceRecord.NoCar;
+				record.EngineRunning = false;
+				record.EngineRpm = 0f;
+			}
 			if (sent.LastMovement != null)
 			{
 				sent.LastMovement.SenderId = record.PlayerId;
@@ -60,6 +71,16 @@ namespace CMS21_Together_Server.Network.Handlers
 				Logger.Info($"Player {record.PlayerId} '{record.Username}' scene {previous} -> {record.Scene}");
 
 			Server.SendToClients(new PlayerPresencePacket { Record = record.Copy() }, record.PlayerId);
+		}
+
+		private static PlayerPresenceRecord SeatHolder(PlayerPresenceRecord claimant)
+		{
+			if (claimant.SeatCarLoaderId == PlayerPresenceRecord.NoCar) return null;
+			foreach (var other in PresenceRegistry.All)
+				if (other.PlayerId != claimant.PlayerId && other.Scene == GameScene.Garage
+					&& other.SeatCarLoaderId == claimant.SeatCarLoaderId && other.SeatLeft == claimant.SeatLeft)
+					return other;
+			return null;
 		}
 	}
 }

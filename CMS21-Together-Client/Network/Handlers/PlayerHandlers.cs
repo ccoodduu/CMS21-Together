@@ -20,6 +20,12 @@ public static class PlayerHandlers
 		PresenceManager.ApplyRecord(packet.Record);
 	}
 
+	[PacketHandler(PacketTypes.SeatRefused)]
+	public static void OnSeatRefused(long senderId, SeatRefusedPacket packet)
+	{
+		ClientScene.GarageBound(() => SeatEngine.OnSeatRefused(packet));
+	}
+
 	[PacketHandler(PacketTypes.PlayerRoster)]
 	public static void OnPlayerRoster(long senderId, PlayerRosterPacket packet)
 	{

@@ -20,6 +20,15 @@ namespace CMS21_Together_Server.Data.Cars
 			lock (removedBy) return removedBy.TryGetValue(uid, out int remover) && remover != clientId;
 		}
 
+		public static string DescribeRemover(long uid)
+		{
+			int remover;
+			lock (removedBy)
+				if (!removedBy.TryGetValue(uid, out remover)) return "never seen";
+			if (remover == UnknownRemover) return "removed by the server";
+			return $"removed by client {remover} '{Presence.PresenceRegistry.Get(remover)?.Username ?? "left"}'";
+		}
+
 		public static IEnumerable<long> StillHeld(InventoryDelta delta)
 		{
 			var inventory = GameDataManager.CurrentState.InventoryState;

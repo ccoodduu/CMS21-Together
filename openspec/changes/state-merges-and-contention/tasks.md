@@ -221,27 +221,27 @@ the ledger's "accept" rows (S1 fixed; no silent drops for I3, I7, E4, M8, C4, J2
 
 Independent of row 18 and of parts 1 and 2 (except that the dropped-transaction step needs task 3.5); can start now.
 
-- [ ] 12.1 Inventory and repair answers per design D16: an `Update` of a missing item answers with its `Remove`; an
+- [x] 12.1 Inventory and repair answers per design D16: an `Update` of a missing item answers with its `Remove`; an
       `Add` of a present item answers with the stored copy as `Update` when it differs; a refused `PartRepair` adds the
       item's `Remove`. Harness `inv-send <add|update|remove> <uid> [condition]`. Done when the inventory and repair
       steps of `server-answers` (written in 12.5) pass.
-- [ ] 12.2 Upgrade, parking, delete and placement answers per D16: `GarageUpgradeHandler` sends `GarageState` and
+- [x] 12.2 Upgrade, parking, delete and placement answers per D16: `GarageUpgradeHandler` sends `GarageState` and
       `WorldState` to the requester on every refusal or no-op; the second park gets `Invalid`, the parking state and
       the loader's `CarSpawnDelete`; a delete of an empty loader is not relayed; a move of an unknown loader answers
       with `CarSpawnDelete`. Done when the upgrade, second-park and second-delete steps of `server-answers` pass and
       `economy-latejoin`, `car-parking-full` and `car-placement-race` pass.
-- [ ] 12.3 Jobs answers per D16: a dropped or refused generated order answers with the jobs snapshot; an `Unknown`
+- [x] 12.3 Jobs answers per D16: a dropped or refused generated order answers with the jobs snapshot; an `Unknown`
       accept adds `JobRemoved { Expired }` and the client message "This order is no longer available."; a second or
       out-of-bounds job end adds the jobs snapshot to `WorldState`. Server console `jobs expire <id>`. Done when the
       order, expired-accept and second-end steps of `server-answers` pass and `jobs` and `jobs-latejoin` pass.
-- [ ] 12.4 Seats per D17: `PlayerHandlers.OnPlayerPresence` keeps the first holder, stores the second record without
+- [x] 12.4 Seats per D17: `PlayerHandlers.OnPlayerPresence` keeps the first holder, stores the second record without
       seat and engine, and sends `SeatRefused` (new packet type, appended); the client leaves the seat with
       `GameScript.ExitFromInterior(true)` and shows "<name> is sitting there." `seat-engine` gains the two-player step
       of D14, both orders. Done when `seat-engine` and `presence-latejoin` pass.
-- [ ] 12.5 `scenarios/server-answers.ps1` (`# areas: economy, jobs, placement, parts`) per D14, one step per D16 row
+- [x] 12.5 `scenarios/server-answers.ps1` (`# areas: economy, jobs, placement, parts`) per D14, one step per D16 row
       with a message, each checking the loser's dump against the server right after the answer without `resync`; the
       dropped-transaction step after task 3.5. Done when it passes and fails on `main` (commit message names the steps
-      that fail there).
+      that fail there). Done 2026-10-08; the dropped-transaction step is added with task 3.5 (part 1).
 
 ## 13. Part 3: verification and docs
 

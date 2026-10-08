@@ -78,6 +78,8 @@ public static class PartTransactions
 
 	public static bool HoldsInventoryChanges => open.Any(t => !t.Delta.IsEmpty) || committed.Count > 0;
 
+	public static bool HoldsAdd(long uid) => open.Any(t => t.AbortedUntil == 0f && t.Delta.AddedItems.Any(i => i.UID == uid));
+
 	public static bool SuppressAdd(string itemId)
 	{
 		var tx = Match(itemId);

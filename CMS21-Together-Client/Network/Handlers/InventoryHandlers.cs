@@ -206,7 +206,9 @@ namespace CMS21Together.Network.Handlers
                 else if (packet.Action == ItemActionType.Remove)
                 {
                     var item = inventory.GetItem(packet.Item.UID);
-                    if (item != null)
+                    if (item != null && Logic.Car.Parts.PartTransactions.HoldsAdd(packet.Item.UID))
+                        Log.Info($"[InventoryHandlers] Remove of item {packet.Item.UID} skipped: an open part change added it and has not been sent yet.");
+                    else if (item != null)
                         inventory.Delete(item);
                 }
                 else if (packet.Action == ItemActionType.Update)
@@ -239,6 +241,11 @@ namespace CMS21Together.Network.Handlers
                 else if (packet.Action == ItemActionType.Remove)
                 {
                     Singleton<GameManager>.Instance.Inventory.DeleteGroup(packet.GroupItem.UID);
+                }
+                else if (packet.Action == ItemActionType.Update && Singleton<GameManager>.Instance.Inventory.GetGroup(packet.GroupItem.UID) != null)
+                {
+                    Singleton<GameManager>.Instance.Inventory.DeleteGroup(packet.GroupItem.UID);
+                    Singleton<GameManager>.Instance.Inventory.AddGroup(packet.GroupItem.ToGameGroupItem());
                 }
             }
             finally

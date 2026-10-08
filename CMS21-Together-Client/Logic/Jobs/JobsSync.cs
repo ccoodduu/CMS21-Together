@@ -98,7 +98,8 @@ public static class JobsSync
 		if (!packet.Approved)
 		{
 			Log.Info($"[Jobs] Accept of order {packet.JobId} refused: {packet.Reason}.");
-			UIManager.Get()?.ShowInfoWindow(packet.Reason == "AlreadyTaken" ? "Another player took this order." : "Another order is being taken right now. Try again in a moment.");
+			if (packet.Reason == "Unknown") ModNotify.ShowToast("This order is no longer available.");
+			else UIManager.Get()?.ShowInfoWindow(packet.Reason == "AlreadyTaken" ? "Another player took this order." : "Another order is being taken right now. Try again in a moment.");
 			return;
 		}
 		var job = FindOpen(packet.JobId);

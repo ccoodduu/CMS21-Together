@@ -29,6 +29,19 @@ public static class SessionCommands
         return new Dictionary<string, object> { ["id"] = item.ID, ["uid"] = item.UID };
     }
 
+    [HarnessCommand("inv-send")]
+    private static object InvSend(string args)
+    {
+        var parts = (args ?? "").Split(new[] { ' ' }, StringSplitOptions.RemoveEmptyEntries);
+        if (parts.Length < 2 || parts.Length > 3 || !Enum.TryParse(parts[0], true, out ItemActionType action))
+            throw new ArgumentException("usage: inv-send <add|update|remove> <uid> [condition]");
+        if (Client.Instance == null || !Client.Instance.IsConnected) throw new InvalidOperationException("not connected");
+        var item = Singleton<GameManager>.Instance.Inventory.GetItem(long.Parse(parts[1])) ?? throw new ArgumentException($"no item {parts[1]}");
+        if (parts.Length == 3) item.Condition = float.Parse(parts[2], System.Globalization.CultureInfo.InvariantCulture);
+        Client.Instance.Send(new InventoryItemActionPacket { Action = action, Item = item.ToModItem() });
+        return new Dictionary<string, object> { ["action"] = action.ToString(), ["id"] = item.ID, ["uid"] = item.UID, ["condition"] = item.Condition };
+    }
+
     [HarnessCommand("junkyard-buy")]
     private static object JunkyardBuy(string args)
     {

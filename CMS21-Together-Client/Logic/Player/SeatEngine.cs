@@ -1,8 +1,11 @@
 using CMS21_Together_Core.Data;
+using CMS21_Together_Core.Network.Packets;
 using CMS21_Together_Core.Logging;
 using CMS21Together.Data;
 using CMS21Together.Logic.Car.Placement;
+using CMS21Together.Logic.Tools;
 using CMS21Together.Network;
+using CMS21Together.UI;
 using HarmonyLib;
 using MelonLoader;
 using UnityEngine;
@@ -141,6 +144,18 @@ public static class SeatEngine
 		EngineRunning = running;
 		EngineRpm = rpm;
 		PresenceManager.PublishLocal();
+	}
+
+	public static void OnSeatRefused(SeatRefusedPacket packet)
+	{
+		if (pendingLoader == packet.CarLoaderID && pendingLeft == packet.SeatLeft) pendingLoader = PlayerPresenceRecord.NoCar;
+		if (SeatCarLoaderId != packet.CarLoaderID || SeatLeft != packet.SeatLeft) return;
+		var game = GameScript.Get();
+		if (game == null) return;
+		Log.Info($"[Presence] Seat {(packet.SeatLeft ? "left" : "right")} of car {packet.CarLoaderID} is taken by player {packet.HolderPlayerId}; leaving it.");
+		if (EngineCarLoaderId == packet.CarLoaderID) Singleton<GameManager>.Instance?.EngineAudioController?.EngineStop();
+		game.StartCoroutine(game.ExitFromInterior(true));
+		ModNotify.ShowToast($"{ToolSync.PlayerName(packet.HolderPlayerId)} is sitting there.");
 	}
 
 	private static void SetSeat(int loader, bool left)

@@ -70,7 +70,11 @@ namespace CMS21_Together_Server.Network.Handlers
                 CarDetailsStore.SendTo(packet.CarLoaderID, (int)clientId);
                 return;
             }
-            CarPartsStore.ClearLoader(packet.CarLoaderID, ClearReason.Deleted);
+            if (!CarPartsStore.ClearLoader(packet.CarLoaderID, ClearReason.Deleted))
+            {
+                Logger.Info($"[Cars] Delete of empty loader {packet.CarLoaderID} from client {clientId}: nothing to delete, not relayed.");
+                return;
+            }
             Server.SendToClients(packet, (int)clientId);
         }
     }
