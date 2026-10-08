@@ -138,5 +138,7 @@ public enum PacketTypes
 	ShopListChange,
 	ShopListState,
 
-	SeatRefused
+	SeatRefused,
+
+	RideUpdate
 }

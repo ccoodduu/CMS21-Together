@@ -120,10 +120,10 @@ public static class PresenceManager
 	{
 		var record = player.Record;
 
+		bool riding = Driving.RideAlong.TryGetAvatarSeat(record.PlayerId, out var seat, out var seatRotation);
 		bool visible = record.Scene == ClientScene.LocalScene
 		               && SharesScene(record)
-		               && record.LastMovement != null
-		               && record.LastMovement.Scene == record.Scene;
+		               && (riding || record.LastMovement != null && record.LastMovement.Scene == record.Scene);
 		if (!visible)
 		{
 			DestroyAvatar(player);
@@ -132,7 +132,7 @@ public static class PresenceManager
 
 		if (!player.HasAvatar)
 		{
-			player.Avatar = CreateAvatar(record);
+			player.Avatar = riding ? CreateAvatar(record, seat, seatRotation) : CreateAvatar(record);
 			if (player.Avatar == null) return;
 		}
 		player.Avatar.gameObject.SetActive(record.SeatCarLoaderId == PlayerPresenceRecord.NoCar);
@@ -199,12 +199,30 @@ public static class PresenceManager
 		var movement = record.LastMovement;
 		var position = new Vector3(movement.Position.X, movement.Position.Y, movement.Position.Z);
 		var rotation = new Quaternion(movement.Rotation.X, movement.Rotation.Y, movement.Rotation.Z, movement.Rotation.W);
+		var instance = InstantiateAvatar(record, position, rotation);
+		ApplyMovement(instance, movement);
+		return instance;
+	}
+
+	private static PlayerInstance CreateAvatar(PlayerPresenceRecord record, Vector3 position, Quaternion rotation)
+	{
+		if (!ModGameManager.PlayerPrefab)
+		{
+			Log.Warn("Cannot create an avatar, player prefab is null.");
+			return null;
+		}
+		var instance = InstantiateAvatar(record, position, rotation);
+		instance.UpdateNetworkState(position, rotation, Vector3.zero, 0f, true, true, false);
+		return instance;
+	}
+
+	private static PlayerInstance InstantiateAvatar(PlayerPresenceRecord record, Vector3 position, Quaternion rotation)
+	{
 		GameObject avatar = Object.Instantiate(ModGameManager.PlayerPrefab, position, rotation);
 		avatar.SetActive(true);
 		avatar.name = $"Player[{record.PlayerId}]";
 		var instance = avatar.AddComponent<PlayerInstance>();
 		instance.PlayerId = record.PlayerId;
-		ApplyMovement(instance, movement);
 		Log.Debug($"[Presence] Avatar for player {record.PlayerId} at ({position.x:F2},{position.y:F2},{position.z:F2}).");
 		return instance;
 	}

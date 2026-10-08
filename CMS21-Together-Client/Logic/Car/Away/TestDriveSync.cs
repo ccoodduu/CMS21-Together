@@ -54,6 +54,7 @@ public static class TestDriveSync
 	public static bool HoldDeparture(string sceneName, SceneType sceneType)
 	{
 		if (sceneType != SceneType.TestTrack || !Connected || ClientScene.LocalScene != GameScene.Garage) return false;
+		if (Driving.RideAlong.IsPassenger) return false;
 		int loader = LoaderOfSelectedCar();
 		if (loader < 0 || CarAwaySync.IsMine(loader, CarAwayKind.TestTrack)) return false;
 

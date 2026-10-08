@@ -27,6 +27,9 @@ namespace CMS21_Together_Server.Data.Cars
 
 		private static readonly Dictionary<int, Away> claims = new Dictionary<int, Away>();
 
+		public static event System.Action<int, int, CarAwayKind> Granted;
+		public static event System.Action<int, int, CarAwayKind> Released;
+
 		public static void Initialize()
 		{
 			CarPartsStore.LoaderCleared += (loader, _, _) => Drop(loader, "car cleared");
@@ -75,6 +78,7 @@ namespace CMS21_Together_Server.Data.Cars
 			Server.SendToClients(update, exceptClient: clientId);
 			update.RequestId = packet.RequestId;
 			Server.SendToClient(update, clientId);
+			Granted?.Invoke(packet.CarLoaderID, clientId, packet.Kind);
 		}
 
 		public static void OnRelease(int clientId, CarAwayReleasePacket packet)
@@ -146,6 +150,7 @@ namespace CMS21_Together_Server.Data.Cars
 			{
 				CarLoaderID = loader, SpawnSeq = away.SpawnSeq, Kind = away.Kind, OwnerPlayerId = -1, SpecialState = specialState,
 			});
+			Released?.Invoke(loader, away.Owner, away.Kind);
 		}
 	}
 }

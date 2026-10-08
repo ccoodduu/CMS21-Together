@@ -123,6 +123,9 @@ namespace CMS21_Together_Server.Network
 					Logger.Info("Away:");
 					foreach (string line in CarAwayRegistry.Describe(Data.ServerTime.Time))
 						Logger.Info(line);
+					Logger.Info("Rides:");
+					foreach (string line in Data.Presence.Rides.Describe(Data.ServerTime.Time))
+						Logger.Info(line);
 					break;
 
 				case "economy":
