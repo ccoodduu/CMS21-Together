@@ -2,6 +2,22 @@
 
 Newest first. One entry per work session.
 
+## 2026-10-07 (22:00–23:45) — audit, row 19 drafted, harness input guard; paused for the night
+
+- `main` = `6dcd638`. Race and drift audit (`docs/audits/race-and-drift-audit.md`, 80 scenarios). Gap 5 fixed
+  (`d1dd908`, `car-gone-inflight`). Playtest finding 7 fixed (`6ac54e6`: builds of one version and build kind join
+  when the protocol matches). New playtest build `dev.935` on the Desktop. Headless test games read no keyboard and
+  open no web/Discord/store pages (`3db16a4`).
+- **Resume here (2026-10-08):**
+  1. Row 18 `part-locks` (branch `change/part-locks`, worktree `CMS21-Together-wt/part-locks`): see "Resume here" at
+     the top of its tasks.md; the switch-over (5.1) was in progress on lane 1.
+  2. Row 19 `state-merges-and-contention` (branch `change/state-merges`, worktree `CMS21-Together-wt/state-merges`):
+     revision after its review (`review.md`, Resolution section) plus the user's decisions in QUESTIONS.md
+     (Answered, late evening): fix seats (S1); every refused/ignored action reaches the acting client.
+  3. Row 15 `change/shared-outdoor-scenes`: only `outdoor-scale` on lane 3 left, then merge.
+  4. 4-hour soak on lane 3 (`Run-Soak.ps1 -Hours 4 -Lane 3 -Headless C,D`, storms every 20 min) when the PC can run
+     unattended; row 18's lane-1 runs pause meanwhile. Daily regression on main afterwards.
+
 ## 2026-10-07 (21:00–22:00) — playtest findings 3, 4 and 5 fixed
 
 - Lane 2. Each fix has a scenario that fails without it; with the fixes, the three scenarios and the smoke set pass.
