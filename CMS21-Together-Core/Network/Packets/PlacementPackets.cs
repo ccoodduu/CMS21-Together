@@ -49,6 +49,8 @@ namespace CMS21_Together_Core.Network.Packets
         public int CarLoaderID;
         public int FromPlace;
         public int ToPlace;
+        [OptionalField] public int ToLiftState;
+        [OptionalField] public int FromLiftState;
     }
 
     [Serializable]

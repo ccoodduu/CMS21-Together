@@ -12,7 +12,7 @@ public class ClientTCP
 {
 	public TcpClient socket;
     private NetworkStream stream;
-    private Packet receivedData;
+    private PacketFramer receivedData;
     private byte[] receiveBuffer;
 
     public void Connect(string ip, int port)
@@ -26,7 +26,7 @@ public class ClientTCP
             };
 
             receiveBuffer = new byte[4096];
-            receivedData = new Packet();
+            receivedData = new PacketFramer();
 
             socket.BeginConnect(ip, port, ConnectCallback, null);
         }
@@ -76,11 +76,9 @@ public class ClientTCP
             }
             ServerWatchdog.MarkReceived();
 
-            byte[] data = new byte[byteLength];
-            Array.Copy(receiveBuffer, data, byteLength);
-            
-            receivedData.Reset(HandleData(data));
-            
+            if (!receivedData.Feed(receiveBuffer, byteLength, OnPacket))
+                Log.Warn("A packet length of zero or less from the server; dropped the buffered bytes.");
+
             stream.BeginRead(receiveBuffer, 0, 4096, ReceiveCallback, null);
         }
         catch
@@ -89,47 +87,24 @@ public class ClientTCP
         }
     }
 
-    private bool HandleData(byte[] data)
+    private static void OnPacket(byte[] packetBytes)
     {
-        int packetLength = 0;
-        receivedData.SetBytes(data);
-
-        if (receivedData.UnreadLength() >= 4)
+        ThreadManager.ExecuteOnMainThread<object>((_) =>
         {
-            packetLength = receivedData.ReadInt();
-            if (packetLength <= 0) return true;
-        }
-
-        while (packetLength > 0 && packetLength <= receivedData.UnreadLength())
-        {
-            byte[] packetBytes = receivedData.ReadBytes(packetLength);
-            
-            ThreadManager.ExecuteOnMainThread<object>((_) =>
+            using (Packet packet = new Packet(packetBytes))
             {
-                using (Packet packet = new Packet(packetBytes))
+                int packetId = packet.ReadInt();
+                try
                 {
-                    int packetId = packet.ReadInt();
-                    try 
-                    {
-                        object dataObject = packet.Read<object>();
-                        PacketRouter.Dispatch((PacketTypes)packetId, dataObject, 0);
-                    }
-                    catch (Exception ex)
-                    {
-                        Log.Error($"Error reading packet {packetId}: {ex.Message}");
-                    }
+                    object dataObject = packet.Read<object>();
+                    PacketRouter.Dispatch((PacketTypes)packetId, dataObject, 0);
                 }
-            }, null); 
-
-            packetLength = 0;
-            if (receivedData.UnreadLength() >= 4)
-            {
-                packetLength = receivedData.ReadInt();
-                if (packetLength <= 0) return true;
+                catch (Exception ex)
+                {
+                    Log.Error($"Error reading packet {packetId}: {ex.Message}");
+                }
             }
-        }
-        if (packetLength <= 1) return true;
-        return false;
+        }, null);
     }
 
     public void SendData(Packet packet)

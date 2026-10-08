@@ -14,14 +14,35 @@ namespace CMS21Together.Network.Handlers
         private static bool isProcessingSync = false;
         private static readonly System.Collections.Generic.Queue<System.Action> heldDuringFullSync = new System.Collections.Generic.Queue<System.Action>();
         private static bool fullSyncOpen;
+        private static bool waitingForInventory;
+        private static bool replaying;
 
         public static bool IgnoreInventoryHooks = false;
 
-        public static bool HoldDuringFullSync(System.Action apply)
+        // Also while a scene loads: GameManager's inventory is gone between the old scene and the new one.
+        public static bool HoldUntilReady(System.Action apply)
         {
-            if (!fullSyncOpen) return false;
+            if (!fullSyncOpen && (replaying || heldDuringFullSync.Count == 0) && InventoryAvailable()) return false;
             heldDuringFullSync.Enqueue(apply);
+            if (!fullSyncOpen && !waitingForInventory)
+            {
+                waitingForInventory = true;
+                MelonLoader.MelonCoroutines.Start(ReplayWhenAvailable());
+            }
             return true;
+        }
+
+        private static bool InventoryAvailable()
+        {
+            var manager = Singleton<GameManager>.Instance;
+            return manager != null && manager.Inventory != null && manager.Warehouse != null;
+        }
+
+        private static System.Collections.IEnumerator ReplayWhenAvailable()
+        {
+            while (fullSyncOpen || !InventoryAvailable()) yield return null;
+            waitingForInventory = false;
+            ReplayHeld();
         }
 
         public static void ResetHeld()
@@ -32,18 +53,26 @@ namespace CMS21Together.Network.Handlers
 
         private static void ReplayHeld()
         {
-            if (heldDuringFullSync.Count > 0) Log.Debug($"[InventoryHandlers] Replaying {heldDuringFullSync.Count} inventory changes received during the full sync.");
-            while (heldDuringFullSync.Count > 0)
+            if (heldDuringFullSync.Count > 0) Log.Debug($"[InventoryHandlers] Replaying {heldDuringFullSync.Count} inventory changes held during a full sync or a scene load.");
+            replaying = true;
+            try
             {
-                var apply = heldDuringFullSync.Dequeue();
-                try
+                while (heldDuringFullSync.Count > 0)
                 {
-                    apply();
+                    var apply = heldDuringFullSync.Dequeue();
+                    try
+                    {
+                        apply();
+                    }
+                    catch (System.Exception ex)
+                    {
+                        Log.Error($"[InventoryHandlers] Replaying an inventory change failed: {ex.Message}");
+                    }
                 }
-                catch (System.Exception ex)
-                {
-                    Log.Error($"[InventoryHandlers] Replaying an inventory change failed: {ex.Message}");
-                }
+            }
+            finally
+            {
+                replaying = false;
             }
         }
 
@@ -164,7 +193,7 @@ namespace CMS21Together.Network.Handlers
         [PacketHandler(PacketTypes.InventoryItemAction)]
         public static void HandleInventoryItemAction(long clientId, InventoryItemActionPacket packet)
         {
-            if (HoldDuringFullSync(() => HandleInventoryItemAction(clientId, packet))) return;
+            if (HoldUntilReady(() => HandleInventoryItemAction(clientId, packet))) return;
             IgnoreInventoryHooks = true;
             try
             {
@@ -198,7 +227,7 @@ namespace CMS21Together.Network.Handlers
         [PacketHandler(PacketTypes.InventoryGroupItemAction)]
         public static void HandleInventoryGroupItemAction(long clientId, InventoryGroupItemActionPacket packet)
         {
-            if (HoldDuringFullSync(() => HandleInventoryGroupItemAction(clientId, packet))) return;
+            if (HoldUntilReady(() => HandleInventoryGroupItemAction(clientId, packet))) return;
             IgnoreInventoryHooks = true;
             try
             {
@@ -223,7 +252,7 @@ namespace CMS21Together.Network.Handlers
         [PacketHandler(PacketTypes.WarehouseAction)]
         public static void HandleWarehouseAction(long clientId, WarehouseActionPacket packet)
         {
-            if (HoldDuringFullSync(() => HandleWarehouseAction(clientId, packet))) return;
+            if (HoldUntilReady(() => HandleWarehouseAction(clientId, packet))) return;
             IgnoreInventoryHooks = true;
             try
             {

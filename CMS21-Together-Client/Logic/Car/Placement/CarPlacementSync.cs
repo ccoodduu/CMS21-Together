@@ -37,9 +37,22 @@ public static class CarPlacementSync
 			__result = false;
 			return false;
 		}
-		Log.Info($"[Placement] Loader {loader}: moving {from} -> {to}.");
-		Client.Instance.Send(new CarPlaceChangeRequestPacket { CarLoaderID = loader, FromPlace = from, ToPlace = to });
+		var other = CarLoaderPlaces.Get().GetCarLoaderForPlace((CarPlace)to);
+		int toLift = LiftStateAfterArrival(__instance.carLoader, to);
+		int fromLift = other == null ? 0 : LiftStateAfterArrival(other, from);
+		Log.Info($"[Placement] Loader {loader}: moving {from} -> {to} (lift states after the move: to {toLift}, from {fromLift}).");
+		Client.Instance.Send(new CarPlaceChangeRequestPacket { CarLoaderID = loader, FromPlace = from, ToPlace = to, ToLiftState = toLift, FromLiftState = fromLift });
 		return true;
+	}
+
+	// ChangeCarPos raises the lift to Middle when the car it puts on a lift misses a wheel or has wheels of different
+	// sizes on one axle (native NotificationCenter.<ChangeCarPos>d__20 states 4 and 6).
+	public static int LiftStateAfterArrival(CarLoader carLoader, int place)
+	{
+		if (place != (int)CarPlace.CarLifter1 && place != (int)CarPlace.CarLifter2) return 0;
+		bool unsteady = carLoader.CheckIfHaveWheels() == CheckCarCanDriveState.MissingWheels
+			|| !carLoader.FrontWheelsHaveThisSameSize() || !carLoader.RearWheelsHaveThisSameSize();
+		return unsteady ? (int)CarLifterState.Middle : 0;
 	}
 
 	public static void OnPlaceChanged(CarPlaceChangedPacket packet)

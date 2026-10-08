@@ -11,6 +11,7 @@ namespace CMS21_Together_Server.Data.Placement
 	public static class PlacementRules
 	{
 		public const int OnFloor = 0;
+		public const int Middle = 1;
 		public const int Up = 2;
 		public const int CarLifter1Place = 3;
 		public const int CarLifter2Place = 4;
@@ -42,6 +43,17 @@ namespace CMS21_Together_Server.Data.Placement
 			if (lifter < 0 || LifterState(lifter) == OnFloor) return;
 			SetLifter(lifter, OnFloor);
 			Logger.Info($"[Placement] Lift {lifter} reset to the floor (no car on it any more).");
+		}
+
+		// The game raises a lift to Middle by itself when the car put on it cannot stand on its wheels; the client
+		// that moves the car tells the server which state its game ends in.
+		public static void OnCarArrived(int place, int loader, int liftState)
+		{
+			int lifter = LifterAtPlace(place);
+			if (lifter < 0 || liftState != Middle || LifterState(lifter) != OnFloor) return;
+			SetLifter(lifter, Middle);
+			Logger.Info($"[Placement] Lift {lifter} raised to the middle: loader {loader} arrived without a full set of wheels.");
+			SendLifter(lifter, instant: true);
 		}
 
 		public static void OnLoaderCleared(int loader, CarLoaderEntry removed, ClearReason reason)
