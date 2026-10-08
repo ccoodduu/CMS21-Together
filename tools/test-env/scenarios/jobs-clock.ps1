@@ -168,12 +168,13 @@ $mark = Get-ServerLogMark
 Send-HarnessCommand -Instance $b -Verb orders-accept -Arguments "$($o8.Id)" | Out-Null
 $claimed = Wait-Line "\[Jobs\] Order $($o8.Id) claimed by client" $mark 15
 Check ([bool]$claimed) "step 7: B claimed order $($o8.Id)"
-$o9 = Wait-Order "step 7" $o8.Next 60; Decline $o9
+$o9 = Wait-Order "step 7" $(if ($claimed) { $claimed.Next } else { $o8.Next }) 60; Decline $o9
 if ($claimed) { Check-Time "step 7 B's accept 15 s after an order" $o9 ($claimed.T + 30) }
 
 # 8 (regression): taking the story mission leaves the clock alone.
 $mission = @((Send-HarnessCommand -Instance $a -Verb dump).jobs.orders | Where-Object { $_.IsMission }) | Select-Object -First 1
 if ($mission -and $o9) {
+    Check ([bool](Wait-Line "\[Jobs\] Job $($o8.Id) started" 0 60)) "step 8: B's job $($o8.Id) started"
     Wait-Until ($o9.T + 10)
     $mark = Get-ServerLogMark
     Send-HarnessCommand -Instance $a -Verb orders-accept -Arguments "$($mission.id)" | Out-Null
