@@ -39,6 +39,16 @@ namespace CMS21_Together_Server.Data.Diagnostics
 			string saveText = save.ToString();
 			Expect(!saveText.Contains("k1k1k1") && saveText.Contains("\"Name\": \"A\"") && saveText.Contains("Money"), "save copy drops players[].Key and keeps the rest");
 
+			string identity = "guid:5e4d3c2b1a09f8e7d6c5";
+			var jobs = new CMS21_Together_Core.Data.JobsState();
+			jobs.ActiveJobs.Add(new CMS21_Together_Core.Data.ActiveJobEntry { Contributors = { Presence.PlayerRecords.ShortKey(identity) } });
+			var withJobs = JObject.Parse($"{{\"Sections\":{{\"players\":{{\"Data\":{{\"Records\":[{{\"Key\":\"{identity}\"}}]}}}}}}}}");
+			withJobs["Sections"]["jobs"] = new JObject { ["Data"] = JObject.FromObject(jobs) };
+			var jobSecrets = Redaction.SecretValues(withJobs["Sections"]?[Redaction.PlayersSection]).ToList();
+			Redaction.DropPlayerKeys(withJobs);
+			string jobsText = Redaction.Scrub(withJobs.ToString(), jobSecrets);
+			Expect(!jobsText.Contains(identity) && !jobsText.Contains("1a09f8e7d6c5") && jobsText.Contains("guid:5e4d3c2b"), "a jobs section names contributors by short key, never by identity key");
+
 			var json = JObject.Parse("{\"PlayerKey\":\"p9p9p9\",\"Hotkey\":\"F8\",\"Nested\":{\"token\":\"t1t1t1\"}}");
 			Redaction.RedactJson(json);
 			Expect(!json.ToString().Contains("p9p9p9") && !json.ToString().Contains("t1t1t1") && json.ToString().Contains("F8"), "JSON secrets redacted");

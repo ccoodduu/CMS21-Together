@@ -142,5 +142,7 @@ public enum PacketTypes
 
 	RideUpdate,
 
-	OrderRequest
+	OrderRequest,
+
+	JobStatsAward
 }

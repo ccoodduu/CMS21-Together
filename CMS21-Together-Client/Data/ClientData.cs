@@ -33,6 +33,7 @@ public static class ClientData
 		Logic.Car.Placement.ParkingSync.Reset();
 		Logic.Car.CarSpawnManager.Reset();
 		Logic.Jobs.JobsSync.Reset();
+		Logic.Jobs.JobStats.Reset();
 		Logic.ShopList.ShopListSync.Reset();
 		Logic.Car.Details.CarDetailsSync.Reset();
 		PartChangeTracker.Reset();

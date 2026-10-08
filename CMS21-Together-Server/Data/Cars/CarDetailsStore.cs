@@ -83,7 +83,10 @@ namespace CMS21_Together_Server.Data.Cars
 			}
 			missingSince.Remove(packet.CarLoaderID);
 			if (!packet.IsFull)
+			{
 				Logger.Debug($"[CarDetails] Loader {packet.CarLoaderID}: update {packet.ClientSeq} from client {clientId} ({string.Join(", ", DetailsMerge.CarriedSignatures(incoming, packet.WheelMask, packet.AlignmentMask).Keys.Take(8))}).");
+				Jobs.JobContributors.OnCarChange(packet.CarLoaderID, clientId, "car details");
+			}
 			packet.Details = incoming;
 			packet.SourceClientId = clientId;
 			Server.SendToClients(packet);
