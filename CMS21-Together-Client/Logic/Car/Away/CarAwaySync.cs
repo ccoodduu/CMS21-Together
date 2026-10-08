@@ -68,7 +68,7 @@ public static class CarAwaySync
 		else
 		{
 			Log.Info($"[Away] Request {packet.RequestId} for loader {request.Loader} refused: {packet.Refusal}.");
-			request.OnRefused?.Invoke(packet.Refusal, packet.OwnerPlayerId);
+			request.OnRefused?.Invoke(packet.Refusal, packet.Refusal == CarAwayRefusal.Seated ? packet.HolderPlayerId : packet.OwnerPlayerId);
 		}
 	}
 

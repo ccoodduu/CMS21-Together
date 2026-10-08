@@ -56,17 +56,21 @@ namespace CMS21_Together_Server.Data.Cars
 			var entry = CarPartsStore.Get(packet.CarLoaderID);
 			claims.TryGetValue(packet.CarLoaderID, out var current);
 			var refusal = CarAwayRefusal.None;
+			int seated = packet.Kind == CarAwayKind.PathTest ? SeatedOther(packet.CarLoaderID, clientId) : -1;
 			if (entry == null || entry.SpawnSeq != packet.SpawnSeq || !entry.HasBaseline) refusal = CarAwayRefusal.NotReady;
 			else if (current != null && current.Owner != clientId) refusal = CarAwayRefusal.Busy;
 			else if (CarLocks.HeldByOther(packet.CarLoaderID, clientId)) refusal = CarAwayRefusal.InUse;
+			else if (seated >= 0) refusal = CarAwayRefusal.Seated;
 
 			if (refusal != CarAwayRefusal.None)
 			{
-				Logger.Info($"[Away] {packet.Kind} on loader {packet.CarLoaderID} refused for client {clientId}: {refusal}.");
+				Logger.Info($"[Away] {packet.Kind} on loader {packet.CarLoaderID} refused for client {clientId}: {refusal}"
+				            + (refusal == CarAwayRefusal.Seated ? $" (client {seated} sits in the car)." : "."));
 				Server.SendToClient(new CarAwayUpdatePacket
 				{
 					CarLoaderID = packet.CarLoaderID, SpawnSeq = packet.SpawnSeq, Kind = current?.Kind ?? packet.Kind,
 					OwnerPlayerId = current?.Owner ?? -1, RequestId = packet.RequestId, Refusal = refusal,
+					HolderPlayerId = refusal == CarAwayRefusal.Seated ? seated : -1,
 				}, clientId);
 				return;
 			}
@@ -80,6 +84,9 @@ namespace CMS21_Together_Server.Data.Cars
 			Server.SendToClient(update, clientId);
 			Granted?.Invoke(packet.CarLoaderID, clientId, packet.Kind);
 		}
+
+		private static int SeatedOther(int loader, int clientId) =>
+			PresenceRegistry.All.FirstOrDefault(r => r.PlayerId != clientId && r.Scene == GameScene.Garage && r.SeatCarLoaderId == loader)?.PlayerId ?? -1;
 
 		public static void OnRelease(int clientId, CarAwayReleasePacket packet)
 		{
