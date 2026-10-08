@@ -17,7 +17,8 @@ namespace CMS21_Together_Core.Network.Packets
         Busy,
         InUse,
         NotReady,
-        Unknown
+        Unknown,
+        Seated
     }
 
     [Serializable]
@@ -40,6 +41,7 @@ namespace CMS21_Together_Core.Network.Packets
         public int OwnerPlayerId = -1;
         public int RequestId;
         public CarAwayRefusal Refusal;
+        public int HolderPlayerId = -1;
         public int SpecialState = -1;
     }
 

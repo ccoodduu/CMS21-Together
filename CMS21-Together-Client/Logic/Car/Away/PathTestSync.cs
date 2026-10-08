@@ -1,7 +1,9 @@
 using System.Linq;
+using CMS21_Together_Core.Data.Enum;
 using CMS21_Together_Core.Logging;
 using CMS21_Together_Core.Network.Packets;
 using CMS21Together.Data;
+using CMS21Together.Logic.Player;
 using CMS21Together.Network;
 using CMS21Together.UI;
 using HarmonyLib;
@@ -31,21 +33,43 @@ public static class PathTestSync
 	{
 		if (!Active || __instance.carLoader == null) return true;
 		int loader = CarLoaderPlaces.Get().GetCarLoaderId(__instance.carLoader);
-		return loader < 0 || !CarAwaySync.BlockIfLocked(loader, "test path");
+		return loader < 0 || !CarAwaySync.BlockIfLocked(loader, "test path") && !BlockIfSeated(loader);
 	}
+
+	private static bool BlockIfSeated(int loader)
+	{
+		var seated = PresenceManager.Roster.Values.FirstOrDefault(p => p.Record.Scene == GameScene.Garage && p.Record.SeatCarLoaderId == loader);
+		if (seated == null) return false;
+		CarAwaySync.LastBlocked = $"test path on loader {loader}";
+		Log.Info($"[PathTest] Loader {loader}: not started, player {seated.Record.PlayerId} sits in the car.");
+		ModNotify.ShowToast(SeatedMessage(seated.Record.PlayerId));
+		return true;
+	}
+
+	private static string SeatedMessage(int player) => $"{CarAwaySync.OwnerName(player)} is sitting in the car.";
 
 	[HarmonyPatch(typeof(PathTestManager), nameof(PathTestManager.Prepare))]
 	[HarmonyPostfix]
-	private static void AfterPrepare(PathTestManager __instance)
+	private static void AfterPrepare(PathTestManager __instance, bool __runOriginal)
 	{
-		if (!Active || __instance.carLoader == null) return;
+		if (!__runOriginal || !Active || __instance.carLoader == null) return;
 		int loader = CarLoaderPlaces.Get().GetCarLoaderId(__instance.carLoader);
 		if (loader < 0) return;
 		outsideSince = -1f;
+		RequestClaim(loader);
+	}
+
+	public static void RequestClaim(int loader)
+	{
 		CarAwaySync.Request(loader, CarAwayKind.PathTest, null, (refusal, owner) =>
 		{
 			Log.Info($"[PathTest] Loader {loader}: claim refused ({refusal}); the result will not be kept.");
-			ModNotify.ShowToast(refusal == CarAwayRefusal.Busy ? $"{CarAwaySync.OwnerName(owner)} is using this car." : "Another player is working on this car.");
+			ModNotify.ShowToast(refusal switch
+			{
+				CarAwayRefusal.Busy => $"{CarAwaySync.OwnerName(owner)} is using this car.",
+				CarAwayRefusal.Seated => SeatedMessage(owner),
+				_ => "Another player is working on this car.",
+			});
 		});
 	}
 
