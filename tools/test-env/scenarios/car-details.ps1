@@ -1,7 +1,7 @@
 # areas: details, cars, connect
 # sync-car-details: A spawns a car; B gets A's details snapshot (fluids, wheels, alignment, tuning, paint, cosmetics,
-# plates, info). A changes fluids, alignment, mileage, dust and a plate locally; B follows within a few seconds. B then
-# leaves and rejoins and still has A's details (late join through the car-details snapshot).
+# plates, info). A changes fluids, alignment, mileage, dust, a plate and a plate texture locally; B follows within a few
+# seconds. B then leaves and rejoins and still has A's details (late join through the car-details snapshot).
 param($Ctx)
 
 $a, $b = $Ctx.Instances
@@ -56,6 +56,10 @@ $mark = Get-ServerLogMark
 Send-ServerCommand "cardetails 0"
 $stored = try { Wait-ServerLog -Pattern "\[CarDetails\] Loader 0: \{" -After $mark -TimeoutSec 10 } catch { $null }
 Check ($stored -match [regex]::Escape($changed.plate)) "the server stores A's plate ($($changed.plate))"
+
+$plate = Send-HarnessCommand -Instance $a -Verb cardetails-plate -Arguments "0 front Monaco"
+Check ($plate.plates.LicensePlateFrontTex -eq "Monaco") "A's front plate texture is Monaco ($($plate | ConvertTo-Json -Compress))"
+Wait-SameDetails "plate texture"
 
 Send-HarnessCommand -Instance $b -Verb to-menu | Out-Null
 Wait-HarnessStatus -Instance $b -TimeoutSec 60 -What "B in the menu" -Condition { param($s) $s.scene -eq "Menu" -and $s.playable } | Out-Null

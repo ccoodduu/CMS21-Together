@@ -1,0 +1,4 @@
+# Soak contention kinds whose fix has not landed (state-merges-and-contention D13, rule 9 "known gap").
+# A contention of a kind listed here that fails rule 8 or 9 is reported as "known gap" and counted, not failed.
+# Line format: <kind> | <gap id> | <row that closes it>. Remove the line when the kind passes.
+place-same | L4 | open, not assigned: a move whose lock was granted is refused because another player's move lock still holds the car at the target place; the mover's game has swapped both cars and does not take the refusal back, and the car-placement resend does not always undo the swap (persistent in 20261008-210843_L2; soak 20261008-204148_L2, contention 4)

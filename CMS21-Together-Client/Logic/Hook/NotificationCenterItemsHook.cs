@@ -61,11 +61,14 @@ namespace CMS21Together.Logic.Hook
                         Item = itemToMove.ToModItem()
                     };
                     Client.Instance.Send(packet);
+                    LastWarehouseMoveAt = UnityEngine.Time.realtimeSinceStartup;
                     return false;
                 }
             }
             return true;
         }
+
+        public static float LastWarehouseMoveAt { get; private set; } = float.MinValue;
 
         [HarmonyPatch(typeof(NotificationCenter), nameof(NotificationCenter.MoveItem), new Type[] { typeof(GroupItem), typeof(bool), typeof(string) })]
         [HarmonyPrefix]
@@ -82,6 +85,7 @@ namespace CMS21Together.Logic.Hook
                         GroupItem = itemToMove.ToModGroupItem()
                     };
                     Client.Instance.Send(packet);
+                    LastWarehouseMoveAt = UnityEngine.Time.realtimeSinceStartup;
                     return false;
                 }
             }

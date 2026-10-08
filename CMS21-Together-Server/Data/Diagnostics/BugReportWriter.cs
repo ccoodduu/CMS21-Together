@@ -98,14 +98,10 @@ namespace CMS21_Together_Server.Data.Diagnostics
 			secrets.AddRange(Redaction.SecretValues(save["Sections"]?[Redaction.PlayersSection]));
 			Redaction.DropPlayerKeys(save);
 
-			var state = new List<(string, string, Projection)>
-			{
-				(DigestMappers.WorldKey, "", ReconciliationService.Project(DigestMappers.WorldKey, "")),
-				(DigestMappers.InventoryKey, "", ReconciliationService.Project(DigestMappers.InventoryKey, "")),
-				(DigestMappers.PlacementKey, "", ReconciliationService.Project(DigestMappers.PlacementKey, "")),
-			};
+			var state = DigestMappers.GlobalKeys.Select(key => (key, "", ReconciliationService.Project(key, ""))).ToList();
 			foreach (int loader in GameDataManager.CurrentState.CarState.LoadedCars.Keys.OrderBy(k => k))
-				state.Add((DigestMappers.CarsKey, loader.ToString(), ReconciliationService.Project(DigestMappers.CarsKey, loader.ToString())));
+				foreach (string key in DigestMappers.CarKeys)
+					state.Add((key, loader.ToString(), ReconciliationService.Project(key, loader.ToString())));
 
 			var connected = Server.Clients.Values.Where(c => c.IsConnected).OrderBy(c => c.ID).ToList();
 			var players = connected.Select(c =>

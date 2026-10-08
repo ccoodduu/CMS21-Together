@@ -83,6 +83,17 @@ public static class CarDetailsCommands
         return new { mileage = details.Info.Mileage, plate = details.Plates.LicensePlateNumberFront, tinted, painted, tuned = details.Tuning.Modules.Count };
     }
 
+    [HarnessCommand("cardetails-plate")]
+    private static object SetPlate(string args)
+    {
+        var parts = Split(args, 3, "cardetails-plate <loader> front|rear <texture>");
+        var carLoader = Loaded(parts[0]);
+        bool front = parts[1] == "front";
+        CarDetailsIO.ApplyPlateTexture(carLoader, front ? CarDetailsIO.PlateFront : CarDetailsIO.PlateRear, parts[2], front);
+        CarDetailsSync.MarkDirty(carLoader, CarDetailSection.Plates);
+        return Entries(carLoader, CarDetailSection.Plates, CarDetailEntries.Plates);
+    }
+
     [HarnessCommand("cardetails-fluid")]
     private static object SetFluid(string args)
     {

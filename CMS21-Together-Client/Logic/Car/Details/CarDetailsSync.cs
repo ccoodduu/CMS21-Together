@@ -69,6 +69,20 @@ public static class CarDetailsSync
 
 	public static int KeptSends(int loader) => sendCopies.TryGetValue(loader, out var copies) ? copies.Count : 0;
 
+	public static void RememberCurrent(int loader)
+	{
+		var carLoader = CarLoaderPlaces.Get()?.GetCarLoaderByIndex(loader);
+		if (carLoader != null && carLoader.IsCarLoaded()) lastKnown[loader] = new Dictionary<string, string>(CarDetailEntries.Signatures(CarDetailsIO.Read(carLoader, CarDetailsIO.All)));
+	}
+
+	public static bool IsSettled(int loader, ModCarDetails current)
+	{
+		if (!lastKnown.TryGetValue(loader, out var known) || Busy(loader)) return false;
+		if (dirty.ContainsKey(loader) && CarDetailEntries.Signatures(current).Any(p => !known.TryGetValue(p.Key, out string last) || last != p.Value)) return false;
+		float now = Time.realtimeSinceStartup;
+		return !sendCopies.TryGetValue(loader, out var copies) || !copies.Any(c => now - c.At <= SendCopySeconds);
+	}
+
 	public static void OnCarLoading(int loader)
 	{
 		awaiting.Add(loader);

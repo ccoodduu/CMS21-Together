@@ -144,11 +144,14 @@ function Wait-CarsReady([string[]]$Instances, [int]$TimeoutSec = 120) {
     return $problems
 }
 
-# Forces one digest round ("desync check", verbose) and returns per (client, key) what the server logged for the
-# world, inventory and car-placement digests, plus the problems: a mismatch, or no line within -TimeoutSec.
+# Forces one digest round ("desync check", verbose) and returns per (client, key) what the server logged for every
+# digest key (state-merges-and-contention D11: the global keys plus cars:L and car-details:L of every loaded car),
+# plus the problems: a mismatch, or no line within -TimeoutSec.
 function Invoke-ForcedDigestCheck([string[]]$Instances, [int]$TimeoutSec = 20) {
     $ids = @($Instances | ForEach-Object { $s = Get-HarnessStatus $_; if (Test-InGarage $s) { [int]$s.playerId } })
-    $keys = @("world", "inventory", "car-placement")
+    $keys = @("world", "inventory", "car-placement", "workshop-tools", "warehouse", "garage", "jobs")
+    $loaders = @(try { Send-HarnessCommand -Instance $Instances[0] -Verb placement | ForEach-Object { [int]$_.loader } } catch { })
+    foreach ($loader in $loaders) { $keys += "cars:$loader"; $keys += "car-details:$loader" }
     $mark = Get-ServerLogMark
     Send-ServerCommand "desync check"
     $deadline = (Get-Date).AddSeconds($TimeoutSec)
