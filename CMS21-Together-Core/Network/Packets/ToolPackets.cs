@@ -20,6 +20,14 @@ namespace CMS21_Together_Core.Network.Packets
         public ToolSlotState Current;
         public string Reason;
         public int ClientSeq;
+        [System.Runtime.Serialization.OptionalField] public SlotItemOutcome Item;
+    }
+
+    public enum SlotItemOutcome
+    {
+        Unchanged,
+        Returned,
+        Gone
     }
 
     [Serializable]
