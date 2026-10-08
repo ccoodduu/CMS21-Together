@@ -51,6 +51,10 @@ Report problems with both players' `MelonLoader\Latest.log` and the server's `Lo
    money leaves (the game takes the money before it asks where the car goes). Note your money before and after.
 2. Leave and rejoin; stop the server with `/stop` and start it again: everything comes back.
 3. If something looks out of sync, press F7: the garage reloads from the server.
+4. Car salon (covered by the scenario `salon-buy`): both travel to the car salon and open the car list at the same
+   time. Each player configures a car; each sees only their own configurator car (the cars stand at the same spot),
+   which is expected. One buys a car in another version with other rims: the money drops once for both, and the car is
+   in the shared parking for both with that version and rims.
 
 ## Not shared yet
 

@@ -2,6 +2,19 @@
 
 Newest first. One entry per work session.
 
+## 2026-10-09 (00:45–02:00) — row 26 shared salon built (`feat/shared-salon`, lane 1)
+
+- Harness `salon-buy` drives the car salon as a player does (configurator, version window, rims, summary tab,
+  location window); `travel Salon` loads `Auto_salon`. The purchase path needed no change: `GameScript.BuyCar` gets
+  the configurator's car, and after an unpark both players have the chosen version and rim.
+- Guard: `Window CarVersion` allowed ("Car version (car salon)", it never passes `WindowManager.Show`, checked with the
+  guard's decisions); `Scene`/`Window Showroom` are "The showroom (main menu only)".
+- Proof `salon-buy`: fails on the old guard rules (`20261009-005105_L1_salon-buy`, guard step; the purchase steps of
+  that run failed on a harness bug fixed since) and passes (`20261009-011548_L1_salon-buy`): configured purchase paid
+  once and parked once for both, server `NoMoney` refusal answered, local refusal sends nothing.
+- Smoke plus `salon-buy`, `purchases`, `locks-select`, `locks-select-2` were running when the session paused; see the
+  next entry or `toolsuns\*_regression.json` on the branch's worktree.
+
 ## 2026-10-08/09 (23:15–00:45) — order clock, menu click fix, rows 25–31 drafted and reviewed
 
 - `main` = `310f9c3`. Server-owned order clock merged (`6b5dccd`): the server runs the order timer only while a
