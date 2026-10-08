@@ -1,4 +1,4 @@
-# areas: parts, latejoin
+# areas: parts, persistence
 # Soak 2026-10-08 (9 of 24 checkpoints): the "blocked" flag of parts behind a mounted part (brake caliper, cap and
 # stabiliser link behind a wheel) differed between clients. The game keeps it as a counter (PartScript.blockedNo) that
 # every mount adds to and every unmount takes from, so a client that applied a change through another path than the

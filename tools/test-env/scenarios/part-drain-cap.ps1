@@ -1,4 +1,4 @@
-# areas: parts, latejoin
+# areas: parts, persistence
 # Soak 2026-10-08 (confirmed desyncs "s:28.1.unmounted 0 vs 1" and "s:22.1.unmounted 0 vs 1": a power steering cap and
 # an oil filter housing cap): the receivers kept a removed drain plug or fill cap on the car, because the game's
 # HideBySavegame skips special group 1. A takes such a part off; B must show it off, also after a rejoin, and on
