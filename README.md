@@ -80,6 +80,11 @@ the game, click **Multiplayer** in the main menu.
   and the server keeps it with the session.
 - **Test drive together:** players who are on the test track at the same time see each other's car drive (it
   appears a few seconds after you arrive). Cars pass through each other and through players.
+- **Ride along:** sit in the passenger seat of a car before its driver starts a test drive, and you travel to the
+  test track with them ("Riding along with <name>."). A few seconds after you arrive you sit next to the driver: the
+  mouse turns your head, you cannot drive or steer, and the driver sees you in the passenger seat. When the driver
+  drives back to the garage or leaves the game, you come back to the garage too. Only the driver's test drive counts
+  (mileage, examined parts). To leave early, use the pause menu's return button. The test path has no ride-along yet.
 - **See each other work:** when another player takes a part off or puts it on, you see the bolts turn and the part
   slide off or on, and their avatar holds the tool. This is only a picture of what they do: the change itself
   arrives as before. Turn it off with `RemoteVisuals = false` in `UserData\MelonPreferences.cfg`.
