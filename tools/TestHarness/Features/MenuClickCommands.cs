@@ -28,6 +28,7 @@ public static class MenuClickCommands
             {
                 running,
                 points = rows.Count,
+                enabledOver = rows.Count(r => r.Enabled),
                 gameUiUnder = rows.Count(r => r.Hit != null),
                 leaks = rows.Count(r => r.Enabled && r.Hit != null),
                 leakExamples = rows.Where(r => r.Enabled && r.Hit != null).Take(5).Select(r => $"{r.X:0},{r.Y:0} -> {r.Hit}").ToList(),
