@@ -28,8 +28,13 @@ namespace CMS21_Together_Server.Network.Handlers
 
             if (packet.IsJob && (!Data.Jobs.JobsService.IsClaimedBy(packet.JobID, (int)clientId) || CarPartsStore.Get(packet.CarLoaderID) != null))
             {
-                Logger.Info($"[Cars] Job car {packet.CarToLoad} for job {packet.JobID} on loader {packet.CarLoaderID} from client {clientId} refused: no claim or the loader is in use.");
-                Server.SendToClient(new CarSpawnRejectedPacket { CarLoaderID = packet.CarLoaderID, Reason = "This order is not yours to take any more." }, (int)clientId);
+                bool claimed = Data.Jobs.JobsService.IsClaimedBy(packet.JobID, (int)clientId);
+                Logger.Info($"[Cars] Job car {packet.CarToLoad} for job {packet.JobID} on loader {packet.CarLoaderID} from client {clientId} refused: {(claimed ? "the loader is in use" : "no claim")}.");
+                Server.SendToClient(new CarSpawnRejectedPacket
+                {
+                    CarLoaderID = packet.CarLoaderID,
+                    Reason = claimed ? "Another car is already in that place." : "This order is not yours to take any more."
+                }, (int)clientId);
                 return;
             }
 
