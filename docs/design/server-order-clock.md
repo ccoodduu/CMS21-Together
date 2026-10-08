@@ -2,8 +2,7 @@
 
 The only part kept from ROADMAP row 16 (`server-game-logic`; the rest is dropped). Size M (about 2 sessions).
 Status: built on `feat/server-order-clock` (runs in section 9). Reviewed (`server-order-clock-review.md`, "ready after
-fixes"); every fix is folded in below and marked with
-its review id.
+fixes"); every fix is folded in below and marked with its review id.
 
 **Today** (row 3, `sync-orders-and-jobs`):
 
