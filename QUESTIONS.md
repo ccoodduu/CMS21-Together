@@ -117,6 +117,7 @@ draft works with:
 
 ## Answered
 
+- **Answered by the user on 2026-10-08:** no collisions between driven cars for now (row 17 part 2 keeps cars passing through each other); ride-along (row 21) is wanted.
 - **Answered by the user on 2026-10-07 (late evening), row 19 ledger:** S1 (two players in one seat) is fixed in
   row 19 (server arbitrates, the second is refused and leaves the seat). For I3, I7, E4, M8, C4, J2, J4, J5 the
   server's choice stays, but every refused, ignored or overridden action must reach the acting client with the
