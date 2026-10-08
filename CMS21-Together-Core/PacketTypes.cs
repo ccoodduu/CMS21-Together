@@ -131,5 +131,7 @@ public enum PacketTypes
 	CarLockResult,
 	CarLockUpdate,
 	CarLockRelease,
-	CarLockRenew
+	CarLockRenew,
+
+	CoopPing
 }
