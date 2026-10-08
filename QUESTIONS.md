@@ -3,16 +3,6 @@
 Open questions that block a decision. Each has the default we work with until answered.
 Answered ones move to the bottom with the answer.
 
-## Open — rows 27b and 31 (2026-10-08)
-
-Drafts in `openspec/changes/track-races/` and `openspec/changes/faster-remote-cars/` (reviewed and revised).
-
-1. **Where "Start race" lives** (row 27b, races on the race track only). **Default:** a button in the F9 session panel
-   while you are on the race track.
-2. **How fast another player's car must appear on the test track** (row 31). Today about 10 s (7 s when you are
-   already there). **Default:** aim for about 3 s after a measuring spike; the options (a real signal instead of the
-   fixed 3 s wait, keeping the copy between drives, loading before you arrive, a lighter copy) are chosen after it.
-
 ## Open — row 19 state-merges-and-contention (2026-10-08)
 
 Details in `openspec/changes/state-merges-and-contention/proposal.md` (reviewed, see `review.md`).
@@ -142,6 +132,9 @@ Answered by the user on 2026-10-08 (evening):
   27c); the long wait before another player's car appears is to be fixed (row 31); seated avatars in the garage (row
   29) and job achievements for everyone who worked on the job (row 30) are wanted. No in-game "save now" button, no
   automatic reconnect, no text chat.
+- **Row 27b:** a race is started with a "Start race" button in the F9 session panel, shown only on the race track
+  (not the game's own restart, which stays a personal restart). **Row 31:** about 3 s until another player's car
+  appears is fine, as long as loading it gives no big frame spike (no frame over 0.13 s, as in the freeze fix).
 
 
 - **Answered by the user on 2026-10-08 (row 19 part 1):** the defaults of "Open — row 19" stand; the part record base check also compares the part's quality (a part replaced by one of another quality never takes a stale edit), as recommended.
