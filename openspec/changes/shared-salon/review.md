@@ -89,3 +89,22 @@ the DLC slot).
 ## Size
 
 S–M (≈ 2–3) holds if the configurator rethink stays within spike 1.2. Plan 3.
+
+## Review resolution
+
+Applied 2026-10-08 with the user's decision of the same day: the user meant the car salon; the shared display lineup
+is dropped (M1: purchases come from the configurator's full catalog, so a shared lineup is cosmetic). The change now
+proves a salon purchase in multiplayer, proves the server's money refusal, and cleans up the guard. Size ≈ 1.
+
+- **M1** Resolved by the scope cut. The proposal and design describe the configurator purchase; the verb is
+  `salon-buy <carId> [version] [rimId]` through `SubmitCar` and the wizard; `salon-cars` is gone. (b) two configurator
+  cars at one spot is stated as not in scope. (c) spike 1.1 names the bought loader and checks whether a display car can
+  be bought.
+- **M2** Moot. The salon is not a shared outdoor instance, so `OutdoorCarSync.IndexOf` is -1 and nothing is marked
+  sold (checked in `CarPurchaseSync.Begin` on main); open question 1 states it.
+- **M3, M4** Moot (no lineup, no generator hooks).
+- **m1, m2, m4, m5** Moot (no outdoor catalog scene, no selector, no lineup comparison).
+- **m3** Fixed. D2: A `net-hold on`, server `money set` below the price, A buys, `net-hold off` → server `NoMoney`
+  answer; the plain low-money step is labelled "local refusal".
+- **m6** Fixed. `Window CarVersion` label "Car version (car salon)", owner row 26.
+- Size: ≈ 1 (S).

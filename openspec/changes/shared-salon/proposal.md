@@ -2,95 +2,73 @@
 
 ## Why
 
-The user wants "the showroom / salon" in multiplayer: travel there, look around, buy a car (2026-10-08, ROADMAP
-row 26). The game has two different places with these names, and only one of them is a shop:
+The user wants the car salon in multiplayer: travel there, look around, buy a car (2026-10-08, ROADMAP row 26). The
+user means the car salon on the map, not the main menu's Showroom viewer (answer 2026-10-08).
 
 - **The car salon** (`SceneType.Salon`, scene `Auto_salon`, `GameScene.Salon`) is the new-car dealership on the map.
-  The player travels there from the garage map (free), walks between the displayed cars, opens a car, picks a version
-  (`CarVersionWindow`, when the model has several), configures rims, tyres and paint (`SalonWizardWindow`,
-  `CMS.Salon.Configurator`) and buys it; the car goes to the garage or the parking (`CarSummaryTab` → `GameScript.BuyCar`
-  → `CarLocationWindow`). **This is already allowed in multiplayer** (guard `Scene Salon`, `Window SalonSelectCar`,
-  `Window SalonWizard`, row 6 part 2), and a purchase already goes through the server into the shared parking
-  (`CarPurchaseSync`, `CarParkRequest` with `CarLoaderID = -1`). It was only ever checked by hand.
-- **The Showroom** (`SceneType.Showroom`, scene `Showroom_2`, `ShowroomManager`, `ShowroomWindow`) is the main menu's
-  car viewer, reached only from the main menu's "Showroom" button (`MainSection` → `SelectSceneToLoad("Showroom_2",
-  Showroom)`), not from the garage map. There the player picks any car model of the game (and its version), orbits
-  the camera around it and uses the top menu: X-ray, start the engine, explode the car into its parts, change the
-  paint, toggle rust, sit inside, and "Exit" back to the menu (`ShowroomOptions`). No money, no buying, no save: it
-  is a museum. Its only way out is back to the main menu, and returning to the main menu disconnects a multiplayer
-  session (`SceneHooks`), so a connected player can never reach it. The guard entries `Scene Showroom` and
-  `Window Showroom` ("row 6 part 2", Planned) can never fire.
-
-What is still missing for the salon, from the static spike (`docs/spikes/singleplayer-features.md` section 4):
-
-1. **Two players in the salon see different cars.** `SalonManager.<LoadCars>d__6` picks the displayed models with
-   `Helper.GetRandomCars(GetCarsForScene(Salon), …)` and `<LoadCar>d__7` rolls each car's colour, per client. Avatars
-   are shown in the salon (`GameSceneInfo.ShowsAvatars(Salon)` is true), so players stand next to cars the other does
-   not have. Row 15 solved exactly this for the junkyard, barn and auction (server-chosen instance, `ICarSelector`,
-   reseeding).
-2. **Car version.** `SalonSelectCarWindow.SubmitCar` opens `CarVersionWindow` for a model with several versions by
-   calling the window's own `Show(object[])` directly, not through `WindowManager.Show`, so the guard's
-   `Window CarVersion` rule ("row 4", Planned) never sees it: the version choice already works in the salon. The
-   rule is dead and misleading. `CarVersionWindow` has three callers: the salon, the Showroom and one obfuscated
-   method; none is in the garage, so "car version" is not a garage-car feature.
-3. **No proof.** STATUS lists salon purchases as a hand check; no scenario buys a salon car.
+  The player travels there from the garage map (free), opens the salon's car list (`SalonSelectCarWindow`, filled from
+  the whole salon catalog `CarBundleLoader.GetCarsConfigDataForSalon()`), picks a model; `SubmitCar` loads it into the
+  configurator (`CMS.Salon.Configurator.LoadCar(ID, DefaultConfig)` for one version, or `CarVersionWindow` with the
+  configurator as `ICarLoaderExtension` for several), the player configures rims, tyres and paint
+  (`SalonWizardWindow`) and buys that configured car (`CarSummaryTab` → `GameScript.BuyCar` → `CarLocationWindow`). The
+  cars standing in the hall (`SalonManager.<LoadCars>d__6`, `GetRandomCars` plus one DLC car) are a random display;
+  they are not what is bought.
+- **This is already allowed in multiplayer** (guard `Scene Salon`, `Window SalonSelectCar`, `Window SalonWizard`, row 6
+  part 2), and a purchase already goes through the server into the shared parking (`CarPurchaseSync`, `CarParkRequest`
+  with `CarLoaderID = -1`; the server takes the money once in `ParkingHandlers` or refuses with `NoMoney`/
+  `ParkingFull`). It was only ever checked by hand, and no test reaches the server's money refusal: `CarSummaryTab.
+  BuyCar` checks `PlayerMoney < price` locally ("GUI_BrakKasy") before `GameScript.BuyCar`, so a plain "not enough
+  money" test only exercises the game's own check.
+- **Guard entries are misleading.** `SalonSelectCarWindow.SubmitCar` opens `CarVersionWindow` by calling the window's
+  own `Show(object[])`, not through `WindowManager.Show`, so the guard's `Window CarVersion` rule ("row 4", Planned)
+  never fires: the version choice already works in the salon. The Showroom (`Showroom_2`, the main menu's car viewer)
+  is reached only from the main menu, and returning to the main menu disconnects a session (`SceneHooks`), so its
+  guard entries `Scene Showroom` and `Window Showroom` ("row 6 part 2", Planned) can never fire either.
 
 ## What Changes
 
-- **Shared salon instance.** The salon joins row 15's outdoor instances: `OutdoorScenes.All` gains `Salon`, the
-  default of `shared_outdoor_scenes` becomes `junkyard,barn,auction,salon`. The server picks the displayed models
-  from the client-reported salon catalog (`CarBundleLoader.GetCarsForScene(Salon)`, kept inside the shared DLC set)
-  with the existing `BasicCarSelector`, plus the visit seed for the colours; every client in the salon loads exactly
-  those cars. The instance closes when the last player leaves, as for the junkyard.
-- **Hooks for the salon generator** (`SalonManager.<Generate>d__5`, `<LoadCars>d__6`, `<LoadCar>d__7` `MoveNext`):
-  hold until the instance arrives, replace the model list, reseed around the colour roll (row 15's `Reseed`).
-- **Buying stays as it is.** A salon car is a new car: buying one does not remove it from the salon (vanilla keeps the
-  display car; check in task 1.2), so there is no "sold" state to share. The purchase keeps row 6's path; the
-  configurator choices (version, rims, tyres, paint) travel inside the bought car's `NewCarData`.
-- **Configurator is local.** A player configuring a displayed car changes only their own copy of it until they buy;
-  others keep seeing the factory look. (Open question 2.)
-- **Guard clean-up.** `Scene Showroom` and `Window Showroom` become "menu only" entries (`Never`, label "The
-  showroom (main menu only)"); `Window CarVersion` becomes allowed with owner row 26 and the label "Car version
-  (salon)".
-- **Proof.** Scenario `salon-shared`: both players in the salon see the same models and colours; A buys a model with
-  several versions in a non-default version and configuration; the car lands in the shared parking with that version
-  and those rims on both clients; a purchase without money is refused and answered (D16).
+- **Proof of a salon purchase.** Scenario `salon-buy`: A buys, through the configurator, a model with several versions
+  in a non-default version with a non-default rim; the money drops by the price once on both clients, and the car lands
+  once in the shared parking for everyone with that version and rim.
+- **Server money refusal proven.** In the same scenario, the server's money is lowered after A's local check has
+  passed (A holds incoming packets, the server command `money set` lowers the money); the server refuses with
+  `NoMoney`, A is answered ("There is not enough shared money.", D16), and money and parking are unchanged on both.
+- **Guard clean-up.** `Window CarVersion` becomes allowed with owner row 26 and the label "Car version (car salon)";
+  `Scene Showroom` and `Window Showroom` become `Never` with the label "The showroom (main menu only)".
+- **Harness.** `salon-buy <carId> [version] [rimId]` (through `SalonSelectCarWindow.SubmitCar`, the version window and
+  the wizard, then the `CarSummaryTab` path like `buy-car-here`); `travel Salon` loads `Auto_salon` (today the verb
+  passes the enum name).
+- **Not in scope.** The display cars in the hall stay per client (each player sees their own random lineup), and each
+  client's configurator car stands at the same spot, so two players configuring at once each see only their own car.
+  A shared lineup was drafted and dropped by the user (2026-10-08): purchases come from the full catalog, so it would
+  be cosmetic.
 
-Hooks: `SalonManager._Generate_d__5.MoveNext`, `_LoadCars_d__6.MoveNext`, `_LoadCar_d__7.MoveNext` (prefix/postfix,
-row 15 pattern). Packets: none new (row 15's `OutdoorCatalog`, `OutdoorEnter`, `OutdoorInstance`, `OutdoorDigest`
-gain the salon as a scene value; `OutdoorInstance` reuses its car list).
+Hooks: none new. Packets: none.
 
 ## Capabilities
 
 ### New Capabilities
-- `shared-salon`: one car salon for everyone in it (same models and colours), purchases into the shared parking with
-  the chosen version and configuration, and a clear rule that the main menu's Showroom is not part of a session.
+- `shared-salon`: a car bought in the car salon, with its chosen version and configuration, reaches every player once
+  and is paid once; a purchase the server refuses is answered; the guard describes the salon and the main menu's
+  Showroom correctly.
 
 ### Modified Capabilities
-- None in `openspec/specs/` (row 15's `outdoor-scene-instances` is not archived yet; task 4.1 adds the salon there if
-  row 15 is archived first).
+- None in `openspec/specs/`.
 
 ## Impact
 
-- Core: `OutdoorScenes.All` and `DefaultSetting` (salon added), `OutdoorScenes.HasPiles` unchanged (no piles).
-- Server: `CarCatalog` accepts the salon catalog; `OutdoorInstances` opens salon instances; `ServerConfig` default.
-- Client: `Logic/Outdoor/GeneratorHooks.cs` (salon steps), `OutdoorSession` (salon), `Guard/GuardRules.cs`.
-- Harness: `salon-cars` (displayed models, versions, colours), `salon-buy <index> [version] [rim]` (opens the car,
-  picks the version through `CarVersionWindow.LoadCar`, sets the configurator, then the `CarSummaryTab` path like
-  `buy-car-here`), `travel Salon` fix (scene name `Auto_salon`); scenario `salon-shared`.
-- Depends on (merged): row 15 (outdoor instances, selector, reseed), row 6 part 2 (`CarPurchaseSync`), row 2 (parking),
-  row 9 (shared DLC set), row 10 (money).
+- Client: `Guard/GuardRules.cs` (three entries). No other client change unless spike 1.1 finds the purchase path
+  broken.
+- Harness: `salon-buy`, `travel Salon` fix; scenario `salon-buy`.
+- Docs: docs/playtest.md (the salon hand check becomes the scenario plus "configure together"), docs/try-it.md.
+- Depends on (merged): row 6 part 2 (`CarPurchaseSync`), row 2 (parking), row 10 (money), row 19 part 3 (D16 answers).
 
 ## Open questions
 
 Each has the default the draft works with.
 
-1. **Showroom.** The main menu's Showroom is a single-player car viewer that a connected player cannot reach. **Default:**
-   not part of multiplayer; the guard calls it "main menu only". If the user wants a shared viewer (two players looking
-   at the same car in `Showroom_2`), that is a separate, larger change: a new way to travel there from the garage while
-   connected, the viewer's options synced, and a way back to the garage (the scene only knows "back to menu").
-2. **Configurator preview.** **Default:** local until bought. Alternative: others see the car change while a player
-   configures it (one configurator user per car, claim like the balancer).
-3. **Stock.** Vanilla keeps a bought salon car on display. **Default:** the same (unlimited stock). Alternative: a
-   bought car disappears for everyone until the instance closes.
-4. **Salon in the shared list by default.** **Default:** yes; a host can remove `salon` from `shared_outdoor_scenes`.
+1. **Display cars buyable?** Spike 1.1 checks whether a display car in the hall can be bought at all (a `CarInfo` buy
+   path). **Default:** it cannot (purchases come only from the configurator); if it can, the purchase path is the same
+   and nothing is marked sold, because the salon is not a shared outdoor instance (`OutdoorCarSync.IndexOf` is -1
+   outside a shared instance).
+2. **Showroom.** **Default:** not part of multiplayer; the guard calls it "main menu only".
