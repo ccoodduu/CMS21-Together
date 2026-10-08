@@ -25,29 +25,41 @@ What the game offers (static spike, `docs/spikes/singleplayer-features.md` secti
 
 ## What Changes
 
-- **The server owns the look.** It stores `ModGarageLook { int[] MaterialIndexes; string TexturePack }` in the garage
-  state (save section `garage`, version bump with an empty default), sends it in the `garage` snapshot and broadcasts
-  every accepted change.
+- **The server owns the look.** It stores `ModGarageLook { int[] MaterialIndexes; string TexturePack; int
+  SectionCount }` in the garage state (save section `garage` v1 → v2, `Migrate` fills an empty look), sends it in the
+  `garage` snapshot and broadcasts every accepted change.
 - **Commit on close.** When a player closes the customisation window (`GarageCustomizationWindow.Hide` postfix), the
-  client reads every section's `SelectedMaterialIndex` and the current texture pack and sends `GarageLookUpdate` if
-  something changed. Browsing variants inside the window stays local, as the paint shop does.
-- **One player at a time.** Opening the window asks the server for the look claim (`GarageLookClaim`), like the
-  balancer lock of row 5a. A second player is refused with "<name> is customising the garage." (D16 answer, no silent
-  drop). The claim ends on close, on leaving the garage and on disconnect.
-- **Apply on every client.** Receivers write the look into the session profile's `garageCustomizationData` and run
-  the game's own load (`GarageLookManager.Load()`, `TexturePackManager.Load()`), the path `CustomLoad` uses after every
-  scene load. Setting one section from outside the window (`SetMaterialIndexForSection` + `UpdateMaterials`) throws
-  in the spike runs, because the window builds a per-section material cache first. A late joiner gets the look in the
-  `garage` snapshot before its garage finishes loading.
-- **Texture packs are best effort.** The pack id is stored and sent; a client that does not have that pack keeps the
-  default textures and shows one notice ("<pack> is not installed; you see the default garage textures.").
-- **Digest.** The `garage` digest (row 14/19) includes the look, so a missed update is found and resent.
+  client reads every section's `SelectedMaterialIndex`, the section count and the current texture pack and sends
+  `GarageLookUpdate` if something changed. Browsing variants inside the window stays local, as the paint shop does.
+- **One player at a time.** Clicking the garage-look computer (`GameScript.ClickIO` for `#garageLook`, or the start of
+  the `GameScript.ShowGarageCustomization` coroutine, whichever task 1.1's decompile shows is before the fade) asks
+  the server for the look claim (`GarageLookClaim`), like the balancer lock of row 5a. On a grant the client re-runs
+  `ShowGarageCustomization`; a second player is refused with "<name> is customising the garage." (D16 answer, no silent
+  drop). The claim ends on close, on leaving the garage and on disconnect; it has no timer.
+- **Apply per section on every client.** For each section whose stored index differs from the local
+  `SelectedMaterialIndex`, the client runs the game's own per-section call `UpdateMaterials(section.RendererData, i,
+  k + 1, false)` (the overload `UpdateMaterialsFromSave` uses), or the same call with `restore: true` for the default
+  (-1), and writes the profile array. The per-renderer body calls `SetMaterialIndexForSection`, so the section's index
+  stays right and a later `GarageLookManager.Save` does not send a stale value back. Re-running
+  `GarageLookManager.Load()` is not used: `UpdateMaterialsFromSave` skips every section below 0, so a reset to default
+  would never apply.
+- **Late join and trips.** The mod's load runs the game's look load before it asks for the snapshots, so the `garage`
+  snapshot always arrives in a loaded garage and goes through the per-section apply; after a trip the profile already
+  holds the look and the apply finds nothing to change.
+- **Texture packs are best effort.** The pack id is stored and sent. A known id is applied with
+  `TexturePackManager.SetActiveTexturePack`/`LoadTextures`; a null or unknown id with `SetDefaultTexturePack` (the call
+  the window uses for index 0), and an unknown id shows one notice ("<pack> is not installed; you see the default
+  garage textures.").
+- **Digest.** The `garage` digest (row 14/19) includes the last look the client applied from the server (not the live
+  sections), so a missed update is found and resent while a player's live preview or a running apply never counts as a
+  desync.
+- **Section count.** Each update carries the sender's section count; the server stores it, and a client with a
+  different count (a mod adds sections) applies the common sections and logs the difference once.
 - **Guard.** `Window GarageCustomization` becomes allowed (owner row 28) in the merge commit.
 
-Hooks: `GarageCustomizationWindow.Show` (prefix: claim; refused → `__result = false`), `GarageCustomizationWindow.Hide`
-(postfix: commit and release), `GarageLookManager.Load` (only to skip a stale profile apply while a snapshot is
-pending; see design D4). Packets: new `GarageLookUpdate`, `GarageLookClaim`, `GarageLookClaimResult`; `GarageState`
-gains `[OptionalField] ModGarageLook Look`.
+Hooks: `GameScript.ClickIO` (prefix, `#garageLook` only) or `GameScript._ShowGarageCustomization_d__*.MoveNext` (first
+step), per task 1.1; `GarageCustomizationWindow.Hide` (postfix: commit and release). Packets: new `GarageLookUpdate`,
+`GarageLookClaim`, `GarageLookClaimResult`; `GarageState` gains `[OptionalField] ModGarageLook Look`.
 
 ## Capabilities
 
@@ -62,12 +74,14 @@ gains `[OptionalField] ModGarageLook Look`.
 
 - Core: `Network/Packets/GarageLookPackets.cs` (new), `PacketTypes` (appended), `GarageState.Look`,
   `Data/GameType/ModGarageLook.cs`, `DigestMappers.Garage` (look included).
-- Server: `Data/Garage/GarageLookService.cs` (store, claim, clamp), garage save section version bump, `garage`
-  snapshot carries the look, server command `look`.
-- Client: `Logic/Garage/GarageLookSync.cs` (hooks, apply, claim), `GarageUpgrades` snapshot handler passes the look on,
-  `Guard/GuardRules.cs`.
-- Harness: `look-probe`, `look-set` (spike verbs from `SpFeatureProbeCommands`), new `look-open`, `look-close`,
-  `look-pick <section> <material>`; dump section `garageLook`; scenario `garage-look`.
+- Server: `Data/Garage/GarageLookService.cs` (store, claim, clamp, section count), `GarageSection` v2 with
+  `Migrate(1→2)`, `garage` snapshot carries the look, server command `look`, a self-check for clamp and claim release.
+- Client: `Logic/Garage/GarageLookSync.cs` (claim gate, commit, per-section apply, pack setters, last applied look),
+  `GarageUpgrades` snapshot handler passes the look on, `Reconciliation/ClientDigests.cs` (look from the last applied
+  server look), `Guard/GuardRules.cs`.
+- Harness: `look-probe`, `look-set` (spike verbs from `SpFeatureProbeCommands`), new `look-open` (through the same
+  click entry as the game), `look-close`, `look-pick <section> <material>`, `look-read <section>`, `look-pack <id>`;
+  dump section `garageLook`; scenario `garage-look`.
 - Depends on (merged): row 7 (`StateLock`, sections), row 8 (`ModNotify`), row 14/19 (`garage` digest), row 14a (guard),
   row 19 part 3 (D16 answers).
 
@@ -83,6 +97,7 @@ Each has the default the draft works with.
    default textures and one notice. Alternative: leave texture packs local (not stored by the server).
 4. **Required upgrades.** A section that needs a garage upgrade is offered only when the upgrade is bought; upgrades
    are shared (M1), so every player sees the same choice. The server cannot check upgrade names (no game data).
-   **Default:** the client checks, the server only clamps indexes to the section count reported with the update.
+   **Default:** the client checks, the server only clamps indexes and stores the section count reported with the
+   update.
 5. **Reset.** The window's "reset all" restores the default materials. **Default:** it is an ordinary change, sent on
    close like any other.

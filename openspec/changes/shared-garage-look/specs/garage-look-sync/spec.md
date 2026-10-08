@@ -15,6 +15,10 @@ section, and a player who joins later or after a server restart SHALL see that l
 - **WHEN** player A chooses another material for the garage wall and closes the customisation window
 - **THEN** player B sees the wall in that material within a few seconds
 
+#### Scenario: Wall set back to default
+- **WHEN** player A sets the garage wall back to its default material and closes the window
+- **THEN** player B sees the default wall, and it stays default after B customises other sections
+
 #### Scenario: Look after a server restart
 - **WHEN** the server restarts after A changed the floor and B joins again
 - **THEN** B sees the floor A chose

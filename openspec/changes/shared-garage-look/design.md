@@ -3,7 +3,8 @@
 ## Context
 
 Static spike `docs/spikes/singleplayer-features.md` section 6; runtime spike runs `20261008-230909_L2_sp-features-probe`
-and `20261008-231615_L2_sp-features-probe2`.
+and `20261008-231615_L2_sp-features-probe2`; review `review.md` (decompiles `spfeat_clean`, `spfeat2_clean`,
+`placement2_clean/GameScript$$ClickIO.c`).
 
 - `GarageLookManager.sections` has 41 sections in the base garage (spike run 1): interior floors and walls (A/B), the
   lifts (two parts), tire changer, wheel balancer, lockers, cabinets, exterior walls, gates, and the floors and walls of
@@ -11,19 +12,31 @@ and `20261008-231615_L2_sp-features-probe2`.
   one material, 330 renderers). Each has 1–26 materials. Sections of a bought area name its upgrade
   (`garage_upgrade`, `path_test`, `paintshop`, `car_wash`, `dyno`). A fresh session profile has every
   `SelectedMaterialIndex = -1` (the default material) and an empty `MaterialIndexes`.
-- The window (`GarageCustomizationWindow`) moves the camera to the section's camera points, changes the material live
-  (`OnVariationChange` → `ChangeMaterial` → `ProcessRendererData`) and sets the section's `SelectedMaterialIndex`
-  (`SetMaterialIndexForSection`). There is no cancel: what is shown when the window closes is the state.
-  `GarageLoader.Save` → `GarageLookManager.Save` copies the indexes into `ProfileData.garageCustomizationData`.
-- Loading: `LoaderAddition.CustomLoad` runs `garageLookManager.Init()` and `StartCoroutine(garageLookManager.Load())`,
-  which reads `garageCustomizationData.MaterialIndexes` into the sections and runs `UpdateMaterialsFromSave`; then
-  `TexturePackManager.Initialize()` and `Load()` (reads `CurrentTexturePack`).
-- Applying one section from outside the window does not work: `SetMaterialIndexForSection` then
-  `UpdateMaterials(section, restore)` throws `IndexOutOfRangeException` (both runs; the window fills a per-section
-  material cache first, `FillVariants`). The renderer is marked replaced but keeps its material. The load path
-  (profile indexes, then `Load()`) is the one the game itself uses after a scene load.
-- Texture packs: `TexturePackManager` lists packs found in the Workshop folder and a local folder; none in the test
-  installs (`texturePacks = 0`, current `Default`).
+- The window is opened from `GameScript.ClickIO` (`#garageLook`) → `StartCoroutine(GameScript.ShowGarageCustomization())`
+  (not decompiled yet); its `Hide` fades back in (`ScreenFader.NormalFadeIn/FadeOut`). In the window,
+  `OnVariationChange` → `ChangeMaterial` set the manager's `currentMaterialIndex` (1-based list index; 0 = default,
+  which also sets `restore`) and `ProcessRendererData` changes the material live; `SetMaterialIndexForSection` sets the
+  section's `SelectedMaterialIndex`. There is no cancel: what is shown when the window closes is the state.
+  `GarageLoader.Save` → `GarageLookManager.Save` copies the sections' indexes into `ProfileData.garageCustomizationData`.
+- Loading: `<Load>d__44` copies the profile's `MaterialIndexes` into `dataForSave`; `<UpdateMaterialsFromSave>d__24`
+  skips every section whose value is `< 0` and calls `UpdateMaterials(RendererData, i, idx + 1, false)` for the others.
+  So re-running `Load()` can never restore a default section.
+- `UpdateMaterials(int sectionIndex, bool restore)` (`0x180D6A470`) ignores the section's index and passes the manager's
+  `currentMaterialIndex`; the renderer code loads `ProjectMaterials[materialIndex - 1]`. After `Init`,
+  `currentMaterialIndex` is 0, so the spike's call indexed `[-1]` and threw `IndexOutOfRangeException` after
+  `Replaced = true` was set ("flagged replaced, material unchanged"). The spike's earlier explanation (a per-section
+  cache from `FillVariants`) was wrong; `cachedMaterialsList` is only a scratch list for `GetSharedMaterials`.
+- `UpdateMaterials(GarageLookRenderer[], int sectionIndex, int materialIndex, bool restore)` (the overload
+  `UpdateMaterialsFromSave` uses; per-renderer body `0x180D6A670`) takes the material index explicitly and calls
+  `SetMaterialIndexForSection(i, k or -1)`.
+- The mod's load (`LoaderAddition.CustomLoad`) runs `VanillaLoad` first: `garageLookManager.Init()`, `yield
+  garageLookManager.Load()`, `TexturePackManager.Initialize()`/`Load()`; only then does it send `AskForSync`. So the
+  `garage` snapshot always arrives in a garage whose look is already loaded.
+- Texture packs: `TexturePackManager.Load()` with an empty `CurrentTexturePack` only sets `currentActiveTexturePack =
+  default` and does not reload the default textures; with an unknown id, `GetTexturePack` fails and nothing changes.
+  The window uses `SetDefaultTexturePack` (`0x1810C2390`) for index 0 and `SetActiveTexturePack` for a pack. None are
+  installed in the test installs (`texturePacks = 0`, current `Default`).
+- `ClientDigests` builds the `garage` digest from live game state; `GarageSection` is v1 with no migration.
 
 ## Goals / Non-Goals
 
@@ -36,60 +49,72 @@ shared with a graceful fallback.
 
 ### D1. Server state
 
-`ModGarageLook { int[] MaterialIndexes; string TexturePack }` in `GarageState` (`[OptionalField]`), saved in the
-`garage` section (version bump; old saves: all `-1`, pack `null`). The server clamps each index to `-1..63` and the array
-to 64 entries; it does not know the section names (no game data). Every accepted `GarageLookUpdate` replaces the whole
-look and is broadcast to all in-session clients (sender included, so its own echo confirms the store).
+`ModGarageLook { int[] MaterialIndexes; string TexturePack; int SectionCount }` in `GarageState` (`[OptionalField]`),
+saved in the `garage` section v2; `Migrate(1→2)` adds an empty look (no indexes, pack `null`, count 0). The server clamps
+each index to `-1..63` and the array to 64 entries, and stores the sender's `SectionCount`; it does not know the section
+names (no game data). Every accepted `GarageLookUpdate` from the claim holder replaces the whole look and is broadcast
+to all in-session clients (sender included, so its own echo confirms the store). Runtime only: the claim.
 
-### D2. Commit and claim
+### D2. Claim and commit
 
-- `GarageCustomizationWindow.Show` prefix (connected): if this client holds the look claim, continue; else send
-  `GarageLookClaim` and return `__result = false`; the answer `GarageLookClaimResult { Granted, HolderPlayerId }`
-  re-opens the window (granted) or shows "<name> is customising the garage." (refused). The claim is released on
-  `Hide`, on leaving the garage scene and on disconnect (`PresenceEvents`), and expires after 10 minutes without a
-  renew.
-- `GarageCustomizationWindow.Hide` postfix: read `sections[i].SelectedMaterialIndex` for all sections and
-  `TexturePackManager.GetCurrentTexturePack().ID` (`null` for the default); send `GarageLookUpdate` when it differs from
-  the last known look; release the claim.
+- Gate (task 1.1 picks the point after decompiling `ShowGarageCustomization`): a `GameScript.ClickIO` prefix for
+  `#garageLook`, or the first step of the coroutine's `MoveNext`, before any fade. Connected and not holding the claim:
+  send `GarageLookClaim` and skip; `GarageLookClaimResult { Granted, HolderPlayerId }` re-runs
+  `StartCoroutine(GameScript.ShowGarageCustomization())` when granted, or shows "<name> is customising the garage."
+  when refused. No answer within 5 s → "No answer from the server." and nothing opens. The guard keeps hooking
+  `WindowManager.Show` as before.
+- Release on `Hide`, on leaving the garage scene and on disconnect (`PresenceEvents`). No expiry timer (nothing would
+  renew it).
+- `GarageCustomizationWindow.Hide` postfix: read `sections[i].SelectedMaterialIndex` for all sections, the section
+  count and the current pack id (`null` for the default); send `GarageLookUpdate` when it differs from the last applied
+  look; release the claim.
 
 ### D3. Apply
 
-Receivers (and the snapshot apply) write the indexes into the session profile's
-`garageCustomizationData.MaterialIndexes` and `CurrentTexturePack`, then run the game's own load:
-`StartCoroutine(GarageLookManager.Instance.Load())` and, if the pack changed, `TexturePackManager.Load()`. While the local
-player has the window open (only the claim holder can), incoming looks are not applied (none can arrive: the server only
-accepts updates from the holder). Task 1.1 confirms that `Load()` can run a second time in a loaded garage and that a
-section set back to `-1` restores the default material (`UpdateMaterials(restore: true)`); if `Load()` cannot run twice,
-the apply fills the window's material cache for each changed section the way `FillVariants` does and calls
-`ChangeMaterial`.
+`GarageLookSync.Apply(look)` (a coroutine, one section per frame like the game's own load):
+- for each section `i` below `min(look.SectionCount, sections.Length)` whose stored index `k` differs from
+  `sections[i].SelectedMaterialIndex`: `k ≥ 0` → `UpdateMaterials(sections[i].RendererData, i, k + 1, false)`;
+  `k = -1` → the same call with `restore: true`;
+- write `garageCustomizationData.MaterialIndexes` and `CurrentTexturePack` in the session profile, so a later scene load
+  and `GarageLookManager.Save` agree;
+- texture pack (D5);
+- remember the look as `LastApplied` when done.
+Incoming looks are never applied while the local player holds the claim (the server accepts updates only from the
+holder, so none arrive). Task 1.1 measures the apply time for all 41 sections, including the 330-renderer decal section
+and the per-renderer coroutine `<UpdateMaterials>d__21`.
 
 ### D4. Late join and trips
 
-The `garage` snapshot (order 10) arrives before the garage finishes loading for a joiner; the client writes the look
-into the session profile at once, so `CustomLoad`'s own `garageLookManager.Load()` shows it without a second pass. If the
-snapshot comes after `CustomLoad` passed that point, D3's apply runs. A return from a trip loads the garage from the
-session profile, which already holds the look.
+The `garage` snapshot handler (`GarageUpgrades`) passes the look to D3's apply. This is the main path: a joiner's
+garage has already loaded the empty session profile's look, and the apply changes the differing sections. After a trip,
+the garage loads from the session profile, which already holds the look, so the apply finds nothing to change.
 
-### D5. Texture pack fallback
+### D5. Texture pack
 
-If the stored pack id is not in `TexturePackManager.GetTexturePacks()`, the client keeps the default textures, logs it,
-and shows one notice per session ("<pack name or id> is not installed; you see the default garage textures."). The
-server keeps the id.
+A known pack id (in `TexturePackManager.GetTexturePacks()`) → `SetActiveTexturePack(pack)` and `LoadTextures`. A null id
+→ `SetDefaultTexturePack()`. An unknown id → `SetDefaultTexturePack()`, a log line and one notice per session ("<pack
+name or id> is not installed; you see the default garage textures."). The server keeps the id.
 
 ### D6. Digest
 
-`DigestMappers.Garage` appends the look (indexes and pack id) so a client that missed an update is found by the `garage`
-digest and gets a resend (row 19 part 2 resends the `garage` key).
+`DigestMappers.Garage` appends the look (indexes, pack id). The client side builds it from `LastApplied`, not from the
+live sections, so the claim holder's preview and a running apply never differ from the server; a client that missed an
+update still differs and gets the `garage` key resent (row 19 part 2).
+
+### D7. Section count
+
+A client whose `sections.Length` differs from the stored `SectionCount` applies the common sections and logs the
+difference once (`garageLook.sectionCountMismatch` in the dump).
 
 ## Risks / Trade-offs
 
-- [`Load()` restarts coroutines the window or the culler depend on] → task 1.1; fallback in D3.
-- [A section count that differs between clients (a mod adds sections)] → indexes are positional; extra entries are
-  ignored, missing ones stay default; a mismatch is logged once.
-- [The window's camera fade leaves the player stuck if the claim answer is lost] → the window only opens after the
-  answer; a missing answer within 5 s shows "No answer from the server." and nothing opens.
+- [`ShowGarageCustomization` fades out before any hookable point] → task 1.1 decompiles it; the `ClickIO` prefix is
+  before the coroutine starts.
+- [The per-section call has a side effect the load path avoids] → task 1.1 applies, resets and re-applies sections in a
+  loaded garage and reads the renderers back.
+- [The apply takes longer than the scenario's bound] → task 1.1 measures it; the scenario uses the measured bound.
 
 ## Migration Plan
 
-`garage` section version bump with a default; additive packet field; new packets appended. Rollback: revert; the stored
-look is ignored by older servers.
+`garage` section v1 → v2 with `Migrate` filling an empty look; additive packet field; new packets appended. Rollback:
+revert; the stored look is ignored by older servers (a v2 section is refused by a v1 server, as for every section bump).

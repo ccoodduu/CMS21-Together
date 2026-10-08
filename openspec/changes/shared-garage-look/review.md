@@ -112,3 +112,25 @@ the look out of the digest while the window is open or an apply is running.
 S (≈ 1–2) is too small for a new server service with a claim, three packets, a save-section migration, a new apply
 path, a window gate that needs a decompile, texture-pack setters, a digest rule and a restart scenario. Plan for M
 (≈ 3).
+
+## Review resolution
+
+Applied 2026-10-08. Checked on the branch: `LoaderAddition.VanillaLoad` runs `garageLookManager.Init()`/`Load()` and
+the texture pack load before `CustomLoad` sends `AskForSync`; `GarageSection` is v1 and `Migrate` throws;
+`ClientDigests` builds the `garage` digest from live state.
+
+- **B1** Fixed. D3 applies per section with `UpdateMaterials(RendererData, i, k + 1, false)` or `restore: true` for -1
+  and writes the profile array; re-running `Load()` is dropped; the spec and scenario check a reset to default that
+  survives B's next close.
+- **B2** Fixed. Context corrects the cause (`currentMaterialIndex = 0` → `ProjectMaterials[-1]`); task 1.1 proves the
+  per-section apply and corrects the spike note.
+- **M1** Fixed. D4: the snapshot always arrives in a loaded garage; the handler runs D3's apply (main path).
+- **M2** Fixed. D2 gates at the `#garageLook` click or the first step of `ShowGarageCustomization` (task 1.1 decompiles
+  it), re-runs the coroutine on a grant; `look-open` uses the same entry; the scenario checks B's screen is not faded.
+- **M3** Fixed. D5 uses `SetActiveTexturePack`/`LoadTextures` and `SetDefaultTexturePack`.
+- **M4** Fixed. D6 builds the client's look digest from `LastApplied`; the scenario checks no mismatch while the window
+  is open.
+- **m1** Expiry dropped; release on `Hide`, leave and disconnect (D2). **m2** apply time measured in 1.1, the scenario
+  uses that bound. **m3** `GarageSection` v2 with `Migrate(1→2)` (D1, 2.2). **m4** `SectionCount` stored and checked
+  (D1, D7). **m5** old-code run with `guard-allow`.
+- Size: M (≈ 3).
