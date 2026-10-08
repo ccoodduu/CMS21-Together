@@ -19,6 +19,7 @@ public class PingMarker
 	public Vector3 Fallback;
 	public Transform Anchor;
 	public List<Renderer> Renderers = new List<Renderer>();
+	public PartScript Flashed;
 	public float ShownAt;
 	public float ExpiresAt;
 
@@ -45,9 +46,20 @@ public static class PingMarkers
 
 	public static IReadOnlyList<PingMarker> All => markers;
 
-	public static void Clear() => markers.Clear();
+	public static readonly Color OwnColor = new Color(0.35f, 0.85f, 1f);
+	public static readonly Color OtherColor = new Color(1f, 0.6f, 0.1f);
 
-	public static void RemovePlayer(int playerId) => markers.RemoveAll(m => m.PlayerId == playerId);
+	public static void Clear()
+	{
+		foreach (var marker in markers) StopFlash(marker);
+		markers.Clear();
+	}
+
+	public static void RemovePlayer(int playerId)
+	{
+		foreach (var marker in markers.Where(m => m.PlayerId == playerId)) StopFlash(marker);
+		markers.RemoveAll(m => m.PlayerId == playerId);
+	}
 
 	public static PingMarker Show(int playerId, string name, bool own, CoopPingPacket packet)
 	{
@@ -79,6 +91,7 @@ public static class PingMarkers
 			if (script == null || script.IsUnmounted) return;
 			marker.Anchor = script.transform;
 			marker.Renderers = PartGhosts.PartRenderers(script);
+			StartFlash(marker, script);
 		}
 		else
 		{
@@ -88,6 +101,36 @@ public static class PingMarkers
 			marker.Renderers = PartGhosts.VisibleRenderers(marker.Anchor);
 		}
 		marker.Resolved = true;
+	}
+
+	private static void StartFlash(PingMarker marker, PartScript script)
+	{
+		if (script.ho == null) return;
+		try
+		{
+			script.ho.FlashingOn(marker.Own ? OwnColor : OtherColor);
+			marker.Flashed = script;
+			CoopPings.Count("flashes");
+		}
+		catch (Exception ex)
+		{
+			Log.Warn($"[Ping] Flashing {marker.Key} failed: {ex.Message}");
+		}
+	}
+
+	private static void StopFlash(PingMarker marker)
+	{
+		var script = marker.Flashed;
+		marker.Flashed = null;
+		if (script == null || !script || script.ho == null) return;
+		try
+		{
+			script.ho.FlashingOff();
+		}
+		catch (Exception ex)
+		{
+			Log.Warn($"[Ping] Stopping the flash of {marker.Key} failed: {ex.Message}");
+		}
 	}
 
 	private static void PlaySound()
@@ -107,6 +150,7 @@ public static class PingMarkers
 	{
 		if (markers.Count == 0) return;
 		float now = Time.realtimeSinceStartup;
+		foreach (var marker in markers.Where(m => m.ExpiresAt <= now)) StopFlash(marker);
 		int removed = markers.RemoveAll(m => m.ExpiresAt <= now);
 		for (int i = 0; i < removed; i++) CoopPings.Count("expired");
 	}
@@ -230,13 +274,13 @@ public static class PingMarkers
 
 		foreach (var marker in markers.ToList())
 		{
-			if (!TryScreenRect(marker, camera, out var rect, out _)) continue;
+			if (!TryScreenRect(marker, camera, out var rect, out bool onScreen)) continue;
 			float fade = Mathf.Clamp01(marker.Remaining / FadeSeconds);
 			float pulse = 0.75f + 0.25f * Mathf.Sin((now - marker.ShownAt) * 8f);
-			var color = marker.Own ? new Color(0.35f, 0.85f, 1f) : new Color(1f, 0.6f, 0.1f);
+			var color = marker.Own ? OwnColor : OtherColor;
 			color.a = fade * pulse;
 			GUI.color = color;
-			Outline(rect);
+			if (marker.Flashed == null || !onScreen) Outline(rect);
 
 			float distance = Vector3.Distance(camera.transform.position, WorldPoint(marker));
 			string text = $"{marker.Name} ({distance:0} m)";
