@@ -205,3 +205,30 @@ as drafted, and the user should hear that before 27c starts.
   kinds.
 - The speed track's game-side `CurrentSceneType == TestTrack` may also steer game code (pause menu, `TestToShow`). D2
   keeps our identity separate; the hand check 5.1 should include the speed track's pause menu and return.
+
+## Review resolution
+
+Applied 2026-10-08. The split is done as recommended (user decision of the same day): **27a** `shared-race-tracks`
+(this change), **27b** `track-races` (shared start, results, DNF, race track only) and **27c** `track-collisions`
+(spike first, kinematic box on the remote copy, client setting default on, off on a copy carrying a ride-along
+passenger), each with its own proposal, design, tasks and spec. Reference counts checked on the branch: 40 `TestTrack`
+lines in client, core and server plus 9 in the harness; `RideAlong.cs:278` `FindObjectOfType<TestTrackManager>`,
+`DriveCapture.cs:112` loader from the `TestTrack` claim, `DriveInterpolator.SnapDistance = 5f`.
+
+- **M1** Fixed. D1 lists the 49 references per file and makes task 1.1's table a gate for group 3; D4 names the
+  `DriveCapture` loader lookup (`IsTrackKind`); D5 returns through `TrackManager.Instance`.
+- **M2** Fixed. Task 1.2 decompiles `LastTime`, `NextCheckPoint`, `_Restart_d__20` and checks them with `work\at.py`;
+  `track-lap` sets `timer`/checkpoints and calls the real `LastTime`; `track-record-send` is a server-side check only
+  (D6).
+- **M3** Fixed. The scenario runs with `guard-allow Mode:CarDrive`; the old-code run uses `guard-allow
+  Scene:RaceTrack` and fails at B's `away` claim check (4.1).
+- **M4** Fixed. Step 4 adds a server restart and re-checks `records`, the group record and `BestRaceTime`; the spec
+  says "across sessions and server restarts".
+- **m1** Restart hook and 20 m snap dropped (D4). **m2** open question 3 names `topSpeed`/`lastTopSpeed`. **m3**
+  `FreeTrackManager` named, `SpeedTrackManager` noted as unused (proposal, D1). **m4** passenger never sends (D5, D6,
+  step 5, spec scenario). **m5** step 6 says it checks the guard label. **m6** partial lap after a restart ignored (D6).
+  **m7** trusted lap time stated (D6).
+- Track risks: `AwayCheck` self-check per kind (D3); the speed track's pause menu and return in hand check 5.1.
+- **U1** → 27b `track-races` (race track only; speed-track rule left as its open question 2). **U2** → 27c
+  `track-collisions` (spike go/no-go; on no-go the user is told before implementation).
+- Sizes: 27a M ≈ 4–5, 27b M ≈ 4–5 incl. spike, 27c S + S–M ≈ 2.5–3.

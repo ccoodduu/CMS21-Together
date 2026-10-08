@@ -47,9 +47,15 @@ A player seated in a car SHALL ride along when its driver takes it to any base t
 - **THEN** B is on the speed track in A's car as passenger
 
 ### Requirement: Lap records
-The server SHALL keep each player's best race-track lap and the group's best lap across sessions, show a player's own
-best in the game's race display after joining, and tell everyone when the group record falls.
+The server SHALL keep each player's best race-track lap and the group's best lap across sessions and server restarts,
+show a player's own best in the game's race display after joining, and tell everyone when the group record falls. Only
+the driver's complete laps SHALL count; a passenger riding along SHALL NOT record a lap.
 
 #### Scenario: New group record
 - **WHEN** player A finishes a lap faster than the group record
-- **THEN** every player is told A's new record, and it is still the record in the next session
+- **THEN** every player is told A's new record, and it is still the record in the next session and after a server
+  restart
+
+#### Scenario: Passenger on the race track
+- **WHEN** player B rides along in A's car on the race track and A completes a lap
+- **THEN** only A's lap is recorded
