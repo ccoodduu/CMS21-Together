@@ -90,7 +90,11 @@ the game, click **Multiplayer** in the main menu.
   the server does not answer within 3 s you see "The server did not answer. Try again."
 - **DLC:** players may own different DLC. DLC cars and parts that not every connected player owns are blocked while
   connected.
-- **Keys:** **F7** reloads the garage from the server, **F8** saves a bug report, **F9** opens the session panel.
+- **Ping:** look at a part (or any spot) and press the **middle mouse button**. Everyone in the same scene sees it
+  boxed with your name for 5 seconds, also through walls and cars, and hears a short sound. Change the key with
+  `PingHotkey` in `UserData\MelonPreferences.cfg` (`None` turns it off).
+- **Keys:** **F7** reloads the garage from the server, **F8** saves a bug report, **F9** opens the session panel,
+  the **middle mouse button** pings.
 
 ## For developers
 

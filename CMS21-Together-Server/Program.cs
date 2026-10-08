@@ -121,6 +121,7 @@ namespace CMS21_Together_Server
 			Data.Outdoor.OutdoorInstances.Initialize();
 			Network.Handlers.VisualHandlers.Initialize();
 			Network.Handlers.DriveHandlers.Initialize();
+			Network.Handlers.PingHandlers.Initialize();
 			Logger.CurrentLogLevel = Config.LogLevel;
 			Logger.Info($"Log Level set to: {Logger.CurrentLogLevel}");
 			

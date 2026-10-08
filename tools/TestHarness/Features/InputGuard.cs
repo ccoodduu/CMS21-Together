@@ -23,7 +23,7 @@ public static class InputGuard
         ("Steamworks.SteamFriends", "ActivateGameOverlay"),
     };
 
-    private static readonly string[] Hotkeys = { "ResyncHotkey", "SessionPanelHotkey", "BugReportHotkey" };
+    private static readonly string[] Hotkeys = { "ResyncHotkey", "SessionPanelHotkey", "BugReportHotkey", "PingHotkey" };
 
     private static PropertyInfo keyboardEnabled;
     private static object keyboard;

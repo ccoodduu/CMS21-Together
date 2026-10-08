@@ -114,6 +114,8 @@ namespace CMS21Together
 			if (Client.Instance.IsConnectionValid) Logic.Car.Locks.LockPrefetch.Update();
 			if (Client.Instance.IsConnectionValid) Logic.Car.Away.PathTestSync.Update();
 			if (Client.Instance.IsConnectionValid) Logic.Visuals.ActivityCapture.Update();
+			if (Client.Instance.IsConnectionValid) Logic.Pings.CoopPings.Update();
+			Logic.Pings.PingMarkers.Update();
 			Logic.Visuals.VisualScope.Update();
 			Logic.Driving.DriveCapture.Update();
 			ConnectionStatus.Update();
@@ -142,6 +144,7 @@ namespace CMS21Together
 			if (Client.Instance.IsConnectionValid) NameTags.Draw();
 			if (Client.Instance.IsConnectionValid) Logic.Car.Away.AwayLabels.Draw();
 			if (Client.Instance.IsConnectionValid) Logic.Outdoor.AuctionSync.Draw();
+			if (Client.Instance.IsConnectionValid) Logic.Pings.PingMarkers.Draw();
 			ImguiView.Draw();
 		}
 
@@ -164,6 +167,7 @@ namespace CMS21Together
 			Logic.Visuals.BoltReplay.Initialize();
 			Logic.Visuals.ActivityCapture.Initialize();
 			Logic.Visuals.RemoteActivity.Initialize();
+			Logic.Pings.CoopPings.Initialize();
 			Logic.Driving.DriveCapture.Initialize();
 			Logic.Driving.RemoteCars.Initialize();
 		}
