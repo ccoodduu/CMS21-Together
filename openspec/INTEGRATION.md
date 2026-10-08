@@ -45,6 +45,7 @@ part 2. "Owner" defines it; "Users" only call or subscribe.
 | `CarBodyPartUpdatePacket.Changed`, `CarSubPartUpdatePacket.Changed` (`PartFields`: `Mount`, `Bolts`, `Identity`, `Condition`, `Quality`, `Examined`, `Paint`, `Dust`, `Switched`, `All`; `[OptionalField]`) | both | 19 (part 1, D1/D2) | a change record never carries 0; relays carry the groups the server wrote, results the groups that differ from the send; snapshots, resyncs and rejections carry `All`; stored records keep 0 |
 | `CarDetailsUpdatePacket.WheelMask` (bit per wheel index, 0 = all) and `AlignmentMask` (`AlignmentFields`, `None` = all) (`[OptionalField]`) | both | 19 (part 1, D4/D5) | a details update carries only the changed entries |
 | `ToolSlotRejectedPacket.Item` (`SlotItemOutcome`: `Unchanged`, `Returned`, `Gone`; `[OptionalField]`) | S→the refused client | 19 (part 1, D9) | `Returned`: the server put the item back (and relayed its `Add`); `Gone`: another player used it ("<name> used this part.") |
+| `InventorySyncPacket.UidFloor` (`[OptionalField]`, last batch only) | S→the syncing client | 20 | the highest stored UID of that player's range (inventory, warehouse, machine slots, items in groups); `UidRange.Apply` continues after it (audit I6, `docs/design/race-hardening.md`) |
 
 Rows 12 and 14a add no packets.
 
@@ -129,6 +130,7 @@ decisions do not change. A new handler that returns early must answer the same w
 | `GarageUpgradeHandler` refusal or no-op (unknown id, level out of range, already unlocked, not enough money or points) | `WorldState` and `GarageState` to the requester (a success still broadcasts both) |
 | `ParkFromGarage` with no car on the loader (the second park) | `Invalid`, `ParkingService.SendState` and the loader's `CarSpawnDelete` |
 | `HandleCarSpawnDelete` of an empty loader (the second delete) | not relayed |
+| `HandleCarSpawnRequest` for a loader that holds a car (row 20, audit C1) | `CarSpawnRejected` ("Another car is already in that place."), plus the stored car's live snapshot and details when it has a baseline; the client keeps the loader's car when the winner's spawn reached it first (`CarSpawnManager.KeepAfterRejection`) |
 | `OnCarPlaceChange` of an unknown loader | the loader's `CarSpawnDelete` |
 | `JobsService.OnOrderGenerated` dropped (not the generator, tutorial mission, over the limit) | the jobs snapshot |
 | `OnOrderAction` Accept or Decline of an unknown order | the refusal plus `JobRemoved { Expired }`; an accept shows "This order is no longer available." |
@@ -285,7 +287,7 @@ Scenarios (unique): playtest fixes `car-wheel-swap`, `car-mount-race`; 7 `server
 12 `release-smoke` (marked `# run-all: skip`, run after `Install-ReleaseToTestEnv.ps1`); 14a `guard`; 14
 `desync-autofix`, `resync-key`, `bug-report`; 17 `visual-parts`, `visual-activity`, `visual-latejoin`, `visual-screens` (`# needs: graphics`, `# run-all: skip`), `visual-probe` (spike, `# run-all: skip`), `drive-track`, `drive-latejoin`, `drive-probe` (spike, `# run-all: skip`); 11 `scale-connect`, `soak`, `latejoin-full`, `storm` (all
 `# run-all: lane 3`), `full-garage-fixture` and `perf-probe` (`# run-all: skip`); 22 `ping`; 23 `shopping-list`; 19
-`server-answers` (part 3; `seat-engine` gains the seat race), `merges-probe` (part 1 spikes 1.2, 1.3 and the 1.4 setters, `# run-all: skip`), `car-stale-record`, `details-concurrent`, `tools-item-race`, `park-stale`, `car-snapshot-after-delete` (part 1; `car-gone-inflight` gains park and job end, `server-answers` the dropped transaction, `tools-race` two stand-part steps, `locks-fluid` two fills at once); 21 `ride-along`, `ride-probe` (spike, `# run-all: skip`); 24 `locks-select-2`.
+`server-answers` (part 3; `seat-engine` gains the seat race), `merges-probe` (part 1 spikes 1.2, 1.3 and the 1.4 setters, `# run-all: skip`), `car-stale-record`, `details-concurrent`, `tools-item-race`, `park-stale`, `car-snapshot-after-delete` (part 1; `car-gone-inflight` gains park and job end, `server-answers` the dropped transaction, `tools-race` two stand-part steps, `locks-fluid` two fills at once); 21 `ride-along`, `ride-probe` (spike, `# run-all: skip`); 24 `locks-select-2`; 20 `race-hardening`.
 
 Scale lane and long runs (owner 11, design `multiplayer-soak-and-scale` D1-D9):
 
