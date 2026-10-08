@@ -6,7 +6,7 @@
 
 $script:KnownAreas = @(
     "connect", "presence", "guard", "cars", "parts", "placement", "details", "jobs", "economy", "tools",
-    "testdrive", "persistence", "resync", "hosting", "bugreport", "release", "visuals", "driving", "outdoor", "locks"
+    "testdrive", "persistence", "resync", "hosting", "bugreport", "release", "visuals", "driving", "outdoor", "locks", "ping"
 )
 
 $script:PathAreaTable = @'
@@ -43,6 +43,7 @@ tools/TestHarness/Features/Tools*                              tools
 tools/TestHarness/Features/Visual*                             visuals
 tools/TestHarness/Features/Drive*                              driving
 tools/TestHarness/Features/Lock*                               locks
+tools/TestHarness/Features/Ping*                               ping
 tools/TestHarness/*                                            full
 tools/release/*                                                release
 CMS21-Together-*/Network/Handlers/Admin*                       hosting
@@ -67,6 +68,7 @@ CMS21-Together-*/Network/Handlers/TestDrive*                   testdrive
 CMS21-Together-*/Network/Handlers/Tool*                        tools
 CMS21-Together-*/Network/Handlers/Visual*                      visuals, presence
 CMS21-Together-*/Network/Handlers/Drive*                       driving, testdrive
+CMS21-Together-*/Network/Handlers/Ping*                        ping
 CMS21-Together-*/Network/Handlers/WorldStates*                 connect, persistence
 CMS21-Together-*/Diagnostics/*                                 bugreport
 CMS21-Together-*/Properties/*                                  smoke
@@ -91,6 +93,7 @@ CMS21-Together-Core/Network/Packets/TestDrive*                 testdrive
 CMS21-Together-Core/Network/Packets/Tool*                      tools
 CMS21-Together-Core/Network/Packets/VisualPackets.cs           visuals, presence
 CMS21-Together-Core/Network/Packets/DrivePackets.cs            driving, testdrive
+CMS21-Together-Core/Network/Packets/PingPackets.cs             ping
 CMS21-Together-Core/Network/Packets/WorldStates*               connect, persistence
 CMS21-Together-Core/PacketTypes.cs                             smoke
 CMS21-Together-Core/Data/Compatibility/*                       connect
@@ -132,6 +135,7 @@ CMS21-Together-Client/Logic/Reconciliation/*                   resync
 CMS21-Together-Client/Logic/Tools/*                            tools
 CMS21-Together-Client/Logic/Visuals/*                          visuals, presence
 CMS21-Together-Client/Logic/Driving/*                          driving, testdrive
+CMS21-Together-Client/Logic/Pings/*                            ping
 CMS21-Together-Client/Logic/UidRange.cs                        parts
 CMS21-Together-Client/Logic/LoaderAddition.cs                  connect
 CMS21-Together-Client/Guard/*                                  guard

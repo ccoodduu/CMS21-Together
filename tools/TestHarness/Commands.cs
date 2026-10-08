@@ -46,7 +46,7 @@ public static class Commands
     }
 
     [HarnessCommand("ping")]
-    private static object Ping(string args) => StateDump.Status();
+    private static object Ping(string args) => string.IsNullOrWhiteSpace(args) ? StateDump.Status() : Features.PingCommands.Part(args);
 
     [HarnessCommand("connect")]
     private static object Connect(string args)
