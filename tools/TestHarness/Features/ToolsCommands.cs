@@ -82,10 +82,11 @@ public static class ToolsCommands
     private static object GiveItem(string args)
     {
         var parts = Args(args);
-        if (parts.Length < 1) throw new ArgumentException("usage: give-item <id> [condition]");
+        if (parts.Length < 1) throw new ArgumentException("usage: give-item <id> [condition] [quality]");
         var item = new Item(parts[0]) { Condition = parts.Length > 1 ? float.Parse(parts[1], System.Globalization.CultureInfo.InvariantCulture) : 1f };
+        if (parts.Length > 2) item.Quality = int.Parse(parts[2]);
         Inv.Add(item);
-        return new { item.ID, item.UID };
+        return new { item.ID, item.UID, item.Quality };
     }
 
     [HarnessCommand("give-group")]

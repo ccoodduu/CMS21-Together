@@ -280,11 +280,19 @@ public static class TestDriveCommands
     private static object DiagExamine(string args)
     {
         var parts = (args ?? "").Split(new[] { ' ' }, StringSplitOptions.RemoveEmptyEntries);
-        if (parts.Length != 2) throw new ArgumentException("usage: diag-examine <loader> <ToolType>");
+        if (parts.Length != 2 && (parts.Length != 3 || parts[2] != "keys")) throw new ArgumentException("usage: diag-examine <loader> <ToolType> [keys]");
         var carLoader = LoadedCar(parts[0]);
         var tool = (ToolType)Enum.Parse(typeof(ToolType), parts[1]);
         var toExamine = CarHelper.GetPartsToExamine(carLoader, tool);
         int count = toExamine?.Count ?? 0;
+        if (parts.Length == 3)
+        {
+            var registry = CMS21Together.Logic.Car.Parts.PartRegistry.Build(carLoader);
+            var keys = new List<string>();
+            for (int i = 0; i < count; i++)
+                if (registry.TryGetSubPath(toExamine[i], out var path)) keys.Add(CMS21_Together_Core.Network.Packets.PartKeys.Sub(path));
+            return new { tool = tool.ToString(), keys = keys.OrderBy(k => k, StringComparer.Ordinal).ToList() };
+        }
         for (int i = 0; i < count; i++) toExamine[i].Examine(true);
         return new { tool = tool.ToString(), examined = count };
     }

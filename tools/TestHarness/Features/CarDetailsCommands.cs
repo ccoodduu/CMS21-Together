@@ -1,7 +1,11 @@
 using System;
 using System.Collections.Generic;
+using System.Globalization;
+using System.Linq;
 using CMS21_Together_Core.Data.GameType;
 using CMS21Together.Logic.Car.Details;
+using CMS21Together.Logic.Car.Parts;
+using Newtonsoft.Json.Linq;
 
 namespace TogetherTestHarness.Features;
 
@@ -78,6 +82,122 @@ public static class CarDetailsCommands
         CarDetailsSync.MarkDirty(carLoader, CarDetailSection.BodyCosmetics | CarDetailSection.Plates | CarDetailSection.Tuning);
         return new { mileage = details.Info.Mileage, plate = details.Plates.LicensePlateNumberFront, tinted, painted, tuned = details.Tuning.Modules.Count };
     }
+
+    [HarnessCommand("cardetails-fluid")]
+    private static object SetFluid(string args)
+    {
+        var parts = Split(args, 4, "cardetails-fluid <loader> <type> <id> <level> [cond]");
+        var carLoader = Loaded(parts[0]);
+        var type = (ModCarFluidType)Enum.Parse(typeof(ModCarFluidType), parts[1], true);
+        int id = int.Parse(parts[2]);
+        var current = CarDetailsIO.Read(carLoader, CarDetailSection.Fluids).Fluids.FirstOrDefault(f => f.Type == type && f.Id == id)
+                      ?? throw new ArgumentException($"no fluid {type}.{id}");
+        current.Level = Float(parts[3]);
+        if (parts.Length > 4) current.Condition = Float(parts[4]);
+        CarDetailsIO.Apply(carLoader, new ModCarDetails { Fluids = new List<ModFluidLevel> { current } });
+        CarDetailsSync.MarkDirty(carLoader, CarDetailSection.Fluids);
+        return Entries(carLoader, CarDetailSection.Fluids, CarDetailEntries.Fluid(type, id));
+    }
+
+    [HarnessCommand("cardetails-wheel")]
+    private static object SetWheel(string args)
+    {
+        var parts = Split(args, 6, "cardetails-wheel <loader> <index> <w> <rim> <tire> <et>");
+        var carLoader = Loaded(parts[0]);
+        int index = int.Parse(parts[1]);
+        var wheels = CarDetailsIO.Read(carLoader, CarDetailSection.Wheels).Wheels;
+        if (wheels == null || index < 0 || index >= wheels.Length) throw new ArgumentException($"no wheel {index}");
+        wheels[index].Width = int.Parse(parts[2]);
+        wheels[index].RimSize = int.Parse(parts[3]);
+        wheels[index].TireSize = int.Parse(parts[4]);
+        wheels[index].ET = int.Parse(parts[5]);
+        CarDetailsIO.Apply(carLoader, new ModCarDetails { Wheels = wheels });
+        CarDetailsSync.MarkDirty(carLoader, CarDetailSection.Wheels);
+        return Entries(carLoader, CarDetailSection.Wheels, CarDetailEntries.Wheel(index));
+    }
+
+    [HarnessCommand("cardetails-alignment")]
+    private static object SetAlignment(string args)
+    {
+        var parts = Split(args, 5, "cardetails-alignment <loader> <FL> <FR> <RL> <RR> (- leaves a field)");
+        var carLoader = Loaded(parts[0]);
+        var alignment = CarDetailsIO.Read(carLoader, CarDetailSection.Alignment).Alignment;
+        var touched = new List<string>();
+        for (int field = 0; field < 4; field++)
+        {
+            if (parts[field + 1] == "-") continue;
+            CarDetailEntries.SetAlignmentValue(alignment, field, Float(parts[field + 1]));
+            touched.Add(CarDetailEntries.Alignment(CarDetailEntries.AlignmentFieldNames[field]));
+        }
+        CarDetailsIO.Apply(carLoader, new ModCarDetails { Alignment = alignment });
+        CarDetailsSync.MarkDirty(carLoader, CarDetailSection.Alignment);
+        return Entries(carLoader, CarDetailSection.Alignment, touched.ToArray());
+    }
+
+    [HarnessCommand("cardetails-wash")]
+    private static object SetWash(string args)
+    {
+        var parts = Split(args, 3, "cardetails-wash <loader> <dust> <wash> [panelIndex]");
+        var carLoader = Loaded(parts[0]);
+        var panels = CarDetailsIO.Read(carLoader, CarDetailSection.BodyCosmetics).BodyCosmetics;
+        if (parts.Length > 3)
+        {
+            int index = int.Parse(parts[3]);
+            panels = panels.Where(p => p.PartIndex == index).ToList();
+            if (panels.Count == 0) throw new ArgumentException($"no panel {index}");
+        }
+        foreach (var panel in panels)
+        {
+            panel.Dust = Float(parts[1]);
+            panel.WashFactor = Float(parts[2]);
+        }
+        CarDetailsIO.Apply(carLoader, new ModCarDetails { BodyCosmetics = panels });
+        CarDetailsSync.MarkDirty(carLoader, CarDetailSection.BodyCosmetics);
+        var result = Entries(carLoader, CarDetailSection.BodyCosmetics, panels.Select(p => CarDetailEntries.Cosmetics(p.PartIndex)).Take(3).ToArray());
+        result["panels"] = panels.Count;
+        return result;
+    }
+
+    public static object Dump()
+    {
+        var places = CarLoaderPlaces.Get();
+        if (places == null) return null;
+        var result = new List<object>();
+        foreach (var sync in CarPartsSync.All.Where(s => s.State == LoaderSyncState.Ready).OrderBy(s => s.Loader))
+        {
+            var carLoader = places.GetCarLoaderByIndex(sync.Loader);
+            if (carLoader == null || !carLoader.IsCarLoaded()) continue;
+            var entries = new SortedDictionary<string, object>(StringComparer.Ordinal);
+            foreach (var pair in CarDetailEntries.Signatures(CarDetailsIO.Read(carLoader, CarDetailsIO.All)))
+                entries[pair.Key] = JToken.Parse(pair.Value);
+            result.Add(new { loader = sync.Loader, entries });
+        }
+        return result;
+    }
+
+    private static Dictionary<string, object> Entries(CarLoader carLoader, CarDetailSection section, params string[] ids)
+    {
+        var signatures = CarDetailEntries.Signatures(CarDetailsIO.Read(carLoader, section));
+        var result = new Dictionary<string, object>();
+        foreach (string id in ids) result[id] = signatures.TryGetValue(id, out string value) ? JToken.Parse(value) : null;
+        return result;
+    }
+
+    private static string[] Split(string args, int minimum, string usage)
+    {
+        var parts = (args ?? "").Split(new[] { ' ' }, StringSplitOptions.RemoveEmptyEntries);
+        if (parts.Length < minimum) throw new ArgumentException($"usage: {usage}");
+        return parts;
+    }
+
+    private static CarLoader Loaded(string index)
+    {
+        var carLoader = CarLoaderPlaces.Get()?.GetCarLoaderByIndex(int.Parse(index));
+        if (carLoader == null || !carLoader.IsCarLoaded()) throw new ArgumentException("no loaded car");
+        return carLoader;
+    }
+
+    private static float Float(string value) => float.Parse(value, CultureInfo.InvariantCulture);
 
     [HarnessCommand("cardetails-hold")]
     private static object Hold(string args)

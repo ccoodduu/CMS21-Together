@@ -125,14 +125,15 @@ public static class VisualCommands
     private static object UnscrewCommand(string args)
     {
         var parts = Args(args);
-        if (parts.Length < 2) throw new ArgumentException("usage: vfx-unscrew <loader> <key> [mount] [pause <fraction>] | <loader> <key> resume|undo");
+        if (parts.Length < 2) throw new ArgumentException("usage: vfx-unscrew <loader> <key> [mount] [pause <fraction>] | <loader> <key> resume|undo|status");
         int loader = int.Parse(parts[0]);
         string key = parts[1];
         string verb = parts.Length > 2 ? parts[2] : "";
 
-        if (verb == "resume" || verb == "undo")
+        if (verb == "resume" || verb == "undo" || verb == "status")
         {
             if (unscrew == null || unscrew.Loader != loader || unscrew.Key != key) throw new InvalidOperationException($"no vfx-unscrew on {loader} {key}");
+            if (verb == "status") return Status(unscrew);
             if (verb == "resume")
             {
                 unscrew.PauseAt = 2f;

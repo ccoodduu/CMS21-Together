@@ -140,6 +140,16 @@ Every `CarBodyPartUpdatePacket` and `CarSubPartUpdatePacket` gets `PartFields Ch
 | `Switched` | — | `Switched` |
 | `All` | the whole record | the whole record |
 
+**Spike 1.2 (2026-10-08, `merges-probe`, run `20261008-171541_L1_merges-probe`):** `diag-examine` with every
+`ToolType` (OBD 8 keys, Compression 35, Multimeter 13, TireTreadDepthTester 4, CompoundMeter 3, TestDrive 52, PathTest
+43; OilBayonet examines none) changes only `IsExamined` (`Examined`), on the actor and on the receiver. The welder
+(`tool-use Welder`) changes no part record. The game's mount (`PartScript.DoMount`, decompile
+`PartScript._DoMount_d__151$$MoveNext.c`) writes the item's condition, quality, `IsPainted`, dust 0 and id
+(`TunePart`) together with `Unmounted`: a mount record changes `Mount`, `Identity`, `Condition`, `Quality`, `Paint`
+and `Dust` at once, which is why it is taken whole (step 1); a repaired and painted item only differs from the part
+by these fields. Leaving the driver's seat flips a door's `Switched`. Every changed field belongs to exactly one group
+of the table.
+
 Other `State` fields of a body record follow the `Condition` group. `All` is an explicit bit [minor 1]: snapshots,
 resyncs, baselines and the harness's corrupt verbs use it. A change record never carries 0; the server logs and
 skips such a record.
@@ -159,8 +169,12 @@ record into `(merged record, written groups)`:
 2. **Other records with `Mount` in `Changed`** (an unmount, validated by its precondition): the masked groups are
    copied onto the stored record.
 3. **Records without `Mount` in `Changed`: base check** [M1]. The incoming `Unmounted` (and `Switched` for a body
-   part), and also `PartId` and `TunedID` when `Identity` is not in the mask (a tune changes them on purpose), are
-   the sender's base. If they equal the stored ones, the masked groups
+   part), the effective id (`PartId`/`TunedID`, as `PartKeys.EffectiveId`) when `Identity` is not in the mask (a tune
+   changes it on purpose), and `Quality` when `Quality` is not in the mask are the sender's base. `Quality` is in the
+   base because a part replaced by another of the same id is otherwise indistinguishable (task 2.1, 2026-10-08): a
+   mounted part's quality only changes with a mount (spike 1.2), so a different quality means "replaced". A
+   replacement with the same id and quality is still merged onto (accepted: the two parts are alike). If they equal
+   the stored ones, the masked groups
    are copied onto the stored record (counted `staleMerged` when an unmasked group differed: the sender was stale
    elsewhere). If they differ, the part was unmounted or replaced since the sender's view: the record is dropped,
    nothing is written, and it is counted and logged as `staleDropped`.
@@ -315,8 +329,14 @@ echoes, every entry that the server changed or that a foreign update overwrote a
 - `ToolsStore.Check`, for a put (incoming not empty, a UID other than the current one), after today's checks:
   - the UID is in the server's inventory, or this client removed it: accepted (today's path);
   - another client removed it (mounted, sold, scrapped, put elsewhere): refused, "used by player N";
-  - the server never saw the UID: accepted, logged and counted (`unknownSlotItem`), unless spike 1.1 shows machines
-    never use such items (open question 6).
+  - the server never saw the UID: accepted, logged and counted (`unknownSlotItem`) (open question 6). Spike 1.1
+    (2026-10-08, the batch `20261008-171529_L1_batch`: `tools-slots`, `tools-race`, `tools-latejoin`,
+    `tools-car-effects`, debug line `[Tools] Put origin` in `ToolsStore.Check`): 17 puts that passed the existing
+    checks (7, 7, 3, 0), every one "removed by the putter" (the game deletes the item first and `InventoryHook` sends `Remove`
+    ahead of the slot update); none was in the inventory still, removed by another client or never seen. Machines
+    did not use a never-seen item in these runs, but the scenarios hand out items through the hooked inventory only,
+    so groups the game builds itself are not covered; the rule stays "accept and count", and the counter shows in
+    the soak whether such puts happen at all.
 - Every refusal of a put carries `ToolSlotRejectedPacket.Item`: `Returned` (this client had removed the item; the
   server puts the kept copy back into its inventory, clears the remover entry and relays the `Add` to the others),
   `Gone` (another client removed it; nothing is restored) or `Unchanged` (no item involved).
@@ -391,6 +411,11 @@ them. Spike 1.3 lists fields to leave out.
 
 - `car-details:<loader>` rides with `cars:<loader>`: the same car per round, from the same cursor.
 - The other keys are asked every round.
+- **Spike 1.3 (2026-10-08, `merges-probe`, run `20261008-171541_L1_merges-probe`):** no entry drifts. Every entry
+  (`CarDetailEntries.Signatures`, rounded to 3 decimals) was compared every 5 s on both clients: 2 min idle, 2 min with
+  A seated and the engine running, after a test-drive round trip (only `info` mileage changed, equal on both) and after
+  a wheel swap with a new rim and tire type (only that wheel's size changed; `WheelsData` keeps its load-time `Tire`
+  and `Rim` ids on both clients, so they agree). The `car-details` digest needs no exclusions.
 - **Log-only first** [minor 10]: each new key starts with its resend off (`desync_resend_keys` server setting lists the
   keys whose resend is on). A key's resend is turned on after `desync-soak` is quiet for it.
 

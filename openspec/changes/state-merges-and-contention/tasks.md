@@ -1,5 +1,13 @@
 # Tasks
 
+**Resume here (part 1, branch `change/state-merges-1`, worktree `CMS21-Together-wt/state-merges`, lane 1):** group 1
+done (spikes in design.md D1, D9, D11; run batch `20261008-171529_L1_batch`). Group 2 (Core, `--check-merges` for
+the part rules) done. Group 3: 3.1-3.3 code written (masks in `PartChangeTracker`/`EngineStandParts`, normalisation
+and masked relay/result in `CarPartsHandlers.OnChange` and `ToolsStore.OnPartChange`, masked apply in
+`PartChanges`/`PartApplier`, `ShowMounted` recheck, ghosts and bolt replays only for moving records),
+`car-stale-record` steps 1-5 written; next: prove them, then 3.5. Open with the user: the base check also compares
+`Quality` (design D1 step 3), needed by `car-stale-record` step 5.
+
 **Row 19: the race and drift audit's gaps that row 18 does not close** (gaps 3, 6, 9, 10, the rest of 7, the soak
 contention mode, and the review ledger's P7, P11, I2, I5, M4, M5 and C2), plus the user's decision of 2026-10-07 on
 the ledger's "accept" rows (S1 fixed; no silent drops for I3, I7, E4, M8, C4, J2, J4, J5). Revised 2026-10-07 after
@@ -25,19 +33,19 @@ the ledger's "accept" rows (S1 fixed; no silent drops for I3, I7, E4, M8, C4, J2
 
 ## 1. Spikes and early harness
 
-- [ ] 1.1 Machine items (design D15.1). Log in `ToolsStore.Check` (debug level) whether each put's UID was in the
+- [x] 1.1 Machine items (design D15.1). Log in `ToolsStore.Check` (debug level) whether each put's UID was in the
       server's inventory, removed by the putter, or never seen. Run `tools-slots`, `tools-race`, `tools-latejoin` and
       `tools-car-effects`. Done when design.md D9 states the rule for never-seen UIDs with the counts, and the
       scenarios still pass.
-- [ ] 1.2 Examine and condition paths (D15.2). `part-state` of the touched keys before and after `diag-examine` with
+- [x] 1.2 Examine and condition paths (D15.2). `part-state` of the touched keys before and after `diag-examine` with
       each `ToolType`, `tool-use` with the welder on a body part, `tool-repair` and `tool-paint-part` on a part that is
       then mounted. Done when design.md D1 lists, per path, the groups it changes, and every changed field belongs to
       exactly one group.
-- [ ] 1.3 Detail values that drift by themselves (D15.3). `cardetails-show 0` every 5 s for 2 minutes on an idle car,
+- [x] 1.3 Detail values that drift by themselves (D15.3). `cardetails-show 0` every 5 s for 2 minutes on an idle car,
       with the engine running (`sit`, `engine on`), after a `test-drive` round trip and after a `car-wheel-swap`
       style rim and tire change. Done when design.md D11 lists the fields the `car-details` digest leaves out or
       rounds coarser, or states that none drift.
-- [ ] 1.4 Harness, independent of row 18 [review M7]: row 4's registered setters `cardetails-fluid <loader> <type> <id>
+- [x] 1.4 Harness, independent of row 18 [review M7]: row 4's registered setters `cardetails-fluid <loader> <type> <id>
       <level> [cond]`, `cardetails-wheel <loader> <index> <w> <rim> <tire> <et>`, `cardetails-alignment <loader> <FL>
       <FR> <RL> <RR>` (`-` leaves a field) and `cardetails-wash <loader> <dust> <wash> [panelIndex]`, each through the
       game setters and `MarkDirty`; the dump section `carDetails` (rounded like `Signature`, lists sorted by key).
@@ -46,7 +54,7 @@ the ledger's "accept" rows (S1 fixed; no silent drops for I3, I7, E4, M8, C4, J2
 
 ## 2. Core
 
-- [ ] 2.1 Core: `PartFields` (with `All`), `Changed` on both part record packets, `PartRecordMerge.Normalise(stored,
+- [x] 2.1 Core: `PartFields` (with `All`), `Changed` on both part record packets, `PartRecordMerge.Normalise(stored,
       incoming, precondition)` per design D1 (the groups of 1.2); `WheelMask` and `AlignmentFields AlignmentMask` on
       `CarDetailsUpdatePacket`; `SlotItemOutcome` on `ToolSlotRejectedPacket`. Server flag `--check-merges` for the part
       rules: a mount record is taken whole; an unmount copies its masked groups; a stale examine (base `Unmounted`

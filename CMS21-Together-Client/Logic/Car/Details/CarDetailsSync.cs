@@ -273,8 +273,6 @@ public static class CarDetailsSync
 	private static string Known(int loader, CarDetailSection section) =>
 		lastKnown.TryGetValue(loader, out var known) && known.TryGetValue(section, out string value) ? value : null;
 
-	private static readonly JsonSerializerSettings Rounded = new JsonSerializerSettings { FloatFormatHandling = FloatFormatHandling.String, Converters = { new RoundingConverter() } };
-
 	public static string Signature(ModCarDetails details, CarDetailSection section)
 	{
 		object value = section switch
@@ -290,14 +288,6 @@ public static class CarDetailsSync
 			CarDetailSection.Dyno => details.Dyno,
 			_ => null,
 		};
-		return JsonConvert.SerializeObject(value, Rounded);
-	}
-
-	private sealed class RoundingConverter : JsonConverter
-	{
-		public override bool CanConvert(Type objectType) => objectType == typeof(float) || objectType == typeof(double);
-		public override void WriteJson(JsonWriter writer, object value, JsonSerializer serializer) => writer.WriteValue(Math.Round(Convert.ToDouble(value), 3));
-		public override object ReadJson(JsonReader reader, Type objectType, object existingValue, JsonSerializer serializer) => throw new NotSupportedException();
-		public override bool CanRead => false;
+		return CarDetailEntries.Signature(value);
 	}
 }

@@ -74,7 +74,17 @@ namespace CMS21_Together_Server.Data.Tools
 			string id = incoming.Item?.ID ?? incoming.Group?.ID ?? "";
 			if (IdPrefixes.TryGetValue(incoming.Tool, out string prefix) && !id.StartsWith(prefix, StringComparison.Ordinal)) return $"'{id}' does not fit";
 			var other = State.Slots.Values.FirstOrDefault(s => s.Tool != incoming.Tool && !s.IsEmpty && s.Uid == incoming.Uid);
+			if (other == null && incoming.Uid != current.Uid) Logger.Debug($"[Tools] Put origin {incoming.Tool} {incoming.Uid} '{id}' from client {clientId}: {PutOrigin(incoming.Uid, clientId)}.");
 			return other != null ? $"{incoming.Uid} is on {other.Tool}" : null;
+		}
+
+		private static string PutOrigin(long uid, int clientId)
+		{
+			var inventory = GameDataManager.CurrentState.InventoryState;
+			if (inventory.InventoryItems.Any(i => i.UID == uid) || inventory.InventoryGroupItems.Any(g => g.UID == uid)) return "in-inventory";
+			if (InventoryChanges.RemovedByOther(uid, clientId)) return "removed-by-other";
+			string remover = InventoryChanges.DescribeRemover(uid);
+			return remover == "never seen" ? "never-seen" : "removed-by-putter";
 		}
 
 		private static ToolSlotState Normalize(ToolSlotState incoming, ToolSlotState current)
