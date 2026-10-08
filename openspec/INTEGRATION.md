@@ -51,7 +51,7 @@ part 2. "Owner" defines it; "Users" only call or subscribe.
 | `RaceStartRequest { Scene, Laps }` → `RaceRefused { Reason }` or `RaceCountdown { RaceId, Scene, Laps, Participants, StartInMs }` (S→players on the race track); `RaceLap { RaceId, Lap, LapMs }`, `RaceQuit { RaceId }` (C→S); `RaceResult { RaceId, Order }` (S→all in session); `WorldState.RaceResults` (`[OptionalField]`, last 10) | both | 27b (drafted) | 27a (`LastTime` hook, track set), 17 part 2 (`ActiveDrives`), 19 part 3 (D16) |
 | `ServerInfoPacket.TrackCollisions` (`[OptionalField]`, server config `track_collisions`) | S→C | 27c (drafted) | 17 part 2 (`RemoteCars` copy, `DriveInterpolator` snap), 21 (ride-along copy), 27b (start rule) |
 | `GarageLookUpdate`, `GarageLookClaim` → `GarageLookClaimResult`; `GarageState.Look` (`ModGarageLook { MaterialIndexes, TexturePack, SectionCount }`, `[OptionalField]`; save section `garage` v2) | both | 28 (drafted) | 14/19 (`garage` digest includes the look; the client digests its last applied server look) |
-| `JobStatsReport { JobId, Stats }` (finisher → S), `JobStatsAward { JobId, Stats }` (S → contributors); active job `Contributors` (`[OptionalField]`) | both | 30 (drafted) | 3 (`JobEndContext`, `JobsService`), 18, 19 part 1 (sources of contributions) |
+| `JobStatsAward { JobId, Stats, MissionFinished }` (S → contributors, stats derived by the server in `OnJobEnd`; no client report); active job `Contributors` (`[OptionalField]`, `PlayerRecords.ShortKey`) | both | 30 (drafted) | 3 (`JobsService.OnJobEnd`, mission counters in `JobRemoved`), 18, 19 part 1 (sources of contributions) |
 
 Rows 12 and 14a add no packets; rows 26 (`shared-salon`, drafted: guard entries and a proof only) and 29 (`seated-avatars`, drafted) add none either.
 

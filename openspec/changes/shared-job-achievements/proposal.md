@@ -23,8 +23,9 @@ What the game counts (static, `docs/spikes/orders-and-jobs.md` section 7 and the
 | `stat_finish_allmissions` | the last story mission ends | `achiv_finish_allmissions_stage1` |
 | `stat_level` | level-up | `achiv_level_stage1/2/3`; **already shared**: every client increments it by the level difference when the shared level changes (`WorldStatesPackets`) |
 
-All of them go through `PlatformManager.IncrementStat(id, amount)` → the platform's `BaseAchievements.IncrementStat`,
-which adds to the stat, unlocks the achievements whose threshold is reached and writes Steam (`SteamUserStats.SetStat`,
+All of them end in the platform's `SteamAchievements.IncrementStat` (the job end calls it directly for three stats and
+through `PlatformManager.IncrementStat(id, amount)` for `stat_finish_allmissions`), which runs
+`BaseAchievements.IncrementStat`: it adds to the stat, unlocks the achievements whose threshold is reached and writes Steam (`SteamUserStats.SetStat`,
 `StoreStats`). Calling `PlatformManager.IncrementStat` on another client reproduces the stat and its achievements
 exactly.
 
@@ -32,25 +33,30 @@ exactly.
 
 - **Who worked on a job.** The server keeps, per active job, the set of players who contributed: the player who took
   the order, every player whose part change, car detail change, granted car lock (row 18) or examine on the job's car
-  the server accepted while the job was active, and the finisher. Kept in memory with the active job and in the `jobs`
-  save section (so a server restart in the middle of a job keeps it; old saves load with the taker only).
-- **The finisher reports what the game counted.** While its `EndJobCoroutine` runs (row 3's `JobEndContext`), the
-  finisher's client records every `PlatformManager.IncrementStat` call and, when the coroutine ends, sends
-  `JobStatsReport { JobId, Stats[] }` (stat id and amount).
-- **The server awards the others.** It checks the report (the job just ended by that client, ids in the job stat
-  allow-list above except `stat_level`, amount 1) and sends `JobStatsAward { JobId, Stats[] }` to every contributor who
-  is connected, except the finisher. Each receiver calls `PlatformManager.IncrementStat(id, amount)` once per job id
-  (a second award for the same job is ignored).
-- **No double count.** The finisher's own game already counted; the server never sends it an award. Stats the
-  receiver's game increments while applying the job end (none today: the car delete and money apply call no stat) are
-  not affected.
+  the server accepted while the job was active, and the finisher. The job is found from the car's spawn record
+  (`CarState.LoadedCars[L].Spawn.JobID` with `Spawn.IsJob`), not from the loader the job started on, because a job car
+  can move to another loader. Kept in memory with the active job and in the `jobs` save section (so a server restart in
+  the middle of a job keeps it; old saves load with the taker only). Contributors are stored by
+  `PlayerRecords.ShortKey`, a non-secret id, so the `jobs` section never carries identity keys into a bug report.
+- **The server derives the job's stats.** When it accepts a job end (`JobsService.OnJobEnd`), it already knows
+  everything the game's stat calls depend on: `packet.IsCompleted`, the job's `BonusToExp`/`BonusToMoney` and
+  `IsMission`. It derives `stat_finish_order` (completed), `stat_bonus_exp` and `stat_bonus_money` (completed with that
+  bonus), and whether a mission was finished. No client report and no hook on the finisher.
+- **The server awards the others.** It sends `JobStatsAward { JobId, Stats[], MissionFinished }` to every contributor
+  who is connected, except the finisher, after the `JobRemoved` broadcast. Each receiver calls
+  `PlatformManager.IncrementStat(id, 1)` once per job id (a second award for the same job is ignored); for
+  `MissionFinished` it adds `stat_finish_allmissions` when `GlobalData.MissionsAmount <= GlobalData.MissionsFinished`
+  (row 3 keeps the counters equal and `JobRemoved` carries them before the award).
+- **No double count.** The finisher's own game already counted; the server never sends it an award. The receivers'
+  job-end path calls no stat (only the finisher runs `EndJobCoroutine`).
 - **A contributor who is offline** at the end gets nothing (no queue).
 - Server config `job_stats_to` = `contributors` (default) | `garage` (every player in the garage at the end) |
-  `finisher` (today's behaviour), for players who prefer another rule.
+  `finisher` (today's behaviour), for players who prefer another rule; also settable at runtime with the server command
+  `jobs stats-to <rule>`.
+- The difficulty is one server setting for the session, so every client applies `sandbox_<id>` the same way
+  (`SteamAchievements.IncrementStat` writes it in difficulty mode 2).
 
-Hooks: `PlatformManager.IncrementStat(string, int)` (prefix, records only inside `JobEndContext`), the existing
-`GameScript._EndJobCoroutine_d__139.MoveNext` postfix (end of the coroutine). Packets: new `JobStatsReport`,
-`JobStatsAward`.
+Hooks: none in game code (the receivers call `PlatformManager.IncrementStat`). Packets: new `JobStatsAward`.
 
 ## Capabilities
 
@@ -65,16 +71,16 @@ Hooks: `PlatformManager.IncrementStat(string, int)` (prefix, records only inside
 
 ## Impact
 
-- Core: `Network/Packets/JobPackets.cs` (`JobStatsReport`, `JobStatsAward`, `ModStatIncrement`), `PacketTypes`
-  (appended), `JobsState` active job gains `Contributors` (`[OptionalField]`).
-- Server: `Data/Jobs/JobContributors.cs` (record on part, detail, lock and examine paths, keyed by the job's loader),
-  `JobsService.OnJobEnd` (keeps the contributor list of the ended job for 60 s for the report), `ServerConfig`
-  (`job_stats_to`), server command `jobs contributors`.
-- Client: `Logic/Jobs/JobStats.cs` (capture on the finisher, apply on receivers, per-job dedupe).
-- Harness: `stats-trace on|off|report` (counts `PlatformManager.IncrementStat` calls per id; `StatsGuard` keeps Steam
-  untouched), scenario `job-stats`.
-- Depends on (merged): row 3 (`JobEndContext`, `JobsService`), row 18 (lock grants), row 19 part 1 (part and detail
-  merges name their source client).
+- Core: `Network/Packets/JobPackets.cs` (`JobStatsAward`), `PacketTypes` (appended), `JobsState` active job gains
+  `Contributors` (`[OptionalField]`, short keys).
+- Server: `Data/Jobs/JobContributors.cs` (record on part, detail, lock and examine paths; job resolved from the car's
+  spawn record), `JobsService.OnJobEnd` (derive the stats, send the awards), `ServerConfig` (`job_stats_to`), server
+  commands `jobs contributors <jobId>` and `jobs stats-to <rule>`, `RedactionCheck` case for the `jobs` section.
+- Client: `Logic/Jobs/JobStats.cs` (apply awards, per-job dedupe).
+- Harness: `stats-trace on|off|report` (counts calls at `SteamAchievements.IncrementStat` for the four job ids only;
+  `StatsGuard` keeps Steam untouched), scenario `job-stats`.
+- Depends on (merged): row 3 (`JobsService`, mission counters in `JobRemoved`), row 7 (identity, `ShortKey`), row 18
+  (lock grants), row 19 part 1 (part and detail merges name their source client).
 
 ## Open questions
 

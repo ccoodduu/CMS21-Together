@@ -2,21 +2,25 @@
 
 ## Context
 
-- Row 3: the finisher's client runs the vanilla `EndJob`; `JobEndContext` covers the coroutine (money and XP go to the
-  server as `JobEndRequest`); the server ends the job once (`JobsService.OnJobEnd`), clears the car and broadcasts
-  `JobRemoved { Reason = Ended }`. Its spec promised stats for every connected player through a `JobStatsAwarder` that
-  was never built.
-- The coroutine's stat calls come after `GameScript.EndJob` sent the request: payout and XP first, then the car delete,
-  then `stat_finish_order`, `stat_bonus_exp`, `stat_bonus_money` (virtual `IncrementStat` on the achievement system) and
-  `stat_finish_allmissions` (`PlatformManager.IncrementStat`). `PlatformManager.IncrementStat` tail-calls the same
-  virtual, so a prefix on the virtual target sees all four; a prefix on `PlatformManager.IncrementStat` alone does not
-  (the coroutine calls the virtual directly for three of them). The hook is therefore on
-  `CMS.Platforms.Steam.SteamAchievements.IncrementStat(string, int)` (the platform's override, `0x180D99D80`), with
-  `PlatformManager.IncrementStat` as fallback if Harmony cannot patch the override (task 1.1).
-- The harness blocks the Steam writes (`StatsGuard` skips `SteamUserStats.SetAchievement/SetStat/StoreStats/…`), but
-  `BaseAchievements.IncrementStat` still runs, so calls can be counted in test games without touching the account.
+- Row 3: the finisher's client runs the vanilla `EndJob`; `JobEndContext` covers the payout (money and XP go to the
+  server as `JobEndRequest`) and closes in the `OrderGenerator.CancelJob` prefix; the server ends the job once
+  (`JobsService.OnJobEnd`, which has `packet.IsCompleted` and the active job's `BonusToExp`, `BonusToMoney`,
+  `IsMission`), clears the car and broadcasts `JobRemoved { Reason = Ended, IsCompleted, Missions }`. Its spec promised
+  stats for every connected player through a `JobStatsAwarder` that was never built.
+- In `GameScript.<EndJobCoroutine>d__139`, `CancelJob(job.id)` comes before the four stat calls in the same `MoveNext`
+  step, so a capture tied to `JobEndContext` would record nothing. Three stats use the virtual at vtable +0x1D8
+  (`stat_finish_order`, `stat_bonus_exp`, `stat_bonus_money`, only when `IsCompleted`); `stat_finish_allmissions` goes
+  through `PlatformManager.IncrementStat`, which tail-jumps to the same virtual (`SteamAchievements.IncrementStat`,
+  `0x180D99D80`). It runs `BaseAchievements.IncrementStat` (in-memory `Value`, `UpdateProgress`, `Unlock`; in difficulty
+  mode 2 also `sandbox_<id>`/`ValueSandbox`), then `SteamUserStats.SetStat` and `StoreStats`. Only the finisher runs the
+  coroutine, so receivers never count a job stat themselves.
+- The harness blocks the Steam writes (`StatsGuard` skips `SetAchievement`, `SetStat`, `StoreStats`,
+  `IndicateAchievementProgress`), so calls can be counted in test games without touching the account.
+  `WorldStatesPackets` calls `PlatformManager.IncrementStat("stat_level", diff)` on every world state (often 0).
 - The server sees who changed what: part records and detail entries carry the sender (row 19 part 1), lock grants
-  carry the holder (row 18), examines are part record changes.
+  carry the holder (row 18), examines are part record changes. `ActiveJobEntry.CarLoaderId` is set once when the job
+  starts; the car's spawn record (`Spawn.IsJob`, `Spawn.JobID`) follows the car (`ClearsCar`, `DeleteJobCar` use it).
+- The session difficulty is a server setting (`new_session_difficulty`, the `world` section), the same on every client.
 
 ## Goals / Non-Goals
 
@@ -29,51 +33,53 @@ configurable.
 
 ### D1. Contributors per active job
 
-`JobContributors` maps an active job id to a set of player keys (row 7 identity keys, so a rejoin keeps a player's
-contribution). Added:
+`JobContributors` maps an active job id to a set of player short keys (`PlayerRecords.ShortKey`, stable across a rejoin
+and not secret). When a change on loader L is accepted, the job is `CarState.LoadedCars[L].Spawn.JobID` if
+`Spawn.IsJob` and that job is active. Added:
 
 - on `JobStarted` (the taker);
-- in `CarPartsHandlers` when a part record or transaction from client X on the job's loader is accepted;
-- in `CarDetailsStore.OnUpdate` when an entry from X on that loader is accepted;
-- in `CarLocks` when a lock on that loader is granted to X;
+- in `CarPartsHandlers` when a part record or transaction from client X on a job car is accepted;
+- in `CarDetailsStore.OnUpdate` when an entry from X on that car is accepted;
+- in `CarLocks` when a lock on that car is granted to X;
 - in `JobsService.OnJobEnd` (the finisher).
 
 Stored with the active job (`ActiveJob.Contributors`, `[OptionalField]`, `jobs` section version bump, old saves: taker
-only). All writes under `GameDataManager.StateLock`.
+only). All writes under `GameDataManager.StateLock`. `RedactionCheck` gains a case that a bug report's `jobs` section has
+no identity key.
 
-### D2. Report after the coroutine
+### D2. Stats derived on the server
 
-The finisher records the stat calls while `JobEndContext.IsActive` and the coroutine runs, and sends
-`JobStatsReport { JobId, Stats = [{ Id, Amount }] }` from the coroutine's final `MoveNext` (returns false). A report
-with no stats (job not completed, no bonus) is still sent, so the server's log shows the end-to-end path. The server
-accepts a report only from the client that ended that job, within 60 s, once, with ids in
-`{stat_finish_order, stat_bonus_exp, stat_bonus_money, stat_finish_allmissions}` and amount 1; anything else is dropped
-with a log line (no state changes, nothing to answer: D16 does not apply, the client's own state already equals the
-server's).
+In `JobsService.OnJobEnd`, after the end is accepted: `Stats` = `stat_finish_order` if `packet.IsCompleted`, plus
+`stat_bonus_exp` if completed and `Job.BonusToExp`, plus `stat_bonus_money` if completed and `Job.BonusToMoney`;
+`MissionFinished` = `Job.IsMission`. This mirrors the game's own conditions in `EndJobCoroutine`. A job end that is
+refused (row 3) awards nothing, and a second end of the same job is refused, so a job's stats are awarded at most once.
+No client report and no game hook: this removes the capture window problem and the Harmony-on-override risk.
 
 ### D3. Award
 
-The server sends `JobStatsAward { JobId, Stats }` to each connected contributor except the finisher (or, per
-`job_stats_to`, to everyone in the garage or nobody). The receiver calls
-`Singleton<GameManager>.Instance.PlatformManager.IncrementStat(id, amount)` for each, once per job id (a small set of
-awarded job ids, cleared on disconnect). The award is applied wherever the player is (garage or away): it touches only
-the platform stats.
+After the `JobRemoved` broadcast, the server sends `JobStatsAward { JobId, Stats, MissionFinished }` to each connected
+contributor except the finisher (or, per `job_stats_to`, to everyone in the garage except the finisher, or to nobody).
+An award with no stats and no mission is not sent. The receiver calls
+`Singleton<GameManager>.Instance.PlatformManager.IncrementStat(id, 1)` for each id, and for `MissionFinished` adds
+`stat_finish_allmissions` when `GlobalData.MissionsAmount <= GlobalData.MissionsFinished` (the counters arrived with
+`JobRemoved`). Once per job id (a small set of awarded job ids, cleared on disconnect). The award is applied wherever the
+player is (garage or away): it touches only the platform stats. Every client runs the session's difficulty, so the
+sandbox variant is written the same way as on the finisher.
 
-### D4. Late and repeated paths
+### D4. What the server stores and relays; late join
 
-- A second end of the same job is refused by row 3 (D16 answer), so no second report is accepted.
-- A server restart between the end and the report loses the report (rare; accepted).
-- Missions: the finisher's game decides `stat_finish_allmissions` from its mission counters, which row 3 keeps equal on
-  every client; the report carries it.
+Stored: the contributor set of each active job (`jobs` section). Nothing about an ended job is kept. Relayed: nothing;
+the award is computed. A player who joins after a job ended gets nothing for it; a contributor who rejoins during the job
+keeps the contribution (short key). A server restart during a job keeps the contributors.
 
 ## Risks / Trade-offs
 
-- [Harmony cannot patch the platform override (shared native body)] → task 1.1 checks with `work\at.py`; fallback:
-  derive the three job stats on the server from `IsCompleted`, `BonusToExp`, `BonusToMoney` and the mission counter.
+- [The game's stat conditions differ from D2 in a case not seen in the decompile] → the scenario compares B's counted
+  stats with A's for a completed bonus job.
 - [A contributor gets an achievement the user considers unearned] → `job_stats_to` lets the host choose.
 - [Steam rate limits on `StoreStats`] → one award per job; the game itself stores after each increment.
 
 ## Migration Plan
 
-New packets appended; `jobs` section version bump with a default (taker only). Client and server update together (the
+New packet appended; `jobs` section version bump with a default (taker only). Client and server update together (the
 version check enforces it). Rollback: revert; saved contributor lists are ignored by older servers.

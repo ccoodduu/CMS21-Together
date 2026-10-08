@@ -76,3 +76,22 @@ updated when the car moves (row 2/19 placement moves). Fix: when a change on loa
 ## Size
 
 S (≈ 1–2) holds with B1(b). With B1(a) plus a Harmony spike on the override, plan for 2.
+
+## Review resolution
+
+Applied 2026-10-08. Checked on the branch: `JobsService.OnJobEnd` has `packet.IsCompleted`, `active.Job.IsMission`;
+`ModJob` has `BonusToExp`/`BonusToMoney`; `JobsService` resolves job cars by `Spawn.IsJob`/`Spawn.JobID`;
+`Redaction.DropPlayerKeys` only scrubs `players`; the difficulty is a server setting.
+
+- **B1** Fixed with option (b), the review's recommendation: the server derives `stat_finish_order`, `stat_bonus_exp`,
+  `stat_bonus_money` and `MissionFinished` in `OnJobEnd` (D2); `JobStatsReport`, the capture hook, the 60 s window and
+  the report validation are gone; the receiver adds `stat_finish_allmissions` from the mission counters (D3).
+- **M1** Fixed. `stats-trace` counts only at `SteamAchievements.IncrementStat` (task 3.2); spike 1.1 covers the case
+  where the override cannot be patched.
+- **M2** Fixed. D1 resolves the job from the car's spawn record; the scenario moves the car before the end; `JobsCheck`
+  covers it.
+- **m1** The trace filters to the four job ids. **m2** D3: the session difficulty is one server setting. **m3**
+  contributors stored as `PlayerRecords.ShortKey`, `RedactionCheck` case. **m4** server command `jobs stats-to`, one
+  restart check kept. **m5** step 3 labelled a guard; step 1 is the proof. **m6** spec requirement now "awarded once,
+  when the server accepts that job's end".
+- Size: S (≈ 1–2).

@@ -31,10 +31,10 @@ at the end, or only the finisher.
 - **WHEN** the server is set to award everyone in the garage and A finishes a job alone
 - **THEN** B, who is in the garage, also receives the job's statistics
 
-### Requirement: No award from a forged or repeated report
-The server SHALL award a job's statistics only once, only after that job ended, only for the job statistics of the game,
-and only on the report of the player who ended it.
+### Requirement: A job's statistics are awarded once
+The server SHALL award a job's statistics once, when it accepts that job's end, and only the statistics the game counts
+for that end (finished order, and the bonus statistics for a completed job with that bonus).
 
-#### Scenario: Report repeated
-- **WHEN** the finishing client sends its report a second time
-- **THEN** nobody receives the statistics again
+#### Scenario: Job end repeated
+- **WHEN** the finishing client sends the end of the same job a second time
+- **THEN** the second end is refused and nobody receives the statistics again
