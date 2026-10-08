@@ -46,6 +46,7 @@ part 2. "Owner" defines it; "Users" only call or subscribe.
 | `CarDetailsUpdatePacket.WheelMask` (bit per wheel index, 0 = all) and `AlignmentMask` (`AlignmentFields`, `None` = all) (`[OptionalField]`) | both | 19 (part 1, D4/D5) | a details update carries only the changed entries |
 | `ToolSlotRejectedPacket.Item` (`SlotItemOutcome`: `Unchanged`, `Returned`, `Gone`; `[OptionalField]`) | S→the refused client | 19 (part 1, D9) | `Returned`: the server put the item back (and relayed its `Add`); `Gone`: another player used it ("<name> used this part.") |
 | `InventorySyncPacket.UidFloor` (`[OptionalField]`, last batch only) | S→the syncing client | 20 | the highest stored UID of that player's range (inventory, warehouse, machine slots, items in groups); `UidRange.Apply` continues after it (audit I6, `docs/design/race-hardening.md`) |
+| `OrderRequest { RequestId }`; `OrderGeneratedPacket.RequestId`, `.Reason` (`OrderRequestReason`: `None`, `NoCar`, `NotReady`, `Busy`, `Disabled`, `HarnessOff`; `[OptionalField]`); `JobsState.Clock` (`OrderClock { OrderTimer, NextOrderTime = 10 }`, `[OptionalField]`) | S→generator / generator→S | 16 (order clock) | the server asks the elected garage client for an order when its clock is due; the client answers with the order or with no job and a reason. `docs/design/server-order-clock.md` |
 
 Rows 12 and 14a add no packets.
 
@@ -263,6 +264,7 @@ Verbs are globally unique (`Commands.Discover` throws on a duplicate). Existing:
 | 22 | `ping <loader> <key>` (no arguments: the status probe as before; with arguments: the part goes under the game's mouse-over and the hotkey's path runs), `ping-spot x,y,z`, `ping-burst <n> <loader> <key>` (raw packets past the client throttle), `ping-markers [clear]`, `input-bindings [binding]` (Rewired keyboard and mouse maps of every player); dump section `pings` (`hotkey`, `defaultHotkey`, `markers[]`, `counters`, `lastSent`) |
 | 23 | `shoplist` (game list, server mirror, `outstanding`, `windowManagerSame`), `shoplist-add`, `shoplist-remove`, `shoplist-clear` (item arguments `<id> [tire\|rim] [width=] [size=] [profile=] [et=] [plate=] [bonus=]`); no dump section |
 | 16 | `jobcar-digest <jobId> [rows]` (an active job's car: body and sub part records, car details sections, the job's tasks with their part ids; `hash` and one hash per section; `rows` adds the rows), `jobcar-trace on|off|report` (the Unity random state around each step of `TakeJob`, `TakeMission`, `LoadCar` and `SetRandomColorPanels`, and around `PlaceAtPosition` and `PrepareJob`) |
+| 16 (order clock) | `orders-timer [<timer> <next>]` (set or read the native `OrderGenerator.orderTimer`/`nextOrderTime`), `orders-ttl <seconds>|off` (a sticky `timeToEnd` for every order the client generates); `orders-autogen off` also answers server order requests with `HarnessOff`; `orders-generate` goes through `JobsSync.GenerateOrder(0)` while connected |
 | 21 | `ride-state [driverId]` (phase, rides, camera `placed`/`toHead`/`maxDrift`/`customPos`, own track car `kinematic`/`inputsEnabled`/seats, drive capture, the copy's seats, avatars `toSeat`), `ride-probe` (spike: track camera, own car seats and head, copy seats and wheels); dump section `ride` |
 
 | PowerShell helper / server command | Owner (first to land) |
@@ -280,6 +282,7 @@ Verbs are globally unique (`Commands.Discover` throws on a duplicate). Existing:
 | server commands `password`, `serverinfo` (8); `compat` (9); `desync`, `bugreport` (14); `shoplist` (23); existing `kick`, `stop` (`kick` moves to `Server.Refuse`) | as listed |
 | server command `jobs expire <id>` (expires an open order at once, as the tick does) | 19 (part 3) |
 | server command `jobs reopen <id>` (deletes an active job's car and opens the original order again, the lost-car path) | 16 (seeded job cars) |
+| server command `jobs` prints the order clock (`clock t / next s, open of limit (level), running|frozen, request`) | 16 (order clock) |
 | server log lines `[Shop] Sale of …` and `[Inventory] Warehouse move of …` (the soak contention's server order) | 19 (part 2) |
 | server command `away` also lists the rides | 21 |
 | server command `perf` (`perf`, `perf top <n>`, `perf reset`), snapshot line `Client[n] snapshot <id> acked after …`; `tools/test-env/PerfSampler.psm1` (`Get-PerfSample`, `Add-PerfSample`, `Test-PerfWatchdog`, `Add-FrameSample`), `Show-SoakReport.ps1` | 11 |
@@ -291,7 +294,7 @@ Scenarios (unique): playtest fixes `car-wheel-swap`, `car-mount-race`; 7 `server
 5b `tools-car-effects`; 8 `join-ui`, `join-coldstart`, `host-from-game`, `session-admin`; 9 `compat-refusal`, `compat-mods-probe` (run-all: skip; needs real mods copied into A);
 12 `release-smoke` (marked `# run-all: skip`, run after `Install-ReleaseToTestEnv.ps1`); 14a `guard`; 14
 `desync-autofix`, `resync-key`, `bug-report`; 17 `visual-parts`, `visual-activity`, `visual-latejoin`, `visual-screens` (`# needs: graphics`, `# run-all: skip`), `visual-probe` (spike, `# run-all: skip`), `drive-track`, `drive-latejoin`, `drive-probe` (spike, `# run-all: skip`); 11 `scale-connect`, `soak`, `latejoin-full`, `storm` (all
-`# run-all: lane 3`), `full-garage-fixture` and `perf-probe` (`# run-all: skip`); 22 `ping`; 23 `shopping-list`; 16 `jobs-seeded` (seeded job cars); 19
+`# run-all: lane 3`), `full-garage-fixture` and `perf-probe` (`# run-all: skip`); 22 `ping`; 23 `shopping-list`; 16 `jobs-seeded` (seeded job cars); 16 `jobs-clock` (order clock); 19
 `server-answers` (part 3; `seat-engine` gains the seat race), `merges-probe` (part 1 spikes 1.2, 1.3 and the 1.4 setters, `# run-all: skip`), `car-stale-record`, `details-concurrent`, `tools-item-race`, `park-stale`, `car-snapshot-after-delete` (part 1; `car-gone-inflight` gains park and job end, `server-answers` the dropped transaction, `tools-race` two stand-part steps, `locks-fluid` two fills at once); 21 `ride-along`, `ride-probe` (spike, `# run-all: skip`); 24 `locks-select-2`; 20 `race-hardening`.
 
 Scale lane and long runs (owner 11, design `multiplayer-soak-and-scale` D1-D9):
