@@ -99,7 +99,7 @@ public static class LockGate
 		}
 		if (pending != null)
 		{
-			if (SameTarget(pending.Action, action))
+			if (SameTarget(pending.Action, action) || SameExtend(pending.Action, action))
 			{
 				ResetButton();
 				return false;
@@ -117,6 +117,10 @@ public static class LockGate
 
 	private static bool SameTarget(GatedAction a, GatedAction b) =>
 		a.Set.Kind == b.Set.Kind && a.Set.Loader == b.Set.Loader && Equals(Unwrap(a.Target), Unwrap(b.Target));
+
+	private static bool SameExtend(GatedAction a, GatedAction b) => a.ExtendLockId != 0 && a.ExtendLockId == b.ExtendLockId;
+
+	private static bool KeepsBaseLock(GatedAction action, int lockId) => action.ExtendLockId != 0 && action.ExtendLockId == lockId && !action.EndsSlotOnFailure;
 
 	private static void OnAnswer(PendingAction entry, LockAnswer answer)
 	{
@@ -150,7 +154,7 @@ public static class LockGate
 		if (action.Context != null && !action.Context())
 		{
 			CarLockMirror.Count("contextLost");
-			CarLockMirror.Release(lockId);
+			if (!KeepsBaseLock(action, lockId)) CarLockMirror.Release(lockId);
 			Report(action, new GateReport { Result = "context-lost", WaitedMs = waitedMs, LockId = lockId });
 			return;
 		}
@@ -172,8 +176,9 @@ public static class LockGate
 		if (!started)
 		{
 			CarLockMirror.Count("notStarted");
-			CarLockMirror.Release(lockId);
-			Log.Debug($"[Locks] {action.Set.Kind} on loader {action.Set.Loader} did not start; lock {lockId} released.");
+			bool keep = KeepsBaseLock(action, lockId);
+			if (!keep) CarLockMirror.Release(lockId);
+			Log.Debug($"[Locks] {action.Set.Kind} on loader {action.Set.Loader} did not start; lock {lockId} {(keep ? "kept for its earlier phase" : "released")}.");
 		}
 		else
 		{

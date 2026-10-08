@@ -105,6 +105,24 @@ ChoosePartUpWindow.Hide(False)
   `SubmitGroupItem` builds `new GroupItem(items)` and calls `NotificationCenter.MountGroup(uid)` →
   `SelectPartToMount(group)` (static). The members' UIDs are deleted (and sent as removals) when they are picked. Hence
   decision 2 above.
+- How the chooser-built group finally mounts (static, task 6.2; `locks2_clean/…SubmitGroupItem.c`,
+  `crane_clean/NotificationCenter$$MountGroup.c`, `locks_clean/Raycast$$PartSelectMount.c`, `clean/PartScript$$ActionMount.c`):
+  - `ActionMount(true)` opens `Show("MountGroup")` (create a group) only for a part with `unmountWithSeparate`; other parts
+    with members get `Show(Inventory.GetGroup(ids))` (existing groups), parts without members `Show(GetItems(id))`.
+  - `SubmitGroupItem` builds `new GroupItem(id of the first item)` with `IsNormalGroup = false`, adds the picked items,
+    calls `Hide(false)` first, adds the group straight to the inventory's group list (not through `Inventory.AddGroup`)
+    and calls `NotificationCenter.MountGroup(group.UID)`.
+  - `MountGroup(uid)` reads `GetGroup(uid)` and then `mountGroup.gameObject.GetComponentsInChildren<PartScript>()`
+    **before** it looks at the group. `mountGroup` is the private field set by `NotificationCenter.SetMountGroup(iO)`,
+    which only `Raycast.PartSelectMount` (inlined in `Raycast.Update`) calls, with the `InteractiveObject` of the part's
+    parent (else grandparent), right before `ActionMount`. With `IsNormalGroup == false` it then calls
+    `GameScript.SelectPartToMount(group)` → `partMouseOver.DoMount()`; a normal group (crane, engine stand) is mounted
+    part by part with `MountByGroup` and deleted from the inventory.
+  - So the spike's NullReferenceException in `SubmitGroupItem` (run `215950`) was `mountGroup == null`: the probe called
+    `ActionMount` without the raycast. `lock-try … mount <key> group <uid…>` sets it the way `Raycast` does, and the
+    gate's re-invoked `ActionMount` restores the `mountGroup` of the click (another hold in between would change it).
+  - The final `SelectPartToMount(group)` is not a new request: the slot lock already holds the picked items (one
+    `ExtendLockId` per `SelectItemInCreateGroup`), so the gate lets it through and the lock moves to its work phase.
 - `CleanUnfinishedMount`/`CleanUnfinishedUnMount` are called only from `GameMode.SetCurrentMode` and
   `GameScript.HandleGameModeChange`: when the current mode is `UI` (7), the previous one was `PartMount` (9) /
   `PartUnMount` (10) and the new one is something else. That is ESC (pause/pie, mode 7) followed by any other mode. They

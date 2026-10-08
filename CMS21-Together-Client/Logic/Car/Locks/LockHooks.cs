@@ -81,11 +81,17 @@ public static class LockHooks
 		var set = LockSets.ForPart(loader, key, CarLockKind.PartMount);
 		if (set == null) return null;
 		int seq = CarPartsSync.SpawnSeq(loader);
+		var center = NotificationCenter.Get();
+		var mountGroup = center?.mountGroup;
 		return new GatedAction
 		{
 			Set = set, Target = script, TargetKey = key,
 			Context = () => script != null && script.IsUnmounted && CarPartsSync.SpawnSeq(loader) == seq,
-			Run = () => script.ActionMount(true),
+			Run = () =>
+			{
+				if (center != null) center.SetMountGroup(mountGroup);
+				script.ActionMount(true);
+			},
 			Started = () => WindowManager.Instance != null && WindowManager.Instance.IsWindowActive(WindowID.ChoosePartUp),
 			OnStarted = lockId => LockLifecycle.Track(lockId, set, mainKey ?? key, main, phase: LockPhase.Slot),
 		};
@@ -167,7 +173,7 @@ public static class LockHooks
 		return new GatedAction
 		{
 			Set = set, Target = item, TargetKey = slot.MainKey, ExtendLockId = slot.LockId,
-			Context = () => WindowManager.Instance != null && WindowManager.Instance.IsWindowActive(WindowID.ChoosePartUp),
+			Context = () => WindowManager.Instance != null && WindowManager.Instance.IsWindowActive(WindowID.ChoosePartUp) && inventory.GetItem(uid) != null,
 			Run = () => window.SelectItemInCreateGroup(item),
 			Started = () => inventory.GetItem(uid) == null,
 			OnStarted = _ => slot.ItemPicked = true,

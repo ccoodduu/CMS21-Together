@@ -130,7 +130,7 @@ namespace CMS21_Together_Server.Data.Cars
 			var s = Derive(entry, x, request.S);
 			var knownItems = KnownItems(request, clientId);
 
-			var refused = Check(clientId, request.CarLoaderID, x, s, knownItems, extended?.Id ?? 0);
+			var refused = Check(clientId, request.CarLoaderID, x, s, request.Items.Distinct().ToList(), extended?.Id ?? 0);
 			if (refused != null) return refused;
 			if (otherEntry != null)
 			{

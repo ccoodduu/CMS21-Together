@@ -71,8 +71,8 @@ function Race([string]$Label, [string]$ArgsA, [string]$ArgsB, [switch]$Held) {
     $resB = Wait-Try $b $tryB.tryId { param($r) Settled $r }
     Write-Host "  $Label A: $($resA | ConvertTo-Json -Compress)"
     Write-Host "  $Label B: $($resB | ConvertTo-Json -Compress)"
-    $winners = @(@($resA, $resB) | Where-Object { $_.result -eq "granted" -and $_.started -and ($_.finished -or $_.state -notmatch "^item") })
-    $losers = @(@($resA, $resB) | Where-Object { $_.result -in @("denied", "refusedLocally") -or $_.state -match "^item (denied|refusedLocally)" })
+    $winners = @(@($resA, $resB) | Where-Object { $_.result -eq "granted" -and $_.started -and ($_.finished -or $_.state -notmatch "^(no )?item") })
+    $losers = @(@($resA, $resB) | Where-Object { $_.result -in @("denied", "refusedLocally") -or $_.state -match "^item (denied|refusedLocally)" -or $_.state -match "^no item" })
     Check ($winners.Count -eq 1 -and $losers.Count -eq 1) "$Label`: one player gets the lock, the other is refused ($($resA.result)/$($resB.result))"
     if ($winners.Count -eq 1) { Check ($winners[0].finished) "$Label`: the winner's work commits ($($winners[0].state))" }
     $idWinner = if ($resA.result -eq "granted") { $idA } else { $idB }
@@ -142,6 +142,51 @@ Check ((Compare-HarnessDumps $dumpA $dumpB -Sections @("inventory")).Count -eq 0
 $after = @($dumpA.inventory.items | Where-Object { $_.ID -eq $twins.Name }).Count
 $stillThere = @($dumpA.inventory.items | Where-Object { $_.UID -eq $uid }).Count
 Check ($after -eq $before - 1 -and $stillThere -eq 0) "the item was used exactly once ($before -> $after items of $($twins.Name))"
+
+# A caliper with its piston, built as a group in the item chooser, into two calipers' slots (B1, finding 4). The items
+# are locked when they are picked. Both players' incoming packets are held, so both pick before either sees the other;
+# one builds and mounts the group, the other's pick is refused (by the server, even once the item has left its
+# inventory) or finds the item already gone.
+function SubParts([string]$Name) { @((Cmd $Name dump).cars | Where-Object { $_.index -eq $loader } | ForEach-Object { $_.subParts }) }
+$calipers = @(SubParts $a | Where-Object { $_.id -eq "zaciskHamulcowy_1" -and -not $_.unmounted } | Select-Object -First 2)
+if ($calipers.Count -lt 2) { throw "fewer than two calipers on $car" }
+$cal1, $cal2 = $calipers[0].key, $calipers[1].key
+Write-Host "calipers: $cal1 $cal2"
+Cmd $a part-fast-unmount "$loader $cal1" | Out-Null
+Start-Sleep -Seconds 2
+Cmd $a part-fast-unmount "$loader $cal2" | Out-Null
+Start-Sleep -Seconds 3
+Wait-SameCar "both calipers off" | Out-Null
+$inventory = (Cmd $a dump).inventory.items
+$caliperUid = @($inventory | Where-Object { $_.ID -eq "zaciskHamulcowy_1" } | ForEach-Object { $_.UID })[0]
+$pistonUid = @($inventory | Where-Object { $_.ID -eq "zaciskHamulcowy_tloczek_1" } | ForEach-Object { $_.UID })[0]
+Check ($caliperUid -and $pistonUid) "a caliper and a piston are in the inventory ($caliperUid, $pistonUid)"
+$countBefore = @($inventory | Where-Object { $_.ID -like "zaciskHamulcowy*" }).Count
+$race4 = Race "caliper group" "$loader mount $cal1 group $caliperUid $pistonUid finish" "$loader mount $cal2 group $caliperUid $pistonUid finish" -Held
+$groupLoser = @(@($race4.A, $race4.B) | Where-Object { $_.state -match "^item (denied|refusedLocally)" })[0]
+$groupWinnerId = if ($race4.A.finished) { $idA } else { $idB }
+if ($groupLoser) { Check ($groupLoser.holder -eq $groupWinnerId) "caliper group: the refused pick names the winner (holder $($groupLoser.holder))" }
+Wait-SameCar "after the caliper group race" | Out-Null
+$dumpA = Save-HarnessDump -Instance $a -RunDir $Ctx.RunDir -Label "race4"
+$dumpB = Save-HarnessDump -Instance $b -RunDir $Ctx.RunDir -Label "race4"
+Check ((Compare-HarnessDumps $dumpA $dumpB -Sections @("inventory")).Count -eq 0) "inventories are equal after the caliper group race"
+$left = @($dumpA.inventory.items | Where-Object { $_.ID -like "zaciskHamulcowy*" })
+Check ($left.Count -eq $countBefore - 2 -and -not ($left | Where-Object { $_.UID -in @($caliperUid, $pistonUid) })) "the caliper and the piston were used exactly once ($countBefore -> $($left.Count))"
+$mountedParts = SubParts $a | Where-Object { $_.key -in @($cal1, $cal2) }
+Check (@($mountedParts | Where-Object { -not $_.unmounted }).Count -eq 1) "exactly one caliper slot is mounted ($(($mountedParts | ForEach-Object { "$($_.key)=$($_.unmounted)" }) -join ', '))"
+
+# Playtest-review P10: the same body panel taken off by both players at once.
+$panel = @((Cmd $a dump).cars | Where-Object { $_.index -eq $loader } | ForEach-Object { $_.bodyParts } | Where-Object { -not $_.unmounted -and $_.name -match "door|hood|bonnet|maska|drzwi" } | Select-Object -First 1)[0]
+if (-not $panel) { throw "no mounted door or hood on $car" }
+$panelIndex = [int]($panel.key -replace '^b:', '')
+Write-Host "panel: $($panel.key) $($panel.name)"
+$panelItems = @((Cmd $a dump).inventory.items).Count
+$race5 = Race "same body panel" "$loader body $panelIndex finish" "$loader body $panelIndex finish"
+Wait-SameCar "after the body panel race" | Out-Null
+$dumpA = Save-HarnessDump -Instance $a -RunDir $Ctx.RunDir -Label "race5"
+$dumpB = Save-HarnessDump -Instance $b -RunDir $Ctx.RunDir -Label "race5"
+Check ((Compare-HarnessDumps $dumpA $dumpB -Sections @("inventory")).Count -eq 0) "inventories are equal after the body panel race"
+Check (@($dumpA.inventory.items).Count -eq $panelItems + 1) "the panel reached the inventory once ($panelItems -> $(@($dumpA.inventory.items).Count))"
 
 $Ctx.Result.notes += $failures
 $Ctx.Result.passed = ($failures.Count -eq 0)

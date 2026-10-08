@@ -50,6 +50,9 @@ namespace CMS21_Together_Server.Data.Cars
 			Expect("an item in another player's lock is refused", Ask(B, X("s:3.2.1"), items: new[] { 500L }), CarLockRefusal.Item, "i:500");
 			var extend = TryGrant(A, Request(X("s:3.22.4"), extendLockId: item?.Id ?? 0, items: new[] { 501L }));
 			Check("extend merges items into the same lock and moves its phase", extend.Refused == null && extend.Locks[0].Id == item?.Id && extend.Locks[0].Phase == 1 && extend.Locks[0].Items.Count == 2);
+			state.InventoryState.InventoryItems.RemoveAll(i => i.UID == 500);
+			Expect("an item the holder already took out of the inventory is still refused", Ask(B, X("s:3.2.1"), items: new[] { 500L }), CarLockRefusal.Item, "i:500");
+			state.InventoryState.InventoryItems.Add(new ModItem { UID = 500, ID = "caliper" });
 			CarLocks.ReleaseOwner(A, "check");
 
 			var swap = TryGrant(A, Request(X(LockKeys.Car), kind: CarLockKind.Move, otherLoader: OtherLoader));
