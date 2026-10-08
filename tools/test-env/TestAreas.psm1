@@ -104,6 +104,7 @@ CMS21-Together-Core/Data/Digest/*                              resync
 CMS21-Together-Core/Data/JobsState.cs                          jobs
 CMS21-Together-Core/Data/ShopListState.cs                      shoplist
 CMS21-Together-Core/Data/InventoryState.cs                     parts, economy
+CMS21-Together-Core/Data/UidRanges.cs                          parts
 CMS21-Together-Core/Data/ParkingLayout.cs                      placement
 CMS21-Together-Core/Data/Player*                               presence, persistence
 CMS21-Together-Core/Data/GameType/ModJob*                      jobs
