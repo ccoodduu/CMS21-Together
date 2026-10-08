@@ -40,7 +40,9 @@ public static class PartTransactions
 		committed.Clear();
 	}
 
-	public static void DropLoader(int loader)
+	public const int Detached = int.MinValue;
+
+	public static void DropLoader(int loader, bool keepCommitted = false)
 	{
 		foreach (var tx in open.Where(t => t.Loader == loader).ToList())
 		{
@@ -51,6 +53,11 @@ public static class PartTransactions
 		}
 		foreach (var pair in committed.Where(c => c.Value.Loader == loader).ToList())
 		{
+			if (keepCommitted)
+			{
+				committed[pair.Key] = (Detached, pair.Value.Delta, pair.Value.Items, pair.Value.Groups);
+				continue;
+			}
 			committed.Remove(pair.Key);
 			Log.Info($"[Parts] Loader {loader}: the car is gone; undoing change {pair.Key}, whose result has not arrived.");
 			var tx = pair.Value;

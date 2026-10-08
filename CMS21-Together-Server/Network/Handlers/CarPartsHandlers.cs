@@ -118,13 +118,42 @@ namespace CMS21_Together_Server.Network.Handlers
 			private static bool Flips(PartFields written) => written.HasFlag(PartFields.Mount) || written.HasFlag(PartFields.All);
 		}
 
+		private static bool OverlayParked(CMS21_Together_Core.Data.CarLoaderEntry entry, int loader)
+		{
+			var parked = entry.ParkedRecord;
+			int replaced = 0, dropped = 0;
+			foreach (var record in parked.Body)
+			{
+				if (!entry.BodyParts.TryGetValue(record.PartIndex, out var uploaded)) { dropped++; continue; }
+				if (PartRecordMerge.Differ(uploaded, record) == PartFields.None) continue;
+				var kept = PartRecordMerge.WithChanged(record, PartFields.None);
+				kept.Revision = entry.Revision;
+				entry.BodyParts[record.PartIndex] = kept;
+				replaced++;
+			}
+			foreach (var record in parked.Sub)
+			{
+				string key = CarSubPartIdentity.BuildKey(record.PartIndexPath);
+				if (!entry.SubParts.TryGetValue(key, out var uploaded)) { dropped++; continue; }
+				if (PartRecordMerge.Differ(uploaded, record) == PartFields.None) continue;
+				var kept = PartRecordMerge.WithChanged(record, PartFields.None);
+				kept.Revision = entry.Revision;
+				entry.SubParts[key] = kept;
+				replaced++;
+			}
+			for (int i = 0; i < dropped; i++) Count("parkedRecordsDropped");
+			Logger.Info($"[Parking] Loader {loader}: the unparked car's baseline took {replaced} of the parked part records ({dropped} did not resolve).");
+			if (parked.Details != null) CarDetailsStore.StoreParked(loader, entry.SpawnSeq, parked.Details);
+			return replaced > 0;
+		}
+
 		private static readonly Dictionary<string, int> counters = new Dictionary<string, int>();
 
 		public static int Counter(string name) => counters.TryGetValue(name, out int value) ? value : 0;
 
 		private static void Count(string name) => counters[name] = Counter(name) + 1;
 
-		public static string DescribeCounters() => $"part records: staleMerged {Counter("staleMerged")}, staleDropped {Counter("staleDropped")}, skippedNoMask {Counter("skippedNoMask")}";
+		public static string DescribeCounters() => $"part records: staleMerged {Counter("staleMerged")}, staleDropped {Counter("staleDropped")}, skippedNoMask {Counter("skippedNoMask")}, parkedRecordsDropped {Counter("parkedRecordsDropped")}";
 
 		private static NormalisedChange Normalise(CMS21_Together_Core.Data.CarLoaderEntry entry, CarPartsChangePacket change, int clientId)
 		{
@@ -249,7 +278,9 @@ namespace CMS21_Together_Server.Network.Handlers
 
 			CarPartsStore.StoreBaseline(entry, packet.EngineSwap,
 				batches.SelectMany(b => b.BodyParts), batches.SelectMany(b => b.SubParts));
-			CarPartsStore.SendSnapshot(packet.CarLoaderID, entry, CarPartsSnapshotPacket.LiveSnapshot, except: (int)clientId);
+			bool replaced = entry.ParkedRecord != null && OverlayParked(entry, packet.CarLoaderID);
+			entry.ParkedRecord = null;
+			CarPartsStore.SendSnapshot(packet.CarLoaderID, entry, CarPartsSnapshotPacket.LiveSnapshot, except: replaced ? CMS21_Together_Core.Data.CarLoaderEntry.NoClient : (int)clientId);
 			GameDataManager.RequestSave();
 		}
 	}

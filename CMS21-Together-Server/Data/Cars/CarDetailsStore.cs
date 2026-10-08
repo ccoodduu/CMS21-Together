@@ -36,8 +36,28 @@ namespace CMS21_Together_Server.Data.Cars
 			       && details.HasSnapshot && details.SpawnSeq == car.SpawnSeq;
 		}
 
+		private static readonly Dictionary<int, int> dropFirstFull = new Dictionary<int, int>();
+
+		public static void StoreParked(int loader, int spawnSeq, ModCarDetails parked)
+		{
+			var details = JsonConvert.DeserializeObject<ModCarDetails>(JsonConvert.SerializeObject(parked));
+			details.SpawnSeq = spawnSeq;
+			details.HasSnapshot = true;
+			State.Details[loader] = details;
+			dropFirstFull[loader] = spawnSeq;
+			missingSince.Remove(loader);
+			Logger.Info($"[CarDetails] Loader {loader}: details of the parked car restored for SpawnSeq {spawnSeq}.");
+			Server.SendToClients(new CarDetailsUpdatePacket { CarLoaderID = loader, SpawnSeq = spawnSeq, IsFull = true, SourceClientId = -1, Details = details });
+		}
+
 		public static void OnUpdate(int clientId, CarDetailsUpdatePacket packet)
 		{
+			if (packet.IsFull && dropFirstFull.TryGetValue(packet.CarLoaderID, out int parkedSeq) && parkedSeq == packet.SpawnSeq)
+			{
+				dropFirstFull.Remove(packet.CarLoaderID);
+				Logger.Info($"[CarDetails] Loader {packet.CarLoaderID}: full snapshot from client {clientId} dropped, the parked car's details stand.");
+				return;
+			}
 			if (!State.LoadedCars.TryGetValue(packet.CarLoaderID, out var car) || car.SpawnSeq != packet.SpawnSeq || packet.Details == null)
 			{
 				Logger.Debug($"[CarDetails] Update for loader {packet.CarLoaderID} (SpawnSeq {packet.SpawnSeq}) from client {clientId} dropped.");

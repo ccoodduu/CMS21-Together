@@ -113,12 +113,12 @@ public static class CarPartsSync
 		Details.CarDetailsSync.OnCarLoading(sync.Loader);
 	}
 
-	public static void OnCarDeleted(int loader)
+	public static void OnCarDeleted(int loader, bool local = false)
 	{
 		Visuals.VisualScope.CancelLoader(loader, "car deleted");
 		ownBaselinePending.Remove(loader);
 		loaders.Remove(loader);
-		PartTransactions.DropLoader(loader);
+		PartTransactions.DropLoader(loader, keepCommitted: local);
 	}
 
 	private static void DropOnNewSpawn(LoaderSync sync, int spawnSeq)

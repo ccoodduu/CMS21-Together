@@ -42,6 +42,26 @@ public static class PartChangeTracker
 
 	public static bool IsPending(int loader) => dirty.Contains(loader) || mechanicalDirty.Contains(loader);
 
+	public static bool SendNow(int loader)
+	{
+		var sync = CarPartsSync.Get(loader);
+		var carLoader = CarLoaderPlaces.Get()?.GetCarLoaderByIndex(loader);
+		if (sync.State != LoaderSyncState.Ready || sync.Registry == null || carLoader == null || ApplyingRemote.IsActive(loader)) return false;
+		if (InProgress(carLoader)) return false;
+		var body = new List<CarBodyPartUpdatePacket>();
+		var sub = new List<CarSubPartUpdatePacket>();
+		CarPartsSync.CaptureAll(carLoader, sync.Registry, body, sub);
+		var changedBody = body.Where(r => !sync.Body.TryGetValue(r.Key, out var last) || !PartRecords.SameState(r, last)).ToList();
+		var changedSub = sub.Where(r => !sync.Sub.TryGetValue(r.Key, out var last) || !PartRecords.SameState(r, last)).ToList();
+		stability.Remove(loader);
+		dirty.Remove(loader);
+		mechanicalDirty.Remove(loader);
+		if (changedBody.Count == 0 && changedSub.Count == 0) return true;
+		Log.Info($"[Parts] Loader {loader}: sending the pending change at once ({changedBody.Count} body, {changedSub.Count} mechanical).");
+		Send(sync, changedBody, changedSub);
+		return true;
+	}
+
 	public static List<string> TakeSentKeys(int txId)
 	{
 		if (!sentKeys.TryGetValue(txId, out var keys)) return new List<string>();

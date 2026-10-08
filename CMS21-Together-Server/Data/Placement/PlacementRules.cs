@@ -62,6 +62,11 @@ namespace CMS21_Together_Server.Data.Placement
 			if (reason != ClearReason.SpawnerLeft || removed.FromParking == null) return;
 			if (ParkingService.TryAdd(removed.FromParking, -1, out int slot))
 			{
+				if (removed.ParkedRecord != null)
+				{
+					removed.ParkedRecord.CarId = removed.FromParking.Id;
+					ParkingService.KeepRecord(removed.ParkedRecord);
+				}
 				Logger.Info($"[Parking] {removed.FromParking.CarToLoad} went back to slot {slot}: its unparker left before the baseline.");
 				ParkingService.BroadcastSlot(slot);
 			}

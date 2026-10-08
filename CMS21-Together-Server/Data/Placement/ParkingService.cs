@@ -38,7 +38,17 @@ namespace CMS21_Together_Server.Data.Placement
 			var car = Get(slot);
 			if (car == null || car.Id != id) return false;
 			Lot.Slots.Remove(slot);
+			Lot.Records.Remove(id);
 			return true;
+		}
+
+		public static void KeepRecord(ParkedRecord record) => Lot.Records[record.CarId] = record;
+
+		public static ParkedRecord TakeRecord(Guid id)
+		{
+			if (!Lot.Records.TryGetValue(id, out var record)) return null;
+			Lot.Records.Remove(id);
+			return record;
 		}
 
 		public static bool Swap(int from, int to, Guid fromId, Guid toId)
@@ -71,7 +81,7 @@ namespace CMS21_Together_Server.Data.Placement
 
 		public static IEnumerable<string> Describe()
 		{
-			yield return $"parking: {Lot.UnlockedLevels} levels, {Lot.Slots.Count}/{UsableSlots} slots used";
+			yield return $"parking: {Lot.UnlockedLevels} levels, {Lot.Slots.Count}/{UsableSlots} slots used, {Lot.Records.Count} part records kept";
 			foreach (var pair in Lot.Slots.OrderBy(p => p.Key))
 				yield return $"  slot {pair.Key}: {pair.Value.CarToLoad} ({pair.Value.Data?.Length ?? 0} bytes, id {pair.Value.Id})";
 		}

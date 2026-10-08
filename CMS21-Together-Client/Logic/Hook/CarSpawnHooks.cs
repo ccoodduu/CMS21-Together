@@ -58,7 +58,13 @@ namespace CMS21Together.Logic.Hook
             if (__instance == null || string.IsNullOrEmpty(__instance.carToLoad)) return true;
             if (IsSuppressed(CarLoaderPlaces.Get().GetCarLoaderId(__instance))) return true;
 
-            Car.Parts.CarPartsSync.OnCarDeleted(CarLoaderPlaces.Get().GetCarLoaderId(__instance));
+            int loader = CarLoaderPlaces.Get().GetCarLoaderId(__instance);
+            if (!Car.Placement.ParkingSync.IsParking(loader))
+            {
+                Car.Parts.PartChangeTracker.SendNow(loader);
+                Car.Details.CarDetailsSync.FlushNow(loader, Car.Details.CarDetailsIO.All);
+            }
+            Car.Parts.CarPartsSync.OnCarDeleted(loader, local: true);
             if (Car.Placement.ParkingSync.IsParking(CarLoaderPlaces.Get().GetCarLoaderId(__instance))) return true;
             // Request delete from server to notify OTHER clients
             MelonCoroutines.Start(CarSpawnManager.RequestCarDelete(__instance));
