@@ -7,7 +7,7 @@
 >   next soak after the merge), 11.2's full area regression (only the smoke set and the lock scenarios ran), group 12 is
 >   `part-locks-2` (ROADMAP row 24).
 > - **Proof (lane 1):** see the task marks; `locks-latency` `20261008-130352`, `locks-latejoin` `20261008-130524`;
->   the smoke set plus the lock scenarios after the last merge of main (see STATUS.md).
+>   the smoke set plus the lock scenarios after the last merge of main, 18 of 18 (`20261008-130716_regression.json`).
 > - **Open risks:** a job end the server refuses is not given back to the client (row 19 D16 now notes it; the client
 >   refuses locally first); `CarLifter.isMoving` stayed true for a long time after a swap onto a lift in headless
 >   games (`locks-car` lifts before its swaps); the caliper race ends with "item already gone" rather than a server
