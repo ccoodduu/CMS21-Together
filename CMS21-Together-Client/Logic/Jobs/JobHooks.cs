@@ -31,12 +31,15 @@ public static class JobHooks
 	private static bool BeforeMission(OrderGenerator __instance, bool forTutorial, out int __state)
 	{
 		__state = __instance.jobs?.Count ?? 0;
-		return !(Connected && forTutorial && !JobsSync.IsApplying);
+		return !Connected || !forTutorial && JobsSync.IsGenerator && !JobsSync.MissionPending;
 	}
 
 	[HarmonyPatch(typeof(OrderGenerator), nameof(OrderGenerator.GenerateMission))]
 	[HarmonyPostfix]
-	private static void AfterMission(OrderGenerator __instance, int __state) => SendNew(__instance, __state);
+	private static void AfterMission(OrderGenerator __instance, int __state, bool __runOriginal)
+	{
+		if (__runOriginal) SendNew(__instance, __state);
+	}
 
 	private static void SendNew(OrderGenerator generator, int countBefore)
 	{
@@ -49,7 +52,8 @@ public static class JobHooks
 		{
 			foreach (var job in fresh)
 			{
-				Log.Info($"[Jobs] Generated order {job.carFile}{(job.IsMission ? $" (mission {job.MissionID})" : "")}.");
+				Log.Info($"[Jobs] Generated order {job.carFile}{(job.IsMission ? $" (mission {GlobalData.MissionsFinished})" : "")}.");
+				if (job.IsMission) JobsSync.MissionAsked();
 				Client.Instance.Send(new OrderGeneratedPacket { Job = ModJobConverter.ToMod(job), MaxOpenOrders = GlobalData.GetMaxOrdersAmount() });
 				job.StopTimer();
 				jobs.Remove(job);
@@ -72,7 +76,7 @@ public static class JobHooks
 	[HarmonyPrefix]
 	private static bool BeforeDecline(OrdersWindow __instance)
 	{
-		if (!Connected || __instance.currentJob == null) return true;
+		if (!Connected || __instance.currentJob == null || __instance.currentJob.IsMission) return true;
 		Client.Instance.Send(new OrderActionPacket { JobId = __instance.currentJob.id, Action = OrderActionType.Decline });
 		return false;
 	}

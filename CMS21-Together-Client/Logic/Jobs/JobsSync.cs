@@ -21,12 +21,16 @@ namespace CMS21Together.Logic.Jobs;
 public static class JobsSync
 {
 	private const float TakeTimeoutSeconds = 45f;
+	private const float MissionAnswerSeconds = 5f;
 
 	private static JobsState mirror;
 	private static int applyDepth;
+	private static float missionAskedAt = float.NegativeInfinity;
+	private static int missionTakenElsewhere = -1;
 
 	public static bool IsGenerator { get; private set; }
 	public static bool IsApplying => applyDepth > 0;
+	public static bool MissionPending => Time.realtimeSinceStartup - missionAskedAt < MissionAnswerSeconds;
 	public static int PendingTake { get; private set; } = -1;
 	public static bool AcceptBypass { get; private set; }
 
@@ -38,7 +42,12 @@ public static class JobsSync
 	{
 		mirror = null;
 		PendingTake = -1;
+		IsGenerator = false;
+		missionAskedAt = float.NegativeInfinity;
+		missionTakenElsewhere = -1;
 	}
+
+	public static void MissionAsked() => missionAskedAt = Time.realtimeSinceStartup;
 
 	public static void OnGeneratorLoaded()
 	{
@@ -51,6 +60,8 @@ public static class JobsSync
 	{
 		mirror = packet.State ?? new JobsState();
 		IsGenerator = packet.IsGenerator;
+		missionAskedAt = float.NegativeInfinity;
+		missionTakenElsewhere = -1;
 		if (CanApply) ApplyFull();
 		SyncTracker.Applied(SyncOrder.JobsKey, snapshotId);
 	}
@@ -59,6 +70,7 @@ public static class JobsSync
 	{
 		IsGenerator = packet.IsGenerator;
 		Log.Info($"[Jobs] Order generator: {(IsGenerator ? "this client" : "another client")}.");
+		if (mirror != null && CanApply) OfferMission();
 	}
 
 	public static void OnOrderAdded(OrderAddedPacket packet)
@@ -67,12 +79,19 @@ public static class JobsSync
 		mirror.ActiveJobs.RemoveAll(a => a.Job.id == packet.Job.id);
 		mirror.Orders.RemoveAll(o => o.Job.id == packet.Job.id);
 		mirror.Orders.Add(new OrderEntry { Job = packet.Job, RemainingSeconds = packet.RemainingSeconds });
+		if (packet.Job.IsMission)
+		{
+			mirror.Missions.CurrentMissionDone = false;
+			missionAskedAt = float.NegativeInfinity;
+			missionTakenElsewhere = -1;
+		}
 		if (CanApply) ApplyFull();
 	}
 
 	public static void OnJobStarted(JobStartedPacket packet)
 	{
 		if (mirror == null) return;
+		if (packet.JobId == missionTakenElsewhere) missionTakenElsewhere = -1;
 		mirror.Orders.RemoveAll(o => o.Job.id == packet.JobId);
 		mirror.ActiveJobs.RemoveAll(a => a.Job.id == packet.JobId);
 		mirror.ActiveJobs.Add(new ActiveJobEntry { Job = packet.Job, CarLoaderId = packet.CarLoaderId });
@@ -83,6 +102,8 @@ public static class JobsSync
 	public static void OnJobRemoved(JobRemovedPacket packet)
 	{
 		if (mirror == null) return;
+		if (packet.Reason == JobRemovedReason.Taken && mirror.Orders.Any(o => o.Job.id == packet.JobId && o.Job.IsMission)) missionTakenElsewhere = packet.JobId;
+		else if (packet.JobId == missionTakenElsewhere) missionTakenElsewhere = -1;
 		mirror.Orders.RemoveAll(o => o.Job.id == packet.JobId);
 		mirror.ActiveJobs.RemoveAll(a => a.Job.id == packet.JobId);
 		if (packet.Missions != null) mirror.Missions = packet.Missions;
@@ -94,6 +115,12 @@ public static class JobsSync
 
 	public static void OnActionResult(OrderActionResultPacket packet)
 	{
+		if (packet.Action == OrderActionType.Decline && !packet.Approved)
+		{
+			Log.Info($"[Jobs] Decline of order {packet.JobId} refused: {packet.Reason}.");
+			if (packet.Reason == "Mission") ModNotify.ShowToast("Story missions cannot be declined.");
+			return;
+		}
 		if (packet.Action != OrderActionType.Accept) return;
 		if (!packet.Approved)
 		{
@@ -183,7 +210,7 @@ public static class JobsSync
 				var job = ModJobConverter.ToGame(order.Job);
 				job.timeToEnd = order.RemainingSeconds;
 				jobs.Add(job);
-				job.StartTimer();
+				if (!job.IsMission) job.StartTimer();
 			}
 			foreach (var active in mirror.ActiveJobs)
 			{
@@ -204,6 +231,24 @@ public static class JobsSync
 			if (generator.LastUId < maxId) generator.LastUId = maxId;
 			UIManager.Get()?.UpdateJobs(jobs, null);
 		}
+		OfferMission();
+	}
+
+	private static void OfferMission()
+	{
+		var generator = Generator;
+		if (!IsGenerator || MissionPending || missionTakenElsewhere >= 0 || mirror == null || generator == null || !CanApply || !Client.Instance.IsConnectionValid) return;
+		if (mirror.Orders.Any(o => o.Job.IsMission) || mirror.ActiveJobs.Any(a => a.Job.IsMission)) return;
+		int missionId = GlobalData.GetMissionID();
+		if (missionId < 0 || GlobalData.CurrentMissionDone) return;
+		var jobs = generator.jobs;
+		var selected = generator.selectedJobs;
+		for (int i = 0; jobs != null && i < jobs.Count; i++)
+			if (jobs[i].IsMission) return;
+		for (int i = 0; selected != null && i < selected.Count; i++)
+			if (selected[i].IsMission) return;
+		Log.Info($"[Jobs] No story mission is open; generating mission {missionId}.");
+		generator.GenerateMission(missionId, false);
 	}
 
 	public static void MarkCustomerCar(int loader, int jobId)

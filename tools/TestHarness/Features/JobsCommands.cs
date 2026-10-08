@@ -107,6 +107,21 @@ public static class JobsCommands
         return new { job.id, car = job.carFile, accepted = accept };
     }
 
+    [HarnessCommand("orders-decline-packet")]
+    private static object OrdersDeclinePacket(string args)
+    {
+        int id = int.Parse((args ?? "").Trim());
+        CMS21Together.Network.Client.Instance.Send(new CMS21_Together_Core.Network.Packets.OrderActionPacket { JobId = id, Action = CMS21_Together_Core.Network.Packets.OrderActionType.Decline });
+        return "sent";
+    }
+
+    [HarnessCommand("missions-state")]
+    private static object MissionsState(string args) => new
+    {
+        GlobalData.MissionsFinished, GlobalData.CurrentMissionDone, GlobalData.IsStoryMissionInProgress, missionId = GlobalData.GetMissionID(),
+        GlobalData.MissionsAmount, level = GlobalData.PlayerLevel, maxOrders = GlobalData.GetMaxOrdersAmount(),
+    };
+
     [HarnessCommand("orders-reload")]
     private static object OrdersReload(string args)
     {
