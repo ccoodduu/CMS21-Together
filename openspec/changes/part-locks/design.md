@@ -105,6 +105,14 @@ Each gated entry point gets a prefix that runs `LockGate.Enter(kind, target, arg
      and the top window.
    - "Button still held" is part of `Context` only for actions whose effect lasts as long as the hold (the refill
      pour). It is not part of it for actions that fire when the hold completes, so a normal click works [M1].
+     *Implementation (2026-10-08):* `FluidRefill.Use` only opens the refill view; `FluidRefillLogic.Update` reads the
+     button every frame and pours only while it is held. So no gated action needs the button in `Context`.
+   - The re-invoked call gets the click's own target back where the game reads it from a field the cursor keeps
+     changing: `IOMouseOverCarLoader` and `CurrentUsedFluid`/`CurrentUsedFluidId` for the refill and the extractor,
+     `NotificationCenter.mountGroup` for `ActionMount` (spike 1.2, 6.2), `previousMode` for a move.
+   - An extension (`ExtendLockId`) that is denied, times out, loses its context or does not start never releases
+     the lock it extends; only the chooser's back-out or idle cancel does [6.1]. A second item pick while one is
+     pending is swallowed.
 5. **Denial.** Error sound and message.
 
 Postfixes on gated methods run even when the prefix returns `false`, which is now the first call of every action.
@@ -255,8 +263,8 @@ that did not start is released at once. Spike 1.2/1.4 confirms each predicate an
 | `PartMount`, item phase | `DoMount` started (the part transaction opened) | as `PartUnmount` | `UndoMounting`; a mode change; leaving the garage | 5 min without bolt progress |
 | `GroupUnmount`/`GroupMount` | the group mode is entered | as `PartUnmount` | `CleanUnfinished*`; a mode change | 5 min |
 | `BodyPart` | the panel's `TakeOnOffInProgress` is true or its `Unmounted` flipped | its X key reached the target state | not started | — |
-| `Fluid` refill | `FluidRefill` is active (`ExamineTool.IsActive`) | `FluidRefill.Hide`, after `FlushNow` | `Hide` without a level change | — (hold) |
-| `Fluid` extractor | `<UseAnim>d__5` started | its last `MoveNext`, after `FlushNow` | — | — |
+| `Fluid` refill | `FluidRefill` is active (`ExamineTool.IsActive`) | `FluidRefill.Hide` (`IsActive` falls), after `FlushNow` | the same (`Hide` without a pour) | — |
+| `Fluid` extractor | `FluidExtractor` is active right after `Use` (`<UseAnim>d__5` runs later) | the last `MoveNext` of `<UseAnim>d__5` or `Hide`, after `FlushNow` | `Hide` before the drain | — |
 | `OilDrain` | the first `MoveNext` of `<UseOilDrain>d__40` yielded (state 0 returns `false` when there is no oil or plug) | its last `MoveNext`, after `FlushNow` | — | — |
 | `Crane` | an engine group appeared in the inventory (out), the group left it (in) | the engine change is committed | — | — |
 | `Lift` | `isMoving` became true | the local `isMoving` falls (30 s cap) | not started | — |
