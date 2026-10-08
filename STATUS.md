@@ -2,6 +2,19 @@
 
 Newest first. One entry per work session.
 
+## 2026-10-08 (17:30–20:00) — row 24 and row 19 part 1 merged; playtest build dev.1067
+
+- `main` = `9ae63c7`. Row 24 `part-locks-2` merged (`62729ad`): mount-mode previews hide parts in another player's
+  lock, the item chooser marks items being mounted, pie Move/Drive options are unavailable on a locked car; the guard's
+  pie locks now apply on the first opening.
+- Row 19 part 1 merged (`9ae63c7`): field-group masks and server merges for part records (gap 3), per-entry car
+  details with echo handling (gap 6), the removed-by-other rule for machine puts, sales, scrap and warehouse (gap 9),
+  server-side records for parked cars (gap 10); proofs `car-stale-record`, `details-concurrent`, `tools-item-race`,
+  `park-stale` fail on the old code; 25 scenarios green after the merge.
+- Soak report: rule 7 judged per server process (`ba1e757`; today's soak 1.08x, pass); soak inventory capped at 300.
+- In progress: snapshot-after-delete guard (lane 1); row 19 part 2 (digests, stall warning, soak contention; lane 2).
+- Playtest build `0.6.0-dev.1067` and checklist on the Desktop.
+
 ## 2026-10-08 (17:00–19:45) — row 19 part 1 (state merges) ready for merge
 
 - `change/state-merges-1` (lane 1), groups 1–8 of `state-merges-and-contention`, merged with main (row 24 included).
