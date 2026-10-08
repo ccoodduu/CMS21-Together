@@ -8,7 +8,7 @@ using CMS21_Together_Core.Data.GameType;
 using CMS21_Together_Core.Network.Packets;
 using CMS21Together.Logic.Car.Details;
 using CMS21Together.Logic.Car.Parts;
-using CMS21Together.Logic.Outdoor;
+using CMS21Together.Logic.Seeding;
 using HarmonyLib;
 using MelonLoader;
 using Newtonsoft.Json;
@@ -133,7 +133,7 @@ public static class JobCarCommands
         MelonLogger.Msg($"[Harness] jobcar-trace {line}");
     }
 
-    private static string RandomState() => Reseed.Current.ToString();
+    private static string RandomState() => SeededStreams.Current.ToString();
 
     private static int LoaderIndex(CarLoader carLoader) => carLoader == null ? -1 : CarLoaderPlaces.Get().GetCarLoaderId(carLoader);
 
