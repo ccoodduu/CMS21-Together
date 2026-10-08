@@ -2,8 +2,8 @@
 # Seeded job cars (server-game-logic task group 5, review M3): the same order gives the same car. A takes order X and
 # records the job car's digest (parts, details, job tasks). The server reopens X (`jobs reopen`: the car is deleted and
 # the order opens again, the path a lost car takes). B takes X: same digest. X is reopened again with another car on
-# X's loader, so A takes X on another loader: same digest. Order Y gives another digest. When a story mission is open,
-# it is taken, reopened and taken again: same digest. The jobcar trace of each take is kept in the run notes.
+# X's loader, so A takes X on another loader: same digest. Order Y gives another digest. First, when a story mission is
+# open, it is taken, reopened and taken again: same digest. The jobcar trace of each take is kept in the run notes.
 param($Ctx)
 
 $a, $b = $Ctx.Instances
@@ -92,6 +92,17 @@ foreach ($name in $Ctx.Instances) {
 Start-Sleep -Seconds 2
 $gen = if ((Get-HarnessStatus $b).isOrderGenerator) { $b } else { $a }
 
+$mission = @(Missions (Jobs $a)) | Select-Object -First 1
+if ($mission) {
+    $m1 = Take $a $mission.id "mission"
+    Reopen $mission.id
+    $m2 = Take $b $mission.id "mission retake by B"
+    Compare-Digest $m1 $m2 "B's retake of mission $($mission.id)"
+    Reopen $mission.id
+} else {
+    Note "no story mission was open; the mission retake was not run"
+}
+
 $before = @(Regular (Jobs $a) | ForEach-Object { $_.id })
 Send-HarnessCommand -Instance $gen -Verb orders-generate -Arguments "900" | Out-Null
 Send-HarnessCommand -Instance $gen -Verb orders-generate -Arguments "900" | Out-Null
@@ -121,16 +132,6 @@ if ($third) {
 
 $other = Take $b $y "order Y"
 if ($other -and $first) { Check ($other.hash -ne $first.hash) "order $y gives another job car ($($other.hash))" }
-
-$mission = @(Missions (Jobs $a)) | Select-Object -First 1
-if ($mission) {
-    $m1 = Take $a $mission.id "mission"
-    Reopen $mission.id
-    $m2 = Take $b $mission.id "mission retake by B"
-    Compare-Digest $m1 $m2 "B's retake of mission $($mission.id)"
-} else {
-    Note "no story mission was open; the mission retake was not run"
-}
 
 $Ctx.Result.notes += $failures
 $Ctx.Result.passed = ($failures.Count -eq 0)
