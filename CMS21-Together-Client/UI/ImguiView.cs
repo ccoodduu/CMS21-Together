@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using System.Linq;
 using CMS21_Together_Core.Data.Enum;
 using CMS21Together.Data;
@@ -26,7 +27,7 @@ public static class ImguiView
 
 		if (inMenu && !ConnectionStatus.IsBusy)
 		{
-			if (GUI.Button(new Rect(Screen.width - 170f - Margin, Margin, 170f, 36f), "Multiplayer"))
+			if (GUI.Button(MultiplayerButtonRect, "Multiplayer"))
 			{
 				if (MultiplayerMenuModel.Panel != MenuPanel.None) MultiplayerMenuModel.Close();
 				else MultiplayerMenuModel.OpenJoinPanel();
@@ -50,10 +51,34 @@ public static class ImguiView
 		DrawToasts();
 	}
 
+	public static IEnumerable<Rect> Covered()
+	{
+		if (SceneManager.GetActiveScene().name == "Menu" && !ConnectionStatus.IsBusy)
+		{
+			yield return MultiplayerButtonRect;
+			if (MultiplayerMenuModel.JoinPanelOpen) yield return JoinPanelRect;
+			else if (MultiplayerMenuModel.HostPanelOpen) yield return HostPanelRect;
+			else if (MultiplayerMenuModel.FriendsPanelOpen) yield return FriendsPanelRect;
+			if (ConnectionStatus.MessagePending || ModNotify.Messages.Count > 0) yield return MessageRect;
+		}
+		if (MultiplayerMenuModel.SessionPanelOpen) yield return SessionPanelRect;
+		if (JoinService.PendingConfirmation != null) yield return ConfirmRect;
+		if (ConnectionStatus.IsBusy) yield return StatusRect;
+	}
+
+	private static Rect MultiplayerButtonRect => new Rect(Screen.width - 170f - Margin, Margin, 170f, 36f);
+	private static Rect JoinPanelRect => new Rect(Screen.width - PanelWidth - Margin, Margin + 44f, PanelWidth, PanelHeight + TabsHeight + (MultiplayerMenuModel.PasswordFieldShown ? PasswordHeight : 0f));
+	private static Rect FriendsPanelRect => new Rect(Screen.width - PanelWidth - Margin, Margin + 44f, PanelWidth, friendsPanelHeight);
+	private static Rect HostPanelRect => new Rect(Screen.width - PanelWidth - Margin, Margin + 44f, PanelWidth, hostPanelHeight);
+	private static Rect SessionPanelRect => new Rect(Margin, Margin + 44f, SessionPanelWidth, sessionPanelHeight);
+	private static Rect StatusRect => new Rect((Screen.width - 460f) / 2f, Margin, 460f, 40f);
+	private static Rect MessageRect => new Rect((Screen.width - 480f) / 2f, (Screen.height - 180f) / 2f, 480f, 180f);
+	private static Rect ConfirmRect => new Rect((Screen.width - 480f) / 2f, (Screen.height - 160f) / 2f, 480f, 160f);
+
 	private static void DrawJoinPanel()
 	{
 		bool password = MultiplayerMenuModel.PasswordFieldShown;
-		var area = new Rect(Screen.width - PanelWidth - Margin, Margin + 44f, PanelWidth, PanelHeight + TabsHeight + (password ? PasswordHeight : 0f));
+		var area = JoinPanelRect;
 		GUI.Box(area, "", boxStyle);
 		float x = area.x + 12f, y = area.y + 10f, w = area.width - 24f;
 
@@ -104,7 +129,7 @@ public static class ImguiView
 
 	private static void DrawFriendsPanel()
 	{
-		var area = new Rect(Screen.width - PanelWidth - Margin, Margin + 44f, PanelWidth, friendsPanelHeight);
+		var area = FriendsPanelRect;
 		GUI.Box(area, "", boxStyle);
 		float x = area.x + 12f, y = area.y + 10f, w = area.width - 24f;
 
@@ -154,7 +179,7 @@ public static class ImguiView
 
 	private static void DrawSessionPanel()
 	{
-		var area = new Rect(Margin, Margin + 44f, SessionPanelWidth, sessionPanelHeight);
+		var area = SessionPanelRect;
 		GUI.Box(area, "", boxStyle);
 		float x = area.x + 12f, y = area.y + 10f, w = area.width - 24f;
 
@@ -192,7 +217,7 @@ public static class ImguiView
 
 	private static void DrawHostPanel()
 	{
-		var area = new Rect(Screen.width - PanelWidth - Margin, Margin + 44f, PanelWidth, hostPanelHeight);
+		var area = HostPanelRect;
 		GUI.Box(area, "", boxStyle);
 		float x = area.x + 12f, y = area.y + 10f, w = area.width - 24f;
 
@@ -307,14 +332,14 @@ public static class ImguiView
 			JoinStatus.Loading => $"Loading the garage of {ClientData.ServerInfo?.ServerName ?? target}...",
 			_ => "Loading the shared garage..."
 		};
-		var rect = new Rect((Screen.width - 460f) / 2f, Margin, 460f, 40f);
+		var rect = StatusRect;
 		GUI.Box(rect, "", boxStyle);
 		GUI.Label(rect, text, titleStyle);
 	}
 
 	private static void DrawMessage(string title, string text, System.Action onOk)
 	{
-		var rect = new Rect((Screen.width - 480f) / 2f, (Screen.height - 180f) / 2f, 480f, 180f);
+		var rect = MessageRect;
 		GUI.Box(rect, "", boxStyle);
 		GUI.Label(new Rect(rect.x + 12f, rect.y + 10f, rect.width - 24f, 28f), title, titleStyle);
 		GUI.Label(new Rect(rect.x + 12f, rect.y + 44f, rect.width - 24f, 80f), text, labelStyle);
@@ -340,7 +365,7 @@ public static class ImguiView
 
 	private static void DrawConfirm(string text)
 	{
-		var rect = new Rect((Screen.width - 480f) / 2f, (Screen.height - 160f) / 2f, 480f, 160f);
+		var rect = ConfirmRect;
 		GUI.Box(rect, "", boxStyle);
 		GUI.Label(new Rect(rect.x + 12f, rect.y + 12f, rect.width - 24f, 70f), text, labelStyle);
 		if (GUI.Button(new Rect(rect.x + rect.width / 2f - 110f, rect.y + rect.height - 44f, 100f, 32f), "Join")) JoinService.Answer(true);
