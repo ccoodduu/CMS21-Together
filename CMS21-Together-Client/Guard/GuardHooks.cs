@@ -15,9 +15,6 @@ public static class GuardHooks
 		gameMode.Interior, gameMode.CarDrive, gameMode.PathTest, gameMode.Dyno, gameMode.Benchmark
 	};
 
-	private static readonly Dictionary<string, bool> lockedPieOptions = new Dictionary<string, bool>();
-	private static IntPtr lockedFor;
-
 	[HarmonyPatch(typeof(WindowManager), nameof(WindowManager.Show), typeof(WindowID), typeof(bool))]
 	[HarmonyPrefix]
 	[HarmonyPriority(Priority.First)]
@@ -46,32 +43,8 @@ public static class GuardHooks
 	}
 
 	[HarmonyPatch(typeof(PieMenuController), nameof(PieMenuController.PrepareIcons))]
-	[HarmonyPostfix]
-	private static void LockPieOptions(PieMenuController __instance, Il2CppStringArray iconsToLoad)
-	{
-		var options = __instance.options;
-		if (options == null || iconsToLoad == null) return;
-		if (__instance.Pointer != lockedFor)
-		{
-			lockedFor = __instance.Pointer;
-			lockedPieOptions.Clear();
-		}
-		foreach (string id in iconsToLoad)
-		{
-			if (string.IsNullOrEmpty(id) || !options.ContainsKey(id)) continue;
-			bool blocked = FeatureGuard.WouldBlock(GuardKind.Pie, id);
-			if (blocked && !lockedPieOptions.ContainsKey(id))
-			{
-				lockedPieOptions[id] = options[id].Enabled;
-				__instance.SetEnableOption(id, false);
-			}
-			else if (!blocked && lockedPieOptions.TryGetValue(id, out bool wasEnabled))
-			{
-				lockedPieOptions.Remove(id);
-				__instance.SetEnableOption(id, wasEnabled);
-			}
-		}
-	}
+	[HarmonyPrefix]
+	private static void LockPieOptions(PieMenuController __instance, Il2CppStringArray iconsToLoad) => PieOptionState.Apply(__instance, iconsToLoad);
 
 	[HarmonyPatch(typeof(PieMenuController), nameof(PieMenuController.HandleInput))]
 	[HarmonyPrefix]
@@ -80,7 +53,9 @@ public static class GuardHooks
 	{
 		if (!__instance.IsEnabledPieMenu || !(Input.GetMouseButtonDown(0) || Input.GetKeyDown(KeyCode.Return))) return;
 		string id = SelectedPieOption(__instance);
-		if (id != null) FeatureGuard.Decide(GuardKind.Pie, id);
+		if (id == null) return;
+		FeatureGuard.Decide(GuardKind.Pie, id);
+		PieOptionState.Clicked(id);
 	}
 
 	[HarmonyPatch(typeof(PieMenuController), nameof(PieMenuController.CheckSelectedOption))]
