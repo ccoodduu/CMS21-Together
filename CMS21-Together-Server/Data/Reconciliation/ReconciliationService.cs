@@ -267,9 +267,7 @@ namespace CMS21_Together_Server.Data.Reconciliation
 					break;
 				case DigestMappers.PlacementKey:
 					ParkingService.SendState(clientId);
-					for (int lifter = 0; lifter < 2; lifter++) PlacementRules.SendLifter(lifter, instant: true, only: clientId);
-					foreach (var car in state.CarState.LoadedCars)
-						Server.SendToClient(new CarPlaceChangedPacket { CarLoaderID = car.Key, Place = car.Value.Spawn?.PlaceNo ?? -1 }, clientId);
+					PlacementRules.SendCarPlaces(clientId);
 					break;
 				case DigestMappers.ToolsKey:
 					foreach (var tool in Enum.GetValues(typeof(ModToolId)).Cast<ModToolId>().Where(ModTools.IsMachine))

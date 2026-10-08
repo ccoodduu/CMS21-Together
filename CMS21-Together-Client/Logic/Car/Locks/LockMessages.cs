@@ -29,6 +29,7 @@ public static class LockMessages
 
 	public static string ForKey(int loader, string name, string key, string targetKey)
 	{
+		if (LockKeys.IsPlace(key)) return $"{name} is moving a car there.";
 		if (targetKey == LockKeys.Car) return $"{name} is working on this car.";
 		if (key == null || key == targetKey) return $"{name} is working on this part.";
 		if (key == LockKeys.Car) return $"{name} is working on this car.";

@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using CMS21_Together_Core.Logging;
 using CMS21_Together_Core.Network.Packets;
 using CMS21Together.Data;
@@ -20,9 +21,14 @@ public static class CarPlacementSync
 	private static readonly HashSet<int> applying = new HashSet<int>();
 
 	private static readonly HashSet<int> movingLocally = new HashSet<int>();
+	private static float localMoveStartedAt;
+	private const float LocalMoveSeconds = 15f;
+	private static readonly List<(int Loader, int Place)> afterLocalMove = new List<(int, int)>();
 
 	public static bool IsApplying(int loader) => applying.Contains(loader);
 	private static readonly Dictionary<int, int> pendingPlaces = new Dictionary<int, int>();
+
+	public static bool HasLocalMove => movingLocally.Count > 0 || afterLocalMove.Count > 0;
 
 	private static bool Active => ClientScene.IsGarageReady && Client.Instance != null && Client.Instance.IsConnectionValid;
 
@@ -42,6 +48,7 @@ public static class CarPlacementSync
 			return false;
 		}
 		movingLocally.Add(loader);
+		localMoveStartedAt = UnityEngine.Time.realtimeSinceStartup;
 		var other = CarLoaderPlaces.Get().GetCarLoaderForPlace((CarPlace)to);
 		int toLift = LiftStateAfterArrival(__instance.carLoader, to);
 		int fromLift = other == null ? 0 : LiftStateAfterArrival(other, from);
@@ -56,6 +63,19 @@ public static class CarPlacementSync
 	{
 		if (__result || __instance.carLoader == null || movingLocally.Count == 0) return;
 		movingLocally.Remove(CarLoaderPlaces.Get().GetCarLoaderId(__instance.carLoader));
+		if (movingLocally.Count == 0) ApplyAfterLocalMove();
+	}
+
+	private static void ApplyAfterLocalMove()
+	{
+		var places = afterLocalMove.ToList();
+		afterLocalMove.Clear();
+		foreach (var (loader, place) in places)
+		{
+			var carLoader = CarLoaderPlaces.Get()?.GetCarLoaderByIndex(loader);
+			if (carLoader == null || string.IsNullOrEmpty(carLoader.carToLoad) || !carLoader.IsCarLoaded()) continue;
+			ApplyPlace(carLoader, loader, place);
+		}
 	}
 
 	public static bool IsMovingLocally(int loader) => movingLocally.Contains(loader);
@@ -78,6 +98,19 @@ public static class CarPlacementSync
 		{
 			pendingPlaces[packet.CarLoaderID] = packet.Place;
 			Log.Info($"[Placement] Loader {packet.CarLoaderID}: place {packet.Place} kept until the car has loaded.");
+			return;
+		}
+		if (movingLocally.Count > 0 && UnityEngine.Time.realtimeSinceStartup - localMoveStartedAt > LocalMoveSeconds)
+		{
+			Log.Warn($"[Placement] The local move of loader(s) {string.Join(", ", movingLocally)} did not end in {LocalMoveSeconds:0} s; applying the server's places.");
+			movingLocally.Clear();
+			ApplyAfterLocalMove();
+		}
+		if (movingLocally.Count > 0)
+		{
+			afterLocalMove.RemoveAll(p => p.Loader == packet.CarLoaderID);
+			afterLocalMove.Add((packet.CarLoaderID, packet.Place));
+			Log.Info($"[Placement] Loader {packet.CarLoaderID}: place {packet.Place} kept until the local move ends.");
 			return;
 		}
 		ApplyPlace(carLoader, packet.CarLoaderID, packet.Place);

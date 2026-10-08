@@ -61,6 +61,13 @@ namespace CMS21_Together_Server.Data.Cars
 			CarLocks.Release(swap.Locks[0].Id, "check");
 			Check("releasing one swap record releases its partner", !CarLocks.All.Any());
 
+			var move = TryGrant(A, Request(X(LockKeys.Car), kind: CarLockKind.Move, place: 3));
+			Check("a move to a free place holds that place", move.Refused == null && move.Locks[0].Place == 3);
+			Expect("another car's move to the same place is refused, naming the place", TryGrant(B, Request(X(LockKeys.Car), kind: CarLockKind.Move, loader: OtherLoader, place: 3)).Refused, CarLockRefusal.Held, LockKeys.Place(3));
+			Expect("another car's move to a different place is granted", TryGrant(B, Request(X(LockKeys.Car), kind: CarLockKind.Move, loader: OtherLoader, place: 4)).Refused, CarLockRefusal.None, null);
+			CarLocks.ReleaseOwner(A, "check");
+			CarLocks.ReleaseOwner(B, "check");
+
 			var unmount = Grant(A, X("s:3.22.4"));
 			state.CarState.LoadedCars[Loader].SubParts["3.22.4"].Unmounted = true;
 			CarLocks.ReleaseCommitted(A, state.CarState.LoadedCars[Loader], Loader);
@@ -98,10 +105,10 @@ namespace CMS21_Together_Server.Data.Cars
 		private static List<string> S(params string[] keys) => keys.ToList();
 
 		private static CarLockRequestPacket Request(List<string> x, List<string> s = null, CarLockKind kind = CarLockKind.PartUnmount, int loader = Loader,
-			int spawnSeq = 1, int extendLockId = 0, long[] items = null, int otherLoader = -1) => new CarLockRequestPacket
+			int spawnSeq = 1, int extendLockId = 0, long[] items = null, int otherLoader = -1, int place = -1) => new CarLockRequestPacket
 		{
 			RequestId = nextRequest++, CarLoaderID = loader, SpawnSeq = spawnSeq, Kind = kind, X = x, S = s ?? new List<string>(),
-			Items = (items ?? new long[0]).ToList(), ExtendLockId = extendLockId, OtherLoaderID = otherLoader, OtherSpawnSeq = 1
+			Items = (items ?? new long[0]).ToList(), ExtendLockId = extendLockId, OtherLoaderID = otherLoader, OtherSpawnSeq = 1, Place = place
 		};
 
 		private static (CarLocks.Refused Refused, List<CarLocks.Lock> Locks) TryGrant(int client, CarLockRequestPacket request)

@@ -21,6 +21,7 @@ namespace CMS21_Together_Server.Data.Cars
 			public int Loader;
 			public int SpawnSeq;
 			public CarLockKind Kind;
+			public int Place = -1;
 			public byte Phase;
 			public List<string> X = new List<string>();
 			public List<string> S = new List<string>();
@@ -130,7 +131,7 @@ namespace CMS21_Together_Server.Data.Cars
 			var s = Derive(entry, x, request.S);
 			var knownItems = KnownItems(request, clientId);
 
-			var refused = Check(clientId, request.CarLoaderID, x, s, request.Items.Distinct().ToList(), extended?.Id ?? 0);
+			var refused = Check(clientId, request.CarLoaderID, x, s, request.Items.Distinct().ToList(), extended?.Id ?? 0) ?? CheckPlace(clientId, request);
 			if (refused != null) return refused;
 			if (otherEntry != null)
 			{
@@ -157,7 +158,7 @@ namespace CMS21_Together_Server.Data.Cars
 			var record = new Lock
 			{
 				Id = nextId++, Owner = clientId, Loader = request.CarLoaderID, SpawnSeq = entry.SpawnSeq, Kind = request.Kind,
-				X = x, S = s, Items = knownItems, Since = now, RenewedAt = now
+				Place = request.Kind == CarLockKind.Move ? request.Place : -1, X = x, S = s, Items = knownItems, Since = now, RenewedAt = now
 			};
 			Remember(entry, record);
 			Index(record);
@@ -238,6 +239,13 @@ namespace CMS21_Together_Server.Data.Cars
 			return null;
 		}
 
+		private static Refused CheckPlace(int clientId, CarLockRequestPacket request)
+		{
+			if (request.Kind != CarLockKind.Move || request.Place < 0) return null;
+			var mover = locks.Values.FirstOrDefault(l => l.Place == request.Place && l.Owner != clientId);
+			return mover == null ? null : new Refused { Refusal = CarLockRefusal.Held, Holder = mover.Owner, Key = LockKeys.Place(request.Place) };
+		}
+
 		private static int OtherOwner(int lockId, int clientId, int ownLockId)
 		{
 			if (lockId == 0 || lockId == ownLockId || !locks.TryGetValue(lockId, out var record)) return -1;
@@ -298,7 +306,7 @@ namespace CMS21_Together_Server.Data.Cars
 		{
 			LockId = record.Id, LinkedLockId = record.LinkedId, CarLoaderID = record.Loader, SpawnSeq = record.SpawnSeq,
 			OwnerPlayerId = released ? CarLockUpdatePacket.Released : record.Owner, Kind = record.Kind, Phase = record.Phase,
-			X = new List<string>(record.X), S = new List<string>(record.S), Items = new List<long>(record.Items)
+			X = new List<string>(record.X), S = new List<string>(record.S), Items = new List<long>(record.Items), Place = record.Place
 		};
 
 		public static bool Release(int lockId, string reason, string counter = "released")
@@ -432,7 +440,7 @@ namespace CMS21_Together_Server.Data.Cars
 
 		public static string Describe(Lock record) =>
 			$"loader {record.Loader} {record.Kind} phase {record.Phase} X[{string.Join(",", record.X)}] S[{string.Join(",", record.S)}]" +
-			(record.Items.Count > 0 ? $" items[{string.Join(",", record.Items)}]" : "");
+			(record.Items.Count > 0 ? $" items[{string.Join(",", record.Items)}]" : "") + (record.Place >= 0 ? $" to place {record.Place}" : "");
 
 		public static IEnumerable<string> Describe(float now)
 		{

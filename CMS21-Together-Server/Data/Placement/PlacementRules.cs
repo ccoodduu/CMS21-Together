@@ -100,5 +100,12 @@ namespace CMS21_Together_Server.Data.Placement
 			if (only == CarLoaderEntry.NoClient) Server.SendToClients(packet);
 			else Server.SendToClient(packet, only);
 		}
+
+		public static void SendCarPlaces(int clientId)
+		{
+			foreach (var car in GameDataManager.CurrentState.CarState.LoadedCars.OrderBy(c => LifterAtPlace(c.Value.Spawn?.PlaceNo ?? -1) >= 0))
+				Server.SendToClient(new CarPlaceChangedPacket { CarLoaderID = car.Key, Place = car.Value.Spawn?.PlaceNo ?? -1 }, clientId);
+			for (int lifter = 0; lifter < 2; lifter++) SendLifter(lifter, instant: true, only: clientId);
+		}
 	}
 }
