@@ -1,21 +1,17 @@
 # Tasks
 
-> **Resume here (2026-10-08, 13:20).** Branch `change/part-locks`, worktree `CMS21-Together-wt/part-locks`.
+> **Resume here (2026-10-08, 13:30).** Branch `change/part-locks`, worktree `CMS21-Together-wt/part-locks`. Ready
+> for merge.
 >
-> - **Done and committed:** groups 1-9 and 10.4 (2.2/2.3 keep their "in code" notes). Open: 10.1's 8-of-10
->   latency measure, 10.2, 10.3, group 11. Group commits: `350e5aa` (6.1-6.3), `1e3dfb7` (7), `fbbb555` (8), `536f3d6`
->   (9.2, 10.1, 10.4 test steps); `005182f` holds 9.1/10.1's code. Main merged up to `a5dd030` (soak fixes).
-> - **Proof (lane 1):** 5.1's rest: `tools-car-effects`, `visual-activity`, `visual-latejoin`, `visual-lift`,
->   `visual-parts`, `economy-latejoin`, `car-gone-inflight`, `test-drive` (`20261008-120125` … `121023`) and
->   `tools-latejoin` (`121238`, after `crane-group`). New work: see the task marks. After the last main merge, the
->   smoke set plus the lock scenarios pass (`20261008-124403_regression.json`, 16 of 16).
-> - **Open risks:** a job end the server refuses is not given back to the client (the client now refuses locally
->   first); `CarLifter.isMoving` can stay true for a long time after a swap onto a lift (seen headless; main's
->   `a5dd030` lift-state fix may be the cause's other half), so `locks-car` lifts before the swaps; the caliper race
->   with both clients held ends with "item already gone" rather than a server item refusal (`--check-locks` covers
->   that refusal).
-> - **Next step:** 10.1's latency measure with 10.2 `locks-latency`, 10.3 `locks-latejoin`, then group 11 (scale on
->   lane 3, verification, playtest checklist, docs).
+> - **Done:** groups 1-10, 11.3, 11.4 except the merge itself. Open: 11.1 `locks-scale` on lane 3 (runs with the
+>   next soak after the merge), 11.2's full area regression (only the smoke set and the lock scenarios ran), group 12 is
+>   `part-locks-2` (ROADMAP row 24).
+> - **Proof (lane 1):** see the task marks; `locks-latency` `20261008-130352`, `locks-latejoin` `20261008-130524`;
+>   the smoke set plus the lock scenarios after the last merge of main (see STATUS.md).
+> - **Open risks:** a job end the server refuses is not given back to the client (row 19 D16 now notes it; the client
+>   refuses locally first); `CarLifter.isMoving` stayed true for a long time after a swap onto a lift in headless
+>   games (`locks-car` lifts before its swaps); the caliper race ends with "item already gone" rather than a server
+>   item refusal (`--check-locks` covers that refusal).
 
 **Row 18: playtest fix, landing before the next Steam playtest.** It fixes findings 1 and 4 of 2026-10-07, plus the
 coolant and connected-part races.
@@ -259,14 +255,16 @@ coolant and connected-part races.
 
 ## 10. Latency and late join
 
-- [ ] 10.1 Prefetch at hold start per D10 (unless 1.6 dropped it): the request at hold start over a free part, the
+- [x] 10.1 Prefetch at hold start per D10 (unless 1.6 dropped it): the request at hold start over a free part, the
       release on abort or move-off, and the gate using the prefetched lock. The abort step is added to `locks-leak`.
       Done when `locks-leak` passes, and with `lock-click … hold` at `net-delay 80`, `waitedMs` is 0 in at least 8 of
       10 tries.
-      **In code (2026-10-08):** Prefetch in code and used (`locks-select` `20261008-121658`), the abort step passes in `locks-leak` (`20261008-121739`). Open: the `waitedMs` 0 in 8 of 10 at `net-delay 80` (goes with `locks-latency`, 10.2).
-- [ ] 10.2 `scenarios/locks-latency.ps1` (`# areas: locks, parts, connect`) per D13, with `lock_expiry_seconds = 10`.
+      **Done (2026-10-08):** the abort step passes in `locks-leak` (`20261008-121739`); at `net-delay 80`, 10 of 10 completed holds waited 0 ms (`locks-latency` `20261008-130352`).
+- [x] 10.2 `scenarios/locks-latency.ps1` (`# areas: locks, parts, connect`) per D13, with `lock_expiry_seconds = 10`.
       Done when it passes in under 2 minutes.
-- [ ] 10.3 `scenarios/locks-latejoin.ps1` (`# areas: locks, persistence, visuals`) per D13. Done when it passes.
+      **Done (2026-10-08):** `locks-latency` (`20261008-130352`): a click at 150 ms delay waits one answer (282 ms headless), prefetch 10 of 10, timeout with message and late grant released, expiry after 10.3 s, holder disconnect frees the part; the lock steps take 1 min.
+- [x] 10.3 `scenarios/locks-latejoin.ps1` (`# areas: locks, persistence, visuals`) per D13. Done when it passes.
+      **Done (2026-10-08):** `locks-latejoin` (`20261008-130524`).
 - [x] 10.4 Row 19 review X4: `resync-key` gains a lock step: A and B each hold a part lock when B resyncs; B's lock is
       released, A's stays on the server and is back in B's mirror after the reload, and A's release reaches B. Done when
       `resync-key` passes.
@@ -286,8 +284,9 @@ coolant and connected-part races.
       - the smoke set (`Run-All -Changed`).
 
       Done when all are green and their run ids are in STATUS.
-- [ ] 11.3 Manual playtest checklist (D13) in STATUS.md and `docs/try-it.md`, with what to report for each item. Done
+- [x] 11.3 Manual playtest checklist (D13) in STATUS.md and `docs/try-it.md`, with what to report for each item. Done
       when it is in both files and the user has it for the next Steam playtest.
+      **Done (2026-10-08):** in STATUS.md (2026-10-08 12:00 entry) and `docs/try-it.md` ("Please try: parts in use").
 - [ ] 11.4 Docs:
       - INTEGRATION.md: packets, the retired `CarPartClaim`/`CarPartClaimUpdate`, `CarLocks` replacing `CarClaims`
         in the API table, the `PartClaims` view, `CarDetailsSync.FlushNow`, settings, verbs, dump section, area;
@@ -297,6 +296,10 @@ coolant and connected-part races.
       - `part-locks-2` added to the ROADMAP (if question 7 keeps its default), and the ROADMAP status.
 
       Done when `openspec validate part-locks --strict` passes and the change is merged.
+      **Done except the merge (2026-10-08):** INTEGRATION.md (packets, retired claim packets, `CarLocks` API, the
+      `PartClaims` view, `FlushNow`, settings, verbs, dump section, area), README "Playing together" and "What you can do
+      together", spike doc 1.2 (group mount path), QUESTIONS findings 1 and 4, ROADMAP row 18 status and row 24
+      `part-locks-2`; `openspec validate part-locks --strict` passes.
 
 ## 12. Selection in mount mode, chooser and pie (only if open question 7 is answered "no"; otherwise `part-locks-2`)
 

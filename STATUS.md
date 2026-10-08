@@ -2,6 +2,21 @@
 
 Newest first. One entry per work session.
 
+## 2026-10-08 (12:00–13:30) — row 18 part locks ready for merge
+
+- `change/part-locks` (lane 1): groups 1–10 done. Part work, the item chooser (also a caliper with its piston built as
+  a group), body panels, the crane, fluid refill, extractor and oil bin, lifts, moves and swaps ask the server first;
+  hover shows the holder, a click on a part in use is refused at once, holds prefetch their lock. Park, delete and
+  job end are refused while another player works on the car. Proven by `locks-basic`, `-race`, `-leak`,
+  `-connected`, `-fluid`, `-car`, `-select`, `-latency` (10 of 10 holds without a wait at 80 ms), `-latejoin`, the
+  area scenarios of 5.1 and the smoke set. Row 19 review items P8, P10 and X4 are scenario steps. Not done here:
+  `locks-scale` on lane 3 (with the next soak) and part of 11.4. Row 19 D16 notes the job-end refusal gap.
+- **Playtest checklist (row 18)**, also in `docs/try-it.md` with what to report: hover a friend's part (no highlight,
+  label with the name); hold to unmount at normal ping (no wait after the ring); click a part in use (sound, message,
+  nothing starts); open the item chooser and leave with ESC (the slot is free for the friend at once); fill a fluid
+  with a friend at the car (no reservoir removal or second fill meanwhile; same levels after); raise the lift while a
+  friend works (refused); park the car or end its job while a friend works (refused, the car stays).
+
 ## 2026-10-08 (07:15–12:15) — row 15 merged, row 19 documents, 4-hour soak
 
 - `main`: row 15 shared outdoor scenes merged (`99f1888`; `outdoor-scale` passes on lane 3 after merging main in).

@@ -17,8 +17,9 @@ Everyone else joins it from the main menu or through Steam. Your own single-play
   running. Everyone sees the others walk around with name tags.
 - **Shared progress.** Money, XP, level, skills, scrap, inventory and warehouse belong to the whole group. Shop,
   warehouse and garage upgrades work for everyone.
-- **Work on cars together.** Take parts off and put them on, also on the same car at the same time (a part one player
-  is working on is reserved). Lifts, moving cars, the garage parking, the engine crane.
+- **Work on cars together.** Take parts off and put them on, also on the same car at the same time. A part another
+  player works on is locked for you, together with what is fixed to it and its fluids. Lifts, moving cars, the garage
+  parking, the engine crane.
 - **Car details.** Fluids, wheels, tires and alignment, plates, paint, livery, window tint, mileage, dirt and lights.
 - **Jobs.** Orders come in for the whole group. Accept a job, work on the customer car together,
   hand it back: the payout and XP arrive once.
@@ -80,6 +81,13 @@ the game, click **Multiplayer** in the main menu.
 - **See each other work:** when another player takes a part off or puts it on, you see the bolts turn and the part
   slide off or on, and their avatar holds the tool. This is only a picture of what they do: the change itself
   arrives as before. Turn it off with `RemoteVisuals = false` in `UserData\MelonPreferences.cfg`.
+- **Parts in use:** before a part comes off or goes on, your game asks the server for it. A part another player works
+  on has no highlight, its label says "<name> is working on this part.", and a click on it plays the error sound with
+  that message. The same goes for what is fixed to it (a crankshaft while its bearing caps are worked on), for a fluid
+  being filled or drained ("… working on the coolant system."), and for the item another player is mounting. While
+  anyone works on a car, the others cannot lift, move, park, delete it or end its job ("<name> is working on this
+  car."). Holding the mouse button to unmount reserves the part at the start of the hold, so there is no wait. If
+  the server does not answer within 3 s you see "The server did not answer. Try again."
 - **DLC:** players may own different DLC. DLC cars and parts that not every connected player owns are blocked while
   connected.
 - **Keys:** **F7** reloads the garage from the server, **F8** saves a bug report, **F9** opens the session panel.

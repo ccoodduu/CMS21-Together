@@ -331,6 +331,9 @@ last longer still [minor 11]. `CarAwaySync` stays as it is, and the mirror treat
   while another player holds a lock on that car. The refusal is `Busy`, sent through each feature's existing refusal
   path, and the client shows "<name> is working on this car." For job end this means the finishing player waits for
   the other player to finish or cancel. That is the user's "the car does not move while someone works on it".
+  *Implementation (2026-10-08):* the job end is also refused on the client before the native `EndJob` runs, while
+  the mirror shows another player's lock on the car: the native end removes the job locally at once, and a server
+  refusal does not give it back (row 19 D16 notes that gap).
 - **Server safety net.** `OnLifterAction` and `OnCarPlaceChange` refuse when another player holds a lock on the car
   (or on the swap partner) and the sender holds no `car` X lock.
 - **Away (row 13).** `CarAwayRegistry.OnRequest` asks `CarLocks.HeldByOther` (the same `InUse` refusal). An existing
