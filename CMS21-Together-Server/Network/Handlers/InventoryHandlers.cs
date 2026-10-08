@@ -35,13 +35,15 @@ namespace CMS21_Together_Server.Network.Handlers
             }
             else if (packet.Action == ItemActionType.Remove)
             {
-                var removed = state.InventoryState.InventoryItems.RemoveAll(i => i.UID == packet.Item.UID) > 0;
-                if (removed)
+                var stored = state.InventoryState.InventoryItems.FirstOrDefault(i => i.UID == packet.Item.UID);
+                if (stored != null)
                 {
-                    InventoryChanges.NoteRemoved(packet.Item.UID, (int)clientId);
+                    state.InventoryState.InventoryItems.Remove(stored);
+                    InventoryChanges.NoteRemoved(stored, (int)clientId);
                     Server.SendToClients(packet, (int)clientId);
                     EconomyService.OnInventoryRemoved((int)clientId, packet.Item);
                 }
+                else RemoveMissing("item", packet.Item.UID, clientId);
             }
             else if (packet.Action == ItemActionType.Update)
             {
@@ -76,12 +78,14 @@ namespace CMS21_Together_Server.Network.Handlers
             }
             else if (packet.Action == ItemActionType.Remove)
             {
-                var removed = state.InventoryState.InventoryGroupItems.RemoveAll(i => i.UID == packet.GroupItem.UID) > 0;
-                if (removed)
+                var stored = state.InventoryState.InventoryGroupItems.FirstOrDefault(g => g.UID == packet.GroupItem.UID);
+                if (stored != null)
                 {
-                    InventoryChanges.NoteRemoved(packet.GroupItem.UID, (int)clientId);
+                    state.InventoryState.InventoryGroupItems.Remove(stored);
+                    InventoryChanges.NoteRemoved(stored, (int)clientId);
                     Server.SendToClients(packet, (int)clientId);
                 }
+                else RemoveMissing("group", packet.GroupItem.UID, clientId);
             }
         }
 
@@ -96,7 +100,7 @@ namespace CMS21_Together_Server.Network.Handlers
                 {
                     if (state.InventoryState.InventoryGroupItems.RemoveAll(i => i.UID == packet.GroupItem.UID) > 0)
                     {
-                        InventoryChanges.NoteRemoved(packet.GroupItem.UID, (int)clientId);
+                        InventoryChanges.NoteRemoved(packet.GroupItem, (int)clientId);
                         state.InventoryState.WarehouseGroupItems.Add(packet.GroupItem);
                         Server.SendToClients(packet); // Send to all including sender so sender can update their local UI
                     }
@@ -105,7 +109,7 @@ namespace CMS21_Together_Server.Network.Handlers
                 {
                     if (state.InventoryState.InventoryItems.RemoveAll(i => i.UID == packet.Item.UID) > 0)
                     {
-                        InventoryChanges.NoteRemoved(packet.Item.UID, (int)clientId);
+                        InventoryChanges.NoteRemoved(packet.Item, (int)clientId);
                         state.InventoryState.WarehouseItems.Add(packet.Item);
                         Server.SendToClients(packet);
                     }
@@ -133,6 +137,12 @@ namespace CMS21_Together_Server.Network.Handlers
             }
         }
         
+        private static void RemoveMissing(string what, long uid, long clientId)
+        {
+            InventoryChanges.Count("removeMissing");
+            Logger.Info($"[Inventory] Remove of {what} {uid} from client {clientId}: not in the inventory ({InventoryChanges.DescribeRemover(uid)}).");
+        }
+
         private static bool SameJson(object stored, object incoming) =>
             JsonConvert.SerializeObject(stored) == JsonConvert.SerializeObject(incoming);
 

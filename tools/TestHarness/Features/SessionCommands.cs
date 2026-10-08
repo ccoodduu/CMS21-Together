@@ -12,7 +12,22 @@ public static class SessionCommands
     [HarnessCommand("sell-item")]
     private static object SellItem(string args)
     {
-        var items = Singleton<GameManager>.Instance.Inventory.GetItems();
+        var inventory = Singleton<GameManager>.Instance.Inventory;
+        string uidArg = (args ?? "").Trim();
+        if (uidArg.Length > 0)
+        {
+            long uid = long.Parse(uidArg);
+            var group = inventory.GetGroup(uid);
+            if (group != null)
+            {
+                NotificationCenter.Get().SellItem(group, false, true);
+                return new Dictionary<string, object> { ["id"] = group.ID, ["uid"] = group.UID, ["group"] = true };
+            }
+            var single = inventory.GetItem(uid) ?? throw new ArgumentException($"no item or group {uid}");
+            NotificationCenter.Get().SellItem(single, false, true);
+            return new Dictionary<string, object> { ["id"] = single.ID, ["uid"] = single.UID, ["group"] = false };
+        }
+        var items = inventory.GetItems();
         if (items == null || items.Count == 0) throw new InvalidOperationException("the inventory has no single items");
         var item = items[0];
         int expected = Helper.GetPrice(item, 0.5f);

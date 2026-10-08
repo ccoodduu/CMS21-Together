@@ -201,9 +201,13 @@ public static class ToolSync
 		slots[current.Tool] = current;
 		pending.TryGetValue(packet.ClientSeq, out var update);
 		pending.Remove(packet.ClientSeq);
-		Log.Warn($"[Tools] {current.Tool}: local change rejected ({packet.Reason}); applying the server's state.");
-		ModNotify.ShowToast($"Another player changed the {Label(current.Tool)} first.");
-		MelonCoroutines.Start(Run(Compensate(current.Tool, update)));
+		Log.Warn($"[Tools] {current.Tool}: local change rejected ({packet.Reason}, item {packet.Item}); applying the server's state.");
+		var usedBy = System.Text.RegularExpressions.Regex.Match(packet.Reason ?? "", @"used by player (-?\d+)");
+		var heldBy = System.Text.RegularExpressions.Regex.Match(packet.Reason ?? "", @"held by player (-?\d+)");
+		if (packet.Item == SlotItemOutcome.Gone && usedBy.Success) ModNotify.ShowToast($"{PlayerName(int.Parse(usedBy.Groups[1].Value))} used this part.");
+		else if (heldBy.Success) ModNotify.ShowToast($"{PlayerName(int.Parse(heldBy.Groups[1].Value))} is mounting this part.");
+		else ModNotify.ShowToast($"Another player changed the {Label(current.Tool)} first.");
+		MelonCoroutines.Start(Run(Compensate(current.Tool, update, packet.Item)));
 	}
 
 	public static void OnRemoteProperty(ToolSlotPropertyPacket packet)
@@ -330,7 +334,7 @@ public static class ToolSync
 		}
 	}
 
-	private static IEnumerator Compensate(ModToolId tool, PendingUpdate update)
+	private static IEnumerator Compensate(ModToolId tool, PendingUpdate update, SlotItemOutcome outcome = SlotItemOutcome.Unchanged)
 	{
 		RequestApply(tool);
 		while (applyRunning.Contains(tool)) yield return null;
@@ -343,9 +347,21 @@ public static class ToolSync
 			bool onMachine = slots.Values.Any(s => s.Uids().Contains(uid));
 			bool inInventory = update.Attempted.Item != null ? inventory.GetItem(uid) != null : inventory.GetGroup(uid) != null;
 			if (onMachine || inInventory) yield break;
-			Log.Info($"[Tools] {tool}: returning {uid} to the inventory.");
-			if (update.Attempted.Item != null) inventory.Add(update.Attempted.Item.ToGameItem());
-			else inventory.AddGroup(update.Attempted.Group.ToGameGroupItem());
+			if (outcome == SlotItemOutcome.Gone)
+			{
+				Log.Info($"[Tools] {tool}: {uid} was used by another player; not returned.");
+				yield break;
+			}
+			Log.Info($"[Tools] {tool}: returning {uid} to the inventory{(outcome == SlotItemOutcome.Returned ? " (the server put it back)" : "")}.");
+			bool previous = InventoryHandlers.IgnoreInventoryHooks;
+			InventoryHandlers.IgnoreInventoryHooks = outcome == SlotItemOutcome.Returned || previous;
+			try
+			{
+				if (update.Attempted.Item != null) inventory.Add(update.Attempted.Item.ToGameItem());
+				else inventory.AddGroup(update.Attempted.Group.ToGameGroupItem());
+			}
+			finally { InventoryHandlers.IgnoreInventoryHooks = previous; }
+			InventoryHandlers.RefreshInventoryWindow();
 		}
 		else if (update.Attempted.IsEmpty && !update.Previous.IsEmpty)
 		{
