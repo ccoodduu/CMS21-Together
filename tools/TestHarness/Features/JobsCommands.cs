@@ -16,6 +16,7 @@ public static class JobsCommands
     private static bool autogen = true;
     private static float nextTtl = -1f;
     private static float stickyTtl = -1f;
+    private static string nextBonus;
 
     private static OrderGenerator Generator => Singleton<GameManager>.Instance.OrderGenerator;
 
@@ -42,10 +43,15 @@ public static class JobsCommands
     private static void AfterGenerateNewJob(int __state)
     {
         float ttl = nextTtl > 0f ? nextTtl : stickyTtl;
+        string bonus = nextBonus;
         nextTtl = -1f;
+        nextBonus = null;
         var jobs = Generator.Jobs;
-        if (ttl <= 0f || jobs == null || jobs.Count <= __state) return;
-        jobs[jobs.Count - 1].timeToEnd = ttl;
+        if (jobs == null || jobs.Count <= __state) return;
+        var job = jobs[jobs.Count - 1];
+        if (ttl > 0f) job.timeToEnd = ttl;
+        if (bonus == "money") job.BonusToMoney = true;
+        if (bonus == "exp") job.BonusToExp = true;
     }
 
     [HarnessCommand("orders-ttl")]
@@ -79,6 +85,7 @@ public static class JobsCommands
     {
         if (!autogen) changed.Add("orders-autogen off");
         if (stickyTtl > 0f) changed.Add("orders-ttl");
+        nextBonus = null;
         autogen = true;
         nextTtl = -1f;
         stickyTtl = -1f;
@@ -87,7 +94,9 @@ public static class JobsCommands
     [HarnessCommand("orders-generate")]
     private static object OrdersGenerate(string args)
     {
-        nextTtl = float.TryParse((args ?? "").Trim(), out float ttl) ? ttl : -1f;
+        var parts = (args ?? "").Split(new[] { ' ' }, StringSplitOptions.RemoveEmptyEntries);
+        nextTtl = parts.Length > 0 && float.TryParse(parts[0], out float ttl) ? ttl : -1f;
+        nextBonus = parts.Length > 1 && (parts[1] == "money" || parts[1] == "exp") ? parts[1] : null;
         int before = Generator.Jobs?.Count ?? 0;
         bool connected = CMS21Together.Network.Client.Instance != null && CMS21Together.Network.Client.Instance.IsConnectionValid;
         if (connected) return new { before, sent = CMS21Together.Logic.Jobs.JobsSync.GenerateOrder(0) };
@@ -110,7 +119,7 @@ public static class JobsCommands
         for (int i = 0; jobs != null && i < jobs.Count; i++)
         {
             var job = jobs[i];
-            result.Add(new { job.id, car = job.carFile, job.carLoaderID, job.forXP, job.IsMission, timeToEnd = Mathf.Round(job.timeToEnd), tasks = job.jobTasks?.Length ?? 0 });
+            result.Add(new { job.id, car = job.carFile, job.carLoaderID, job.forXP, job.IsMission, timeToEnd = Mathf.Round(job.timeToEnd), tasks = job.jobTasks?.Length ?? 0, job.BonusToMoney, job.BonusToExp });
         }
         return new Dictionary<string, object> { ["jobs"] = result, ["globalJobs"] = GlobalData.Jobs, ["max"] = GlobalData.GetMaxOrdersAmount() };
     }
