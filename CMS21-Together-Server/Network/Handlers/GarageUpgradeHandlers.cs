@@ -13,56 +13,55 @@ namespace CMS21_Together_Server.Network.Handlers
 		[PacketHandler(PacketTypes.UpgradeRequest)]
 		public static void OnUpgradeRequest(long clientId, UpgradeRequest packet)
 		{
-			var garageState = GameDataManager.CurrentState.GarageState;
-		    var worldState = GameDataManager.CurrentState.WorldState;
-		    
-
-		    switch (packet.type)
-		    {
-		        case UpgradeType.Money:
-		            var upgradeData = GameDatabase.PlayerUpgrades.MoneyUpgrades.Find(s => s.ID == packet.id);
-		            
-		            if (upgradeData == null || packet.level < 0 || packet.level >= upgradeData.Costs.Count) return;
-		            
-		            if (garageState.GarageUpgradeLevels.TryGetValue(packet.id, out bool[] levels))
-		            {
-		                if (levels[packet.level]) return;
-		                
-		                int cost = upgradeData.Costs[packet.level];
-		                if (worldState.Money >= cost)
-		                {
-		                    worldState.Money -= cost;
-		                    levels[packet.level] = true;
-		                    Logger.Info($"Player {clientId} bought {packet.id} Lvl {packet.level} for {cost}$");
-		                }
-		            }
-		            break;
-
-		        case UpgradeType.Points:
-			        var skillData = GameDatabase.PlayerUpgrades.PointUpgrades.Find(s => s.ID == packet.id);
-			        if (skillData == null || packet.level < 0 || packet.level >= skillData.Costs.Count) return;
-
-			        if (garageState.PlayerUpgradeLevels.TryGetValue(packet.id, out bool[] skillLevels))
-			        {
-				        if (skillLevels[packet.level]) return; 
-
-				        // Calcul des points
-				        int availablePoints = ComputeAvailablePoints(worldState, garageState);
-
-				        int cost = skillData.Costs[packet.level];
-				        if (availablePoints >= cost)
-				        {
-					        skillLevels[packet.level] = true;
-					        Logger.Info($"[Server] Skill {packet.id} Lvl {packet.level} validated for client {clientId}");
-				        }
-			        }
-		            break;
-		    }
-			GameDataManager.CurrentState.GarageState.AvailablePoints = ComputeAvailablePoints(GameDataManager.CurrentState.WorldState, GameDataManager.CurrentState.GarageState);
-			Server.SendToClients(GameDataManager.CurrentState.WorldState);
-			Server.SendToClients(GameDataManager.CurrentState.GarageState);
+			var state = GameDataManager.CurrentState;
+			string refusal = packet.type switch
+			{
+				UpgradeType.Money => BuyUpgrade(packet, state.GarageState, state.WorldState),
+				UpgradeType.Points => UnlockSkill(packet, state.GarageState, state.WorldState),
+				_ => "unknown type",
+			};
+			state.GarageState.AvailablePoints = ComputeAvailablePoints(state.WorldState, state.GarageState);
+			state.WorldState.updateGamemode = false;
+			if (refusal == null)
+			{
+				Logger.Info($"[Upgrades] {packet.type} {packet.id} level {packet.level} unlocked by client {clientId}.");
+				Server.SendToClients(state.WorldState);
+				Server.SendToClients(state.GarageState);
+				return;
+			}
+			Logger.Info($"[Upgrades] {packet.type} {packet.id} level {packet.level} from client {clientId} refused: {refusal}; answering with the garage state.");
+			Server.SendToClient(state.WorldState, (int)clientId);
+			Server.SendToClient(state.GarageState, (int)clientId);
 		}
-		
+
+		private static string BuyUpgrade(UpgradeRequest packet, GarageState garageState, WorldState worldState)
+		{
+			var upgradeData = GameDatabase.PlayerUpgrades.MoneyUpgrades.Find(s => s.ID == packet.id);
+			if (upgradeData == null) return "unknown id";
+			if (packet.level < 0 || packet.level >= upgradeData.Costs.Count) return "level out of range";
+			if (!garageState.GarageUpgradeLevels.TryGetValue(packet.id, out bool[] levels) || packet.level >= levels.Length) return "not in the garage state";
+			if (levels[packet.level]) return "already unlocked";
+			int cost = upgradeData.Costs[packet.level];
+			if (worldState.Money < cost) return $"not enough money ({worldState.Money} < {cost})";
+			worldState.Money -= cost;
+			levels[packet.level] = true;
+			return null;
+		}
+
+		private static string UnlockSkill(UpgradeRequest packet, GarageState garageState, WorldState worldState)
+		{
+			var skillData = GameDatabase.PlayerUpgrades.PointUpgrades.Find(s => s.ID == packet.id);
+			if (skillData == null) return "unknown id";
+			if (packet.level < 0 || packet.level >= skillData.Costs.Count) return "level out of range";
+			if (!garageState.PlayerUpgradeLevels.TryGetValue(packet.id, out bool[] skillLevels) || packet.level >= skillLevels.Length) return "not in the garage state";
+			if (skillLevels[packet.level]) return "already unlocked";
+			int availablePoints = ComputeAvailablePoints(worldState, garageState);
+			int cost = skillData.Costs[packet.level];
+			if (availablePoints < cost) return $"not enough points ({availablePoints} < {cost})";
+			skillLevels[packet.level] = true;
+			return null;
+		}
+
 		public static int ComputeAvailablePoints(WorldState worldState, GarageState garageState)
 		{
 			int totalPointsEarned = 0;

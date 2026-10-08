@@ -2,6 +2,21 @@
 
 Newest first. One entry per work session.
 
+## 2026-10-08 (14:00–15:10) — row 19 part 3 (server answers, seats) ready for merge
+
+- `change/server-answers` (lane 1): groups 12–13 of `state-merges-and-contention`. Every server path that refuses,
+  ignores or overrides an action now answers the acting client (design D16: inventory update/add, refused repair,
+  upgrades, second park and delete, move of an unknown loader, dropped orders, expired accept with "This order is no
+  longer available.", second or refused job end with the jobs snapshot); seats are arbitrated with the new packet
+  `SeatRefused` ("<name> is sitting there."). Harness `inv-send`, server `jobs expire <id>`.
+- Proof: `server-answers` and `seat-engine` (seat race, both orders) fail on main's code (run
+  `20261008-142844_L1_seat-engine` batch); with the change the areas run `20261008-143432_regression.json` (16/16:
+  smoke set, `server-answers`, `seat-engine`, `economy-latejoin`, `economy-trades`, `car-parking-full`,
+  `car-placement-race`, `jobs`, `jobs-latejoin`, `presence-latejoin`, `tools-slots`, server saves) and after merging
+  main `20261008-145330_regression.json` (smoke + both, `seat-engine` FLAKY on a timing check, fixed and passed in
+  `20261008-150317_L1_seat-engine`).
+- Not done here: the dropped-transaction step of `server-answers` (needs task 3.5, part 1).
+
 ## 2026-10-08 (12:15–15:00) — soak fixes, locks, ping and shared shopping list merged; playtest build dev.1021
 
 - `main` = `a0b844a`. Soak fixes merged (`a5dd030`, `docs/soak/2026-10-08.md`): receivers no longer add an extra

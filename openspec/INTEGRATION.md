@@ -38,6 +38,8 @@ part 2. "Owner" defines it; "Users" only call or subscribe.
 | `CarLockRequest { RequestId, CarLoaderID, SpawnSeq, Kind, X, S, Items, ExtendLockId, OtherLoaderID, OtherSpawnSeq }` → `CarLockResult { RequestId, LockId, Granted, Refusal, HolderPlayerId, ConflictKey }` (`RequestId = 0`: a refusal without a request, `CarBusy` for park, delete, job end, lift, move); `CarLockUpdate` (full record, `OwnerPlayerId = -1` = released, also in the `cars` snapshot), `CarLockRelease`, `CarLockRenew`; `ServerInfo` + `LockScope`, `LockExpirySeconds`; `ParkRefusal.Busy` | both | 18 | 1, 2, 3, 5b, 13, 17 (claims view) |
 | `CoopPing { PlayerId, Scene, CarLoaderID, PartKey, Position }` | C→S→same scene | 22 | relay only, no state (not saved, not in a snapshot); the server drops a ping from a stale scene or a scene without avatars and more than one per 0.4 s per player, and turns a ping with an unknown loader or key into a spot ping |
 | `ShopListChange { ClientSeq, Removed, Deltas }` → `ShopListState { Entries, Revision, SourcePlayer, SourceSeq, Refused }` (`ShopListEntry`: id, amount, the `ShopListItemDataEx` fields) | C→S / S→all (S→actor when nothing changed) | 23 | — (design `docs/design/shared-shopping-list.md`) |
+| `SeatRefused { CarLoaderID, SeatLeft, HolderPlayerId }` | S→the refused client | 19 (part 3, D17) | 6 (`PlayerHandlers.OnPlayerPresence` keeps the first seat holder and stores the second record without seat and engine; the client leaves with `GameScript.ExitFromInterior(true)` and shows "<name> is sitting there.") |
+| `InventoryGroupItemAction` with `ItemActionType.Update` | S→one client | 19 (part 3, D16) | the stored group as the answer to an `Add` of a group the server has with other content; the client replaces its group |
 
 Rows 12 and 14a add no packets.
 
@@ -97,6 +99,30 @@ row 8's client enum `JoinFailure` and never travel.
 Prefix rule on guarded game methods: row 14a's prefixes run at `Priority.First`; every other prefix of this mod on the
 same method (row 6's `SceneHooks` on `NotificationCenter.SelectSceneToLoad`, formerly `DisconnectHooks`) takes
 `bool __runOriginal` and does nothing when it is false.
+
+## No silent drops (row 19 part 3, design D16 of `state-merges-and-contention`)
+
+Rule (user, 2026-10-07): whenever the server refuses, ignores or overrides a client's action, it sends that client the
+authoritative result, so the client equals the server right after, without F7 or a digest round. The server's
+decisions do not change. A new handler that returns early must answer the same way.
+
+| Server path | Answer to the acting client |
+|---|---|
+| `InventoryHandlers` `Update` of an item the server does not have | that item's `Remove` (logged with the remover); the client skips it while an open part transaction holds the item's `Add` |
+| `InventoryHandlers` `Add` of an item or group the server has | nothing when equal; the stored copy as `Update` when it differs |
+| `InventoryHandlers` `Remove` of a UID the server does not have | nothing (the client lacks it too) |
+| `EconomyRules.PartRepair` refused (item gone) | the refusal and `WorldState`, plus the item's `Remove` (`EconomyOutcome.Answer`) |
+| `GarageUpgradeHandler` refusal or no-op (unknown id, level out of range, already unlocked, not enough money or points) | `WorldState` and `GarageState` to the requester (a success still broadcasts both) |
+| `ParkFromGarage` with no car on the loader (the second park) | `Invalid`, `ParkingService.SendState` and the loader's `CarSpawnDelete` |
+| `HandleCarSpawnDelete` of an empty loader (the second delete) | not relayed |
+| `OnCarPlaceChange` of an unknown loader | the loader's `CarSpawnDelete` |
+| `JobsService.OnOrderGenerated` dropped (not the generator, tutorial mission, over the limit) | the jobs snapshot |
+| `OnOrderAction` Accept or Decline of an unknown order | the refusal plus `JobRemoved { Expired }`; an accept shows "This order is no longer available." |
+| `OnJobEnd` not active, out of bounds, car away, or refused `Busy` (row 18) | `WorldState` plus the jobs snapshot |
+| `OnPlayerPresence` claiming a seat another player holds | `SeatRefused` (D17) |
+
+Paths that stay without a reply, because the acting client already equals the server or another packet answers it:
+details for a gone car, a dropped baseline, a removal of a UID nobody took, drive and visual rate limits.
 
 ## Save sections
 
@@ -214,6 +240,7 @@ Verbs are globally unique (`Commands.Discover` throws on a duplicate). Existing:
 | 11 | `perf` (frame time over 10 s, managed and IL2CPP heap, scene, `syncAcked`), `fps-cap <n>` |
 | 17 | `vfx-trace`, `vfx-probe` (spike), `vfx-unscrew`, `vfx-tool`, `vfx-hold`, `vfx-enable`, `vfx-parts`, `vfx-switch`, `vfx-stand`; dump section `visuals`; part 2: `drive-trace`, `drive-pie`, `drive-probe`, `drive-input`, `drive-input-state`, `drive-stop`, `drive-history`, `drive-codec-check`, `drive-blob`, `drive-ghost-test`, `drive-start`; dump section `remoteCars` (`local`, `cars[]`) |
 | 18 | `lock-take <loader> <kind> <key...> [bare] [items <uid...>] [release]` and `lock-take result <id>`, `lock-release`, `lock-renew on|off`, `lock-counters [reset]`, `lock-try <loader> unmount <key>|mount <key> [uid|group <uid...>]|body <index>|crane-out|fill <type> <id> [level <x>] [nocar]|drain <type> <id>|oil|lift <lifter> up|down [nogate]|move <place> [nogate] ... [finish|hold|release]` and `lock-try result <id>`, `lock-chooser <loader> <key> open|close`, `lock-hover <loader> <key>`, `lock-idle <bolt s> <chooser s>|default`, `lock-tracked`, `lock-watch <loader> <fluidKey>|report|off` (fluid level at each release), `lock-fluid <loader> <fluidKey>`, `lock-tool-end` (ends an active refill or extractor), `lock-reports [clear]` (every gate report: kind, result, `waitedMs`, prefetched), `lock-trace` (spike: `on|off|report|state|reinvoke|relations`), `lock-probe` (spike), `lock-click <loader> <key> hold <ms>` (input shim), `cardetails-flush <loader> [applying <ms>]`; dump section `locks` (`mirror`, `pending`, `counters`, `answers`, `lastMessage`); `lock-click status` reports `label`, `hoverFrames`, `partMouseOverFrames`; `LockSession.psm1` (`Get-ServerLocks`, `Request-Lock`, `Wait-LockMirror`) |
+| 19 | part 3: `inv-send <add|update|remove> <uid> [condition]` (a raw inventory packet for a local item; the condition is written into the local item first) |
 | 22 | `ping <loader> <key>` (no arguments: the status probe as before; with arguments: the part goes under the game's mouse-over and the hotkey's path runs), `ping-spot x,y,z`, `ping-burst <n> <loader> <key>` (raw packets past the client throttle), `ping-markers [clear]`, `input-bindings [binding]` (Rewired keyboard and mouse maps of every player); dump section `pings` (`hotkey`, `defaultHotkey`, `markers[]`, `counters`, `lastSent`) |
 | 23 | `shoplist` (game list, server mirror, `outstanding`, `windowManagerSame`), `shoplist-add`, `shoplist-remove`, `shoplist-clear` (item arguments `<id> [tire\|rim] [width=] [size=] [profile=] [et=] [plate=] [bonus=]`); no dump section |
 
@@ -230,6 +257,7 @@ Verbs are globally unique (`Commands.Discover` throws on a duplicate). Existing:
 | `tools/release/Build-Release.ps1`, `Install-ReleaseToTestEnv.ps1 -Lane`, `Collect-Logs.ps1` (+ `.bat`); `Deploy-Mod.ps1` removes release-only files | 12 |
 | `tools/test-env/Compare-Database.ps1`, `tools/test-env/fixtures/mod-targets/` | 9 |
 | server commands `password`, `serverinfo` (8); `compat` (9); `desync`, `bugreport` (14); `shoplist` (23); existing `kick`, `stop` (`kick` moves to `Server.Refuse`) | as listed |
+| server command `jobs expire <id>` (expires an open order at once, as the tick does) | 19 (part 3) |
 | server command `perf` (`perf`, `perf top <n>`, `perf reset`), snapshot line `Client[n] snapshot <id> acked after …`; `tools/test-env/PerfSampler.psm1` (`Get-PerfSample`, `Add-PerfSample`, `Test-PerfWatchdog`, `Add-FrameSample`), `Show-SoakReport.ps1` | 11 |
 
 Scenarios (unique): playtest fixes `car-wheel-swap`, `car-mount-race`; 7 `server-restart`, `profile-safety`, `rejoin`, `latejoin`, `persistence-restart`,
@@ -239,7 +267,8 @@ Scenarios (unique): playtest fixes `car-wheel-swap`, `car-mount-race`; 7 `server
 5b `tools-car-effects`; 8 `join-ui`, `join-coldstart`, `host-from-game`, `session-admin`; 9 `compat-refusal`, `compat-mods-probe` (run-all: skip; needs real mods copied into A);
 12 `release-smoke` (marked `# run-all: skip`, run after `Install-ReleaseToTestEnv.ps1`); 14a `guard`; 14
 `desync-autofix`, `resync-key`, `bug-report`; 17 `visual-parts`, `visual-activity`, `visual-latejoin`, `visual-screens` (`# needs: graphics`, `# run-all: skip`), `visual-probe` (spike, `# run-all: skip`), `drive-track`, `drive-latejoin`, `drive-probe` (spike, `# run-all: skip`); 11 `scale-connect`, `soak`, `latejoin-full`, `storm` (all
-`# run-all: lane 3`), `full-garage-fixture` and `perf-probe` (`# run-all: skip`); 22 `ping`; 23 `shopping-list`.
+`# run-all: lane 3`), `full-garage-fixture` and `perf-probe` (`# run-all: skip`); 22 `ping`; 23 `shopping-list`; 19
+`server-answers` (part 3; `seat-engine` gains the seat race).
 
 Scale lane and long runs (owner 11, design `multiplayer-soak-and-scale` D1-D9):
 

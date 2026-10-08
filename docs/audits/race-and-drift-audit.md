@@ -113,11 +113,11 @@ Markers: **None** = no mechanism prevents or repairs it; **Partial** = a mechani
 |---|---|---|---|---|
 | I1 | One item is consumed by two paths at once: put on a machine (inventory `Remove` + slot update) while another player mounts it, or sells or scraps it | **Partial**. If the machine's `Remove` reaches the server first, the mount is rejected (`RemovedByOther`). If the mount comes first, the server drops the `Remove` silently with no answer (`InventoryHandlers.cs:33`), and `ToolsStore.Check` accepts a slot item the server no longer has (`ToolsStore.cs:67-77`). The item is then both on the car and on the machine, and taking it off the machine duplicates it. Tools are in no digest. | **none** (`tools-race` covers machine against machine only) | Medium |
 | I2 | Two players move the same item to or from the warehouse | Server first; relayed only when the server really moved it (`InventoryHandlers.cs:97,118`) | **none** | Low |
-| I3 | Two `Update`s of one item (repair table and part paint), or an update racing a mount | Last write wins on the whole item (`InventoryHandlers.cs:41-49`); an update of a gone item is ignored | **none** (`tools-slots` has one actor) | Low |
+| I3 | Two `Update`s of one item (repair table and part paint), or an update racing a mount | **Answered (row 19 part 3, D16): an update of a gone item gets its `Remove`, an add of a stored item with other values the stored copy.** Before: Last write wins on the whole item (`InventoryHandlers.cs:41-49`); an update of a gone item is ignored | `server-answers` | Low |
 | I4 | Live inventory packets during a full inventory sync | Held during the sync and replayed by UID (client `InventoryHandlers.HoldDuringFullSync`) | `latejoin-full` | Low |
 | I5 | An item is sold or scrapped (server first) while another player mounts it | Sale and scrap note the remover (`ShopHandlers`, `EconomyService.RemoveItem`), so the later part change is rejected and rolled back | **none** (`economy-trades` races sellers, not a seller against a mount) | Low |
 | I6 | A reused player slot hands out client UIDs again | **Partial**: `UidRange` continues after the highest UID of the slot's range in the local inventory only (`UidRange.cs:20-25`); warehouse and machine items with that range are not scanned, and the server's duplicate check only looks at the inventory | **none** | Low |
-| I7 | A part transaction that never commits keeps its inventory change on this client for 10 s | **Partial**: idle flush after 10 s (`PartTransactions.cs:18`); meanwhile the item exists only locally and the inventory digest is skipped | **none** | Low |
+| I7 | A part transaction that never commits keeps its inventory change on this client for 10 s | **Answered (row 19 part 3, D16): each flushed packet is answered as I3; the dropped-transaction rollback waits for row 19 task 3.5.** Before: **Partial**: idle flush after 10 s (`PartTransactions.cs:18`); meanwhile the item exists only locally and the inventory digest is skipped | `server-answers` (dropped-transaction step after task 3.5) | Low |
 
 ### Shop, sell, scrap, economy, world state
 
@@ -126,7 +126,7 @@ Markers: **None** = no mechanism prevents or repairs it; **Partial** = a mechani
 | E1 | Two fees at once (money changed locally, then by the server) | Server applies each amount and broadcasts the absolute `WorldState` | `economy-fees` (two fees in a race) | Low |
 | E2 | Car sale while another player works on the car; two sellers | Refused `Busy`/`Gone` (`EconomyRules.cs:196-237`, claims at `:206`) | `economy-trades` | Low |
 | E3 | Scrap, quality upgrade, barn map or crate on an item another player just used | Server first, `Gone`; crates keep a `Looted` flag | `economy-trades` | Low |
-| E4 | Two players unlock the same skill or garage upgrade | Server first and idempotent (`GarageUpgradeHandlers.cs:29,47`); `GarageState` is not digested | **none** (`economy-latejoin` checks late join only) | Low |
+| E4 | Two players unlock the same skill or garage upgrade | **Answered (row 19 part 3, D16): a refused or no-op unlock gets `WorldState` and `GarageState`.** Before: Server first and idempotent (`GarageUpgradeHandlers.cs:29,47`); `GarageState` is not digested | `server-answers` | Low |
 | E5 | A duplicated `EconomyRequest` (resend or replay) | **Partial**: no `RequestId` deduplication in `EconomyService.Handle`; only crates are protected. The transport is reliable, so only the harness `Resend` produces duplicates today. | `economy-trades` (crate replay only) | Low |
 | E6 | Buy, sell-single and sell-by-condition by two players | Server first (`ShopHandlers`), money checked under the lock | `purchases`, `junkyard-trip` (buys) | Low |
 
@@ -154,7 +154,7 @@ Markers: **None** = no mechanism prevents or repairs it; **Partial** = a mechani
 | M5 | A stand part change while another player takes the engine off the stand | Rejected "engine is not on the tool" (`ToolsStore.cs:121`) | **none** | Low |
 | M6 | Tool positions, stand angle, machine "active" by two players | Last write wins | `tools-slots` | Low |
 | M7 | The holder of a machine claim disconnects | Released on leave and scene change | `tools-slots`, `storm` K5 | Low |
-| M8 | Repair table or part paint on an item another player mounts meanwhile | The update of a gone item is ignored; the repair fee is refused when the item is gone (`EconomyRules.PartRepair`) | **none** (`tools-slots` has one actor) | Low |
+| M8 | Repair table or part paint on an item another player mounts meanwhile | **Answered (row 19 part 3, D16): the refused repair also gets the item's `Remove`, and the update of the gone item too.** Before: The update of a gone item is ignored; the repair fee is refused when the item is gone (`EconomyRules.PartRepair`) | `server-answers` | Low |
 | M9 | The oil bin drains while another player fills oil or works on the oil filter | **None** (fluids, last write wins) | **none** (`tools-car-effects` has one actor); planned: `locks-fluid` (oil bin against oil filter) | Medium |
 
 ### Placement, lifts, parking, car moves
@@ -177,7 +177,7 @@ Markers: **None** = no mechanism prevents or repairs it; **Partial** = a mechani
 | C1 | A spawn request for a loader that already holds a car | **Partial**: job and unpark paths check the loader; `RegisterSpawn` clears the existing car silently (`CarPartsStore.cs:45`) | `jobs-latejoin` (job path only) | Low |
 | C2 | The spawner or unparker leaves before the baseline | Loader cleared, a parked car goes back to its slot (`PlacementRules.OnLoaderCleared`) | **none** | Low |
 | C3 | Park, delete or job end while another player works on the car | **None**. Each checks only the away claim (`ParkingHandlers.cs:37`, server `CarHandlers.cs:65`, `JobsService.cs:204`). The worker's car disappears mid-action; see P7 and P8 for the follow-on drift. | **none**; planned: `locks-car` (park, delete, job end refused) | High |
-| C4 | Two players delete, or park, the same car | The second is harmless (`ClearLoader` returns false; the park is refused) | **none** | Low |
+| C4 | Two players delete, or park, the same car | **Answered (row 19 part 3, D16): the second park gets the parking state and the loader's delete; the second delete is not relayed.** Before: The second is harmless (`ClearLoader` returns false; the park is refused) | `server-answers` | Low |
 | C5 | A second baseline replaces all records once one exists: any client may send it (`CarPartsHandlers.cs:160-166`), and the job take re-uploads after 0.5 s (`JobsSync.cs:151`) | **Partial**: a change by another player in that short window is overwritten | **none** | Low |
 | C6 | Delete while a player sits in the car with the engine running | `EnsureNotSeatedIn` before the delete | `seat-engine` | Low |
 
@@ -186,10 +186,10 @@ Markers: **None** = no mechanism prevents or repairs it; **Partial** = a mechani
 | # | Scenario | Code coverage | Test coverage | Risk |
 |---|---|---|---|---|
 | J1 | Two players accept the same order | Server; one approved, a second take refused `Busy` (`JobsService.cs:113-122`) | `jobs` | Low |
-| J2 | The generator changes while an order is being generated | Orders from a non-generator are dropped (`JobsService.cs:82`) | **none** | Low |
+| J2 | The generator changes while an order is being generated | **Answered (row 19 part 3, D16): a dropped order gets the jobs snapshot.** Before: Orders from a non-generator are dropped (`JobsService.cs:82`) | `server-answers` | Low |
 | J3 | The taker disconnects or stalls mid-take | Claim released on leave, 60 s timeout, car deleted | `jobs-latejoin` | Low |
-| J4 | An order expires while it is being accepted | The server tick removes it; the accept gets `Unknown` | **none** | Low |
-| J5 | Two players end the same job | The second is ignored and gets the world state | **none** | Low |
+| J4 | An order expires while it is being accepted | **Answered (row 19 part 3, D16): the refusal plus `JobRemoved { Expired }` and "This order is no longer available."**. Before: The server tick removes it; the accept gets `Unknown` | `server-answers` (server `jobs expire <id>`) | Low |
+| J5 | Two players end the same job | **Answered (row 19 part 3, D16): `WorldState` plus the jobs snapshot.** Before: The second is ignored and gets the world state | `server-answers` | Low |
 
 ### Test drive, dyno, test path (away)
 
@@ -212,7 +212,7 @@ Markers: **None** = no mechanism prevents or repairs it; **Partial** = a mechani
 
 | # | Scenario | Code coverage | Test coverage | Risk |
 |---|---|---|---|---|
-| S1 | Two players sit in the same seat | **None**: seats are presence data, not arbitrated (`PlayerHandlers.cs:42`) | **none** | Low |
+| S1 | Two players sit in the same seat | **Fixed (row 19 part 3, D17): the server keeps the first seat holder and sends `SeatRefused` to the second, who leaves the seat with "<name> is sitting there."**. Before: **None**: seats are presence data, not arbitrated (`PlayerHandlers.cs:42`) | `seat-engine` (seat race, both orders) | Low |
 | S2 | The car is deleted while a player sits in it | `EnsureNotSeatedIn` | `seat-engine` | Low |
 
 ### Session (join, late join, rejoin, disconnect, server restart, autosave, F7)

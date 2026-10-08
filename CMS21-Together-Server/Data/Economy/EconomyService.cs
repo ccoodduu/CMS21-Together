@@ -81,6 +81,7 @@ namespace CMS21_Together_Server.Data.Economy
 				Server.SendToClient(Result(request, false, outcome.Refusal), client);
 				world.updateGamemode = false;
 				Server.SendToClient(world, client);
+				outcome.Answer?.Invoke(client);
 				return;
 			}
 

@@ -136,5 +136,7 @@ public enum PacketTypes
 	CoopPing,
 
 	ShopListChange,
-	ShopListState
+	ShopListState,
+
+	SeatRefused
 }

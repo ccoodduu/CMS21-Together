@@ -40,7 +40,8 @@ namespace CMS21_Together_Server.Network.Handlers
 			var entry = CarPartsStore.Get(request.CarLoaderID);
 			if (entry?.Spawn == null)
 			{
-				Logger.Debug($"[Placement] Move of unknown loader {request.CarLoaderID} from client {clientId} dropped.");
+				Logger.Info($"[Placement] Move of unknown loader {request.CarLoaderID} from client {clientId} refused; answering with its delete.");
+				Server.SendToClient(new CarSpawnDeletePacket { CarLoaderID = request.CarLoaderID }, (int)clientId);
 				return;
 			}
 

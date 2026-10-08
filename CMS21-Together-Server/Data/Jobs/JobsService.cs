@@ -81,20 +81,23 @@ namespace CMS21_Together_Server.Data.Jobs
 		{
 			if (clientId != generator)
 			{
-				Logger.Info($"[Jobs] Order from client {clientId} dropped: client {generator} is the generator.");
+				Logger.Info($"[Jobs] Order from client {clientId} dropped: client {generator} is the generator; answering with the jobs state.");
+				SendSnapshot(clientId);
 				return;
 			}
 			var job = packet.Job;
 			if (job == null) return;
 			if (job.IsMission && job.MissionID == 0)
 			{
-				Logger.Info("[Jobs] Tutorial mission refused.");
+				Logger.Info($"[Jobs] Tutorial mission from client {clientId} refused; answering with the jobs state.");
+				SendSnapshot(clientId);
 				return;
 			}
 			int open = State.Orders.Count;
 			if (packet.MaxOpenOrders > 0 && open >= packet.MaxOpenOrders)
 			{
-				Logger.Info($"[Jobs] Order refused: {open} open orders, the generator's limit is {packet.MaxOpenOrders}.");
+				Logger.Info($"[Jobs] Order from client {clientId} refused: {open} open orders, the generator's limit is {packet.MaxOpenOrders}; answering with the jobs state.");
+				SendSnapshot(clientId);
 				return;
 			}
 			job.id = State.NextJobId++;
@@ -118,6 +121,7 @@ namespace CMS21_Together_Server.Data.Jobs
 					{
 						Logger.Info($"[Jobs] Accept of order {packet.JobId} by client {clientId} refused: {refusal}.");
 						Server.SendToClient(new OrderActionResultPacket { JobId = packet.JobId, Action = packet.Action, Approved = false, Reason = refusal }, clientId);
+						if (order == null) Server.SendToClient(new JobRemovedPacket { JobId = packet.JobId, Reason = JobRemovedReason.Expired }, clientId);
 						return;
 					}
 					order.Status = OrderStatus.Claimed;
@@ -131,6 +135,7 @@ namespace CMS21_Together_Server.Data.Jobs
 					if (order == null || order.Status != OrderStatus.Open || !order.Job.CanDelete)
 					{
 						Server.SendToClient(new OrderActionResultPacket { JobId = packet.JobId, Action = packet.Action, Approved = false, Reason = order == null ? "Unknown" : "CannotDecline" }, clientId);
+						if (order == null) Server.SendToClient(new JobRemovedPacket { JobId = packet.JobId, Reason = JobRemovedReason.Expired }, clientId);
 						return;
 					}
 					State.Orders.Remove(order);
@@ -197,14 +202,19 @@ namespace CMS21_Together_Server.Data.Jobs
 			var world = GameDataManager.CurrentState.WorldState;
 			if (active == null || packet.Payout < 0 || packet.Payout > MaxPayout || packet.Xp < 0 || packet.Xp >= MaxXp)
 			{
-				Logger.Info($"[Jobs] End of job {packet.JobId} from client {clientId} ignored ({(active == null ? "not active" : "out of bounds")}).");
+				Logger.Info($"[Jobs] End of job {packet.JobId} from client {clientId} ignored ({(active == null ? "not active" : "out of bounds")}); answering with the world and jobs state.");
+				world.updateGamemode = false;
 				Server.SendToClient(world, clientId);
+				SendSnapshot(clientId);
 				return;
 			}
 			if (active.CarLoaderId >= 0 && (CarAwayRegistry.Blocks(active.CarLoaderId, clientId, $"end of job {packet.JobId}")
 				|| ClearsCar(active, packet.JobId) && CarLocks.RefuseBusy(active.CarLoaderId, clientId, CarLocks.BusyJobEnd)))
 			{
+				Logger.Info($"[Jobs] End of job {packet.JobId} from client {clientId} refused; answering with the world and jobs state.");
+				world.updateGamemode = false;
 				Server.SendToClient(world, clientId);
+				SendSnapshot(clientId);
 				return;
 			}
 			State.ActiveJobs.Remove(active);
@@ -271,10 +281,23 @@ namespace CMS21_Together_Server.Data.Jobs
 				if (order.Job.IsMission) continue;
 				order.RemainingSeconds -= delta;
 				if (order.RemainingSeconds > 0f) continue;
-				State.Orders.Remove(order);
-				Logger.Info($"[Jobs] Order {order.Job.id} expired.");
-				Server.SendToClients(new JobRemovedPacket { JobId = order.Job.id, Reason = JobRemovedReason.Expired });
+				Expire(order);
 			}
+		}
+
+		public static bool ExpireNow(int jobId)
+		{
+			var order = State.Orders.FirstOrDefault(o => o.Job.id == jobId && o.Status == OrderStatus.Open);
+			if (order == null) return false;
+			Expire(order);
+			return true;
+		}
+
+		private static void Expire(OrderEntry order)
+		{
+			State.Orders.Remove(order);
+			Logger.Info($"[Jobs] Order {order.Job.id} expired.");
+			Server.SendToClients(new JobRemovedPacket { JobId = order.Job.id, Reason = JobRemovedReason.Expired });
 		}
 
 		public static IEnumerable<string> Describe()

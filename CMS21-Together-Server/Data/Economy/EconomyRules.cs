@@ -22,6 +22,7 @@ namespace CMS21_Together_Server.Data.Economy
 		public EconomyRefusal Refusal;
 		public string Note;
 		public Action Effect;
+		public Action<int> Answer;
 
 		public static EconomyOutcome Refused(EconomyRefusal refusal, string note) => new EconomyOutcome { Refusal = refusal, Note = note };
 	}
@@ -131,7 +132,12 @@ namespace CMS21_Together_Server.Data.Economy
 		private static EconomyOutcome PartRepair(EconomyRequestPacket r)
 		{
 			var item = FindItem(r.ItemUid);
-			if (item == null) return Invalid($"item {r.ItemUid} not in the inventory");
+			if (item == null)
+			{
+				var refused = Invalid($"item {r.ItemUid} not in the inventory, {InventoryChanges.DescribeRemover(r.ItemUid)}");
+				refused.Answer = client => Server.SendToClient(new InventoryItemActionPacket { Action = ItemActionType.Remove, Item = new ModItem { UID = r.ItemUid } }, client);
+				return refused;
+			}
 			int price = Math.Max(1, PricingCalculator.GetPrice(item));
 			return Ranged(r.Money, -price, -1);
 		}

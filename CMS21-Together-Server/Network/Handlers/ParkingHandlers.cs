@@ -45,7 +45,12 @@ namespace CMS21_Together_Server.Network.Handlers
 				Logger.Info($"[Parking] Park of loader {request.CarLoaderID} from client {client} refused: {refusal}.");
 				Reply(client, request, refusal);
 				if (request.PreferredSlot >= 0) ParkingService.BroadcastSlot(request.PreferredSlot, client);
-				if (entry == null) return;
+				if (entry == null)
+				{
+					ParkingService.SendState(client);
+					Server.SendToClient(new CarSpawnDeletePacket { CarLoaderID = request.CarLoaderID }, client);
+					return;
+				}
 				var giveBack = entry.Spawn;
 				giveBack.CarData = request.Car.Data;
 				giveBack.CarDataVersion = (byte)request.Car.SaveVersion;

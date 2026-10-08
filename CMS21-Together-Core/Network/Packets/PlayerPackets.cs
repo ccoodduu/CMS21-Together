@@ -31,6 +31,15 @@ public class PlayerPresencePacket : INetworkData
 }
 
 [Serializable]
+[NetworkPacket(PacketTypes.SeatRefused)]
+public class SeatRefusedPacket : INetworkData
+{
+	public int CarLoaderID;
+	public bool SeatLeft;
+	public int HolderPlayerId;
+}
+
+[Serializable]
 [NetworkPacket(PacketTypes.PlayerRoster)]
 public class PlayerRosterPacket : INetworkData
 {
