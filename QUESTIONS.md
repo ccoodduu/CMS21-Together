@@ -3,18 +3,6 @@
 Open questions that block a decision. Each has the default we work with until answered.
 Answered ones move to the bottom with the answer.
 
-## Open — row 16 server-game-logic scope (2026-10-08)
-
-Draft in `openspec/changes/server-game-logic/` (worktree `CMS21-Together-wt/server-game-logic`); review verdict
-"ready after fixes" (blockers B1 game tables needed at server start, B2 story missions refused; B2 is being fixed
-on its own, branch `fix/story-missions`).
-
-1. **Scope.** Full port (server computes orders, payout, XP and sale prices from game tables, ~18–21 blocks) or the
-   smaller variant: (a) seeded job cars, (b) the server owns the order clock, limit, seed and car pool while a garage
-   client runs the game's own generator with that seed, (c) payout, XP and prices computed as a shadow that only logs
-   differences, (d) game tables stay in the repo and leave the release zips once the server reads the player's
-   install. **Default:** smaller variant, in the order mission fix → seeded job cars → orders → shadow.
-
 ## Open — row 19 state-merges-and-contention (2026-10-08)
 
 Details in `openspec/changes/state-merges-and-contention/proposal.md` (reviewed, see `review.md`).
@@ -129,6 +117,16 @@ draft works with:
    server setting (`outdoor_fill_all_spawn_points`) turns it on.
 
 ## Answered
+Answered by the user on 2026-10-08 (evening):
+
+- **Row 16 scope:** no full port and no decompiled game logic on the server. Kept: seeded job cars (extra tasks,
+  drained fluids and plate may differ on a retake) and the server-owned order clock and limit (design first,
+  reviewed before it is built). The elected client keeps running the game's generator; payout and XP stay
+  client-reported with bounds. The server-hosted generator client stays an idea for after the release.
+- **Blocked features to open in multiplayer:** race track (base-game tracks only, DLC tracks stay blocked), tuning
+  window, bonus parts, building new engines, the showroom, garage customization (everything visual). Save/load,
+  benchmark, tutorial, photo location and changing garages stay blocked. Drafts on `change/singleplayer-features`.
+
 
 - **Answered by the user on 2026-10-08 (row 19 part 1):** the defaults of "Open — row 19" stand; the part record base check also compares the part's quality (a part replaced by one of another quality never takes a stale edit), as recommended.
 - **Answered by the user on 2026-10-08:** no collisions between driven cars for now (row 17 part 2 keeps cars passing through each other); ride-along (row 21) is wanted. Ping (row 22) is wanted; a shared shopping list (row 23) is wanted; row 17 #8 (other car appears after ~10 s) is fine for now; no Unity project for playermodel.bundle (#3 stays the procedural pose); asking LvxMagick maybe later; the 1.0 release waits; the Drive pie option may open the map (merged 2026-10-08); the LvxBetterCarSpawns-based car selector (row 15 group 11) is dropped: the mod was hidden by its author on 2026-09-11 for permission issues (it spawned DLC cars players did not own); the server keeps its own selector, which limits DLC cars to the DLC every connected player owns; task split in the job view, more orders for more players, gestures and an end-of-session scoreboard are not.
