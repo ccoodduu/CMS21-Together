@@ -149,10 +149,13 @@ public static class RemoteCars
 		try
 		{
 			var steps = BuildSteps(car, forceRoute);
+			float resumed = Time.realtimeSinceStartup;
 			while (!car.Stopped && steps.MoveNext())
 			{
 				yield return steps.Current;
-				car.LongestFrame = Mathf.Max(car.LongestFrame, Time.unscaledDeltaTime);
+				float now = Time.realtimeSinceStartup;
+				car.LongestFrame = Mathf.Max(car.LongestFrame, now - resumed);
+				resumed = now;
 			}
 		}
 		finally
@@ -193,9 +196,10 @@ public static class RemoteCars
 		car.Route = route;
 		car.Mode = data != null ? "ghost" : "ghost=base";
 		Log.Info($"[Drive] Observer car of player {car.PlayerId}: loading {car.Start.CarToLoad} on {route}.");
+		Il2CppSystem.Collections.IEnumerator load;
 		try
 		{
-			car.Loader.StartCoroutine(data != null ? car.Loader.LoadCarFromFile(data) : car.Loader.LoadCar(car.Start.CarToLoad));
+			load = data != null ? car.Loader.LoadCarFromFile(data) : car.Loader.LoadCar(car.Start.CarToLoad);
 		}
 		catch (Exception e)
 		{
@@ -204,6 +208,28 @@ public static class RemoteCars
 		}
 
 		float deadline = Time.realtimeSinceStartup + LoadTimeoutSeconds;
+		int step = 0;
+		while (!car.Stopped && Time.realtimeSinceStartup < deadline)
+		{
+			bool more;
+			var watch = System.Diagnostics.Stopwatch.StartNew();
+			try
+			{
+				more = load.MoveNext();
+			}
+			catch (Exception e)
+			{
+				Fail(car, $"load threw {e.GetType().Name}: {e.Message.Split('\n')[0]}");
+				yield break;
+			}
+			step++;
+			StopPhysics(car);
+			if (watch.ElapsedMilliseconds >= 100) Log.Info($"[Drive] Observer car of player {car.PlayerId}: load step {step} took {watch.ElapsedMilliseconds} ms.");
+			if (!more) break;
+			yield return null;
+		}
+		if (car.Stopped) yield break;
+
 		while (!car.Stopped && car.Loader != null && car.Loader && !car.Loader.IsCarLoaded() && Time.realtimeSinceStartup < deadline) yield return null;
 		if (car.Stopped) yield break;
 		if (car.Loader == null || !car.Loader || !car.Loader.IsCarLoaded())
@@ -286,18 +312,29 @@ public static class RemoteCars
 		car.Root = null;
 	}
 
+	// The last load step puts the copy on the track's car spot; its colliders there stalled the driver's VPP wheels.
+	private static void StopPhysics(RemoteCar car)
+	{
+		var root = DriveCapture.RootOf(car.Loader);
+		foreach (var owner in new[] { car.Holder != null && car.Holder ? car.Holder.transform : null, root })
+		{
+			if (owner == null || !owner || (owner == root && car.Holder != null && car.Holder && root.IsChildOf(car.Holder.transform))) continue;
+			foreach (var body in owner.GetComponentsInChildren<Rigidbody>(true))
+			{
+				body.isKinematic = true;
+				body.detectCollisions = false;
+			}
+			foreach (var collider in owner.GetComponentsInChildren<Collider>(true)) collider.enabled = false;
+		}
+	}
+
 	private static void MakeInert(RemoteCar car)
 	{
 		car.Root = DriveCapture.RootOf(car.Loader);
 		if (car.Root == null || !car.Root) car.Root = car.Holder.transform;
 		if (!car.Root.IsChildOf(car.Holder.transform)) car.Root.SetParent(car.Holder.transform, true);
+		StopPhysics(car);
 		var bodies = car.Holder.GetComponentsInChildren<Rigidbody>(true);
-		foreach (var body in bodies)
-		{
-			body.isKinematic = true;
-			body.detectCollisions = false;
-		}
-		foreach (var collider in car.Holder.GetComponentsInChildren<Collider>(true)) collider.enabled = false;
 		int disabled = 0;
 		foreach (var script in car.Holder.GetComponentsInChildren<PartScript>(true))
 		{

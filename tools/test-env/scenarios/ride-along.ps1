@@ -75,6 +75,8 @@ function Start-Ride([string]$Label) {
     $seated = Wait-Ride $b { param($s) $s.phase -eq "Seated" -and $s.camera.placed } 120
     Save "${Label}_seated_B" $seated
     Check ($seated.phase -eq "Seated" -and $seated.driverId -eq $idA) "${Label}: Bob is seated in Ann's car (phase $($seated.phase), driver $($seated.driverId))"
+    $copy = @((Cmd $b dump).remoteCars.cars) | Where-Object { $_.playerId -eq $idA } | Select-Object -First 1
+    Check ($copy -and $copy.longestFrame -lt 1) "${Label}: no frame over 1 s while Bob built the copy of Ann's car ($($copy.longestFrame) s, build $($copy.buildSeconds) s)"
     return $seated
 }
 

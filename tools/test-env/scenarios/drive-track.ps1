@@ -101,6 +101,7 @@ Save "observer_A_start" $carB
 Check ($carA -and $carA.visible -and $carA.mode -match "^ghost") "B shows A's car (A drove before B arrived; mode $($carA.mode), build $($carA.buildSeconds) s, longest frame $($carA.longestFrame) s, $($carA.buildMb) MB)"
 Check ($carB -and $carB.visible -and $carB.mode -match "^ghost") "A shows B's car (mode $($carB.mode))"
 Check ($carA.kinematic -and $carA.collidersOff) "A's car on B is kinematic with colliders off"
+Check ($carA.longestFrame -lt 1 -and $carB.longestFrame -lt 1) "no frame over 1 s while building the observer cars (B $($carA.longestFrame) s, A $($carB.longestFrame) s)"
 
 Cmd $a drive-input "0.6 0 5" | Out-Null
 $err1 = Follow-Error $b $a $idA 6
