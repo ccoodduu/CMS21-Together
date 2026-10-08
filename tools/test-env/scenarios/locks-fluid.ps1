@@ -180,6 +180,27 @@ Cmd $b lock-tool-end | Out-Null
 Wait-NoLocks "after the extractor"
 Check ([math]::Abs((Level $b $brake) - (Level $a $brake)) -lt 0.001) "A and B have the same brake fluid level after the extractor ($(Level $a $brake) / $(Level $b $brake))"
 
+# Row 19 task 8.2: A fills brake fluid while B fills coolant, each under its own lock; both levels survive.
+$ta = Cmd $a lock-try "$loader fill Brake 0 level 0.61 finish"
+$tb = Cmd $b lock-try "$loader fill EngineCoolant 0 level 0.73 finish"
+$deadline = (Get-Date).AddSeconds(20)
+do {
+    Start-Sleep -Milliseconds 300
+    $ra = Cmd $a lock-try "result $($ta.tryId)"; $rb = Cmd $b lock-try "result $($tb.tryId)"
+} while (-not ($ra.finished -and $rb.finished) -and (Get-Date) -lt $deadline)
+Check ($ra.finished -and $rb.finished) "both fills finish at once (A $($ra.result) $($ra.state), B $($rb.result) $($rb.state))"
+Wait-NoLocks "after the two fills"
+Start-Sleep -Seconds 2
+foreach ($name in $a, $b) {
+    Check ([math]::Abs((Level $name $brake) - 0.61) -lt 0.01 -and [math]::Abs((Level $name $coolant) - 0.73) -lt 0.01) "two fills: $name has A's brake fluid and B's coolant ($(Level $name $brake) / $(Level $name $coolant))"
+}
+$mark = Get-ServerLogMark
+Send-ServerCommand "cardetails $loader"
+$stored = (Wait-ServerLog -Pattern "\[CarDetails\] Loader $loader`: \{" -After $mark -TimeoutSec 10) -replace "^.*?\[CarDetails\] Loader $loader`: ", "" | ConvertFrom-Json
+$serverBrake = @($stored.Fluids | Where-Object { $_.Type -eq 2 -and $_.Id -eq 0 })[0].Level
+$serverCoolant = @($stored.Fluids | Where-Object { $_.Type -eq 4 -and $_.Id -eq 0 })[0].Level
+Check ([math]::Abs($serverBrake - 0.61) -lt 0.01 -and [math]::Abs($serverCoolant - 0.73) -lt 0.01) "two fills: the server has both levels ($serverBrake / $serverCoolant)"
+
 $locks = Get-ServerLocks
 Check ((Get-LockCounter $locks "overlapViolations") -eq 0) "overlapViolations is 0 ($($locks.Line))"
 

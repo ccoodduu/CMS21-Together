@@ -6,7 +6,11 @@
 # B's own unmount is not undone and B shows no ghost. (3) A examines a part B is unscrewing: B's bolts and pause are
 # untouched, B's commit still goes through. (4) B's condition edit that has not been sent yet survives A's examine
 # relay. (5) A's condition edit of a part B replaced meanwhile (another quality) never lands on the new part.
+# (6) Row 18's locks (D3): A's examine of a part B holds a lock on is accepted and the lock stays; A's stale edit of a
+# part B unmounted under a lock that is still held (its other key has not flipped) is dropped, never refused as locked.
 param($Ctx)
+
+Import-Module (Join-Path $PSScriptRoot "..\LockSession.psm1") -Force
 
 $a, $b = $Ctx.Instances
 $loader = 0
@@ -100,6 +104,7 @@ $p3 = Pick-Examined "step 3" $bolted
 $p1 = Pick-Examined "step 1" $free
 $p2 = Pick-Examined "step 2" $free
 $p4 = Pick-Examined "step 4" @()
+$p6 = Pick-Examined "step 6" @()
 
 # (1) A examines with B's unmount still on its way to A.
 $k = $p1.Key
@@ -186,6 +191,7 @@ Wait-Same "step 4"
 # (5) A's condition edit of a part that B replaced by one of another quality meanwhile.
 $candidates = @(Cmd $a vfx-parts "$loader" | Where-Object { $script:usedKeys -notcontains $_.key })
 $k = $candidates[0].key
+$script:usedKeys += $k
 $old = Part $a $k
 $quality = if ($old.quality -eq 3) { 1 } else { 3 }
 $staleBefore = Stale
@@ -208,6 +214,40 @@ foreach ($name in $a, $b) {
 Check ((Stale) -eq $staleBefore + 1) "step 5: the server dropped A's condition edit of the replaced part"
 Wait-Same "step 5"
 Check-ServerDigest "step 5"
+
+# (6) Locks: an examine during B's lock is accepted; a stale edit in the window before the lock's release is dropped.
+$k = $p6.Key
+$answer = Request-Lock $b "$loader unmount $k"
+Check ($answer.result -eq "granted") "step 6: B holds $k ($($answer.result))"
+$mark = Get-ServerLogMark
+Cmd $a diag-examine "$loader $($p6.Tool)" | Out-Null
+Wait-ServerChange $mark "A's examine"
+Start-Sleep -Seconds 2
+Check (-not (@(Get-ServerLogLines | Select-Object -Skip $mark) -match "rejected: .*is locked by")) "step 6: A's examine during B's lock is accepted"
+foreach ($name in $a, $b) { $part = Part $name $k; Check ($part.examined -and -not $part.unmounted) "step 6: $k is examined and still on on $name" }
+Check (@((Get-ServerLocks).Records | Where-Object { $_.X -contains $k }).Count -eq 1) "step 6: B's lock on $k is still held"
+Cmd $b lock-release "$loader" | Out-Null
+Start-Sleep -Seconds 1
+
+$k7, $k8 = @(Cmd $b vfx-parts "$loader" | Where-Object { $script:usedKeys -notcontains $_.key } | Select-Object -First 2 | ForEach-Object { $_.key })
+$answer = Request-Lock $b "$loader unmount $k7 $k8"
+Check ($answer.result -eq "granted") "step 6: B holds $k7 and $k8 ($($answer.result))"
+$staleBefore = Stale
+Cmd $a net-hold "on" | Out-Null
+$mark = Get-ServerLogMark
+Cmd $b part-fast-unmount "$loader $k7" | Out-Null
+Wait-ServerChange $mark "B's unmount under the lock"
+$mark = Get-ServerLogMark
+Cmd $a part-condition "$loader $k7 0.3" | Out-Null
+Wait-ServerChange $mark "A's stale edit"
+Cmd $a net-hold "off" | Out-Null
+Start-Sleep -Seconds 3
+Check (-not (@(Get-ServerLogLines | Select-Object -Skip $mark) -match "rejected: .*is locked by")) "step 6: A's stale edit is not refused as locked"
+Check ((Stale) -eq $staleBefore + 1) "step 6: A's stale edit of $k7 is dropped"
+Check (@((Get-ServerLocks).Records | Where-Object { $_.X -contains $k8 }).Count -eq 1) "step 6: B's lock is still held"
+foreach ($name in $a, $b) { Check ((Part $name $k7).unmounted) "step 6: $k7 is off on $name" }
+Cmd $b lock-release "$loader" | Out-Null
+Wait-Same "step 6"
 
 $Ctx.Result.notes += $failures
 $Ctx.Result.passed = ($failures.Count -eq 0)
