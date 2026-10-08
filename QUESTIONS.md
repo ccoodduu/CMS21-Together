@@ -102,7 +102,8 @@ Not questions for the user; open bugs from the first playtest, fixed one by one.
 - Payout/XP reported by the finishing client is trusted (with bounds checks).
 - Steam achievements/stats for a finished job go to the player who finishes it.
 - Barn: other players are hidden (its layout differs per visit).
-- A seated player's avatar is hidden instead of posed.
+- A seated player's avatar is shown in the seat (replaced the earlier "hidden instead of posed" by row 29,
+  `seated-avatars`, user wish 2026-10-08).
 - Player name comes from a mod setting (no in-game UI yet).
 - Engine stand 2 is synced like stand 1; disabled while connected if that fails.
 - While connected, taking a car out from the separate Parking scene is blocked (garage parking works).

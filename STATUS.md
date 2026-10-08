@@ -2,6 +2,21 @@
 
 Newest first. One entry per work session.
 
+## 2026-10-09 (00:00–00:45) — row 29 seated avatars built (`feat/seated-avatars`, lane 1)
+
+- A seated player is shown crouched in the right seat of the car in the garage (`SeatPoses`, `SeatedAvatars` in
+  `OnLateUpdate`), follows the lift, stands up where the player stands (one more forced movement packet when the
+  seated mode ends), and is posed after a late join once the car is Ready; seated records no longer move the avatar;
+  name tags follow the posed head; ride-along uses the same helper.
+- Spike 1.1: the lift moves the seat handle before `OnLateUpdate` (1.678 m before, 0 m after over a full travel;
+  offset 0.000 m every frame); a player can sit in a car on a raised lift; `sit left` is the left handle on the Bolt
+  Atlanta. No RHD car can be spawned (all RHD models are DLC); left the RHD case to the hand check.
+- Proof `seat-avatars` fails on the old client (`20261009-000552_L1_seat-avatars`, 10 failures) and passes
+  (`20261009-002305_L1_seat-avatars`). Smoke plus `seat-engine` (now expects the seated avatar shown), `ride-along`,
+  `presence-latejoin`, `scenes`, `drive-latejoin`, `ping`: all pass (`guard` and `presence-latejoin` failed once in
+  the batch and passed alone, both known flakes); `server-saves` passed on a rerun (the parallel run timed out
+  starting its server).
+
 ## 2026-10-08 (22:00–23:15) — row 19 part 2 and seeded job cars merged; playtest build dev.1102
 
 - `main` = `63c146e`. Row 19 part 2 merged (`23c46ef`; smoke plus touched scenarios `20261008-224024_regression.json`).
