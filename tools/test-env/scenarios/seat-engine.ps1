@@ -126,7 +126,12 @@ Expect $a "out of the seat and engine off after B deleted the car" { param($d) $
 Expect $b "sees Ann standing again, no engine" {
     param($d) $r = $d.roster."$idA"; $r -and $r.seat -eq -1 -and -not $r.engineRunning -and $r.avatarActive -and @(EnginesOf $d $idA).Count -eq 0
 } 20
-$loaded = Send-HarnessCommand -Instance $a -Verb car-loaded -Arguments "0"
+$deadline = (Get-Date).AddSeconds(10)
+do {
+    $loaded = Send-HarnessCommand -Instance $a -Verb car-loaded -Arguments "0"
+    if (-not $loaded.loaded) { break }
+    Start-Sleep -Milliseconds 300
+} while ((Get-Date) -lt $deadline)
 Check (-not $loaded.loaded) "A's car 0 is deleted ($($loaded | ConvertTo-Json -Compress))"
 $status = Get-HarnessStatus -Instance $a
 Check ($status.connectionValid -and $status.scene -eq "garage") "A is still connected in the garage"
