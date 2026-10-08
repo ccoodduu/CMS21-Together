@@ -11,7 +11,8 @@ the same time and fails when an item is duplicated or lost.
 ### Requirement: Every kind of shared state is compared
 The server SHALL compare each player's car details (per car), workshop machines, warehouse, skills and garage
 upgrades, and orders and active jobs with its own state, in addition to money, inventory, car parts and car
-placement, and SHALL repair a confirmed difference by sending its state of that kind to that player.
+placement, and SHALL repair a confirmed difference by sending its state of that kind to that player. A newly compared
+kind MAY only log a confirmed difference until the desync test session has shown no false alarm for it.
 
 #### Scenario: Car details differ
 - **WHEN** player B's coolant level of a car differs from the server's without any change being sent
@@ -27,16 +28,17 @@ placement, and SHALL repair a confirmed difference by sending its state of that 
 
 ### Requirement: A busy player does not hide a difference
 A comparison the player cannot answer at that moment (the state is being changed) SHALL neither confirm nor clear a
-difference found before it. A difference that is not confirmed within 60 s SHALL be dropped. When a player cannot
-answer for the same kind of state for 120 s in a row, the server SHALL log it and list it in the bug report.
+difference found before it. A difference that is not confirmed within four comparisons of that kind of state SHALL be
+dropped. When a player cannot answer for the same kind of state for longer than the server's stall time
+(`desync_stall_seconds`, 120 s by default) in a row, the server SHALL log it once and list it in the bug report.
 
 #### Scenario: Difference confirmed across a busy round
 - **WHEN** player B's inventory differs from the server's and one comparison round finds player B's inventory busy
 - **THEN** the difference is still confirmed and repaired within three rounds
 
 #### Scenario: Stuck "busy" answer
-- **WHEN** a player's car state cannot be compared for more than 120 s in a row
-- **THEN** the server logs one warning naming the player and the car, and the bug report lists it
+- **WHEN** one kind of a player's state (a car's parts or details, the inventory, or any other kind) cannot be compared for longer than the stall time in a row
+- **THEN** the server logs one warning naming the player and that kind of state, the bug report lists it, and no new warning follows once the state can be compared again
 
 ### Requirement: A forced check covers everything
 A forced comparison round started from the server console SHALL compare every loaded car and every kind of state for
@@ -48,7 +50,8 @@ every player in the garage.
 
 ### Requirement: The test session makes players contend
 The long-running test session SHALL be able to make two to four players act on the same part, item, car detail,
-machine, lift or car at the same moment, in a seeded order that a replay repeats exactly, and SHALL fail when an item
+machine, lift or car at the same moment, in a seeded order in which the server receives their actions and which a
+replay repeats exactly, and SHALL fail when an item
 is duplicated or lost, when a player's state is not comparable at two checkpoints in a row, or when the outcome of a
 contention differs from the expected one. Contentions whose fix has not landed yet SHALL be reported as known gaps
 instead of failures.
@@ -59,7 +62,7 @@ instead of failures.
 
 #### Scenario: Replay of a contention
 - **WHEN** a failed test session is replayed from its action log
-- **THEN** the same players act on the same targets and are released in the same order
+- **THEN** the same players act on the same targets, and the server receives their actions in the same order as in the failed session
 
 #### Scenario: Known gap
 - **WHEN** the test session runs a contention whose fix is listed as not yet done

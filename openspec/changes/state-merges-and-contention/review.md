@@ -412,12 +412,131 @@ changed fluids only); stale records after the lock release (row 19 D1, with M2);
 
 ## Resolution
 
-**Resume here (2026-10-07, work in progress):** done in the documents: B1, B2, M1–M7, minors 1–13 and 15, the nits
-(design.md D1–D17 and tasks.md rewritten; `specs/concurrent-state-merges/spec.md` rewritten), the ledger's additions
-(P7, P11, I2, I5, M4, M5, C2 in tasks and D14; I6, E5, C1, C5 named as a later change in design Non-Goals), and the
-user's decision of 2026-10-07 on the "accept" rows (S1 fixed in D17 and task 12.4; no silent drops in D16 and part 3,
-tasks 12.1–12.5 with `server-answers`). Left: proposal.md (sizes, the user's decision, the later hardening change by
-name, the final open questions, `SeatRefused` as the one new packet type, impact list), `specs/drift-detection-coverage`
-(minor 11 wording: a car key, `desync_stall_seconds`), ROADMAP row 19 (sizes part 1 ≈ 9–11, part 2 ≈ 6–7, part 3 ≈ 3),
-minor 14 (sizes, in proposal and ROADMAP), the per-item resolution list below, `openspec validate --strict`, and a
-consistency read of all files.
+Revised 2026-10-07 and 2026-10-08 in proposal.md, design.md (D1–D17), tasks.md (groups 1–13, parts 1–3) and both spec
+files, together with the user's decision of 2026-10-07 (late evening) on the ledger's "accept" rows. Every item is
+resolved as recommended unless it says otherwise.
+
+### Blockers
+
+- **B1. Resolved.** D2 is rewritten: the server relays the stored records with `Changed` = the groups the normalisation
+  wrote, and returns to the sender the groups that differ from its send. Receivers write only the masked groups, to the
+  game and to `LoaderSync` per group; a transaction is aborted only for `Mount`, `Identity`, `Switched` or `All`, and
+  `AbortFor` runs after the revision check. The first draft's "in local work" rules are gone. `car-stale-record` step
+  2 checks `visuals` (no ghost), step 3 asserts through `vfx-unscrew` status (`paused`, k mounted, bolt progress
+  unchanged), step 4 is the unsent attribute edit with the new verb `part-condition` (D14; tasks 3.3, 3.4).
+- **B2. Resolved.** D7 decides the own echo per entry: each kept send copy (16 sends or 10 s per loader) marks entries
+  `foreignSince` when a foreign update of them is applied; an own echo, older or latest, applies an entry the server
+  clamped or a foreign write overwrote, and drops the rest. `details-concurrent` runs the same-entry step in both
+  server orders with `net-hold out` and a wait for the server log line (D14; tasks 4.4, 4.5). Spec scenario "Same fluid
+  by two players, in either order".
+
+### Majors
+
+- **M1. Resolved.** D1 step 3 is the base check: without `Mount` in the mask, the incoming `Unmounted` (and `Switched`),
+  and `PartId`/`TunedID` unless `Identity` is masked, must equal the stored ones, else the record is dropped and counted
+  `staleDropped`. `--check-merges` covers a stale and a replaced base (task 2.1); `car-stale-record` step 5 is the
+  replaced part. The first spec scenario no longer marks an unmounted part examined, and a new scenario covers the
+  replaced part.
+- **M2. Resolved.** D3 defines a flip for row 18's rule as `Mount` in the written groups or a precondition for that key;
+  normalisation runs before row 18's lock check, and `FlippedKeys` and `unlockedFlip` use the definition (tasks 3.2,
+  8.1). `car-stale-record` step 6 (task 8.1) checks a stale examine in the window before B's lock is released.
+- **M3. Resolved in this change's documents; one edit is left for row 18.** Design Context lists what row 18 ships and
+  the agreed ownership: row 18 keeps `FlushNow` with its changed-fluids send, `DropLoader` and `CarDetailsStore.SendTo`,
+  and drops `KeepStoredMountState`. Tasks 3.2 (removes `KeepStoredMountState` if it reached `main`), 3.5 (builds on
+  `DropLoader`) and 4.1 (replaces `OnlyChanged`) say so; proposal open question 5 asks the user. Dropping
+  `KeepStoredMountState` is an edit on `change/part-locks`, not made here.
+- **M4. Resolved.** D10 drains before a park request and before a car delete: at most 1 s for the tracker and the
+  loader's transactions, then `FlushNow(loader, All)`, else "Try again in a moment." (task 6.3, after 3.5). `park-stale`
+  gains the own-unsent-change step; spec scenario "Own unmount just before the park".
+- **M5. Resolved.** D9 keeps the remover of every removed UID for the session, bounded at 10 000 UIDs, and only the
+  item copy for `Returned` expires after 60 s. `EconomyService.RemoveItem` gets the client id through
+  `EconomyOutcome.Effect`, so scrap, barn maps and quality upgrades name their remover (task 5.1).
+- **M6. Resolved.** D13 forces the server order: `net-hold out` on every member, release member i+1 only after the
+  server logged member i (`Wait-ServerLog`), the observed order in the marker, `{step:N:…}` templates for per-run
+  values, and `-ContentionKinds`. Task 10.2 is done when a replay reproduces the observed server order; task 10.3's
+  negative control forces `machine-same-item`. New verbs `warehouse-move`, `diag-examine … keys` and `sell-item [uid]`
+  for groups (D14; tasks 3.4, 5.2); the sale and scrap rounds run on the brake lathe; `wheel-mount` keeps its
+  signature. The spec's replay scenario now says the server receives the actions in the same order.
+- **M7. Resolved.** Task 1.4 (the four `cardetails-*` setters and the `carDetails` dump section) can start now, and
+  INTEGRATION.md records row 19 as the builder of row 4's names. The details merge is the Core helper `DetailsMerge`,
+  and its `--check-merges` cases are in task 4.2. `cardetails-pour` moved with the echo work to task 4.4.
+
+### Minors
+
+1. **Resolved.** `PartFields.All` is an explicit bit; a change record never carries 0 (logged and skipped); groups
+   compare raw values, `Bolts` element-wise with epsilon 0.001; a `SameState` difference with no group gets the
+   effective-value groups (D1).
+2. **Resolved.** `Paint` is `IsPainted` only, stored and never applied (D1 table).
+3. **Resolved.** `OnlyExamines` checks masks (every `Changed` is `Examined`, no preconditions, body records or
+   removals); stored records keep `Changed` cleared (D1; task 3.2).
+4. **Resolved.** `EngineStandParts` sets masks (D1; task 3.1); `ToolsStore.FindConflict` gets the removed-by-other check
+   (D9; task 3.2); `tools-race` gains the two stand steps (ledger M4, M5).
+5. **Resolved by naming it, not by splitting.** One panel stays one entry (D4 alternatives, Non-Goals); proposal open
+   question 2 asks the user. Splitting would need a mask per panel for a rare race.
+6. **Resolved.** No `car-placement` v2: `Parking.Records` is an additive field (D10, Migration).
+7. **Resolved.** The live snapshot goes to the unparker only when the parked records replaced something, and D10 says
+   that the unparker's `LoaderSync` is replaced whole and the digest catches what it forgot.
+8. **Resolved.** A pending mismatch expires after four asks of that key; the stall series counts the client's `NotReady`
+   flag; the `desync-autofix` steps use forced rounds and a long `desync_check_interval_seconds` (D12; task 9.5).
+9. **Resolved.** `workshop-tools` reads `ToolMachine.ReadLocal`; D11 says the resend's apply drops items the game adds
+   during it (`RemoveSilentAdditions`).
+10. **Resolved.** New keys start log-only (`desync_resend_keys`) and get their resend after a quiet `desync-soak` (D11;
+    tasks 9.3, 9.4; proposal open question 7). Spike 1.3 includes a wheel swap.
+11. **Resolved.** `desync_stall_seconds` (default 120) is a server setting; task 10.4 tests with 20 s. The spec's stall
+    scenario speaks of any kind of state (a car's parts or details, the inventory, …), so the inventory test proves it.
+12. **Resolved.** D3 states that an examine or condition change during B's lock survives B's commit while the part stays
+    mounted; the spec scenario is rewritten ("Examine during another player's lock").
+13. **Resolved by scoping.** The spec promises the name for a machine put only; a rejected mount keeps today's log-only
+    behaviour (D9).
+14. **Resolved.** Part 1 ≈ 9–11 sessions, part 2 ≈ 6–7, and the new part 3 (D16, D17) ≈ 3, in proposal.md, tasks.md and
+    ROADMAP row 19. The first-pass/second-pass split of the contention kinds is adopted (D13), but the second pass
+    stays in part 2 (task 10.5), so part 2 stays at 6–7.
+15. **Moot** with B1: D2 no longer looks at local transactions.
+
+### Nits
+
+- `SetExamined`: design Context says `PartScript.IsExamined` is a plain field that `PartApplier` writes. Done.
+- `bonus` and `Dyno`: `BonusParts` stays out (D4); `Present` includes `Dyno` (D6). Done.
+- `state-corrupt` has no `jobs` mode; `jobs` is proven by `desync-soak` only (D14). Done.
+- The details mappers sort lists by key (D11; task 9.1). Done.
+- `cardetails-pour` adds condition `dt × 0.05` (D14). Done.
+- `[OptionalField]`: kept, noted as moot but harmless (design Packets). Done.
+- Parked record size: D10 says the save grows by about 230 records per parked car. Done.
+
+### Checked and fine: one line superseded
+
+"No new packet type" no longer holds: the user's seat decision adds `SeatRefused` (D17), appended to `PacketTypes` at
+merge time after row 18's packets.
+
+### Simpler path
+
+1. **Adopted.** B1's masked relay is D2.
+2. **Not adopted; left to the user.** D10 keeps the server's record of the parked car. The hybrid shows the player a
+   refusal whenever a newer part change is on its way, and its window is a guess; the drain (M4) is needed either way,
+   and with it D10 loses nothing. Proposal open question 3 offers the hybrid as the alternative.
+3. **Adopted.** D13's first pass covers this change's gaps plus P1, P2, M1 and L1; row 18's kinds are the second pass
+   (task 10.5), known gaps until then.
+
+### Coverage ledger
+
+- **Added to row 19 as recommended:** P7 (task 3.5, `car-gone-inflight` park and job-finish steps), P11 (D2, task 3.3),
+  I2 (`warehouse-move`, task 5.3), I5 (`tools-item-race` mount-against-sale round, kind `mount-vs-sale`), M4 and M5
+  (`tools-race` stand steps, task 3.2), C2 (D10, tasks 6.2 and 6.4).
+- **The "accept" rows, decided by the user on 2026-10-07:** S1 is fixed (D17, task 12.4, `seat-engine` two-player
+  step). For I3, I7, E4, M8, C4, J2, J4 and J5 the server's choice stays, and the acting client gets the authoritative
+  result (D16, tasks 12.1–12.3 and 12.5, scenario `server-answers`). D16's audit of the server's silent paths covers
+  further rows without an audit id.
+- **Later change:** I6, E5, C1 and C5 go to `race-hardening`, ROADMAP row 20 (not drafted); named in proposal.md and
+  design Non-Goals.
+- **Test holes in rows closed by row 18 (P8, P10, X4):** not taken into row 19. They belong in row 18's scenarios
+  (`locks-car` check after the car is removed, a body-panel step in `locks-race`, a `resync-key` step), to be added on
+  `change/part-locks`.
+
+### Consistency pass (2026-10-08)
+
+- Task references in design.md corrected: `OnlyChanged` is replaced by task 4.1 (was 4.2), `DetailsMerge`'s check is
+  task 4.2 (was 4.3), the same-entry check is tasks 4.4 and 4.5 (was 4.6).
+- D17 and design Context: `GameScript.ExitFromInterior` is already patched by row 6's `SeatEngine` prefix, which clears
+  the local seat; the earlier "not patched" was wrong. Nothing new is patched.
+- `drift-detection-coverage`: expiry after four comparisons (was 60 s), the stall time as a server setting, the replay
+  scenario, and log-only for a newly compared kind.

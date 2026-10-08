@@ -6,14 +6,14 @@ the ledger's "accept" rows (S1 fixed; no silent drops for I3, I7, E4, M8, C4, J2
 `review.md`.
 
 - **Prerequisites** (on `main`): rows 1, 2, 4, 5a, 5b, 11, 13, 14 and the gap 5 fix (`d1dd908`).
-- **Parts** (open question 5), each merged on its own:
+- **Parts** (open question 4), each merged on its own:
   - part 1 = groups 1–7 (state merges, L ≈ 9–11 sessions);
   - part 2 = groups 9–11 (detection and contention, L ≈ 6–7 sessions);
   - part 3 = groups 12–13 (the server answers every refusal, and seats, M ≈ 3 sessions).
   - Group 8 holds the row 18 tie-ins and merges with whichever part is open when row 18 has merged.
 - **Order with row 18** (`change/part-locks`):
   - Task 1.4 lands first and does not wait: row 18's `locks-fluid` needs `cardetails-fluid` (its task 7.2).
-  - Groups 3 and 4, task 6.3 and task 9.2's car keys start after row 18 has merged (open question 6; 6.3 needs its
+  - Groups 3 and 4, task 6.3 and task 9.2's car keys start after row 18 has merged (open question 5; 6.3 needs its
     `FlushNow`, 3.5 builds on its `PartTransactions.DropLoader`, 4.1 replaces its changed-fluids send).
   - Tasks 8.1–8.3 need row 18's switch-over (its task 5.1); 8.2 also its fluid gates (7.1), 8.3 its item step (6.1).
     Task 10.4 needs its task 5.1; task 10.5 needs row 18 merged.

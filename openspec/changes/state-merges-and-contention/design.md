@@ -46,7 +46,7 @@ coverage ledger. State on `main` (`d1dd908`):
 
 **What row 18 (`part-locks`) ships that this change builds on** [M3]. Agreed ownership:
 - Row 18 keeps `CarDetailsSync.FlushNow(loader, sections)` and its send of **changed fluids only** (its `OnlyChanged`
-  against the remembered fluid list); it needs both for `locks-fluid`. Task 4.2 generalises that send to every
+  against the remembered fluid list); it needs both for `locks-fluid`. Task 4.1 generalises that send to every
   section and every entry kind and replaces `OnlyChanged`.
 - Row 18 keeps `PartTransactions.DropLoader` (open transactions of a loader dropped on car delete) and
   `CarDetailsStore.SendTo`. Task 3.5 adds the `committed` half per loader [P7].
@@ -66,8 +66,9 @@ Game facts this design relies on (checked in `dump.cs` and the decompiles under 
   relies on). `WheelsAlignment` is a struct (`dump.cs:437140`); its fields can be set one at a time by
   read-modify-write, as `ApplyAlignment` does for the headlamps.
 - `PartScript.IsExamined` is a plain field (`dump.cs:438752`) that `PartApplier` writes directly.
-- No method this change calls is patched, nothing new is patched at all, and nothing takes `NewCarData` or
-  `FluidsData` by value.
+- Nothing new is patched, and nothing this change calls takes `NewCarData` or `FluidsData` by value. Of the methods
+  it calls, only `GameScript.ExitFromInterior` is patched already: row 6's `SeatEngine` prefix clears the local seat,
+  which is what D17 wants.
 
 ## Goals / Non-Goals
 
@@ -91,8 +92,8 @@ Game facts this design relies on (checked in `dump.cs` and the decompiles under 
 
 **Non-Goals:**
 - Locks for car tools, machines or examine (row 18's non-goals stand).
-- Two players writing the same detail entry: the last write the server receives wins (accepted 2026-10-06; open
-  question 1). One body panel's paint, livery, tint, dust and wash are one entry [minor 5].
+- Two players writing the same detail entry: the last write the server receives wins (accepted 2026-10-06). One
+  body panel's paint, livery, tint, dust and wash are one entry [minor 5; open question 2].
 - The later hardening change (proposal): I6 (UID ranges), E5 (economy request deduplication), C1 (spawn into an
   occupied loader), C5 (second baseline).
 - Engine-stand parts in a digest (the slot is compared, its part overlay is not).
@@ -185,7 +186,7 @@ instead, A's examine would not mark the new disc either. A's examine of keys who
   Writes the old part's id and condition onto a new part B mounted meanwhile.
 - *Merge the masked groups without a base check (this change's first draft).* Writes A's examine or condition onto the
   part that replaced the one A looked at [M1].
-- *Reject a stale attribute record* (open question 2). A loses every examine in the change, not only the stale keys,
+- *Reject a stale attribute record* (open question 1). A loses every examine in the change, not only the stale keys,
   and runs the rollback path that caused playtest finding 4.
 - *A base revision per record and a three-way merge on the server.* Needs history per key; the mask and the base
   fields carry the same information.
@@ -227,7 +228,7 @@ This replaces the first draft's "in local work" rules.
   lock survives B's commit while the part stays mounted [minor 12].
 - Row 18's release on commit is evaluated on the stored records after normalisation.
 - Gap 3 does not need row 18 for correctness. Its groups start after row 18 merges only to avoid two branches
-  rewriting `CarPartsHandlers.OnChange` and `PartChanges` (open question 6).
+  rewriting `CarPartsHandlers.OnChange` and `PartChanges` (open question 5).
 
 ### D4. Car details travel as entries
 
@@ -255,14 +256,14 @@ This replaces the first draft's "in local work" rules.
 - *Nullable fields in `ModAlignment` and `null` entries in `Wheels`.* `ModCarDetails` is also the saved and stored
   form, which must stay complete; the masks live on the packet only.
 - *Split a panel into `c:<i>.paint`, `.livery`, `.tint`, `.dirt`* [minor 5]. A tint and a wash of the same panel by two
-  players at once is rare; it would need a mask per panel. Open question 1 names "the same panel" instead.
+  players at once is rare; it would need a mask per panel. Open question 2 asks the user instead.
 - *Per-entry packets.* More packets for a multi-entry change such as a wash, for no gain.
 
 ### D5. Server: merge per entry, relay entries
 
 - `CarDetailsStore.Merge` merges wheels per masked index (growing the stored array if needed) and alignment per masked
   field, and keeps its per-entry merge of fluids, cosmetics and tuning modules. Paint, plates, info and dyno stay
-  whole. The merge is the Core helper `DetailsMerge`, so `--check-merges` covers it (task 4.3) [M7].
+  whole. The merge is the Core helper `DetailsMerge`, so `--check-merges` covers it (task 4.2) [M7].
 - The relay is the clamped incoming packet with its masks, as today, in arrival order, to every client including the
   sender. Receivers apply only what it carries (D6).
 - Snapshots and resends send the stored, complete details.
@@ -292,11 +293,11 @@ echoes, every entry that the server changed or that a foreign update overwrote a
   whole, as today's latest echo is.
 - A pour is never set back to the level of its last send (the `FluidRefillLogic.Update` fact in Context), unless
   another player wrote the same fluid in between, in which case the server's later value is the right one.
-- `details-concurrent` checks the same-entry case in both server orders (task 4.6).
+- `details-concurrent` checks the same-entry case in both server orders (tasks 4.4 and 4.5).
 
 ### D8. Fluids under row 18's locks
 
-- Row 18 ships `FlushNow` with a changed-fluids-only send. Task 4.2 replaces that send with the per-entry `Flush`,
+- Row 18 ships `FlushNow` with a changed-fluids-only send. Task 4.1 replaces that send with the per-entry `Flush`,
   which at a fill's release sends the filled fluid (and any other entry this client changed). This is the audit's
   correction for row 18 without a second API.
 - Task 8.2 adds the audit's step to `locks-fluid`: A holds `f:Brake.0` and fills while B holds `f:EngineCoolant.0` and
@@ -315,7 +316,7 @@ echoes, every entry that the server changed or that a foreign update overwrote a
   - the UID is in the server's inventory, or this client removed it: accepted (today's path);
   - another client removed it (mounted, sold, scrapped, put elsewhere): refused, "used by player N";
   - the server never saw the UID: accepted, logged and counted (`unknownSlotItem`), unless spike 1.1 shows machines
-    never use such items (open question 4).
+    never use such items (open question 6).
 - Every refusal of a put carries `ToolSlotRejectedPacket.Item`: `Returned` (this client had removed the item; the
   server puts the kept copy back into its inventory, clears the remover entry and relays the `Add` to the others),
   `Gone` (another client removed it; nothing is restored) or `Unchanged` (no item involved).
@@ -566,7 +567,8 @@ server's state for that key right after the answer, checked without `resync`.
   server sends `SeatRefused { CarLoaderID, SeatLeft, HolderPlayerId }` to that client. The relay to the others carries
   the stored record, so nobody sees two players in one seat.
 - The refused client leaves the seat with the game's own exit, `GameScript.ExitFromInterior(true)` (`dump.cs:432023`,
-  started as a coroutine as the harness `stand` verb does; not patched), and shows "<name> is sitting there."
+  started as a coroutine as the harness `stand` verb does). Row 6's prefix on it (`SeatEngine.BeforeExitFromInterior`)
+  clears the pending and local seat, so the next presence record carries no seat. It shows "<name> is sitting there."
 - A seat frees when its holder's record has no seat, on leave and on a scene change.
 - The car's engine follows the seat: the refused client's engine flags are cleared with the seat.
 
@@ -626,11 +628,11 @@ additive field. Rollback is reverting the change; an old server ignores the reco
 - **Send copies grow** → bounded per loader (16 sends or 10 s).
 - **Parked records and the blob disagree on the hierarchy** (an engine swap the server did not see) → keys that do not
   resolve are dropped and logged; the car digest checks the unparked car.
-- **Unknown machine UIDs accepted** → spike 1 measures it; open question 4 can tighten it.
+- **Unknown machine UIDs accepted** → spike 1 measures it; open question 6 can tighten it.
 - **New digest keys raise false alarms** → log-only per key first, spike 3, `desync-soak`.
 - **Contention runs are flaky** → the server order is forced and recorded; kinds with an open gap are reported, not
   failed.
-- **Two branches rewrite the same methods as row 18** → the agreed ownership in Context and open question 6.
+- **Two branches rewrite the same methods as row 18** → the agreed ownership in Context and open question 5.
 
 ## Open questions / assumptions
 
