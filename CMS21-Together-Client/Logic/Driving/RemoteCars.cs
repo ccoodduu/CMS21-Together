@@ -20,6 +20,9 @@ public class RemoteCar
 	public GameObject Holder;
 	public CarLoader Loader;
 	public Transform Root;
+	public Transform Body;
+	public Vector3 BodyLocalPosition;
+	public Quaternion BodyLocalRotation = Quaternion.identity;
 	public string Mode = "loading";
 	public string Route;
 	public readonly DriveInterpolator Interpolator = new DriveInterpolator();
@@ -215,6 +218,7 @@ public static class RemoteCars
 		{
 			MakeInert(car);
 			FindWheels(car);
+			FindBody(car);
 			car.Engine = RemoteEngines.Create(car.Loader, car.PlayerId, -1);
 			if (car.Engine?.Sound != null) car.Engine.Sound.name = $"RemoteDriveEngine[{car.PlayerId}]";
 		}
@@ -329,6 +333,24 @@ public static class RemoteCars
 		}
 	}
 
+	// The driver streams the pose of the car model under its VPP blueprint (DriveCapture.BodyOf), which sits turned
+	// 180° inside the loader root that the copy moves.
+	private static void FindBody(RemoteCar car)
+	{
+		var parts = car.Loader.carParts;
+		var handle = parts != null && parts.Count > 0 ? parts[0].handle : null;
+		if (handle == null || !handle) return;
+		var body = handle.transform;
+		while (body.parent != null && body.parent != car.Root) body = body.parent;
+		if (body.parent != car.Root) return;
+		car.Body = body;
+		var inverse = Quaternion.Inverse(car.Root.rotation);
+		car.BodyLocalPosition = inverse * (body.position - car.Root.position);
+		car.BodyLocalRotation = inverse * body.rotation;
+	}
+
+	public static RemoteCar Of(int playerId) => cars.TryGetValue(playerId, out var car) ? car : null;
+
 	public static void Update()
 	{
 		if (cars.Count == 0) return;
@@ -339,7 +361,8 @@ public static class RemoteCars
 			if (!car.Interpolator.Sample(now, Time.deltaTime)) continue;
 			if (!car.Root.gameObject.activeSelf) car.Root.gameObject.SetActive(true);
 			if (car.ShownAfter < 0f) car.ShownAfter = Time.realtimeSinceStartup - car.StartedAt;
-			car.Root.SetPositionAndRotation(car.Interpolator.Position, car.Interpolator.Rotation);
+			var rootRotation = car.Interpolator.Rotation * Quaternion.Inverse(car.BodyLocalRotation);
+			car.Root.SetPositionAndRotation(car.Interpolator.Position - rootRotation * car.BodyLocalPosition, rootRotation);
 
 			var newest = car.Interpolator.Newest;
 			car.WheelAngle = (car.WheelAngle + newest.WheelRadPerSecond * 57.29578f * Time.deltaTime) % 360f;
