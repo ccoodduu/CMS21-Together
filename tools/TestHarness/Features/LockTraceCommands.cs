@@ -790,11 +790,14 @@ public static class LockTraceCommands
         public bool Aimed;
         public string Aim;
         public int Frames;
+        public string Label;
+        public int HoverFrames;
+        public int MouseOverFrames;
 
         public object Describe() => new Dictionary<string, object>
         {
             ["key"] = Key, ["holdMs"] = HoldSeconds * 1000f, ["aimed"] = Aimed, ["aim"] = Aim, ["downFrame"] = DownFrame, ["upFrame"] = UpFrame,
-            ["done"] = Done, ["frames"] = Frames,
+            ["done"] = Done, ["frames"] = Frames, ["label"] = Label, ["hoverFrames"] = HoverFrames, ["partMouseOverFrames"] = MouseOverFrames,
         };
     }
 
@@ -903,6 +906,18 @@ public static class LockTraceCommands
         if (camera == null) return;
         camera.transform.SetPositionAndRotation(click.Position, click.Rotation);
         click.Frames++;
+    }
+
+    [HarmonyPatch(typeof(Raycast), nameof(Raycast.Update))]
+    [HarmonyPostfix]
+    private static void AfterRaycastUpdate()
+    {
+        if (!ClickActive || !click.Aimed || click.DownFrame < 0) return;
+        click.HoverFrames++;
+        var over = GameScript.Get()?.partMouseOver;
+        if (over != null && over.Pointer == click.Target.Pointer) click.MouseOverFrames++;
+        string label = UIManager.Get()?.TextDescription?.text;
+        if (!string.IsNullOrEmpty(label)) click.Label = label;
     }
 
     [HarmonyPatch(typeof(ProMouse), nameof(ProMouse.GetLocalMousePosition))]

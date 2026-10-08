@@ -1,8 +1,8 @@
 # areas: locks, parts, details, placement
 # part-locks 5.3 [review B2]: every lock ends. The item chooser opened and closed without a choice, an unmount the
 # game refuses (a blocked part), a mount on a part that is still mounted, and the idle cancels (chooser after 3 s,
-# bolt view after 5 s with lock-idle 5 3) each leave the server's lock table empty within 1 s of the end. The steps
-# for a refill without a target, a lift that is already moving and an aborted prefetch join with tasks 7.1, 8.1 and 10.1.
+# bolt view after 5 s with lock-idle 5 3), a hold aborted after its prefetch, a refill without a car and a lift that
+# is already moving each leave the server's lock table empty within 1 s of the end (a lift lock, at the end of the move).
 param($Ctx)
 
 Import-Module (Join-Path $PSScriptRoot "..\LockSession.psm1")
@@ -111,6 +111,40 @@ $part = Cmd $a lock-probe "part $loader $free"
 Check (-not $part.unmounted -and $part.mode -ne "PartUnMount") "the idle unmount was undone (unmounted $($part.unmounted), mode $($part.mode))"
 Check ((Get-LockMirror $a).counters.idleCancelled -ge 2) "two idle cancels were counted ($((Get-LockMirror $a).counters.idleCancelled))"
 Cmd $a lock-idle "default" | Out-Null
+
+# A hold aborted before the ring fills: the lock prefetched at hold start is released (D10).
+$counters = (Get-LockMirror $a).counters
+Cmd $a lock-click "$loader $free hold 400" | Out-Null
+Start-Sleep -Seconds 2
+$after = (Get-LockMirror $a).counters
+Check ($after.prefetched -eq $counters.prefetched + 1 -and $after.prefetchAborted -eq $counters.prefetchAborted + 1) "the aborted hold prefetched a lock and dropped it (prefetched $($counters.prefetched) -> $($after.prefetched), aborted $($counters.prefetchAborted) -> $($after.prefetchAborted))"
+Wait-NoLocks "aborted prefetch" | Out-Null
+$part = Cmd $a lock-probe "part $loader $free"
+Check (-not $part.unmounted) "the aborted hold did not unmount $free"
+
+# A refill without a car under the cursor has no target: nothing is requested.
+$try = Cmd $a lock-try "$loader fill EngineCoolant 0 nocar"
+Check ($try.result -eq "not gated") "a refill without a car is not gated ($($try.result), $($try.state))"
+Wait-NoLocks "refill without a car" | Out-Null
+
+# A lift that is already moving: the second press has nothing to gate, and the first lock ends with the move.
+Cmd $a car-move "$loader CarLifter1" | Out-Null
+Start-Sleep -Seconds 6
+Wait-Ready $a | Out-Null
+Wait-NoLocks "move to the lift" -TimeoutSec 5 | Out-Null
+$lifter = @(Cmd $a lifters | Where-Object { $_.connectedLoader -eq $loader })[0]
+Check ($null -ne $lifter) "the car stands on a lift"
+if ($lifter) {
+    $first = Cmd $a lock-try "$loader lift $($lifter.index) up"
+    $r = Wait-Try $first.tryId
+    Check ($r.result -eq "granted" -and $r.started) "the lift moves under a car lock ($($r.result), started $($r.started))"
+    $second = Cmd $a lock-try "$loader lift $($lifter.index) up"
+    Check ($second.result -eq "not gated") "a second press while the lift moves is not gated ($($second.result))"
+    Wait-NoLocks "lift already moving" -TimeoutSec 20 | Out-Null
+    $down = Cmd $a lock-try "$loader lift $($lifter.index) down finish"
+    Wait-Try $down.tryId | Out-Null
+    Wait-NoLocks "lift down" -TimeoutSec 20 | Out-Null
+}
 
 $locks = Get-ServerLocks
 Check ((Get-LockCounter $locks "overlapViolations") -eq 0) "overlapViolations is 0 ($($locks.Line))"
