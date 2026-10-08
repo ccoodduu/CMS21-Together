@@ -15,11 +15,15 @@ public static class PerfCommands
     private static readonly float[] sorted = new float[Capacity];
     private static int next;
     private static int count;
+    private static float lastFrameAt = -1f;
 
     internal static void RecordFrame()
     {
-        frameTimes[next] = Time.unscaledTime;
-        frameDeltas[next] = Time.unscaledDeltaTime;
+        float now = Time.realtimeSinceStartup;
+        StackSampler.Beat();
+        frameTimes[next] = now;
+        frameDeltas[next] = lastFrameAt < 0f ? 0f : now - lastFrameAt;
+        lastFrameAt = now;
         next = (next + 1) % Capacity;
         if (count < Capacity) count++;
     }
@@ -27,7 +31,7 @@ public static class PerfCommands
     [HarnessCommand("perf")]
     private static object Perf(string args)
     {
-        float since = Time.unscaledTime - WindowSeconds;
+        float since = Time.realtimeSinceStartup - WindowSeconds;
         int frames = 0;
         double total = 0;
         float max = 0;
