@@ -76,8 +76,9 @@ foreach ($name in $Ctx.Instances) {
 $genA = (Get-HarnessStatus $a).isOrderGenerator
 Check ($genA -and -not (Get-HarnessStatus $b).isOrderGenerator) "A is the order generator"
 
-$jobs = Wait-Jobs "the first story mission is open on both" { param($j) (Missions $j).Count -eq 1 } 60
-$mission = (Missions $jobs)[0]
+$jobs = Wait-Jobs "the first story mission is open on both" { param($j) @(Missions $j).Count -eq 1 } 60
+$found = @(Missions $jobs)
+$mission = if ($found.Count -gt 0) { $found[0] } else { $null }
 if (-not $mission) {
     $Ctx.Result.notes += $failures
     $Ctx.Result.passed = $false
@@ -85,11 +86,11 @@ if (-not $mission) {
 }
 Write-Host "mission order $($mission.id): $($mission.carFile)"
 Start-Sleep -Seconds 3
-$lines = MissionLines $start
+$lines = @(MissionLines $start)
 Check ($lines.Count -eq 1) "the server added exactly one mission order ($($lines -join ' | '))"
 Check (-not (Try-ServerLog "Tutorial mission from client" $start 1)) "no story mission was refused as the tutorial"
 $generated = @($Ctx.Instances | Where-Object {
-    (Get-Content -LiteralPath (ClientLog $_) | Select-Object -Skip $clientMarks[$_] | Select-String "\[Jobs\] Generated order .*\(mission").Count -gt 0
+    @(Get-Content -LiteralPath (ClientLog $_) | Select-Object -Skip $clientMarks[$_] | Select-String "\[Jobs\] Generated order .*\(mission").Count -gt 0
 })
 Check ($generated.Count -eq 1 -and $generated[0] -eq $a) "only the generator generated a mission ($($generated -join ', '))"
 foreach ($name in $Ctx.Instances) {
@@ -109,11 +110,13 @@ $refused = Try-ServerLog "Decline of order $($mission.id) by client \d+ refused:
 Check ([bool]$refused) "a decline packet for the mission is refused with the jobs state ($refused)"
 $jobs = Wait-Jobs "the mission is still open on both" { param($j) @(Missions $j | Where-Object { $_.id -eq $mission.id }).Count -eq 1 } 10
 
+$takeMark = Get-ServerLogMark
 Send-HarnessCommand -Instance $b -Verb orders-accept -Arguments "$($mission.id)" | Out-Null
-$jobs = Wait-Jobs "B's mission is active for both" { param($j) @($j.active | Where-Object { $_.id -eq $mission.id }).Count -eq 1 -and (Missions $j).Count -eq 0 } 90
+$jobs = Wait-Jobs "B's mission is active for both" { param($j) @($j.active | Where-Object { $_.id -eq $mission.id }).Count -eq 1 -and @(Missions $j).Count -eq 0 } 90
 $active = @($jobs.active | Where-Object { $_.id -eq $mission.id })
 $loader = if ($active.Count -gt 0) { $active[0].carLoaderID } else { -1 }
 Write-Host "mission $($mission.id) on loader $loader"
+Check (-not (Try-ServerLog "Mission order from client \d+ refused" $takeMark 1)) "the generator did not offer a second mission while B took the first"
 foreach ($name in $Ctx.Instances) {
     $r = Send-HarnessCommand -Instance $name -Verb car-ready -Arguments "$loader"
     Check ($r.loaded) "$name has the mission car on loader $loader ($($r.car))"
@@ -127,7 +130,7 @@ Check ($level -ge 1) "A reached level $level, so the next mission is unlocked"
 $max = (Send-HarnessCommand -Instance $a -Verb missions-state).maxOrders
 $mark = Get-ServerLogMark
 for ($i = 0; $i -le $max; $i++) { Send-HarnessCommand -Instance $a -Verb orders-generate -Arguments "900" | Out-Null; Start-Sleep -Milliseconds 300 }
-$jobs = Wait-Jobs "the regular orders are at the limit ($max)" { param($j) (Regular $j).Count -eq $max } 30
+$jobs = Wait-Jobs "the regular orders are at the limit ($max)" { param($j) @(Regular $j).Count -eq $max } 30
 Check ([bool](Try-ServerLog "refused: \d+ open orders, the generator's limit is $max" $mark 5)) "a regular order over the limit was refused"
 
 $moneyBefore = (Send-HarnessCommand -Instance $a -Verb dump).stats.money
@@ -149,11 +152,11 @@ foreach ($name in $Ctx.Instances) {
 
 $mark = Get-ServerLogMark
 Send-HarnessCommand -Instance $a -Verb orders-autogen -Arguments "on" | Out-Null
-$jobs = Wait-Jobs "the next mission appears with the regular orders at the limit" { param($j) (Missions $j).Count -eq 1 -and (Regular $j).Count -eq $max } 60
+$jobs = Wait-Jobs "the next mission appears with the regular orders at the limit" { param($j) @(Missions $j).Count -eq 1 -and @(Regular $j).Count -eq $max } 60
 Send-HarnessCommand -Instance $a -Verb orders-autogen -Arguments "off" | Out-Null
 $next = @(Missions $jobs)
 Check ($next.Count -eq 1 -and $next[0].id -ne $mission.id) "the next mission is a new order ($($next | ConvertTo-Json -Compress))"
-Check ((MissionLines $mark).Count -eq 1) "the server added the next mission once"
+Check (@(MissionLines $mark).Count -eq 1) "the server added the next mission once"
 foreach ($name in $Ctx.Instances) {
     $state = Send-HarnessCommand -Instance $name -Verb missions-state
     Check ($state.MissionsFinished -eq 1 -and -not $state.CurrentMissionDone) "$name has the next mission open ($($state | ConvertTo-Json -Compress))"
