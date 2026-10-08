@@ -130,7 +130,7 @@ function Get-RealProfileFingerprint {
         Where-Object { $_.Name -notlike "Player*.log" } |
         Sort-Object FullName |
         ForEach-Object { "{0}|{1}|{2}" -f $_.FullName, $_.Length, (Get-FileHash -LiteralPath $_.FullName -Algorithm SHA1).Hash }
-    $tmp = Join-Path $env:TEMP "cms21-together-real.reg"
+    $tmp = Join-Path $env:TEMP ("cms21-together-real-{0}.reg" -f [guid]::NewGuid().ToString("N"))
     cmd /c "reg export `"$script:RealRegistryKey`" `"$tmp`" /y >nul 2>&1"
     $registry = (Get-FileHash -LiteralPath $tmp -Algorithm SHA1).Hash
     Remove-Item -LiteralPath $tmp -Force
