@@ -2,6 +2,22 @@
 
 Newest first. One entry per work session.
 
+## 2026-10-08 (12:15–15:00) — soak fixes, locks, ping and shared shopping list merged; playtest build dev.1021
+
+- `main` = `a0b844a`. Soak fixes merged (`a5dd030`, `docs/soak/2026-10-08.md`): receivers no longer add an extra
+  `blockedNo` on remote mounts; a wheel-less car's lift state travels with the move request; special group 1 parts
+  (drain plugs, caps) unmount remotely; a shared `PacketFramer` for TCP; inventory updates held during scene loads.
+  The soak's memory "growth" is a series of server restarts loading a bigger save (measure per process; to do).
+- Row 18 `part-locks` merged (`ba31e91`; 18/18 smoke + lock scenarios; `locks-scale` runs with the next soak).
+  Row 22 `coop-ping` merged (`83753ed`; middle mouse; the part flashes in the game's highlight colour, `a0b844a`).
+  Row 23 `shared-shopping-list` merged (`a395139`).
+- Harness: each real-profile fingerprint uses its own registry temp file (`2309f82`; two lanes at once gave a false
+  "REAL SAVE FOLDER OR REGISTRY CHANGED").
+- Daily regression: the first run is invalid (main changed under it mid-run); it runs again from a pinned worktree
+  (`CMS21-Together-wt/regression`). Rule: regressions run from a pinned worktree, never from the main checkout.
+- Playtest build `0.6.0-dev.1021` and an updated checklist on the Desktop (`CMS21-Together-playtest`).
+- In progress: row 19 part 3 (server answers every refusal, seats) on lane 1.
+
 ## 2026-10-08 (12:00–13:30) — row 18 part locks ready for merge
 
 - `change/part-locks` (lane 1): groups 1–10 done. Part work, the item chooser (also a caliper with its piston built as
