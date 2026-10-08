@@ -21,6 +21,7 @@ namespace CMS21_Together_Server.Data.Jobs
 		private const int MaxXp = 10_000;
 
 		private static JobsState State => GameDataManager.CurrentState.JobsState;
+		private static readonly System.Random seeds = new System.Random();
 		private static int generator = CarLoaderEntry.NoClient;
 		private static bool checkedLoadedJobs;
 		private static float lastTick = -1f;
@@ -38,7 +39,24 @@ namespace CMS21_Together_Server.Data.Jobs
 		{
 			generator = CarLoaderEntry.NoClient;
 			checkedLoadedJobs = false;
-			foreach (var order in State.Orders) order.Status = OrderStatus.Open;
+			foreach (var order in State.Orders)
+			{
+				order.Status = OrderStatus.Open;
+				if (order.Job.PrepSeed == 0) order.Job.PrepSeed = NewPrepSeed();
+			}
+			foreach (var active in State.ActiveJobs)
+			{
+				var job = active.OrderJob ?? active.Job;
+				if (job.PrepSeed == 0) job.PrepSeed = NewPrepSeed();
+			}
+		}
+
+		private static int NewPrepSeed()
+		{
+			int seed;
+			do seed = seeds.Next(int.MinValue, int.MaxValue);
+			while (seed == 0);
+			return seed;
 		}
 
 		// Elections
@@ -101,6 +119,7 @@ namespace CMS21_Together_Server.Data.Jobs
 				return;
 			}
 			job.id = State.NextJobId++;
+			job.PrepSeed = NewPrepSeed();
 			var entry = new OrderEntry { Job = job, RemainingSeconds = job.timeToEnd, Status = OrderStatus.Open };
 			State.Orders.Add(entry);
 			if (job.IsMission) State.Missions.CurrentMissionDone = false;
@@ -196,7 +215,8 @@ namespace CMS21_Together_Server.Data.Jobs
 			}
 			State.Orders.Remove(order);
 			packet.Job.id = packet.JobId;
-			State.ActiveJobs.Add(new ActiveJobEntry { Job = packet.Job, CarLoaderId = packet.CarLoaderId, OriginalSeconds = order.RemainingSeconds });
+			packet.Job.PrepSeed = order.Job.PrepSeed;
+			State.ActiveJobs.Add(new ActiveJobEntry { Job = packet.Job, OrderJob = order.Job, CarLoaderId = packet.CarLoaderId, OriginalSeconds = order.RemainingSeconds });
 			if (packet.Missions != null) State.Missions = packet.Missions;
 			Logger.Info($"[Jobs] Job {packet.JobId} started by client {clientId} on loader {packet.CarLoaderId}.");
 			Server.SendToClients(packet, clientId);
@@ -269,7 +289,7 @@ namespace CMS21_Together_Server.Data.Jobs
 		private static void ReopenActive(ActiveJobEntry active, string why)
 		{
 			State.ActiveJobs.Remove(active);
-			var order = new OrderEntry { Job = active.Job, RemainingSeconds = active.OriginalSeconds, Status = OrderStatus.Open };
+			var order = new OrderEntry { Job = active.OrderJob ?? active.Job, RemainingSeconds = active.OriginalSeconds, Status = OrderStatus.Open };
 			State.Orders.Add(order);
 			Logger.Info($"[Jobs] Job {active.Job.id} back to the open orders ({why}).");
 			Server.SendToClients(new OrderAddedPacket { Job = order.Job, RemainingSeconds = order.RemainingSeconds });

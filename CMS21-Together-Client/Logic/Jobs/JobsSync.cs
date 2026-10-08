@@ -275,6 +275,8 @@ public static class JobsSync
 		CarPartsSync.OnCarDeleted(loader);
 	}
 
+	public static int PrepSeedOf(int jobId) => mirror?.Orders.FirstOrDefault(o => o.Job.id == jobId)?.Job.PrepSeed ?? 0;
+
 	private static Job FindOpen(int id)
 	{
 		var jobs = Generator?.jobs;
