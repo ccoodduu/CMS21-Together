@@ -208,7 +208,7 @@ public static class GuardRules
 		Allow(GuardKind.Pie, "equipment_move_entrance2", "row 5b", "Moving equipment"),
 		Allow(GuardKind.Pie, "equipment_move_carLift1", "row 5b", "Moving equipment"),
 		Allow(GuardKind.Pie, "equipment_move_carLift2", "row 5b", "Moving equipment"),
-		Planned(GuardKind.Pie, "car_drive", "row 17", "Driving"),
+		Allow(GuardKind.Pie, "car_drive", "row 17", "Drive: opens the map (user, 2026-10-08)"),
 		Allow(GuardKind.Pie, "car_run", "row 6 part 2", "Starting the engine"),
 		Allow(GuardKind.Pie, "car_buy", "row 6 part 2", "Buying cars"),
 		Allow(GuardKind.Pie, "start_bidding", "row 6 part 2", "The auction"),
