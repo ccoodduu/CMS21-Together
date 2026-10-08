@@ -2,6 +2,20 @@
 
 Newest first. One entry per work session.
 
+## 2026-10-08 (21:00–22:00) — story missions fixed; refused delete restore fixed; playtest build dev.1086
+
+- `main` = `04760bd`. Story missions merged (`f37602b`): only the order generator makes a mission, the first mission
+  is no longer lost at start, missions sit outside the open-order limit, a mission decline is refused (`Mission`) with
+  the jobs state, and the server counts a finished mission itself. Proof `jobs-missions` fails on the old code
+  (`20261008-210859_L1_jobs-missions`) and passes (`20261008-211950_L1_jobs-missions`); `jobs` and four scenarios
+  that take a new order now skip the mission.
+- Regression from the snapshot-after-delete guard (`9fa5bf5`): after a refused delete or park the server sends the car
+  back, but the client dropped its snapshot as deleted and the car never became Ready. Fixed (`04760bd`): a
+  CarSpawnResponse clears the remembered delete. `locks-car` fails on `f37602b` and passes with the fix;
+  `car-snapshot-after-delete`, `economy-trades` and the smoke set pass (`20261008-215000_regression.json`).
+- Playtest build `0.6.0-dev.1086` on the Desktop; the checklist has a story mission section.
+- Row 19 part 2 still in progress on lane 2. Row 16 waits for the scope answer in QUESTIONS.md.
+
 ## 2026-10-08 (20:30–21:00) — row 20 merged; row 16 reviewed; story mission bug found
 
 - `main` = `fbebf7d`. Row 20 race-hardening merged (`6d732f4`); snapshot-after-delete guard merged (`f156303`); a job
