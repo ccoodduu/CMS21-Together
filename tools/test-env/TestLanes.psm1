@@ -18,7 +18,7 @@ $script:LaunchMutexName = "Global\CMS21TogetherGameLane"
 $script:Lanes = @{
     1 = @{ Instances = @("A", "B"); Server = "Server"; Port = 7777; MinCommitGb = 22; MinFreeGb = 6; Locks = @(1) }
     2 = @{ Instances = @("C", "D"); Server = "Server2"; Port = 7787; MinCommitGb = 22; MinFreeGb = 10; Locks = @(2) }
-    3 = @{ Instances = @("A", "B", "C", "D"); Server = "Server3"; Port = 7797; MinCommitGb = 44; MinFreeGb = 16; Locks = @(1, 2) }
+    3 = @{ Instances = @("A", "B", "C", "D"); Server = "Server3"; Port = 7797; MinCommitGb = 36; MinFreeGb = 12; Locks = @(1, 2) }
 }
 
 function Get-TestLanes { @($script:Lanes.Keys | Sort-Object) }

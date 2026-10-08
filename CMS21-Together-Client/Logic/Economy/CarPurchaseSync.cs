@@ -11,6 +11,7 @@ using CMS21Together.Data;
 using CMS21Together.Guard;
 using CMS21Together.Logic.Car;
 using CMS21Together.Logic.Car.Placement;
+using CMS21Together.Logic.Outdoor;
 using CMS21Together.Network;
 using CMS21Together.UI;
 using HarmonyLib;
@@ -38,6 +39,9 @@ public static class CarPurchaseSync
 		public string Source;
 		public string Car;
 		public bool Chosen;
+		public int SourceInstanceId;
+		public int SourceCarIndex = -1;
+		public int SourceLot = -1;
 	}
 
 	private static readonly Dictionary<int, Capture> sent = new Dictionary<int, Capture>();
@@ -93,17 +97,33 @@ public static class CarPurchaseSync
 
 	[HarmonyPatch(typeof(AuctionBidding), nameof(AuctionBidding.ReceiveCarAction))]
 	[HarmonyPrefix]
-	private static bool BeforeReceiveCar(AuctionBidding __instance, out EconomyScopeEntry __state) =>
-		Begin("Auction", __instance.auctionManager?.playerCarLoader, __instance.currentBid, out __state);
+	private static bool BeforeReceiveCar(AuctionBidding __instance, out EconomyScopeEntry __state)
+	{
+		bool run = Begin("Auction", __instance.auctionManager?.playerCarLoader, __instance.currentBid, out __state, AuctionSync.CurrentLot(__instance));
+		if (run && __state != null) locationBypass = FeatureGuard.Bypass();
+		return run;
+	}
 
 	[HarmonyPatch(typeof(AuctionBidding), nameof(AuctionBidding.ReceiveCarAction))]
-	[HarmonyPostfix]
-	private static void AfterReceiveCar(EconomyScopeEntry __state) => EconomyScope.Pop(__state);
+	[HarmonyFinalizer]
+	private static Exception AfterReceiveCar(Exception __exception, EconomyScopeEntry __state)
+	{
+		EconomyScope.Pop(__state);
+		locationBypass?.Dispose();
+		locationBypass = null;
+		return __exception;
+	}
 
-	private static bool Begin(string source, CarLoader carLoader, int price, out EconomyScopeEntry scope)
+	private static bool Begin(string source, CarLoader carLoader, int price, out EconomyScopeEntry scope, int sourceLot = -1)
 	{
 		scope = null;
 		if (!Connected || ClientScene.LocalScene == GameScene.Garage) return true;
+		if (sourceLot < 0 && OutdoorCarSync.CannotBuy(carLoader, out string why))
+		{
+			Log.Info($"[Purchase] {source}: {carLoader?.carToLoad} not bought: {why}");
+			UIManager.Get()?.ShowInfoWindow(why);
+			return false;
+		}
 		if (ParkingCarPlaceManager.ParkingIsFull())
 		{
 			Log.Info($"[Purchase] {source}: {carLoader?.carToLoad} not bought, the shared parking is full.");
@@ -111,8 +131,13 @@ public static class CarPurchaseSync
 			return false;
 		}
 		if (open != null) Log.Warn($"[Purchase] Capture {open.RequestId} ({open.Car}) replaced before the car was saved.");
-		open = new Capture { RequestId = nextRequestId++, Price = price, Source = source, Car = carLoader?.carToLoad };
-		Log.Info($"[Purchase] {source}: capture {open.RequestId} opened for {open.Car} at {price} in {ClientScene.LocalScene}.");
+		open = new Capture
+		{
+			RequestId = nextRequestId++, Price = price, Source = source, Car = carLoader?.carToLoad,
+			SourceInstanceId = OutdoorSession.InstanceId, SourceCarIndex = sourceLot < 0 ? OutdoorCarSync.IndexOf(carLoader) : -1, SourceLot = sourceLot,
+		};
+		Log.Info($"[Purchase] {source}: capture {open.RequestId} opened for {open.Car} at {price} in {ClientScene.LocalScene}" +
+		         (open.SourceInstanceId > 0 ? $" (instance {open.SourceInstanceId}, car {open.SourceCarIndex}, lot {open.SourceLot})." : "."));
 		scope = EconomyScope.Push(CMS21_Together_Core.Network.Packets.EconomyReason.Work, EconomyMode.Suppressed, EconomyKind.Money, name: ScopeName);
 		return true;
 	}
@@ -192,7 +217,8 @@ public static class CarPurchaseSync
 		Log.Info($"[Purchase] Capture {capture.RequestId}: sending {car.CarToLoad} ({car.Data.Length} bytes) for {capture.Price}; vanilla {(toParking ? "parking" : "garage")} slot {index} cleared.");
 		Client.Instance.Send(new CarParkRequestPacket
 		{
-			RequestId = capture.RequestId, CarLoaderID = -1, PreferredSlot = -1, Car = car, Price = capture.Price
+			RequestId = capture.RequestId, CarLoaderID = -1, PreferredSlot = -1, Car = car, Price = capture.Price,
+			SourceInstanceId = capture.SourceInstanceId, SourceCarIndex = capture.SourceCarIndex, SourceLot = capture.SourceLot
 		});
 		MelonCoroutines.Start(WarnIfUnanswered(capture));
 	}
@@ -230,6 +256,7 @@ public static class CarPurchaseSync
 	{
 		ParkRefusal.NoMoney => "There is not enough shared money.",
 		ParkRefusal.ParkingFull => "The shared parking is full.",
+		ParkRefusal.Taken => "Another player bought this car first.",
 		_ => "The server refused the purchase.",
 	};
 

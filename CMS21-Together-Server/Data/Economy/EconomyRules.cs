@@ -6,6 +6,7 @@ using CMS21_Together_Core.Data.Enum;
 using CMS21_Together_Core.Data.GameType;
 using CMS21_Together_Core.Network.Packets;
 using CMS21_Together_Server.Data.Cars;
+using CMS21_Together_Server.Data.Outdoor;
 using CMS21_Together_Server.Data.Placement;
 using CMS21_Together_Server.Network;
 using CMS21_Together_Server.Network.Handlers;
@@ -70,7 +71,7 @@ namespace CMS21_Together_Server.Data.Economy
 					return r.Exp > 0 && r.Exp < WorkExpLimit && r.Money == 0 && r.Scraps == 0
 						? new EconomyOutcome { Exp = r.Exp }
 						: Invalid($"work exp {r.Exp}");
-				case EconomyReason.TravelFee: return TravelFee(r);
+				case EconomyReason.TravelFee: return TravelFee(client, r);
 				case EconomyReason.TravelFeeLegacy:
 					if (!TravelTable.Values.Contains(r.Money)) return Invalid($"legacy travel fee {r.Money}");
 					return new EconomyOutcome { Money = ChargesTravel ? r.Money : 0 };
@@ -116,12 +117,14 @@ namespace CMS21_Together_Server.Data.Economy
 		public static bool HasLevel(Dictionary<string, bool[]> levels, string id) =>
 			levels != null && levels.TryGetValue(id, out var unlocked) && unlocked != null && unlocked.Any(u => u);
 
-		private static EconomyOutcome TravelFee(EconomyRequestPacket r)
+		private static EconomyOutcome TravelFee(int client, EconomyRequestPacket r)
 		{
 			if (!TravelTable.TryGetValue(r.Arg, out int table)) return Invalid($"destination {r.Arg}");
 			var outcome = new EconomyOutcome { Money = ChargesTravel ? table : 0 };
-			if (r.Arg == BarnDestination && r.Arg2 == 1) outcome.Barns = -1;
+			bool joinsOpenBarn = r.Arg == BarnDestination && r.Arg2 == 1 && !OutdoorInstances.BarnTripUsesBarn(client);
+			if (r.Arg == BarnDestination && r.Arg2 == 1 && !joinsOpenBarn) outcome.Barns = -1;
 			if (outcome.Money != r.Money) outcome.Note = $"client charged {r.Money}";
+			if (joinsOpenBarn) outcome.Note = (outcome.Note == null ? "" : outcome.Note + ", ") + "joins the open barn";
 			return outcome;
 		}
 

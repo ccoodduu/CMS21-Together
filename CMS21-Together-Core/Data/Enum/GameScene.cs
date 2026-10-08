@@ -39,4 +39,7 @@ public static class GameSceneInfo
 				return true;
 		}
 	}
+
+	public static bool ShowsAvatars(GameScene scene, bool shared) =>
+		ShowsAvatars(scene) || (shared && scene == GameScene.Barn);
 }

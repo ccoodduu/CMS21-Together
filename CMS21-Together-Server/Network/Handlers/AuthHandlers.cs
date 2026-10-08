@@ -91,7 +91,8 @@ namespace CMS21_Together_Server.Network.Handlers
 			PasswordRequired = !string.IsNullOrEmpty(Program.Config.Password),
 			IsAdmin = Server.Clients.TryGetValue(clientId, out var client) && client.IsAdmin,
 			LockScope = Program.Config.LockScope,
-			LockExpirySeconds = Program.Config.LockExpirySeconds
+			LockExpirySeconds = Program.Config.LockExpirySeconds,
+			SharedOutdoorScenes = Data.Outdoor.OutdoorInstances.SharedScenes.OrderBy(s => (int)s).ToList()
 		};
 
 		public static void BroadcastServerInfo()

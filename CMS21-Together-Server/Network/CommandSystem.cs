@@ -54,6 +54,7 @@ namespace CMS21_Together_Server.Network
 					Logger.Info("  away              - Show cars on the test track, test path or dyno");
 					Logger.Info("  locks             - Show the part, fluid and car locks and the lock counters");
 					Logger.Info("  tools             - Show the workshop machines, tool positions and claims");
+					Logger.Info("  outdoor [catalog|junkyard|barn|auction] - Show the shared outdoor instances, the car catalog or one scene");
 					Logger.Info("  desync [check]    - Show recent desync repairs; check compares every player now");
 					Logger.Info("  bugreport         - List the bug-report bundles in BugReports/");
 					Logger.Info("  economy [n]       - Show the last n economy requests and a count per reason");
@@ -162,6 +163,17 @@ namespace CMS21_Together_Server.Network
 				case "tools":
 					Logger.Info("Tools:");
 					foreach (string line in Data.Tools.ToolsStore.Describe())
+						Logger.Info($"  {line}");
+					break;
+
+				case "outdoor":
+					string outdoorArg = args.Length > 1 ? args[1].ToLower() : "";
+					Logger.Info("Outdoor:");
+					var outdoorLines = outdoorArg == "catalog" ? Data.Outdoor.CarCatalog.Describe()
+						: Enum.TryParse(outdoorArg, true, out CMS21_Together_Core.Data.Enum.GameScene outdoorScene) && CMS21_Together_Core.Data.Outdoor.OutdoorScenes.IsOutdoor(outdoorScene)
+							? Data.Outdoor.OutdoorInstances.DescribeScene(outdoorScene)
+							: Data.Outdoor.OutdoorInstances.Describe();
+					foreach (string line in outdoorLines)
 						Logger.Info($"  {line}");
 					break;
 

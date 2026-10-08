@@ -73,4 +73,5 @@ public class ServerInfoPacket : INetworkData
 	[OptionalField] public bool IsAdmin;
 	[OptionalField] public string LockScope;
 	[OptionalField] public int LockExpirySeconds;
+	[OptionalField] public List<Data.Enum.GameScene> SharedOutdoorScenes;
 }

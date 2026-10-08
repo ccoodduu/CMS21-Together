@@ -6,6 +6,7 @@ using CMS21_Together_Core.Network.Packets;
 using CMS21_Together_Server.Data;
 using CMS21_Together_Server.Data.Cars;
 using CMS21_Together_Server.Data.Economy;
+using CMS21_Together_Server.Data.Outdoor;
 using CMS21_Together_Server.Data.Placement;
 using CMS21_Together_Server.Log;
 
@@ -67,17 +68,20 @@ namespace CMS21_Together_Server.Network.Handlers
 			var world = GameDataManager.CurrentState.WorldState;
 			ParkRefusal refusal = ParkRefusal.None;
 			if (request.Price < 0 || request.Price > EconomyRules.MaxCarPurchasePrice) refusal = ParkRefusal.Invalid;
-			else if (request.Price > world.Money) refusal = ParkRefusal.NoMoney;
+			else refusal = OutdoorInstances.CheckCarPurchase(client, request);
+			if (refusal == ParkRefusal.None && request.Price > world.Money) refusal = ParkRefusal.NoMoney;
 			int slot = -1;
 			if (refusal == ParkRefusal.None && !ParkingService.TryAdd(request.Car, request.PreferredSlot, out slot)) refusal = ParkRefusal.ParkingFull;
 			if (refusal != ParkRefusal.None)
 			{
 				Logger.Info($"[Parking] Arrival of {request.Car.CarToLoad} from client {client} refused: {refusal}.");
+				OutdoorInstances.CarPurchaseRefused(client, request, refusal);
 				Reply(client, request, refusal);
 				return;
 			}
 
 			Logger.Info($"[Parking] {request.Car.CarToLoad} arrived in slot {slot} from client {client} for {request.Price}.");
+			OutdoorInstances.CarPurchaseAccepted(client, request);
 			ParkingService.BroadcastSlot(slot);
 			if (request.Price > 0)
 			{

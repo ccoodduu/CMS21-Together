@@ -65,6 +65,12 @@ namespace CMS21_Together_Server
 				return;
 			}
 
+			if (GetArgument(args, "--self-test") == "outdoor")
+			{
+				Environment.Exit(Data.Outdoor.OutdoorSelfTest.Run());
+				return;
+			}
+
 			if (Array.IndexOf(args, "--check-redaction") >= 0)
 			{
 				Environment.Exit(Data.Diagnostics.RedactionCheck.Run());
@@ -105,6 +111,8 @@ namespace CMS21_Together_Server
 			Data.Cars.CarAwayRegistry.Initialize();
 			Data.Cars.CarLocks.Initialize(Config.LockScope, Config.LockExpirySeconds);
 			Data.Tools.ToolsStore.Initialize();
+			Data.Outdoor.OutdoorInstances.Configure(Config.SharedOutdoorScenes, Config.CarSelector, Config.OutdoorRejoinGraceSeconds, Config.OutdoorFillAllSpawnPoints);
+			Data.Outdoor.OutdoorInstances.Initialize();
 			Network.Handlers.VisualHandlers.Initialize();
 			Network.Handlers.DriveHandlers.Initialize();
 			Logger.CurrentLogLevel = Config.LogLevel;

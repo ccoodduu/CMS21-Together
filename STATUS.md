@@ -2,6 +2,20 @@
 
 Newest first. One entry per work session.
 
+## 2026-10-08 (07:15–12:15) — row 15 merged, row 19 documents, 4-hour soak
+
+- `main`: row 15 shared outdoor scenes merged (`99f1888`; `outdoor-scale` passes on lane 3 after merging main in).
+  Row 19 `state-merges-and-contention` reviewed and merged as documents (`e04dde3`; questions in QUESTIONS.md).
+  Lane 3 waits for 36 GB commit / 12 GB RAM instead of 44/16 (`8bd718f`; headless games). ROADMAP rows 21
+  `ride-along`, 22 `coop-ping`, 23 `shared-shopping-list` (user wishes); no car collisions for now.
+- 4-hour soak on lane 3 (`tools/runs/20261008-075718_L3_soak`, seed 1008075710): **FAIL**. No errors or crashes,
+  bandwidth 3.1/1.0 kB/s per client, server CPU 2.8 %, late join 2.6 s. Failed: 9 of 24 checkpoints (mostly B, C, D
+  differ from A on cars), confirmed desyncs (`lift:0.state 1 vs 0` server OnFloor vs all clients Middle;
+  `s:N.unmounted`), 4 of 11 storms (K5, K2, K8 not settling within 90 s), server memory ×1.53, game memory 280 MB/h.
+  An agent analyses and fixes them on lane 2 (`fix/soak-2026-10-08`, `docs/soak/2026-10-08.md`); the lift
+  broadcast on `fix/lift-reset-broadcast` is not proven (its `lift-reset` scenario passes without it).
+- Row 18 `part-locks`: switch-over done on its branch; the rest of 5.1's proof and groups 6.2–9.2 run on lane 1.
+
 ## 2026-10-07 (22:00–23:45) — audit, row 19 drafted, harness input guard; paused for the night
 
 - `main` = `6dcd638`. Race and drift audit (`docs/audits/race-and-drift-audit.md`, 80 scenarios). Gap 5 fixed

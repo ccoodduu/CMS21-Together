@@ -3,6 +3,7 @@ using CMS21_Together_Core.Data;
 using CMS21_Together_Core.Data.Enum;
 using CMS21_Together_Core.Network;
 using CMS21_Together_Core.Network.Packets;
+using CMS21_Together_Server.Data.Outdoor;
 using CMS21_Together_Server.Data.Presence;
 using CMS21_Together_Server.Log;
 
@@ -19,11 +20,14 @@ namespace CMS21_Together_Server.Network.Handlers
 
 			packet.SenderId = (int)clientId;
 			record.LastMovement = packet;
-			if (packet.Scene != record.Scene || !GameSceneInfo.ShowsAvatars(packet.Scene)) return;
+			bool shared = OutdoorInstances.IsShared(packet.Scene);
+			if (packet.Scene != record.Scene || !GameSceneInfo.ShowsAvatars(packet.Scene, shared)) return;
+			if (shared && record.OutdoorInstanceId == 0) return;
 
 			foreach (var other in PresenceRegistry.All)
 			{
 				if (other.PlayerId == record.PlayerId || other.Scene != packet.Scene) continue;
+				if (shared && other.OutdoorInstanceId != record.OutdoorInstanceId) continue;
 				var client = Server.Clients[other.PlayerId];
 				if (client.IsConnected && client.SyncState != SyncState.Connected)
 					Server.SendToClient(packet, other.PlayerId, false);

@@ -3,6 +3,25 @@
 Open questions that block a decision. Each has the default we work with until answered.
 Answered ones move to the bottom with the answer.
 
+## Open — row 19 state-merges-and-contention (2026-10-08)
+
+Details in `openspec/changes/state-merges-and-contention/proposal.md` (reviewed, see `review.md`).
+
+1. **Stale examine or condition change:** merged when the player's view of the part still matches, otherwise dropped
+   and counted. **Default:** merge, drop only the stale parts.
+2. **One body panel is one detail entry** (paint, livery, tint, dust, wash together). **Default:** yes.
+3. **Parking** stores the server's own records after a drain of up to 1 s ("Try again in a moment."). **Default:** yes.
+4. **Split** into part 1 (state merges), part 2 (detection and soak contention), part 3 (server answers every
+   refusal, seats). **Default:** yes.
+5. **Order with row 18:** groups that change the same methods wait for row 18's merge. **Default:** yes.
+6. **Machine put of an item another player used** is refused with "<name> used this part."; items the server never
+   saw are accepted and logged. **Default:** yes.
+7. **New digest keys** only log at first; repair is turned on once the soak is quiet for that key. **Default:** yes.
+8. **Stall warning** goes to the server log and bug report only. **Default:** log only.
+9. **Contention** runs in the regular lane-3 soak (weight 15); open gaps are reported as "known gap". **Default:** yes.
+10. **Player messages:** "<name> used this part.", "<name> is sitting there.", "This order is no longer available.",
+    "Try again in a moment." **Default:** these texts.
+
 ## Open — row 18 part-locks (2026-10-07)
 
 Details and reasons in `openspec/changes/part-locks/proposal.md` (reviewed, see `review.md`).
@@ -98,6 +117,7 @@ draft works with:
 
 ## Answered
 
+- **Answered by the user on 2026-10-08:** no collisions between driven cars for now (row 17 part 2 keeps cars passing through each other); ride-along (row 21) is wanted. Ping (row 22) is wanted; a shared shopping list (row 23) is wanted; row 17 #8 (other car appears after ~10 s) is fine for now; no Unity project for playermodel.bundle (#3 stays the procedural pose); asking LvxMagick maybe later; the 1.0 release waits; task split in the job view, more orders for more players, gestures and an end-of-session scoreboard are not.
 - **Answered by the user on 2026-10-07 (late evening), row 19 ledger:** S1 (two players in one seat) is fixed in
   row 19 (server arbitrates, the second is refused and leaves the seat). For I3, I7, E4, M8, C4, J2, J4, J5 the
   server's choice stays, but every refused, ignored or overridden action must reach the acting client with the

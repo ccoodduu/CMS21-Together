@@ -112,9 +112,24 @@ public enum PacketTypes
 	CarDriveState,
 	CarDriveStop,
 
+	OutdoorCatalog,
+	OutdoorEnter,
+	OutdoorInstance,
+	OutdoorLootRecord,
+	OutdoorDigest,
+	LootTake,
+	LootPutBack,
+	LootUpdate,
+	LootTakeRefused,
+	OutdoorCarRemoved,
+	AuctionLotClaim,
+	AuctionBidState,
+	AuctionBidRequest,
+	AuctionLotClosed,
+
 	CarLockRequest,
 	CarLockResult,
 	CarLockUpdate,
 	CarLockRelease,
 	CarLockRenew
-}
+}
