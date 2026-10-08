@@ -372,6 +372,11 @@ the session, and the item from the unmount exists only on that client.
 
 ### 7. Digest blind spots and skip rules (finding 6, P7, P8, D2, I1, L8) — Medium-High
 
+**Fixed by row 19 part 2 (`state-merges-and-contention`, group 9):** digest keys `car-details:<loader>`,
+`workshop-tools`, `warehouse`, `garage` (skills, garage upgrades, barns) and `jobs`; "not ready" keeps a pending
+mismatch (expiry after four asks); the forced check asks every car and key; a stall warning
+(`desync_stall_seconds`); the soak checkpoint compares `carDetails`. Proof: `desync-autofix`, `desync-soak`.
+
 - **Fix:**
   - Change the car skip rule to "this client holds a claim or has an unconfirmed change on this car" (row 18 D6).
   - Keep a pending mismatch across "not ready" rounds instead of clearing it (`ReconciliationService.cs:94`).
@@ -443,6 +448,10 @@ the session, and the item from the unmount exists only on that client.
   `committed` entries of that loader (gap 5).
 
 ## Soak contention mode
+
+**Built by row 19 part 2 (`state-merges-and-contention` D13, `tools/test-env/SoakContention.ps1`):** the first-pass
+kinds, rules 8 (conservation) and 9 (outcome) — the soak's rule 7 is memory —, `soak-contention-known.txt`, and a
+replay that reports whether the server order was reproduced. Row 18's kinds (task 10.5) are not built yet.
 
 Today `soak.ps1` avoids contention on purpose:
 

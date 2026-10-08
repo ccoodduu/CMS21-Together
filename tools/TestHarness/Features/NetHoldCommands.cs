@@ -57,6 +57,7 @@ public static class NetHoldCommands
     private static object NetHold(string args)
     {
         string mode = (args ?? "").Trim();
+        if (mode == "status") return new { holding, stalling, heldIn = held.Count, heldOut = heldOutgoing.Count };
         if (mode == "on" || mode == "out")
         {
             holding = true;

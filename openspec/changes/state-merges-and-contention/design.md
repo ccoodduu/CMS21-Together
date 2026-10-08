@@ -507,6 +507,27 @@ merged): the kinds that prove row 18. Until a kind's fix is in, it is listed in 
 - **Rule 9 (as drafted: rule 8), outcome.** The kind's expected outcome. A kind listed in `scenarios/soak-contention-known.txt` (kind, gap
   id, the row that closes it) is reported as "known gap" and counted, not failed.
 
+*As built (tasks 10.1-10.3, 2026-10-08, `tools/test-env/SoakContention.ps1`, lane 2 runs):*
+- The group runner releases member i+1 when the server logged member i's first packet (for lifts and moves that is
+  row 18's lock request) or when the hold reaches 7 s: `net-hold out` also stops heartbeats, and a client the server
+  has not heard for 10 s is dropped (seen once, `20261008-213609_L2_soak`). A member verb that fails makes the group
+  "invalid" (not judged).
+- Settle compares the members' sections, the parts' `blocked` counters left out: `part-fast-mount` without an item
+  does not block on the actor what the receivers block (a harness verb artifact; checkpoints still compare them). The
+  soak's own part choice and the contention keys leave rims and tires out for the same reason.
+- Outcomes come from the server log where a client dump cannot tell: accepted mounts (`inventory … -1`), sales
+  (`[Shop] Sale of …`, a new log line), warehouse moves (`[Inventory] Warehouse move of …`, new), lift steps. A wheel
+  taken off the tire changer may come back as a new group or as its parts; the take check accepts either.
+- Kinds in `soak-contention-known.txt` stay out of the random draw unless `-ContentionIncludeKnown` or
+  `-ContentionKinds` names them: the state they leave behind fails later checkpoints. `Run-Soak.ps1` passes
+  `-Contention` unless `-NoContention`.
+- Replay reruns each group from its `contend-start` marker and logged steps and reports whether the server order was
+  the same (8 of 9 in `20261008-220620_L2_soak`, the replay of `20261008-215819_L2_soak`; in the ninth the lift had no
+  car in the replay, so no member sent anything: a replay repeats actions, not state).
+- `place-same` is a known gap (L4, see the known list). The harness dump's `cars[].index` was the index of
+  `GameScript.carOnScene`, not the loader id, whenever several cars were loaded; it is now the loader id (the soak's
+  part keys and these checks read the wrong car before).
+
 **The checkpoint gains:** the dump section `carDetails`; a forced digest round that expects every loader's `cars` and
 `car-details` and the D11 keys; **no silent stalls** under rule 2 (a key "not ready" at two checkpoints in a row);
 after row 18, `overlapViolations` 0.

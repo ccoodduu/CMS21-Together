@@ -74,6 +74,7 @@ namespace CMS21_Together_Server.Network.Handlers
                     state.InventoryState.InventoryItems.Remove(item);
                     InventoryChanges.NoteRemoved(item, (int)clientId);
                     state.WorldState.Money += price;
+                    Logger.Info($"[Shop] Sale of item {packet.ItemUID} from client {clientId}: sold for {price}.");
                     
                     Server.SendToClients(packet);
                     Server.SendToClients(state.WorldState);
@@ -87,10 +88,12 @@ namespace CMS21_Together_Server.Network.Handlers
                         state.InventoryState.InventoryGroupItems.Remove(groupItem);
                         InventoryChanges.NoteRemoved(groupItem, (int)clientId);
                         state.WorldState.Money += price;
+                        Logger.Info($"[Shop] Sale of group {packet.ItemUID} from client {clientId}: sold for {price}.");
                         
                         Server.SendToClients(packet);
                         Server.SendToClients(state.WorldState);
                     }
+                    else Logger.Info($"[Shop] Sale of {packet.ItemUID} from client {clientId}: not in the inventory ({InventoryChanges.DescribeRemover(packet.ItemUID)}), ignored.");
                 }
             }
             else if (packet.Action == ShopActionType.SellCondition)

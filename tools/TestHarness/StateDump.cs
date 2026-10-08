@@ -145,13 +145,13 @@ public static class StateDump
 
     private static object Cars()
     {
-        var game = GameScript.Get();
-        if (game == null || game.carOnScene == null) return null;
+        var places = CarLoaderPlaces.Get();
+        if (places == null) return null;
 
         var cars = new List<object>();
-        for (int i = 0; i < game.carOnScene.Length; i++)
+        for (int i = 0; i < places.GetCarLoadersCount(); i++)
         {
-            var loader = game.carOnScene[i];
+            var loader = places.GetCarLoaderByIndex(i);
             if (loader == null) continue;
             var sync = CarPartsSync.All.FirstOrDefault(s => s.Loader == i);
             var car = new Dictionary<string, object>

@@ -1,9 +1,8 @@
 # Tasks
 
 **Resume here (part 2, branch `change/state-merges-2`, worktree `CMS21-Together-wt/state-merges-2`):** parts 1 and 3
-are merged (`9ae63c7`). Group 9 is done (digests, reconciliation rules, and the stall warning of task 10.4). Group 10
-is in progress: the checkpoint, the contention mode and its first-pass kinds are written; the lane-3 runs of 10.1,
-10.3 and 11.1 are the user's (agents test on lane 2 only). User decision 2026-10-08: the base check keeps `Quality`.
+are merged (`9ae63c7`). Groups 9 and 10.1-10.4 are done on lane 2; the lane-3 runs of 10.1, 10.3 and 11.1 are the user's (agents test
+on lane 2 only). Open: task 10.5 (row 18's contention kinds), the lane-3 runs, task 11.2's ROADMAP line at merge. User decision 2026-10-08: the base check keeps `Quality`.
 
 **Row 19: the race and drift audit's gaps that row 18 does not close** (gaps 3, 6, 9, 10, the rest of 7, the soak
 contention mode, and the review ledger's P7, P11, I2, I5, M4, M5 and C2), plus the user's decision of 2026-10-07 on
@@ -221,17 +220,24 @@ the ledger's "accept" rows (S1 fixed; no silent drops for I3, I7, E4, M8, C4, J2
 
 ## 10. Soak contention (part 2)
 
-- [ ] 10.1 Checkpoint per D13: `carDetails` in `Get-SharedDumpSections`; `Invoke-ForcedDigestCheck` expects every
+- [x] 10.1 Checkpoint per D13: `carDetails` in `Get-SharedDumpSections`; `Invoke-ForcedDigestCheck` expects every
       loader's `cars` and `car-details` and the D11 keys; the "no silent stalls" check under rule 2. Done when `soak`
-      (10 min, lane 3, no `-Contention`) passes with the new checks.
-- [ ] 10.2 `-Contention`, `-ContentionWeight` and `-ContentionKinds` per D13: the group runner (`net-hold out` on every
+      (10 min, lane 3, no `-Contention`) passes with the new checks. Built and run on lane 2 with contention
+      (`20261008-215819_L2_soak`: every checkpoint equal and every key compared; rule 2 found one real drift, the
+      examined flags of a car unparked while the other player was away, see STATUS.md); the lane-3 run is the user's.
+- [x] 10.2 `-Contention`, `-ContentionWeight` and `-ContentionKinds` per D13: the group runner (`net-hold out` on every
       member, the verbs, release one at a time in a seeded order, member i+1 only after the server logged member i's
       packet), the observed server order in the `contend` marker, `{step:N:…}` templates for per-run values, the settle
       wait. Done when a 5-minute contention run replayed with `-Replay` reproduces the observed server order of every
-      `contend` marker.
-- [ ] 10.3 The first-pass kinds of D13, rule 7 (conservation), rule 8 (outcome) and `scenarios/soak-contention-known.txt`
+      `contend` marker. Done 2026-10-08: the replay `20261008-220620_L2_soak` of `20261008-215819_L2_soak` reproduced
+      8 of 9 groups; in the ninth (`lift-same`) the lift had no car in the replay and neither member sent anything.
+- [x] 10.3 The first-pass kinds of D13, rule 7 (conservation), rule 8 (outcome) and `scenarios/soak-contention-known.txt`
       (kind, gap id, closing row). Done when a 10-minute lane-3 run with `-Contention` fails no rule except as "known
       gap", and `-ContentionKinds machine-same-item` with the gap 9 fix reverted fails rule 7.
+      As built the rules are 8 (conservation) and 9 (outcome); the soak's rule 7 is memory. Done 2026-10-08 on lane 2:
+      `20261008-215819_L2_soak` 9 of 9 groups passed; with the gap 9 put check reverted every "mount first" group of
+      `-ContentionKinds machine-same-item` failed rule 8 (6 of 13, `20261008-221624_L2_soak`). Known gap: `place-same`
+      (L4). The lane-3 run is the user's.
 - [x] 10.4 (needs row 18 task 5.1) Stall warning per D12 with the server setting `desync_stall_seconds` (default 120).
       `desync-autofix` gains a step with `desync_stall_seconds = 20` and `digest-hold inventory notready` for 25 s: one
       warning in the server log and in `desync`, none after the hold ends. Done when `desync-autofix` passes. Done
