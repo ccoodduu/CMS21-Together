@@ -77,6 +77,8 @@ namespace CMS21_Together_Server.Network.Handlers
 				Logger.Info($"[Placement] Loader {request.CarLoaderID} moved {stored}->{request.ToPlace} by client {clientId}.");
 			}
 			Server.SendToClients(new CarPlaceChangedPacket { CarLoaderID = request.CarLoaderID, Place = request.ToPlace });
+			PlacementRules.OnCarArrived(request.ToPlace, request.CarLoaderID, request.ToLiftState);
+			if (other.HasValue) PlacementRules.OnCarArrived(stored, other.Value, request.FromLiftState);
 		}
 
 		private static bool BusyWithoutCarLock(int loader, int clientId, string what) =>

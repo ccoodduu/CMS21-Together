@@ -109,7 +109,9 @@ function Wait-HarnessDumpsAllEqual {
     foreach ($entry in @($differ | Select-Object -First 4)) {
         $name, $section = $entry -split '/', 2
         $left = $dumps[$first].$section | ConvertTo-Json -Depth 10 -Compress
+        if ($null -eq $left) { $left = "null" }
         $right = $dumps[$name].$section | ConvertTo-Json -Depth 10 -Compress
+        if ($null -eq $right) { $right = "null" }
         Write-Host "  $section $first`: $($left.Substring(0, [math]::Min(600, $left.Length)))"
         Write-Host "  $section $name`: $($right.Substring(0, [math]::Min(600, $right.Length)))"
     }

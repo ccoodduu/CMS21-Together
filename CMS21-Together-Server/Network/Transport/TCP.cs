@@ -12,7 +12,7 @@ namespace CMS21_Together_Server.Network.Transport
 		public TcpClient Socket;
         private readonly int id;
         private NetworkStream stream;
-        private Packet receivedData;
+        private PacketFramer receivedData;
         private byte[] receiveBuffer;
         
 
@@ -28,7 +28,7 @@ namespace CMS21_Together_Server.Network.Transport
             Socket.SendBufferSize = 4096;
 
             stream = Socket.GetStream();
-            receivedData = new Packet();
+            receivedData = new PacketFramer();
             receiveBuffer = new byte[4096];
 
             stream.BeginRead(receiveBuffer, 0, 4096, ReceiveCallback, null);
@@ -45,12 +45,9 @@ namespace CMS21_Together_Server.Network.Transport
                     return;
                 }
 
-                byte[] data = new byte[byteLength];
-                Array.Copy(receiveBuffer, data, byteLength);
+                if (!receivedData.Feed(receiveBuffer, byteLength, OnPacket))
+                    Logger.Warn($"[Network] Client {id}: a packet length of zero or less; dropped the buffered bytes.");
 
-                // Gestion de la fragmentation des paquets
-                receivedData.Reset(HandleData(data)); 
-                
                 stream.BeginRead(receiveBuffer, 0, 4096, ReceiveCallback, null);
             }
             catch (Exception)
@@ -59,51 +56,24 @@ namespace CMS21_Together_Server.Network.Transport
             }
         }
 
-        private bool HandleData(byte[] data)
+        private void OnPacket(byte[] packetBytes)
         {
-            int packetLength = 0;
-
-            receivedData.SetBytes(data);
-
-            if (receivedData.UnreadLength() >= 4)
+            using (Packet packet = new Packet(packetBytes))
             {
-                packetLength = receivedData.ReadInt();
-                if (packetLength <= 0) return true;
-            }
+                int packetId = packet.ReadInt();
+                TrafficCounters.CountReceived(id, packetId, PerfTransport.Tcp, packetBytes.Length + 4);
 
-            while (packetLength > 0 && packetLength <= receivedData.UnreadLength())
-            {
-                byte[] packetBytes = receivedData.ReadBytes(packetLength);
-                
-                using (Packet packet = new Packet(packetBytes))
+                try
                 {
-                    int packetId = packet.ReadInt();
-                    TrafficCounters.CountReceived(id, packetId, PerfTransport.Tcp, packetLength + 4);
-
-                    try 
-                    {
-                        
-                        object packetData = packet.Read<object>();
-                        Server.Dispatch(id, (PacketTypes)packetId, packetData);
-                    }
-                    catch (Exception ex)
-                    {
-                        Logger.Error($"Error packet {packetId}: {ex.Message}");
-                        Server.RefuseUnreadableConnect(id, (PacketTypes)packetId);
-                    }
+                    object packetData = packet.Read<object>();
+                    Server.Dispatch(id, (PacketTypes)packetId, packetData);
                 }
-
-                packetLength = 0;
-                if (receivedData.UnreadLength() >= 4)
+                catch (Exception ex)
                 {
-                    packetLength = receivedData.ReadInt();
-                    if (packetLength <= 0) return true;
+                    Logger.Error($"Error packet {packetId}: {ex.Message}");
+                    Server.RefuseUnreadableConnect(id, (PacketTypes)packetId);
                 }
             }
-
-            if (packetLength <= 1) return true;
-
-            return false;
         }
 
         public void SendData(Packet packet)

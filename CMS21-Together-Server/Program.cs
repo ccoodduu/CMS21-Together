@@ -59,6 +59,12 @@ namespace CMS21_Together_Server
 				return;
 			}
 
+			if (Array.IndexOf(args, "--check-framing") >= 0)
+			{
+				Environment.Exit(Network.Transport.FramingCheck.Run());
+				return;
+			}
+
 			if (Array.IndexOf(args, "--check-digest") >= 0)
 			{
 				Environment.Exit(Data.Reconciliation.DigestCheck.Run());
