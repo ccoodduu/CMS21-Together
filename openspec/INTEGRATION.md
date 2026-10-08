@@ -46,8 +46,13 @@ part 2. "Owner" defines it; "Users" only call or subscribe.
 | `CarDetailsUpdatePacket.WheelMask` (bit per wheel index, 0 = all) and `AlignmentMask` (`AlignmentFields`, `None` = all) (`[OptionalField]`) | both | 19 (part 1, D4/D5) | a details update carries only the changed entries |
 | `ToolSlotRejectedPacket.Item` (`SlotItemOutcome`: `Unchanged`, `Returned`, `Gone`; `[OptionalField]`) | S→the refused client | 19 (part 1, D9) | `Returned`: the server put the item back (and relayed its `Add`); `Gone`: another player used it ("<name> used this part.") |
 | `InventorySyncPacket.UidFloor` (`[OptionalField]`, last batch only) | S→the syncing client | 20 | the highest stored UID of that player's range (inventory, warehouse, machine slots, items in groups); `UidRange.Apply` continues after it (audit I6, `docs/design/race-hardening.md`) |
+| `CarLockKind.Tune`, `CarLockKind.BonusPart` (appended), `LockKeys.Bonus(slot)` = `x:<slot>`; `ToolSlotUpdatePacket.Created` (`[OptionalField]`); `ModCarDetails.BonusSlots` (`ModBonusSlot` per slot, replaces the never-written `BonusParts`), detail entries `x:<slot>` | both | 25 (drafted) | 18 (lock rules), 4/19 (per-entry details), 5a (created engine on the stand) |
+| `OutdoorScenes.All` + `Salon` (no new packet; row 15's outdoor packets carry the salon) | — | 26 (drafted) | 15 |
+| `CarAwayKind.RaceTrack`, `CarAwayKind.SpeedTrack` (appended); `RideUpdate.Scene` (`[OptionalField]`); `TrackRecord { Scene, LapMs }` → `TrackRecordUpdate { Scene, PlayerId, LapMs, IsGroupRecord }` | both | 27 (drafted) | 13, 17 part 2, 21 (track set instead of the test track only) |
+| `GarageLookUpdate`, `GarageLookClaim` → `GarageLookClaimResult`; `GarageState.Look` (`ModGarageLook`, `[OptionalField]`) | both | 28 (drafted) | 14/19 (`garage` digest includes the look) |
+| `JobStatsReport { JobId, Stats }` (finisher → S), `JobStatsAward { JobId, Stats }` (S → contributors); active job `Contributors` (`[OptionalField]`) | both | 30 (drafted) | 3 (`JobEndContext`, `JobsService`), 18, 19 part 1 (sources of contributions) |
 
-Rows 12 and 14a add no packets.
+Rows 12 and 14a add no packets; row 29 (`seated-avatars`, drafted) adds none either.
 
 ## `DisconnectReason` (Core `StartPackets.cs`, append-only like `PacketTypes`)
 
