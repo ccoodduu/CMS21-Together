@@ -15,7 +15,8 @@ public class ModGameState
 	public PlacementState PlacementState = new PlacementState();
 	public JobsState JobsState = new JobsState();
 	public ToolsState ToolsState = new ToolsState();
-	
+	public ShopListState ShopListState = new ShopListState();
+
 	public Dictionary<string, PlayerRecord> PlayerRecords = new Dictionary<string, PlayerRecord>();
 
 	[NonSerialized] public PlayerState PlayerState = new PlayerState();

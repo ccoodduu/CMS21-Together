@@ -113,6 +113,7 @@ namespace CMS21Together
 			if (Client.Instance.IsConnectionValid) Logic.Car.Locks.LockLifecycle.Update();
 			if (Client.Instance.IsConnectionValid) Logic.Car.Locks.LockPrefetch.Update();
 			if (Client.Instance.IsConnectionValid) Logic.Car.Away.PathTestSync.Update();
+			if (Client.Instance.IsConnectionValid) Logic.ShopList.ShopListSync.Update();
 			if (Client.Instance.IsConnectionValid) Logic.Visuals.ActivityCapture.Update();
 			if (Client.Instance.IsConnectionValid) Logic.Pings.CoopPings.Update();
 			Logic.Pings.PingMarkers.Update();
