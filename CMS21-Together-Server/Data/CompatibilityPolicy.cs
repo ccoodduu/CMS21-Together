@@ -73,7 +73,7 @@ namespace CMS21_Together_Server.Data
 				findings.Add(finding);
 			}
 
-			if (packet.modVersion != Program.MOD_VERSION)
+			if (!ModVersions.Compatible(packet.modVersion, Program.MOD_VERSION))
 				Fail(DisconnectReason.VersionMismatch, $"This server runs Together {Program.MOD_VERSION}; you have {packet.modVersion}.");
 			else if (packet.protocolHash != ProtocolHash.Value)
 				Fail(DisconnectReason.VersionMismatch,

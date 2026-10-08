@@ -79,7 +79,7 @@ public static class RemoteEngines
 		foreach (int id in engines.Keys.ToList()) Remove(id);
 	}
 
-	private static RemoteEngine Create(CarLoader carLoader, int playerId, int carLoaderId)
+	public static RemoteEngine Create(CarLoader carLoader, int playerId, int carLoaderId)
 	{
 		var engineObject = carLoader.GetEngine();
 		string soundName = engineObject == null ? null : carLoader.GetEngineSound();

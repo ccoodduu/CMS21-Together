@@ -70,6 +70,7 @@ public static class StateDump
         dump["toolPositions"] = Features.ToolsCommands.Positions();
         dump["toolActionsSeen"] = Features.ToolsCommands.ActionsSeen();
         dump["visuals"] = Features.VisualCommands.Dump();
+        dump["remoteCars"] = Features.DriveCommands.Dump();
         dump["lifterButtonsEnabled"] = Features.ToolsCommands.LifterButtons();
         dump["players"] = PresenceManager.Roster.Where(p => p.Value.HasAvatar).ToDictionary(
             p => p.Key.ToString(),
@@ -182,7 +183,7 @@ public static class StateDump
                 car["subParts"] = sub.OrderBy(s => s.Key, StringComparer.Ordinal).Select(s => new
                 {
                     key = s.Key,
-                    id = s.PartId,
+                    id = s.EffectiveId,
                     unmounted = s.Unmounted,
                     condition = Round(s.Condition),
                     quality = s.Quality,

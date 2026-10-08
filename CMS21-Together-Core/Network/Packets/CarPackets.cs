@@ -16,6 +16,8 @@ namespace CMS21_Together_Core.Network.Packets
         public static string Body(int index) => $"b:{index}";
 
         public static string Sub(int[] partIndexPath) => $"s:{CarSubPartIdentity.BuildKey(partIndexPath)}";
+
+        public static string EffectiveId(string partId, string tunedId) => string.IsNullOrEmpty(tunedId) ? partId ?? "" : tunedId;
     }
 
     [Serializable]
@@ -123,6 +125,9 @@ namespace CMS21_Together_Core.Network.Packets
 
         [Newtonsoft.Json.JsonIgnore]
         public string Key => PartKeys.Sub(PartIndexPath);
+
+        [Newtonsoft.Json.JsonIgnore]
+        public string EffectiveId => PartKeys.EffectiveId(PartId, TunedID);
     }
 
     [Serializable]

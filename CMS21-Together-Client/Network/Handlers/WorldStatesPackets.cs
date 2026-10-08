@@ -52,8 +52,13 @@ public static class WorldStatesPackets
 		int levelDifference = GlobalData.RealPlayerLevel - currentPlatformLevel;
 		Singleton<GameManager>.Instance.PlatformManager.IncrementStat("stat_level", levelDifference);
 
-		UIManager.Get().RefreshAllStats();
-		UIManager.Get().RefreshStatsUICoroutine(StatType.Scraps, false);
+		// UIManager is part of the scene, so it is gone while a scene loads (a resync).
+		var ui = UIManager.Get();
+		if (ui != null)
+		{
+			ui.RefreshAllStats();
+			ui.RefreshStatsUICoroutine(StatType.Scraps, false);
+		}
 		ClientData.IsWorldStateSynced = true;
 		SyncTracker.Applied(SyncOrder.WorldKey, SyncTracker.ReceivingSnapshotId);
 	}

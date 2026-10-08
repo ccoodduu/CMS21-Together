@@ -19,7 +19,14 @@ namespace CMS21_Together_Server.Network.Handlers
 			var entry = CarPartsStore.Get(change.CarLoaderID);
 			if (entry == null || entry.SpawnSeq != change.SpawnSeq || !entry.HasBaseline)
 			{
-				Logger.Debug($"[Cars] Change {change.TxId} from client {clientId} for loader {change.CarLoaderID} dropped (no car or baseline for SpawnSeq {change.SpawnSeq}).");
+				var gone = new CarPartsChangeResultPacket
+				{
+					CarLoaderID = change.CarLoaderID, SpawnSeq = change.SpawnSeq, TxId = change.TxId,
+					Accepted = false, Reason = "the car is gone", Revision = entry?.Revision ?? 0
+				};
+				gone.RestoreUids.AddRange(InventoryChanges.StillHeld(change.InventoryDelta));
+				Server.SendToClient(gone, (int)clientId);
+				Logger.Info($"[Cars] Change {change.TxId} from client {clientId} for loader {change.CarLoaderID} rejected: no car or baseline for SpawnSeq {change.SpawnSeq}.");
 				return;
 			}
 
@@ -37,7 +44,7 @@ namespace CMS21_Together_Server.Network.Handlers
 					if (entry.BodyParts.TryGetValue(record.PartIndex, out var stored)) reject.BodyParts.Add(stored);
 				foreach (var record in change.SubParts)
 					if (entry.SubParts.TryGetValue(CarSubPartIdentity.BuildKey(record.PartIndexPath), out var stored)) reject.SubParts.Add(stored);
-				reject.RestoreUids.AddRange(change.InventoryDelta.RemovedItemUids.Concat(change.InventoryDelta.RemovedGroupUids));
+				reject.RestoreUids.AddRange(InventoryChanges.StillHeld(change.InventoryDelta));
 				Server.SendToClient(reject, (int)clientId);
 				Logger.Info($"[Cars] Change {change.TxId} from client {clientId} on loader {change.CarLoaderID} rejected: {conflict}");
 				return;

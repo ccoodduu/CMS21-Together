@@ -65,7 +65,7 @@ public static class DigestMappers
 		foreach (var record in sub)
 		{
 			string id = record.Key;
-			projection.Add(id, "unmounted", record.Unmounted).Add(id, "tunedId", record.TunedID).Add(id, "condition", record.Condition)
+			projection.Add(id, "unmounted", record.Unmounted).Add(id, "partId", record.EffectiveId).Add(id, "condition", record.Condition)
 				.Add(id, "quality", record.Quality).Add(id, "examined", record.IsExamined);
 		}
 		return projection;

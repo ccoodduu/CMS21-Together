@@ -87,7 +87,8 @@ public static class PacketRouter
 			}
 			catch (Exception ex)
 			{
-				Log.Error($"[PacketRouter] Error in handler {id}: {ex.InnerException?.Message}");
+				var cause = ex.InnerException ?? ex;
+				Log.Error($"[PacketRouter] Error in handler {id}: {cause.Message}\n{cause.StackTrace}");
 			}
 		}
 	}

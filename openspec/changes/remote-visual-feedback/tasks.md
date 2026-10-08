@@ -142,30 +142,30 @@ same commit. Every scenario carries `# areas:` (new areas `visuals`, `driving`, 
 
 ## 8. Spikes: driving (part 2)
 
-- [ ] 8.1 Static decompile of the `car_drive` pie lambda (`PieMenuController.<GetOnClick>b__72_N`), what it starts
+- [x] 8.1 **Done (2026-10-07):** `car_drive` = `WindowManager.Show(Map)` + `CloseAnim()`, confirmed in `drive-probe` (mode, scene and every car place unchanged); only the track managers set `CarDrive`: **garage driving no-go**, group 11 parked, QUESTIONS.md row 17 #7 (docs/spikes/remote-visuals.md "Part 2", design D10/D11). Static decompile of the `car_drive` pie lambda (`PieMenuController.<GetOnClick>b__72_N`), what it starts
       (scene change, free drive in the garage scene, `ParkingSpace.DriveIn/DriveOut`), which game modes it sets, where the
       car ends and whether `CarLoaderPlaces` or the lifts change; add a `drive-trace on|off|report` verb (logging only)
       and confirm in a game run with the guard on `Off` (single client is enough). Done when docs/spikes/remote-visuals.md
       has the flow, and design.md D10 says "garage driving: go" (with the end-placement rule) or "no-go" (group 11
       parked, entry stays `Planned`, recorded in QUESTIONS.md).
-- [ ] 8.2 Second car on the test track: in the track scene, clone the track's `CarLoader`, load a parked car's
+- [x] 8.2 **Done (2026-10-07):** clone route works (also `new`, `base`); 0.4 s for own data, 6.5-9 s for another player's car (frames < 0.2 s), memory within noise; building in the frame the own car became driveable froze B > 10 s, so builds wait 3 s after the own car is driveable and run one at a time (design "Spike results", "Measurements"). Second car on the test track: in the track scene, clone the track's `CarLoader`, load a parked car's
       `NewCarData` blob with `LoadCarFromFile`, make it inert (kinematic, colliders off, `PartScript` and interactive
       objects disabled, no `PrepareCarPhysics`); measure load time and memory; try the base-model fallback. Done when
       D10 records which route works and its cost.
-- [ ] 8.3 Drive state sources on VPP: where steer, wheel angular speed, gear, rpm, brake and lights are read on the
+- [x] 8.3 **Done (2026-10-07):** fields confirmed (36 bytes); the car hangs under `VPP BluePrint/Model/model(Clone)` on the track (loader root gone), the stream sends that pose; reverse from the velocity. Drive state sources on VPP: where steer, wheel angular speed, gear, rpm, brake and lights are read on the
       driver (`VPVehicleController` data channels, `BaseCarPhysics.res`, `rigidBody`), and how the observer turns wheels
       on an inert car (wheel transforms under the car root). Done when D9's field list is confirmed.
-- [ ] 8.4 Two players at the test track with two different cars at once (row 13 claims both): both drive, return and
+- [x] 8.4 **Done (2026-10-07):** `drive-track`: both claims granted and held at once, both results applied, `cars`/`away` equal. Two players at the test track with two different cars at once (row 13 claims both): both drive, return and
       their results apply. Done when a scratch run shows both away claims granted and released and `cars` equal after the
       return; a failure goes to row 13's code first.
 
 ## 9. Core and server: driving
 
-- [ ] 9.1 Core `Network/Packets/DrivePackets.cs`: `CarDriveStartPacket`, `CarDriveStatePacket { DriveId, Seq, Payload }`,
+- [x] 9.1 **Done (2026-10-07):** `drive-codec-check` passes (rotation ≤ 0.06°, velocity ≤ 0.01 m/s, steer ≤ 0.25°); no `CarAwayKind.Driving` (8.1 no-go). Core `Network/Packets/DrivePackets.cs`: `CarDriveStartPacket`, `CarDriveStatePacket { DriveId, Seq, Payload }`,
       `CarDriveStopPacket`, `DriveStateCodec` (40-byte layout of D9); append the three to `PacketTypes`; append
       `CarAwayKind.Driving` if 8.1 says go. Done when the solution builds and a harness `drive-codec-check` (encode and
       decode 1000 random states, errors within the quantization) passes.
-- [ ] 9.2 Server `Network/Handlers/DriveHandlers.cs` + `Data/Presence/ActiveDrives.cs` per D9: store start and latest
+- [x] 9.2 **Done (2026-10-07):** server logs start, relay, the running drive sent on scene entry, and the stop on the driver's leave (`drive-track`, `drive-latejoin`); only the test track scene is accepted. Server `Network/Handlers/DriveHandlers.cs` + `Data/Presence/ActiveDrives.cs` per D9: store start and latest
       state per driver, relay to the driver's scene (state unreliable), require the `Driving` away claim for a garage
       drive, send active drives to a client when its presence scene becomes that scene, send `CarDriveStop` and clear on
       the driver's scene change and leave; cap state at 20 per second per client. Done when a two-client scratch run logs
@@ -173,13 +173,13 @@ same commit. Every scenario carries `# areas:` (new areas `visuals`, `driving`, 
 
 ## 10. Test track driving
 
-- [ ] 10.1 `Logic/Driving/DriveCapture.cs` on the test track: start when `GameMode.CarDrive` is set by
+- [x] 10.1 **Done (2026-10-07):** streams at 15 Hz, 3 Hz while parked. `Logic/Driving/DriveCapture.cs` on the test track: start when `GameMode.CarDrive` is set by
       `TestTrackManager` (send `CarDriveStart` with the blob from `NewCarDataCodec`), stream at 15 Hz, stop on
       `ClientScene.LeavingScene`. Done when the client builds.
-- [ ] 10.2 `Logic/Driving/RemoteCars.cs` + `DriveInterpolator.cs` per D9/D10: build the observer car (route from 8.2),
+- [x] 10.2 **Done (2026-10-07):** positions set in `OnLateUpdate`; 0 snaps in every run. `Logic/Driving/RemoteCars.cs` + `DriveInterpolator.cs` per D9/D10: build the observer car (route from 8.2),
       100 ms buffer, Hermite, 250 ms extrapolation, 5 m snap, wheels, engine sound through `RemoteEngines` from the
       stream's rpm; destroy on stop, leave and scene change. Done when the client builds.
-- [ ] 10.3 Harness `Features/DriveCommands.cs`: `drive-start`, `drive-input <throttle> <steer> <seconds>`, `drive-stop`,
+- [x] 10.3 **Done (2026-10-07):** `drive-track` passes (`20261007-210258_L1_drive-track`): follow error ≤ 0.03 m at B's render time, rest 0 m, B drives its own car, A's car gone when A leaves. Harness `Features/DriveCommands.cs`: `drive-start`, `drive-input <throttle> <steer> <seconds>`, `drive-stop`,
       dump section `remoteCars`. `scenarios/drive-track.ps1` (`# areas: driving, testdrive`): cars on loaders 0 and 1, A
       and B each take theirs to the test track; A `drive-input 0.6 0 5` then `0.4 0.5 3` → B's `remoteCars` shows A's car
       (`mode` `ghost` or `ghost=base`, `collidersOff`, `kinematic`), its position within 1.5 m of A's sampled position
@@ -188,6 +188,8 @@ same commit. Every scenario carries `# areas:` (new areas `visuals`, `driving`, 
       Done when it passes.
 
 ## 11. Garage-area driving (only if 8.1 says go)
+
+**Parked (2026-10-07):** spike 8.1 says no-go (no driving inside the garage); recorded in QUESTIONS.md row 17 #7.
 
 - [ ] 11.1 `CarAwayKind.Driving` claim on `car_drive` (row 13's `CarAwaySync.Request` before the drive starts, the
       guard's message on refusal), released at the end and on leave. Done when a second player is refused a part edit on
@@ -202,11 +204,11 @@ same commit. Every scenario carries `# areas:` (new areas `visuals`, `driving`, 
 
 ## 12. Driving: late join, budget and verification
 
-- [ ] 12.1 `scenarios/drive-latejoin.ps1` (`# areas: driving, testdrive, presence`): A drives on the test track; B
+- [ ] 12.1 **Partly (2026-10-07):** `drive-latejoin` passes (`20261007-210430_L1_drive-latejoin`; travel mid-drive and after a reconnect, no replay, 0.3-0.4 s behind A), but the car shows 9.7 s after the drive reaches B, not 2 s (QUESTIONS.md row 17 #8). `scenarios/drive-latejoin.ps1` (`# areas: driving, testdrive, presence`): A drives on the test track; B
       travels there mid-drive → B's car for A appears within 2 s at A's current position (no replay of the path); B
       disconnects and reconnects while A still drives (garage drive if group 11 is in) → the same. Done when it passes.
-- [ ] 12.2 Budget: `drive-track` reads server `perf top` for `CarDriveState` (≤ 4 kB/s per driver upload) and
+- [x] 12.2 **Done (2026-10-07):** `CarDriveState` 276 B, 4.1 kB/s per moving driver (3 % over 4 kB/s, under twice D8), `CarDriveStart` 15.6 kB; design "Measurements". Budget: `drive-track` reads server `perf top` for `CarDriveState` (≤ 4 kB/s per driver upload) and
       `CarDriveStart` size; numbers into design.md "Measurements" (over twice D8 → QUESTIONS.md). Done when recorded.
-- [ ] 12.3 Two-instance verification: `drive-track`, `drive-latejoin` (and `drive-garage`) pass with A and B, plus the
+- [ ] 12.3 **Partly (2026-10-07):** `drive-track`, `drive-latejoin` and the smoke set pass (regression `20261007-205411`; `guard` failed once in the batch on "Inventory did not open after the blocked mode change" and passed alone); README "Playing together" and INTEGRATION.md updated. The `testdrive`, `placement` and `guard` areas were not run (test policy: proving scenarios + smoke). Not merged. Two-instance verification: `drive-track`, `drive-latejoin` (and `drive-garage`) pass with A and B, plus the
       `driving`, `testdrive`, `placement` and `guard` areas and the smoke set; INTEGRATION.md and README updated (who sees
       a driven car, no collisions); run ids in STATUS. Done when all are green and part 2 is merged.

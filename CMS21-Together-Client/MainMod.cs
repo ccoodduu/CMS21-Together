@@ -111,6 +111,7 @@ namespace CMS21Together
 			if (Client.Instance.IsConnectionValid) Logic.Car.Away.PathTestSync.Update();
 			if (Client.Instance.IsConnectionValid) Logic.Visuals.ActivityCapture.Update();
 			Logic.Visuals.VisualScope.Update();
+			Logic.Driving.DriveCapture.Update();
 			ConnectionStatus.Update();
 			ServerWatchdog.Update();
 			LocalServerHost.Update();
@@ -126,7 +127,10 @@ namespace CMS21Together
 			ThreadManager.UpdateThread();
 		}
 
-		public override void OnLateUpdate() { }
+		public override void OnLateUpdate()
+		{
+			if (isModInitialized) Logic.Driving.RemoteCars.Update();
+		}
 
 		public override void OnGUI()
 		{
@@ -154,6 +158,8 @@ namespace CMS21Together
 			Logic.Visuals.BoltReplay.Initialize();
 			Logic.Visuals.ActivityCapture.Initialize();
 			Logic.Visuals.RemoteActivity.Initialize();
+			Logic.Driving.DriveCapture.Initialize();
+			Logic.Driving.RemoteCars.Initialize();
 		}
 
 		public override void OnApplicationQuit()

@@ -108,6 +108,9 @@ public enum PacketTypes
 	BugReportCollect,
 	BugReportResult,
 	PlayerActivity,
+	CarDriveStart,
+	CarDriveState,
+	CarDriveStop,
 
 	OutdoorCatalog,
 	OutdoorEnter,
@@ -124,4 +127,3 @@ public enum PacketTypes
 	AuctionBidRequest,
 	AuctionLotClosed
 }
-

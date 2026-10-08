@@ -3,19 +3,42 @@
 Open questions that block a decision. Each has the default we work with until answered.
 Answered ones move to the bottom with the answer.
 
+## Open — row 18 part-locks (2026-10-07)
+
+Details and reasons in `openspec/changes/part-locks/proposal.md` (reviewed, see `review.md`).
+
+1. **Sibling parts** (two caps on one crankshaft) can be worked on at the same time. **Default:** yes.
+2. **Idle holder:** the holder's own game cancels after 60 s in the item chooser without a choice, or 5 min in the
+   bolt view without progress. **Default:** yes; the server expiry only covers crashes.
+3. **Engine-stand parts** stay on today's path. **Default:** yes, follow-up if the next playtest shows races.
+4. **Welder, paint, wash, detailing** take no lock. **Default:** no lock.
+5. **Hover look** of a part in use: no highlight plus the label. **Default:** that.
+6. **Message** for a connected part: "<name> is working on the <part name>". **Default:** that.
+7. **Split:** this change ships the locks, the click-time refusal and the hover label; mount-mode previews, item
+   chooser filtering and pie greying move to `part-locks-2` (clicks there are still refused). **Default:** split.
+
 ## Playtest findings (2026-10-07)
 
 Not questions for the user; open bugs from the first playtest, fixed one by one.
 
 1. **Ghost stuck when the lift moves (row 17):** a remote mount's ghost stayed at its world position after the lift
-   moved, and the real caliper stayed hidden (`forceRenderingOff`) until the scene was reloaded.
+   moved, and the real caliper stayed hidden (`forceRenderingOff`) until the scene was reloaded. Not reproduced by `visual-lift` (fast mount and unscrew while the lift moves, held ghost: no ghost or hidden renderer left, 2026-10-07); the playtest mount ran with bolts. Row 18 `part-locks` D7 (no lift or move while another player holds a lock on the car) removes the situation.
 2. **Server keeps running** after the host returned to the main menu (the user typed `/exit`). By design (session-hosting spec: leaving keeps hosting; Stop on the Host tab or quitting the game stops it); my advice to "go to the main menu" was wrong. Idea: a main-menu notice "your server is still running".
 3. **Persistent car desync** on wheels: `s:3.22.4.tunedId` empty on the host vs `tire_sport` on the server.
+   **Fixed** (`c369763`): the game writes a tire's tuned id as empty or equal to its id, and TunePart also changes a
+   rim's or tire's id; digests and the apply now compare the effective id, and the car-details wheel apply keeps the
+   rim and tire ids. `car-wheel-swap` (own wheel, then a new rim and tire type) proves it.
 4. **Rollback after a rejected mount** (same item taken by both players) left the loser's inventory out of sync
-   until F7.
-5. **F7 on a friend's client** logs `Error in handler WorldState: Object reference not set`.
-6. **Car state "not ready"** in the host's bug report while the car was being worked on (`be9b`).
-7. **Version check too strict for a playtest:** every commit changes `dev.N`, so friends must reinstall for
+   until F7. **Fixed** (`f9557c0`): the rejection gave the loser back the item the other player had mounted; it now
+   restores only items the server still has. `car-mount-race` proves it.
+5. **F7 on a friend's client** logs `Error in handler WorldState: Object reference not set`. **Fixed** (`c81fd05`):
+   UIManager is missing while the garage reloads; the refresh is skipped then. `resync-key` sends money changes
+   during the reload.
+6. **Car state "not ready"** in the host's bug report while the car was being worked on (`be9b`). **Expected:** the
+   car digest is left out while any claim, open transaction or unsent change exists on the car (`ClientDigests.Car`),
+   which is almost always the case during shared work. Row 18 (locks) should keep car digests running while locks
+   are held. **Expected:** the car digest is left out while any claim, open transaction or unsent change exists on the car (`ClientDigests.Car`), which is almost always during shared work. Row 18 (locks) should keep digests running with locks held.
+7. **Version check too strict for a playtest:** **Fixed** (this commit: same version and build kind, e.g. `dev.892` and `dev.894`, join when the protocol hash matches; releases must match exactly; `compat-refusal` proves both).   every commit changes `dev.N`, so friends must reinstall for
    server-only fixes. Proposal: compare the base version and the protocol hash, not the build number.
 
 ## Open — row 17 remote visual feedback (2026-10-07)
@@ -29,6 +52,15 @@ Not questions for the user; open bugs from the first playtest, fixed one by one.
 4. **Remote visuals** (parts moving, bolts turning) on by default, with a local off switch. **Default:** yes.
 5. **Driving** as part 2 of this change (merged separately) or a change of its own. **Default:** part 2.
 6. **A garage drive** that ends somewhere other than a car place. **Default:** the car goes back to its place.
+   *Moot since spike 8.1: the game has no driving inside the garage.*
+7. **The pie option "Drive" (`car_drive`)** only opens the map (spike 8.1, 2026-10-07); there is no driving inside
+   the garage, so garage driving (group 11) is dropped. Allow the option in multiplayer as a map shortcut? A test
+   track trip from that map goes through row 13's claim as usual. **Default:** it stays blocked (`Planned`) until
+   you say yes.
+8. **Another player's car on the test track appears after about 10 s** (7 s when you are already there), not the
+   2 s the spec asks: loading another car takes about 6.5 s, and it waits 3 s after your own car is ready (starting
+   earlier froze the game). **Default:** accept it for 1.1; a faster way (keeping the copy between drives, loading it
+   before you arrive) would be a follow-up.
 
 ## Accepted defaults (user, 2026-10-06)
 
@@ -66,6 +98,14 @@ draft works with:
 
 ## Answered
 
+- **Answered by the user on 2026-10-07 (late evening), row 19 ledger:** S1 (two players in one seat) is fixed in
+  row 19 (server arbitrates, the second is refused and leaves the seat). For I3, I7, E4, M8, C4, J2, J4, J5 the
+  server's choice stays, but every refused, ignored or overridden action must reach the acting client with the
+  authoritative result, so the client whose action was cancelled rolls back and never stays out of sync (no silent
+  drops). The race and drift audit's rows are all either covered by rows 18/19, a later hardening change (I6, E5,
+  C1, C5) or this rule.
+- **Answered by the user on 2026-10-07 (evening):** an agent reviews every complicated OpenSpec change before it is
+  implemented; races between players get a soak contention mode after row 18.
 - **Answered by the user on 2026-10-07 (afternoon):** release questions 1–4 take the defaults (no tags for past milestones; 0.6.0 → 1.0.0 in the release commit; bug reports as GitHub issues on the fork; the new README). The Steam playtest will probably be after the autumn holiday. Mod lists: only the user's own install for now (the friends just bought the game). No need to open row 11's proposal/design. Row 11: budgets and headless C/D take the defaults; the 4-hour soak runs on 2026-10-08 while the user is at school (start after 08:00 once the PC is idle; the PC and this Claude Code session must be running).
 - **Two lanes and the memory guard (2026-10-06, 23:55):** (b). The user wants parallel lanes again; `CLAUDE_CODE_DISABLE_BG_SHELL_PRESSURE_REAP=1` is in `~/.claude/settings.json` (works after a restart of Claude Code). The second lane only starts with at least 10 GB free RAM. Also: test less (full regression only for client/server changes) and reuse the running games across scenarios (batch mode).
 Answered by the user on 2026-10-06 ("4. server rule, andre questions default"):

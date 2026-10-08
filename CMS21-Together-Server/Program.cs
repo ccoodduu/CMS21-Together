@@ -107,6 +107,7 @@ namespace CMS21_Together_Server
 			Data.Outdoor.OutdoorInstances.Configure(Config.SharedOutdoorScenes, Config.CarSelector, Config.OutdoorRejoinGraceSeconds, Config.OutdoorFillAllSpawnPoints);
 			Data.Outdoor.OutdoorInstances.Initialize();
 			Network.Handlers.VisualHandlers.Initialize();
+			Network.Handlers.DriveHandlers.Initialize();
 			Logger.CurrentLogLevel = Config.LogLevel;
 			Logger.Info($"Log Level set to: {Logger.CurrentLogLevel}");
 			
