@@ -2,6 +2,21 @@
 
 Newest first. One entry per work session.
 
+## 2026-10-08 (15:00–17:30) — row 19 part 3, ride-along, freeze fix; playtest build dev.1049
+
+- `main` = `9ac5e12`. Row 19 part 3 merged (`2a066ca`): every refused/ignored/overridden server action answers the
+  acting client (D16 table), seats are arbitrated (`SeatRefused`). Row 21 `ride-along` merged (`7e44859`): a seated
+  passenger travels along on a test drive; observer cars no longer face backwards. The Drive pie option opens the
+  map (`e3397a9`). The test path is single-player and refused while another player sits in the car (`e89c962`).
+  A blocked dyno start no longer sends a claim (`9ac5e12`).
+- Freeze fix (`fix: merge the observer-car freeze fix`): building another player's car copy froze the game 6–8 s
+  (its live colliders hit the driver's wheel physics) and could time the player out; now 0.5 s, no frame over
+  0.13 s; frame times use the real clock. drive-track and ride-along check it.
+- Regression: 76 passed on the pinned worktree; bug-report was a test bug (scenario helpers now record "FAIL: …").
+- Decisions: test path stays single-player; LvxBetterCarSpawns selector dropped (mod hidden for permission issues);
+  our selector limits DLC cars to the shared DLC.
+- Playtest build `0.6.0-dev.1049` with checklist on the Desktop.
+
 ## 2026-10-08 (15:10–16:10) — row 21 ride-along (test track) ready for merge
 
 - `feat/ride-along` (lane 1): spike `docs/spikes/ride-along.md` (runs `20261008-151452`/`-151836_L1_ride-probe`),
