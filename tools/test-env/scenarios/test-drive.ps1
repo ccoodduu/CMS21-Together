@@ -96,13 +96,13 @@ $differ = Compare-HarnessDumps -Left (Send-HarnessCommand -Instance $a -Verb dum
 Check ($differ.Count -eq 0) "A and B have the same cars and away sections (differ: $($differ -join ', '))"
 
 # Refused departure: B holds a part claim.
-Send-HarnessCommand -Instance $b -Verb part-claim -Arguments "0 $($repair.key)" | Out-Null
+Send-HarnessCommand -Instance $b -Verb lock-take -Arguments "0 unmount $($repair.key) bare" | Out-Null
 Start-Sleep -Seconds 1
 Send-HarnessCommand -Instance $a -Verb testdrive-go -Arguments "0" | Out-Null
 Start-Sleep -Seconds 8
 $status = Get-HarnessStatus -Instance $a
 Check ($status.scene -eq "garage" -and $status.playable) "A stays in the garage while B works on the car ($($status.scene))"
-Send-HarnessCommand -Instance $b -Verb part-claim -Arguments "0 $($repair.key) release" | Out-Null
+Send-HarnessCommand -Instance $b -Verb lock-take -Arguments "0 unmount $($repair.key) release" | Out-Null
 Start-Sleep -Seconds 1
 
 # Aborted drive: 1500 m.

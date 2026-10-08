@@ -34,7 +34,7 @@ namespace CMS21_Together_Server.Data.Cars
 			foreach (var pair in State.LoadedCars.OrderBy(p => p.Key))
 			{
 				var entry = pair.Value;
-				var held = CarClaims.Held(pair.Key).ToList();
+				var held = CarLocks.HeldPartKeys(pair.Key).ToList();
 				string claims = held.Count == 0 ? "none" : string.Join(", ", held.Select(c => $"{c.Key} by {c.Owner}"));
 				yield return $"loader {pair.Key}: {entry.Spawn?.CarToLoad} SpawnSeq {entry.SpawnSeq}, revision {entry.Revision}, baseline {entry.HasBaseline}, {entry.BodyParts.Count} body, {entry.SubParts.Count} mechanical ({entry.SubParts.Values.Count(s => s.Unmounted)} unmounted), claims: {claims}";
 			}
@@ -122,7 +122,6 @@ namespace CMS21_Together_Server.Data.Cars
 		{
 			if (!State.LoadedCars.TryGetValue(loader, out var entry)) return false;
 			State.LoadedCars.Remove(loader);
-			CarClaims.DropLoader(loader);
 			Logger.Info($"[Cars] Loader {loader}: {entry.Spawn?.CarToLoad} cleared ({reason}).");
 			LoaderCleared?.Invoke(loader, entry, reason);
 			return true;

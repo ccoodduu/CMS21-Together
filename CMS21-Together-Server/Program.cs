@@ -53,6 +53,12 @@ namespace CMS21_Together_Server
 				return;
 			}
 
+			if (Array.IndexOf(args, "--check-locks") >= 0)
+			{
+				Environment.Exit(Data.Cars.CarLocksCheck.Run());
+				return;
+			}
+
 			if (Array.IndexOf(args, "--check-framing") >= 0)
 			{
 				Environment.Exit(Network.Transport.FramingCheck.Run());
@@ -109,6 +115,7 @@ namespace CMS21_Together_Server
 			Data.Presence.PresenceEvents.Left += Data.Reconciliation.ReconciliationService.OnLeft;
 			Data.Jobs.JobsService.Initialize();
 			Data.Cars.CarAwayRegistry.Initialize();
+			Data.Cars.CarLocks.Initialize(Config.LockScope, Config.LockExpirySeconds);
 			Data.Tools.ToolsStore.Initialize();
 			Data.Outdoor.OutdoorInstances.Configure(Config.SharedOutdoorScenes, Config.CarSelector, Config.OutdoorRejoinGraceSeconds, Config.OutdoorFillAllSpawnPoints);
 			Data.Outdoor.OutdoorInstances.Initialize();

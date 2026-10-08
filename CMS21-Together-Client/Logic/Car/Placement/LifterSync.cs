@@ -19,6 +19,9 @@ public static class LifterSync
 	private const float StepWaitSeconds = 15f;
 
 	private static readonly HashSet<int> applying = new HashSet<int>();
+	private static readonly Dictionary<int, int> remoteSteps = new Dictionary<int, int>();
+
+	public static bool IsApplying(int lifterIndex) => applying.Contains(lifterIndex) || remoteSteps.ContainsKey(lifterIndex);
 
 	private static bool Active => ClientScene.IsGarageReady && Client.Instance != null && Client.Instance.IsConnectionValid;
 
@@ -32,19 +35,22 @@ public static class LifterSync
 
 	[HarmonyPatch(typeof(CarLifter), nameof(CarLifter.Action))]
 	[HarmonyPrefix]
-	private static bool BeforeAction(CarLifter __instance, out (int State, bool Moving) __state)
+	private static bool BeforeAction(CarLifter __instance, int actionType, out (int State, bool Moving) __state)
 	{
 		__state = ((int)__instance.GetState(), __instance.isMoving);
-		if (!Active || applying.Contains(IndexOf(__instance)) || __instance.connectedCarLoader == null) return true;
-		int loader = CarLoaderPlaces.Get().GetCarLoaderId(__instance.connectedCarLoader);
-		return loader < 0 || !CarAwaySync.BlockIfLocked(loader, "lift");
+		int index = IndexOf(__instance);
+		var connected = __instance.GetConnectedCarLoader();
+		if (!Active || applying.Contains(index) || connected == null) return true;
+		int loader = CarLoaderPlaces.Get().GetCarLoaderId(connected);
+		if (loader < 0) return true;
+		return !CarAwaySync.BlockIfLocked(loader, "lift") && Locks.LockCarHooks.Gate(Locks.LockCarHooks.LiftAction(__instance, index, actionType));
 	}
 
 	[HarmonyPatch(typeof(CarLifter), nameof(CarLifter.Action))]
 	[HarmonyPostfix]
-	private static void AfterAction(CarLifter __instance, int actionType, (int State, bool Moving) __state)
+	private static void AfterAction(CarLifter __instance, int actionType, (int State, bool Moving) __state, bool __runOriginal)
 	{
-		if (!Active || __state.Moving || !__instance.isMoving) return;
+		if (!__runOriginal || !Active || __state.Moving || !__instance.isMoving) return;
 		int index = IndexOf(__instance);
 		if (index < 0 || applying.Contains(index)) return;
 		int to = __state.State + (actionType == 0 ? 1 : -1);
@@ -67,34 +73,41 @@ public static class LifterSync
 			yield break;
 		}
 		var lifter = lifters[packet.LifterIndex];
+		remoteSteps[packet.LifterIndex] = (remoteSteps.TryGetValue(packet.LifterIndex, out int running) ? running : 0) + 1;
+		try
+		{
+			float deadline = Time.realtimeSinceStartup + CarWaitSeconds;
+			while ((lifter.isMoving || lifter.GetConnectedCarLoader() == null && packet.State != 0) && Time.realtimeSinceStartup < deadline)
+				yield return new WaitForSeconds(0.25f);
 
-		float deadline = Time.realtimeSinceStartup + CarWaitSeconds;
-		while ((lifter.isMoving || lifter.GetConnectedCarLoader() == null && packet.State != 0) && Time.realtimeSinceStartup < deadline)
-			yield return new WaitForSeconds(0.25f);
-
-		if (lifter.GetConnectedCarLoader() == null && packet.State != 0)
-		{
-			Log.Error($"[Placement] Lift {packet.LifterIndex}: no car on it after {CarWaitSeconds} s; leaving it on the floor.");
-		}
-		else if (packet.Instant)
-		{
-			Set(packet.LifterIndex, lifter, packet.State);
-		}
-		else
-		{
-			while ((int)lifter.GetState() != packet.State)
+			if (lifter.GetConnectedCarLoader() == null && packet.State != 0)
 			{
-				applying.Add(packet.LifterIndex);
-				try { lifter.Action(packet.State > (int)lifter.GetState() ? 0 : 1); }
-				finally { applying.Remove(packet.LifterIndex); }
-				if (!lifter.isMoving)
-				{
-					Set(packet.LifterIndex, lifter, packet.State);
-					break;
-				}
-				deadline = Time.realtimeSinceStartup + StepWaitSeconds;
-				while (lifter.isMoving && Time.realtimeSinceStartup < deadline) yield return new WaitForSeconds(0.1f);
+				Log.Error($"[Placement] Lift {packet.LifterIndex}: no car on it after {CarWaitSeconds} s; leaving it on the floor.");
 			}
+			else if (packet.Instant)
+			{
+				Set(packet.LifterIndex, lifter, packet.State);
+			}
+			else
+			{
+				while ((int)lifter.GetState() != packet.State)
+				{
+					applying.Add(packet.LifterIndex);
+					try { lifter.Action(packet.State > (int)lifter.GetState() ? 0 : 1); }
+					finally { applying.Remove(packet.LifterIndex); }
+					if (!lifter.isMoving)
+					{
+						Set(packet.LifterIndex, lifter, packet.State);
+						break;
+					}
+					deadline = Time.realtimeSinceStartup + StepWaitSeconds;
+					while (lifter.isMoving && Time.realtimeSinceStartup < deadline) yield return new WaitForSeconds(0.1f);
+				}
+			}
+		}
+		finally
+		{
+			if (--remoteSteps[packet.LifterIndex] <= 0) remoteSteps.Remove(packet.LifterIndex);
 		}
 		SyncTracker.Applied(SyncOrder.CarPlacementKey, snapshotId);
 	}

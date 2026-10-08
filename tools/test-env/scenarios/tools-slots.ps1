@@ -144,7 +144,7 @@ do { Start-Sleep -Milliseconds 700; $ready = Cmd $a car-ready "0" } while (-not 
 $crane = Cmd $a crane-out "0"
 $engineId = $crane.engine
 Start-Sleep -Seconds 2
-Cmd $a tool-put "EngineStand1 $($crane.group)" | Out-Null
+Cmd $a tool-put "EngineStand1 $((Cmd $a crane-group "0").group)" | Out-Null
 try { Wait-HarnessDump -Instance $a -TimeoutSec 60 -What "engine built on A's stand" -Condition { param($x) (Tool $x "EngineStand1").uid -ne 0 } | Out-Null } catch { }
 Start-Sleep -Seconds 5; $standBuilt = (Tool (Cmd $b dump) "EngineStand1").uid -ne 0
 if (-not $standBuilt) {

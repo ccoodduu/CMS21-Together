@@ -62,11 +62,11 @@ $carsLine = Wait-ServerLog -Pattern "loader ${loader}: $car SpawnSeq \d+, revisi
 Check ([bool]$carsLine) "the cars command lists the spawned car ($carsLine)"
 
 $claimKey = "s:2.0"
-Send-HarnessCommand -Instance $a -Verb part-claim -Arguments "$loader $claimKey" | Out-Null
+Send-HarnessCommand -Instance $a -Verb lock-take -Arguments "$loader unmount $claimKey bare" | Out-Null
 Start-Sleep -Seconds 1
 $try = Send-HarnessCommand -Instance $b -Verb part-action-unmount -Arguments "$loader $claimKey"
 Check ([bool]$try.blocked) "B is blocked from a part A holds (owner $($try.owner))"
-Send-HarnessCommand -Instance $a -Verb part-claim -Arguments "$loader $claimKey release" | Out-Null
+Send-HarnessCommand -Instance $a -Verb lock-take -Arguments "$loader unmount $claimKey release" | Out-Null
 Start-Sleep -Seconds 1
 $try = Send-HarnessCommand -Instance $b -Verb part-action-unmount -Arguments "$loader $claimKey"
 Check (-not $try.blocked) "the part is free again after A releases it"

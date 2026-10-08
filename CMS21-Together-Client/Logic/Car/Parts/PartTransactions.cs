@@ -40,6 +40,8 @@ public static class PartTransactions
 		committed.Clear();
 	}
 
+	public static void DropLoader(int loader) => open.RemoveAll(t => t.Loader == loader);
+
 	public static void Open(int loader, IEnumerable<string> keys, IEnumerable<string> itemIds)
 	{
 		var tx = open.FirstOrDefault(t => t.Loader == loader && t.Keys.Overlaps(keys));

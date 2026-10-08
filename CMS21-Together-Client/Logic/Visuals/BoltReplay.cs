@@ -36,7 +36,7 @@ public static class BoltReplay
 	private static void OnClaimChanged(int loader, IReadOnlyList<string> keys, int owner, bool fromSnapshot)
 	{
 		if (keys.Count == 0) return;
-		if (owner == CarPartClaimUpdatePacket.Released)
+		if (owner == PartClaims.Released)
 		{
 			foreach (var effect in Active.Where(e => e.Loader == loader && keys.Contains(e.Key)).ToList()) effect.Released();
 			return;

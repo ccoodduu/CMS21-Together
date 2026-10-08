@@ -108,6 +108,10 @@ namespace CMS21Together
 			if (PlayerSettings.DevHotkeys && Client.Instance.IsConnectionValid && Input.GetKeyDown(KeyCode.F6)) Logic.Car.Placement.DevCarSpawner.SpawnRandom();
 			if (Client.Instance.IsConnectionValid) Logic.Car.Details.CarDetailsSync.Update();
 			if (Client.Instance.IsConnectionValid) Logic.Car.Away.CarAwaySync.Update();
+			if (Client.Instance.IsConnectionValid) Logic.Car.Locks.CarLockMirror.Update();
+			if (Client.Instance.IsConnectionValid) Logic.Car.Locks.LockGate.Update();
+			if (Client.Instance.IsConnectionValid) Logic.Car.Locks.LockLifecycle.Update();
+			if (Client.Instance.IsConnectionValid) Logic.Car.Locks.LockPrefetch.Update();
 			if (Client.Instance.IsConnectionValid) Logic.Car.Away.PathTestSync.Update();
 			if (Client.Instance.IsConnectionValid) Logic.ShopList.ShopListSync.Update();
 			if (Client.Instance.IsConnectionValid) Logic.Visuals.ActivityCapture.Update();
@@ -149,6 +153,8 @@ namespace CMS21Together
 			GuardSettings.Initialize();
 			Logic.Car.Details.CarDetailsSync.Initialize();
 			Logic.Car.Away.TestDriveSync.Initialize();
+			Logic.Car.Locks.CarLockMirror.Initialize();
+			Logic.Car.Locks.LockLifecycle.Initialize();
 			Logic.Car.Away.PathTestSync.Initialize();
 			Logic.Economy.CarPurchaseSync.Initialize();
 			Logic.Outdoor.OutdoorSession.Initialize();

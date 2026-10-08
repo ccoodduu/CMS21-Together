@@ -206,8 +206,8 @@ namespace CMS21_Together_Server.Data.Economy
 				if (entry.Spawn?.IsJob == true) return Invalid($"loader {r.CarLoaderId} is a job car");
 				int awayOwner = CarAwayRegistry.OwnerOf(r.CarLoaderId);
 				if (awayOwner >= 0) return EconomyOutcome.Refused(EconomyRefusal.Busy, $"loader {r.CarLoaderId} is away with client {awayOwner}");
-				var claim = CarClaims.Held(r.CarLoaderId).FirstOrDefault(h => h.Owner != client);
-				if (claim.Key != null) return EconomyOutcome.Refused(EconomyRefusal.Busy, $"client {claim.Owner} works on {claim.Key}");
+				int lockOwner = CarLocks.OtherOwnerOn(r.CarLoaderId, client);
+				if (lockOwner >= 0) return EconomyOutcome.Refused(EconomyRefusal.Busy, $"client {lockOwner} holds a lock on the car");
 				int loader = r.CarLoaderId;
 				return new EconomyOutcome
 				{

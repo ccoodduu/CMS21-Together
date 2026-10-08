@@ -63,6 +63,7 @@ public class HarnessMod : MelonMod
         if (mute && AudioListener.volume > 0f) AudioListener.volume = 0f;
         if (Application.isBatchMode && Cursor.lockState != CursorLockMode.None) Cursor.lockState = CursorLockMode.None;
         Features.InputGuard.Update();
+        Features.LockTraceCommands.Update();
 
         Features.PerfCommands.RecordFrame();
         SceneState.Update();

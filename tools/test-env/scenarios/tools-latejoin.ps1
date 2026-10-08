@@ -50,7 +50,7 @@ do { Start-Sleep -Milliseconds 700; $ready = Cmd $a car-ready "0" } while (-not 
 $crane = Cmd $a crane-out "0"
 $engineId = $crane.engine
 Start-Sleep -Seconds 2
-Cmd $a tool-put "EngineStand1 $($crane.group)" | Out-Null
+Cmd $a tool-put "EngineStand1 $((Cmd $a crane-group "0").group)" | Out-Null
 try { Wait-HarnessDump -Instance $a -TimeoutSec 60 -What "engine built on A's stand" -Condition { param($x) $x.tools.EngineStand1.uid -ne 0 } | Out-Null } catch { }
 Start-Sleep -Seconds 5; $standBuilt = @(Cmd $a tool-list | Where-Object { $_.tool -eq "EngineStand1" -and $_.mirrorUid -ne 0 }).Count -eq 1
 if (-not $standBuilt) { $note = "engine stand steps skipped: the game's build coroutine throws when the harness drives it (also disconnected); hand check"; Write-Host "NOTE: $note"; $Ctx.Result.notes += $note; Cmd $a tool-stand-reset | Out-Null }

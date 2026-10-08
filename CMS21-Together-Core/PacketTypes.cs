@@ -127,6 +127,12 @@ public enum PacketTypes
 	AuctionBidRequest,
 	AuctionLotClosed,
 
+	CarLockRequest,
+	CarLockResult,
+	CarLockUpdate,
+	CarLockRelease,
+	CarLockRenew,
+
 	ShopListChange,
 	ShopListState
 }

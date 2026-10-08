@@ -32,6 +32,8 @@ namespace CMS21_Together_Server.Data
 		public int MaxCarSalePrice { get; private set; } = 5000000;
 		public int MaxCarPurchasePrice { get; private set; } = 5000000;
 		public int PerfLogIntervalSeconds { get; private set; }
+		public string LockScope { get; private set; } = CMS21_Together_Core.Network.Packets.LockScope.Connected;
+		public int LockExpirySeconds { get; private set; } = 90;
 		public List<GameScene> SharedOutdoorScenes { get; private set; } = OutdoorScenes.Parse(OutdoorScenes.DefaultSetting);
 		public string CarSelector { get; private set; } = "basic";
 		public int OutdoorRejoinGraceSeconds { get; private set; } = 60;
@@ -70,6 +72,12 @@ namespace CMS21_Together_Server.Data
 			new[] { "perf_log_interval_seconds", "# Seconds between lines of Log/perf_<start>.jsonl (traffic, CPU, memory, handler times). 0 = off", "perf_log_interval_seconds = 0" },
 		};
 
+		private static readonly string[][] LockKeyLines =
+		{
+			new[] { "lock_scope", "# What a part lock also covers: connected (the parts it is fixed to, its fluids, the car) or part (only that part and the car)", "lock_scope = connected" },
+			new[] { "lock_expiry_seconds", "# Seconds without a renew from its owner after which a part lock ends (crashes, lost connections)", "lock_expiry_seconds = 90" },
+		};
+
 		private static readonly string[][] OutdoorKeyLines =
 		{
 			new[] { "shared_outdoor_scenes", "# Outdoor scenes players share (one junkyard, barn or auction for everyone), comma separated: junkyard, barn, auction. Empty = none shared", "shared_outdoor_scenes = " + OutdoorScenes.DefaultSetting },
@@ -78,7 +86,7 @@ namespace CMS21_Together_Server.Data
 			new[] { "outdoor_fill_all_spawn_points", "# Fill every car spawn point of a shared junkyard (True/False)", "outdoor_fill_all_spawn_points = False" },
 		};
 
-		private static string[][] OptionalKeyLines => HostingKeyLines.Concat(CompatibilityKeyLines).Concat(EconomyKeyLines).Concat(DiagnosticsKeyLines).Concat(OutdoorKeyLines).ToArray();
+		private static string[][] OptionalKeyLines => HostingKeyLines.Concat(CompatibilityKeyLines).Concat(EconomyKeyLines).Concat(DiagnosticsKeyLines).Concat(LockKeyLines).Concat(OutdoorKeyLines).ToArray();
 
 		public void ApplyArguments(string[] args)
 		{
@@ -137,7 +145,7 @@ namespace CMS21_Together_Server.Data
 		public string Describe() =>
 			$"name '{ServerName}', port {Port}, max players {MaxPlayers}, steam {UseSteam}, public address '{PublicAddress}', autosave {AutosaveIntervalSeconds}s, backups {BackupCount}, " +
 			$"password {Masked(Password)}{(PasswordSteam ? " (also Steam)" : "")}, admin key {Masked(AdminKey)}, new sessions {NewSessionDifficulty}, " +
-			$"travel fees {TravelFees}, max car sale {MaxCarSalePrice}, max car purchase {MaxCarPurchasePrice}, perf log {(PerfLogIntervalSeconds > 0 ? $"{PerfLogIntervalSeconds}s" : "off")}, shared outdoor scenes {OutdoorScenes.Format(SharedOutdoorScenes)}, car selector {CarSelector}, outdoor rejoin grace {OutdoorRejoinGraceSeconds}s, fill all spawn points {OutdoorFillAllSpawnPoints}, game version {GameVersion}, mods required [{string.Join(", ", ModsRequired)}], ignored [{string.Join(", ", ModsIgnored)}], gameplay [{string.Join(", ", ModsGameplay)}]";
+			$"travel fees {TravelFees}, max car sale {MaxCarSalePrice}, max car purchase {MaxCarPurchasePrice}, perf log {(PerfLogIntervalSeconds > 0 ? $"{PerfLogIntervalSeconds}s" : "off")}, lock scope {LockScope}, lock expiry {LockExpirySeconds}s, shared outdoor scenes {OutdoorScenes.Format(SharedOutdoorScenes)}, car selector {CarSelector}, outdoor rejoin grace {OutdoorRejoinGraceSeconds}s, fill all spawn points {OutdoorFillAllSpawnPoints}, game version {GameVersion}, mods required [{string.Join(", ", ModsRequired)}], ignored [{string.Join(", ", ModsIgnored)}], gameplay [{string.Join(", ", ModsGameplay)}]";
 
 		public static ServerConfig LoadOrCreate()
 		{
@@ -304,6 +312,14 @@ namespace CMS21_Together_Server.Data
 						case "perf_log_interval_seconds":
 							if (int.TryParse(value, out int perfInterval) && perfInterval >= 0) config.PerfLogIntervalSeconds = perfInterval;
 							break;
+						case "lock_scope":
+							string scope = Unquote(value).ToLowerInvariant();
+							if (scope == CMS21_Together_Core.Network.Packets.LockScope.Part || scope == CMS21_Together_Core.Network.Packets.LockScope.Connected) config.LockScope = scope;
+							else Logger.Warn($"Unknown lock_scope '{value}'; use connected or part.");
+							break;
+						case "lock_expiry_seconds":
+							if (int.TryParse(value, out int lockExpiry) && lockExpiry >= 5) config.LockExpirySeconds = lockExpiry;
+						break;
 						case "shared_outdoor_scenes":
 							config.SharedOutdoorScenes = OutdoorScenes.Parse(value, unknown => Logger.Warn($"Unknown scene '{unknown}' in shared_outdoor_scenes; use junkyard, barn or auction."));
 							break;

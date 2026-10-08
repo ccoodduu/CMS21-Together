@@ -56,6 +56,25 @@ time. In a session, **F9** shows the players with their ping, your Steam friends
 - Trips to the junkyard, barns, auction and car salon; bought cars go to the shared parking.
 - **F7** reloads the garage from the server if something looks wrong.
 
+## Please try: parts in use (locks)
+
+Two or more players on one car. For each item, report what you saw, and if it went wrong, press **F8** right away.
+
+1. **Hover a part a friend is working on.** It should have no highlight, and the label should say "<name> is working
+   on this part." Report: highlight shown or not, the label text, and whether the label stayed on your own parts.
+2. **Hold to unmount at a normal ping** (100 ms or so). The ring should fill and the unmount start with no extra wait.
+   Report: any pause after the ring was full, or a "Waiting for the server…" hint.
+3. **Click a part a friend is working on.** You should hear the error sound and see the message; nothing starts.
+   Report: whether anything started (bolt view, part moving).
+4. **Open the item chooser on an empty slot and close it with ESC.** Your friend should be able to use that slot right
+   after. Report: how long your friend had to wait.
+5. **Fill a fluid while a friend is near the car** (coolant, brake fluid, oil). Your friend cannot take off the
+   reservoir or fill the same fluid until you stop. Report: the levels both of you see afterwards.
+6. **Raise the lift while a friend works on that car.** It should be refused with "<name> is working on this car."
+   Report: whether the lift moved on anyone's screen.
+7. **Park the car or end its job while a friend works on it.** Both should be refused with the same message, and the
+   car should stay. Report: whether the car or the job disappeared for anyone.
+
 ## Not yet
 
 Driving around, the race tracks, tuning, bonus parts, building a new engine, the showroom and the separate Parking

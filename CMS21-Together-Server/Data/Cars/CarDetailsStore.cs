@@ -241,6 +241,12 @@ namespace CMS21_Together_Server.Data.Cars
 			return true;
 		}
 
+		public static void SendTo(int loader, int clientId)
+		{
+			if (IsValid(loader, out var details))
+				Server.SendToClient(new CarDetailsUpdatePacket { CarLoaderID = loader, SpawnSeq = details.SpawnSeq, IsFull = true, SourceClientId = -1, Details = details }, clientId);
+		}
+
 		public static int SendSnapshot(int clientId)
 		{
 			int sent = 0;
