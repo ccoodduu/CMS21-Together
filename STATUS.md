@@ -2,6 +2,16 @@
 
 Newest first. One entry per work session.
 
+## 2026-10-08 (20:30–21:00) — row 20 merged; row 16 reviewed; story mission bug found
+
+- `main` = `fbebf7d`. Row 20 race-hardening merged (`6d732f4`); snapshot-after-delete guard merged (`f156303`); a job
+  car refused because its place is taken now says "Another car is already in that place." (`fbebf7d`).
+- Row 16 `server-game-logic` draft reviewed: "ready after fixes". The review found that the server refuses every
+  story mission: the game never sets `MissionID`, so it stays 0 and `JobsService` treats it as the tutorial. No
+  scenario covered it. Fix in progress on `fix/story-missions` (lane 1) with proof scenario `jobs-missions`.
+- Scope question for row 16 in QUESTIONS.md (full port or smaller variant); the design waits for the answer.
+- Row 19 part 2 (digests, stall warning, soak contention) still in progress on lane 2.
+
 ## 2026-10-08 (20:00–20:30) — row 20 race-hardening ready for merge
 
 - `fix/race-hardening` (lane 1), design note `docs/design/race-hardening.md`. Audit rows I6, E5, C1, C5:

@@ -3,6 +3,18 @@
 Open questions that block a decision. Each has the default we work with until answered.
 Answered ones move to the bottom with the answer.
 
+## Open — row 16 server-game-logic scope (2026-10-08)
+
+Draft in `openspec/changes/server-game-logic/` (worktree `CMS21-Together-wt/server-game-logic`); review verdict
+"ready after fixes" (blockers B1 game tables needed at server start, B2 story missions refused; B2 is being fixed
+on its own, branch `fix/story-missions`).
+
+1. **Scope.** Full port (server computes orders, payout, XP and sale prices from game tables, ~18–21 blocks) or the
+   smaller variant: (a) seeded job cars, (b) the server owns the order clock, limit, seed and car pool while a garage
+   client runs the game's own generator with that seed, (c) payout, XP and prices computed as a shadow that only logs
+   differences, (d) game tables stay in the repo and leave the release zips once the server reads the player's
+   install. **Default:** smaller variant, in the order mission fix → seeded job cars → orders → shadow.
+
 ## Open — row 19 state-merges-and-contention (2026-10-08)
 
 Details in `openspec/changes/state-merges-and-contention/proposal.md` (reviewed, see `review.md`).
