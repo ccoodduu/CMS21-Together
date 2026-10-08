@@ -15,6 +15,7 @@ public static class JobsCommands
 {
     private static bool autogen = true;
     private static float nextTtl = -1f;
+    private static float stickyTtl = -1f;
 
     private static OrderGenerator Generator => Singleton<GameManager>.Instance.OrderGenerator;
 
@@ -23,14 +24,39 @@ public static class JobsCommands
     private static bool BeforeUpdate() => autogen;
 
     [HarmonyPatch(typeof(OrderGenerator), "GenerateNewJob")]
+    [HarmonyPrefix]
+    private static void BeforeGenerateNewJob(out int __state) => __state = Generator.Jobs?.Count ?? 0;
+
+    [HarmonyPatch(typeof(OrderGenerator), "GenerateNewJob")]
     [HarmonyPostfix]
     [HarmonyPriority(Priority.First)]
-    private static void AfterGenerateNewJob()
+    private static void AfterGenerateNewJob(int __state)
     {
-        if (nextTtl <= 0f) return;
-        var jobs = Generator.Jobs;
-        if (jobs != null && jobs.Count > 0) jobs[jobs.Count - 1].timeToEnd = nextTtl;
+        float ttl = nextTtl > 0f ? nextTtl : stickyTtl;
         nextTtl = -1f;
+        var jobs = Generator.Jobs;
+        if (ttl <= 0f || jobs == null || jobs.Count <= __state) return;
+        jobs[jobs.Count - 1].timeToEnd = ttl;
+    }
+
+    [HarnessCommand("orders-ttl")]
+    private static object OrdersTtl(string args)
+    {
+        stickyTtl = float.TryParse((args ?? "").Trim(), out float ttl) ? ttl : -1f;
+        return stickyTtl > 0f ? $"every generated order lasts {stickyTtl} s" : "off";
+    }
+
+    [HarnessCommand("orders-timer")]
+    private static object OrdersTimer(string args)
+    {
+        var parts = (args ?? "").Split(new[] { ' ' }, StringSplitOptions.RemoveEmptyEntries);
+        var generator = Generator;
+        if (parts.Length == 2)
+        {
+            generator.orderTimer = float.Parse(parts[0], System.Globalization.CultureInfo.InvariantCulture);
+            generator.nextOrderTime = float.Parse(parts[1], System.Globalization.CultureInfo.InvariantCulture);
+        }
+        return new { generator.orderTimer, generator.nextOrderTime };
     }
 
     [HarnessCommand("orders-autogen")]
@@ -43,8 +69,10 @@ public static class JobsCommands
     internal static void Reset(List<string> changed)
     {
         if (!autogen) changed.Add("orders-autogen off");
+        if (stickyTtl > 0f) changed.Add("orders-ttl");
         autogen = true;
         nextTtl = -1f;
+        stickyTtl = -1f;
     }
 
     [HarnessCommand("orders-generate")]
