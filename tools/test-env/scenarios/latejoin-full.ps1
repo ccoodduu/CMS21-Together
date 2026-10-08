@@ -22,7 +22,7 @@ if ($Seed -eq 0) { $Seed = [int](Get-Date -Format "MMddHHmmss") }
 $rng = New-Object System.Random($Seed)
 $failures = @()
 $warnings = @()
-function Check([bool]$Condition, [string]$Message) { if (-not $Condition) { $script:failures += $Message; Write-Host "FAIL: $Message" -ForegroundColor Red } else { Write-Host "ok: $Message" } }
+function Check([bool]$Condition, [string]$Message) { if (-not $Condition) { $script:failures += "FAIL: $Message"; Write-Host "FAIL: $Message" -ForegroundColor Red } else { Write-Host "ok: $Message" } }
 
 Set-ServerConfigValues $Ctx.ServerDir @{ perf_log_interval_seconds = 5 }
 $scenarioStart = Get-Date
