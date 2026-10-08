@@ -10,6 +10,7 @@ public static class SyncOrder
 	public const string CarPlacementKey = "car-placement";
 	public const string WorkshopToolsKey = "workshop-tools";
 	public const string JobsKey = "jobs";
+	public const string ShopListKey = "shop-list";
 	public const string SelfKey = "self";
 	public const string PlayersKey = "players";
 
@@ -21,6 +22,7 @@ public static class SyncOrder
 	public const int CarPlacement = 200;
 	public const int WorkshopTools = 300;
 	public const int Jobs = 400;
+	public const int ShopList = 420;
 	public const int Self = 450;
 	public const int Players = 500;
 }

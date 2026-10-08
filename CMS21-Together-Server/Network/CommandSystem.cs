@@ -53,6 +53,7 @@ namespace CMS21_Together_Server.Network
 					Logger.Info("  cardetails <id>   - Show the stored details of a loader");
 					Logger.Info("  away              - Show cars on the test track, test path or dyno");
 					Logger.Info("  tools             - Show the workshop machines, tool positions and claims");
+					Logger.Info("  shoplist          - Show the shared shopping list");
 					Logger.Info("  outdoor [catalog|junkyard|barn|auction] - Show the shared outdoor instances, the car catalog or one scene");
 					Logger.Info("  desync [check]    - Show recent desync repairs; check compares every player now");
 					Logger.Info("  bugreport         - List the bug-report bundles in BugReports/");
@@ -157,6 +158,12 @@ namespace CMS21_Together_Server.Network
 				case "tools":
 					Logger.Info("Tools:");
 					foreach (string line in Data.Tools.ToolsStore.Describe())
+						Logger.Info($"  {line}");
+					break;
+
+				case "shoplist":
+					Logger.Info("Shopping list:");
+					foreach (string line in Data.ShopList.ShopListService.Describe())
 						Logger.Info($"  {line}");
 					break;
 

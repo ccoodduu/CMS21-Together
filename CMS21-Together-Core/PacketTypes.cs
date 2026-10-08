@@ -125,5 +125,8 @@ public enum PacketTypes
 	AuctionLotClaim,
 	AuctionBidState,
 	AuctionBidRequest,
-	AuctionLotClosed
+	AuctionLotClosed,
+
+	ShopListChange,
+	ShopListState
 }
