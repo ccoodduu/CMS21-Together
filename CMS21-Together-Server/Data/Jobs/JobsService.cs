@@ -87,14 +87,14 @@ namespace CMS21_Together_Server.Data.Jobs
 			}
 			var job = packet.Job;
 			if (job == null) return;
-			if (job.IsMission && job.MissionID == 0)
+			if (job.IsMission && HasMission())
 			{
-				Logger.Info($"[Jobs] Tutorial mission from client {clientId} refused; answering with the jobs state.");
+				Logger.Info($"[Jobs] Mission order from client {clientId} refused: a story mission is already open or active; answering with the jobs state.");
 				SendSnapshot(clientId);
 				return;
 			}
 			int open = State.Orders.Count;
-			if (packet.MaxOpenOrders > 0 && open >= packet.MaxOpenOrders)
+			if (!job.IsMission && packet.MaxOpenOrders > 0 && open >= packet.MaxOpenOrders)
 			{
 				Logger.Info($"[Jobs] Order from client {clientId} refused: {open} open orders, the generator's limit is {packet.MaxOpenOrders}; answering with the jobs state.");
 				SendSnapshot(clientId);
@@ -103,7 +103,8 @@ namespace CMS21_Together_Server.Data.Jobs
 			job.id = State.NextJobId++;
 			var entry = new OrderEntry { Job = job, RemainingSeconds = job.timeToEnd, Status = OrderStatus.Open };
 			State.Orders.Add(entry);
-			Logger.Info($"[Jobs] Order {job.id}: {job.carFile}{(job.IsMission ? $" (mission {job.MissionID})" : "")}, {entry.RemainingSeconds:0} s.");
+			if (job.IsMission) State.Missions.CurrentMissionDone = false;
+			Logger.Info($"[Jobs] Order {job.id}: {job.carFile}{(job.IsMission ? $" (mission {State.Missions.MissionsFinished})" : "")}, {entry.RemainingSeconds:0} s.");
 			Server.SendToClients(new OrderAddedPacket { Job = job, RemainingSeconds = entry.RemainingSeconds });
 		}
 
@@ -132,10 +133,15 @@ namespace CMS21_Together_Server.Data.Jobs
 					Server.SendToClients(new JobRemovedPacket { JobId = order.Job.id, Reason = JobRemovedReason.Taken }, clientId);
 					break;
 				case OrderActionType.Decline:
-					if (order == null || order.Status != OrderStatus.Open || !order.Job.CanDelete)
+					string declineRefusal = order == null ? "Unknown"
+						: order.Job.IsMission ? "Mission"
+						: order.Status != OrderStatus.Open || !order.Job.CanDelete ? "CannotDecline"
+						: null;
+					if (declineRefusal != null)
 					{
-						Server.SendToClient(new OrderActionResultPacket { JobId = packet.JobId, Action = packet.Action, Approved = false, Reason = order == null ? "Unknown" : "CannotDecline" }, clientId);
-						if (order == null) Server.SendToClient(new JobRemovedPacket { JobId = packet.JobId, Reason = JobRemovedReason.Expired }, clientId);
+						Logger.Info($"[Jobs] Decline of order {packet.JobId} by client {clientId} refused: {declineRefusal}; answering with the jobs state.");
+						Server.SendToClient(new OrderActionResultPacket { JobId = packet.JobId, Action = packet.Action, Approved = false, Reason = declineRefusal }, clientId);
+						SendSnapshot(clientId);
 						return;
 					}
 					State.Orders.Remove(order);
@@ -220,7 +226,7 @@ namespace CMS21_Together_Server.Data.Jobs
 			State.ActiveJobs.Remove(active);
 			world.Money += packet.Payout;
 			StatsHandlers.ApplyExp(packet.Xp);
-			if (packet.IsMission && packet.Missions != null) State.Missions = packet.Missions;
+			if (active.Job.IsMission) FinishMission();
 			int loader = active.CarLoaderId;
 			if (loader >= 0 && GameDataManager.CurrentState.CarState.LoadedCars.TryGetValue(loader, out var car) && car.Spawn?.JobID == packet.JobId)
 				CarPartsStore.ClearLoader(loader, ClearReason.JobEnded);
@@ -228,6 +234,17 @@ namespace CMS21_Together_Server.Data.Jobs
 			world.updateGamemode = false;
 			Server.SendToClients(new JobRemovedPacket { JobId = packet.JobId, Reason = JobRemovedReason.Ended, CarLoaderId = loader, IsCompleted = packet.IsCompleted, Missions = State.Missions });
 			Server.SendToClients(world);
+		}
+
+		private static bool HasMission() => State.Orders.Any(o => o.Job.IsMission) || State.ActiveJobs.Any(a => a.Job.IsMission);
+
+		private static void FinishMission()
+		{
+			var missions = State.Missions;
+			missions.IsStoryMissionInProgress = false;
+			missions.MissionsFinished++;
+			missions.CurrentMissionDone = true;
+			Logger.Info($"[Jobs] Story mission finished: {missions.MissionsFinished} missions finished.");
 		}
 
 		private static bool ClearsCar(ActiveJobEntry active, int jobId) =>
