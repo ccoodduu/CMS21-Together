@@ -14,6 +14,8 @@ namespace CMS21Together.Network.Handlers
         private static bool isProcessingSync = false;
         private static readonly System.Collections.Generic.Queue<System.Action> heldDuringFullSync = new System.Collections.Generic.Queue<System.Action>();
         private static bool fullSyncOpen;
+
+        public static bool FullSyncOpen => fullSyncOpen;
         private static bool waitingForInventory;
         private static bool replaying;
 

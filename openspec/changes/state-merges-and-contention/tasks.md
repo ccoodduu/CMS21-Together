@@ -1,8 +1,9 @@
 # Tasks
 
-**Resume here (part 1 done, branch `change/state-merges-1`, worktree `CMS21-Together-wt/state-merges`):** groups 1-8
-are done and pushed; part 1 waits for the user's merge. Next is part 2 (groups 9-11). User decision 2026-10-08: the
-base check keeps `Quality`.
+**Resume here (part 2, branch `change/state-merges-2`, worktree `CMS21-Together-wt/state-merges-2`):** parts 1 and 3
+are merged (`9ae63c7`). Group 9 is done (digests, reconciliation rules, and the stall warning of task 10.4). Group 10
+is in progress: the checkpoint, the contention mode and its first-pass kinds are written; the lane-3 runs of 10.1,
+10.3 and 11.1 are the user's (agents test on lane 2 only). User decision 2026-10-08: the base check keeps `Quality`.
 
 **Row 19: the race and drift audit's gaps that row 18 does not close** (gaps 3, 6, 9, 10, the rest of 7, the soak
 contention mode, and the review ledger's P7, P11, I2, I5, M4, M5 and C2), plus the user's decision of 2026-10-07 on
@@ -192,24 +193,31 @@ the ledger's "accept" rows (S1 fixed; no silent drops for I3, I7, E4, M8, C4, J2
 
 ## 9. Digests (part 2)
 
-- [ ] 9.1 Core mappers `DigestMappers.Details`, `Tools`, `Warehouse`, `Garage`, `Jobs` per D11 (lists sorted by key,
+- [x] 9.1 Core mappers `DigestMappers.Details`, `Tools`, `Warehouse`, `Garage`, `Jobs` per D11 (lists sorted by key,
       the exclusions of 1.3). Done when `--check-merges` gains one case per key that projects the same sample from the
-      server's stored types and from the client's DTOs to the same hash.
-- [ ] 9.2 Client projections and "not ready" rules per D11 in `ClientDigests` (`workshop-tools` from
+      server's stored types and from the client's DTOs to the same hash. Done 2026-10-08 (`--check-merges`: 11 digest
+      cases, a changed field and an old `SpawnSeq` included).
+- [x] 9.2 Client projections and "not ready" rules per D11 in `ClientDigests` (`workshop-tools` from
       `ToolMachine.ReadLocal`; `car-details:<loader>` after row 18 has merged, since row 18 D6 rewrites
       `ClientDigests.Car`). `digest-hold <key> notready`. Done when `digest-show` lists the five keys on both clients.
-- [ ] 9.3 Server projections and resends per D11, with `desync_resend_keys` (resend off by default per new key).
+      Done 2026-10-08: `desync-autofix` checks that both clients' `digest-show` hashes of every key agree and that a
+      forced round matches every key for both.
+- [x] 9.3 Server projections and resends per D11, with `desync_resend_keys` (resend off by default per new key).
       `state-corrupt <car-details|workshop-tools|warehouse|garage> [loader]`. `desync-autofix` gains one corrupt step
       per key with that key's resend turned on for the run: the server confirms, writes a record and resends, and the
-      client matches again. Done when `desync-autofix` passes.
-- [ ] 9.4 `desync-soak` with the new keys in log-only mode; each key that stays quiet gets its resend turned on by
+      client matches again. Done when `desync-autofix` passes. Done 2026-10-08 (`20261008-201238_L2_desync-autofix`);
+      the first run found the empty-slot and dirty-phase false alarms of design D11 "as built".
+- [x] 9.4 `desync-soak` with the new keys in log-only mode; each key that stays quiet gets its resend turned on by
       default in `desync_resend_keys` [review minor 10]. Done when `desync-soak` reports no mismatch for any new key
-      and the defaults are in the server config.
-- [ ] 9.5 Reconciliation rules per D12: "not ready" keeps a pending mismatch; expiry after four asks; the forced round
+      and the defaults are in the server config. Done 2026-10-08: `desync-soak` (`20261008-202110_L2_desync-soak`, 106
+      steps with details, the tire changer, the warehouse and orders) confirmed nothing; every key's resend is on by
+      default. Smoke set with `desync-autofix`: `20261008-203256_regression.json` (7 of 7).
+- [x] 9.5 Reconciliation rules per D12: "not ready" keeps a pending mismatch; expiry after four asks; the forced round
       asks every car and every key. `desync-autofix` gains a step (forced rounds, long
       `desync_check_interval_seconds`): `inv-corrupt` on B, one forced round with `digest-hold inventory notready`,
       then off: the mismatch is confirmed and repaired within three forced rounds. Done when `desync-autofix` and
-      `desync-soak` pass.
+      `desync-soak` pass. Done 2026-10-08; with "not ready" clearing the mismatch again the step fails
+      (`20261008-201632_L2_desync-autofix`).
 
 ## 10. Soak contention (part 2)
 
@@ -224,9 +232,10 @@ the ledger's "accept" rows (S1 fixed; no silent drops for I3, I7, E4, M8, C4, J2
 - [ ] 10.3 The first-pass kinds of D13, rule 7 (conservation), rule 8 (outcome) and `scenarios/soak-contention-known.txt`
       (kind, gap id, closing row). Done when a 10-minute lane-3 run with `-Contention` fails no rule except as "known
       gap", and `-ContentionKinds machine-same-item` with the gap 9 fix reverted fails rule 7.
-- [ ] 10.4 (needs row 18 task 5.1) Stall warning per D12 with the server setting `desync_stall_seconds` (default 120).
+- [x] 10.4 (needs row 18 task 5.1) Stall warning per D12 with the server setting `desync_stall_seconds` (default 120).
       `desync-autofix` gains a step with `desync_stall_seconds = 20` and `digest-hold inventory notready` for 25 s: one
-      warning in the server log and in `desync`, none after the hold ends. Done when `desync-autofix` passes.
+      warning in the server log and in `desync`, none after the hold ends. Done when `desync-autofix` passes. Done
+      2026-10-08 with group 9 (`20261008-201238_L2_desync-autofix`; the run also checks that no other key stalled).
 - [ ] 10.5 (after row 18 has merged) The second-pass kinds of D13 (row 18's kinds), each removed from the known list
       when it passes. Done when a 10-minute lane-3 run with `-Contention` and every kind fails no rule, and the known
       list holds only gaps still open.
