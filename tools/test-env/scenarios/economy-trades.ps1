@@ -127,7 +127,7 @@ try {
     $gen = if ((Get-HarnessStatus $b).isOrderGenerator) { $b } else { $a }
     Send-HarnessCommand -Instance $gen -Verb orders-generate | Out-Null
     Start-Sleep -Seconds 4
-    $order = @((Dump $a).jobs.orders)[-1].id
+    $order = @((Dump $a).jobs.orders | Where-Object { -not $_.IsMission })[-1].id
     Send-HarnessCommand -Instance $a -Verb orders-accept -Arguments "$order" | Out-Null
     $deadline = (Get-Date).AddSeconds(90)
     do { Start-Sleep -Seconds 1; $active = @((Dump $a).jobs.active | Where-Object { $_.id -eq $order }) } while ($active.Count -eq 0 -and (Get-Date) -lt $deadline)
