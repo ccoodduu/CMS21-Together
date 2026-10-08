@@ -88,6 +88,8 @@ Check ($null -ne $m) "B shows a marker on $key"
 if ($m) {
     Check ($m.name -eq $nameA -and $m.playerId -eq $idA) "B's marker carries A's name ($($m.name))"
     Check ($m.resolved -and $m.loader -eq $loader) "B resolved the part on its own car"
+    $Ctx.Result.notes += "B part marker: flashed=$($m.flashed), flashing=$($m.flashing) (the game highlighter may not be set up in headless games)"
+    Write-Host "B part marker: flashed=$($m.flashed), flashing=$($m.flashing)"
     $gap = Distance $m.position $r.lastSent.position
     Check ($gap -lt 0.5 -and $m.renderers -gt 0) "B's marker sits on the same part as A's, boxed from its meshes ($([math]::Round($gap, 3)) m apart, $($m.renderers) renderer(s))"
     Check ($null -ne $m.screen) "B projects the marker to the screen ($($m.screen | ConvertTo-Json -Compress))"

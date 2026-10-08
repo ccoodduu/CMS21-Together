@@ -108,7 +108,7 @@ public static class PingMarkers
 		if (script.ho == null) return;
 		try
 		{
-			script.Flashing(true, new Il2CppSystem.Nullable<Color>(marker.Own ? OwnColor : OtherColor));
+			script.ho.FlashingOn(marker.Own ? OwnColor : OtherColor);
 			marker.Flashed = script;
 			CoopPings.Count("flashes");
 		}
@@ -125,7 +125,7 @@ public static class PingMarkers
 		if (script == null || !script || script.ho == null) return;
 		try
 		{
-			script.Flashing(false, new Il2CppSystem.Nullable<Color>());
+			script.ho.FlashingOff();
 		}
 		catch (Exception ex)
 		{

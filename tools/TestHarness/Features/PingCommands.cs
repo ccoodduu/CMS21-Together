@@ -148,6 +148,7 @@ public static class PingCommands
                     ["loader"] = m.Loader, ["key"] = m.Key, ["resolved"] = m.Resolved,
                     ["position"] = Vec(PingMarkers.WorldPoint(m)), ["sentPosition"] = Vec(m.Fallback),
                     ["anchor"] = m.Anchor == null ? null : Vec(m.Anchor.position), ["renderers"] = m.Renderers.Count,
+                    ["flashed"] = m.Flashed != null, ["flashing"] = m.Flashed != null && m.Flashed.ho != null && m.Flashed.ho.flashing,
                     ["ageMs"] = Math.Round((Time.realtimeSinceStartup - m.ShownAt) * 1000f), ["remainingMs"] = Math.Round(m.Remaining * 1000f),
                     ["screen"] = projected ? new { x = Math.Round(rect.x), y = Math.Round(rect.y), w = Math.Round(rect.width), h = Math.Round(rect.height), onScreen } : null,
                 };
