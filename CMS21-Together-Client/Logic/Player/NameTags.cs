@@ -41,20 +41,10 @@ public static class NameTags
 	{
 		screen = Vector3.zero;
 		var camera = Camera.main;
-		if (camera == null || !player.HasAvatar) return false;
+		if (camera == null || !player.HasAvatar || !player.Avatar.gameObject.activeSelf) return false;
 
-		Vector3 head;
-		if (player.Record.SeatCarLoaderId != PlayerPresenceRecord.NoCar)
-		{
-			var seat = PresenceManager.SeatHandle(player.Record);
-			if (seat == null) return false;
-			head = seat.position + Vector3.up * SeatedHeadHeight;
-		}
-		else
-		{
-			if (!player.Avatar.gameObject.activeSelf) return false;
-			head = player.Avatar.transform.position + Vector3.up * HeadHeight;
-		}
+		float height = player.Record.SeatCarLoaderId != PlayerPresenceRecord.NoCar ? SeatPoses.SeatedAvatarDrop + SeatedHeadHeight : HeadHeight;
+		Vector3 head = player.Avatar.transform.position + Vector3.up * height;
 		if (Vector3.Distance(camera.transform.position, head) > MaxDistance) return false;
 
 		screen = camera.WorldToScreenPoint(head);

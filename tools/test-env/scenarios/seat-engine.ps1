@@ -1,6 +1,6 @@
 # areas: presence, cars
-# sync-players-and-scenes 5.2-5.4: A sits in a car both players see; B sees A seated with the body hidden, also after
-# B rejoins. A starts the engine and B plays it on that car; A stops it and the sound ends. Both sit in the same seat
+# sync-players-and-scenes 5.2-5.4: A sits in a car both players see; B sees A's avatar seated in the car (row 29), also
+# after B rejoins. A starts the engine and B plays it on that car; A stops it and the sound ends. Both sit in the same seat
 # with their packets held, in both server orders: the first keeps it, the second is out of the seat at once with
 # "<name> is sitting there." (state-merges-and-contention D17). With the engine running again, B deletes the car and A
 # is put out of the seat without an error.
@@ -55,8 +55,8 @@ Start-Sleep -Seconds 2
 
 Send-HarnessCommand -Instance $a -Verb sit -Arguments "0 left" | Out-Null
 Expect $a "seated in car 0 (left)" { param($d) $d.local.seat -eq 0 -and $d.local.seatLeft }
-Expect $b "sees Ann seated in car 0, body hidden" {
-    param($d) $r = $d.roster."$idA"; $r -and $r.seat -eq 0 -and $r.seatLeft -and -not $r.avatarActive
+Expect $b "sees Ann seated in car 0, avatar in the seat" {
+    param($d) $r = $d.roster."$idA"; $r -and $r.seat -eq 0 -and $r.seatLeft -and $r.avatarActive -and $d.players."$idA".seatPose.seated
 }
 Save-HarnessScreenshot -Instance $b -RunDir $Ctx.RunDir -Label "seated"
 
@@ -65,7 +65,7 @@ Wait-HarnessStatus -Instance $b -TimeoutSec 60 -What "B in the menu" -Condition 
 Connect-HarnessInstance $b; Wait-InGarage $b
 Wait-Ready $b | Out-Null
 Expect $b "after the rejoin still sees Ann seated in car 0" {
-    param($d) $r = $d.roster."$idA"; $r -and $r.seat -eq 0 -and -not $r.avatarActive
+    param($d) $r = $d.roster."$idA"; $r -and $r.seat -eq 0 -and $r.avatarActive -and $d.players."$idA".seatPose.seated
 }
 
 Send-HarnessCommand -Instance $a -Verb engine -Arguments "on" | Out-Null

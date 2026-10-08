@@ -1,8 +1,9 @@
 # areas: presence
 # run-all: skip
-# seated-avatars spike 1.1: which seat handle the game's SitInside(car, left) uses on a right-hand-drive car (Sakura
-# Tiara) and a left-hand-drive car (Bolt Atlanta): A sits left and right in each, and A's camera distance to each handle
-# is logged with B's view of A's avatar. Logging only; it fails only when a step cannot run.
+# seated-avatars spike 1.1: which seat handle the game's SitInside(car, left) uses on a right-hand-drive car and on a
+# left-hand-drive car (Bolt Atlanta): A sits left and right in each, and A's camera distance to each handle is logged
+# with B's view of A's avatar. The test installs own no DLC, so the first RHD car the server accepts is used. Logging
+# only; it fails only when a step cannot run.
 param($Ctx)
 
 $a, $b = $Ctx.Instances
@@ -44,8 +45,17 @@ foreach ($name in $Ctx.Instances) { Cmd $name guard-set "Off" | Out-Null }
 $idA = [int](Get-HarnessStatus -Instance $a).playerId
 
 $loader = 0
-foreach ($car in "car_sakuratiara", "car_boltatlanta") {
-    Cmd $a car-spawn "$loader $car 0" | Out-Null
+$rhd = $null
+foreach ($candidate in "car_cabroamer", "car_sakuratiara", "car_nissan240z", "car_jaguaretype", "car_landroversvr", "car_jaguarxjs") {
+    Cmd $a car-spawn "$loader $candidate 0" | Out-Null
+    $deadline = (Get-Date).AddSeconds(12)
+    do { Start-Sleep -Milliseconds 500; $loaded = (Cmd $a car-loaded "$loader").loaded } while (-not $loaded -and (Get-Date) -lt $deadline)
+    if ($loaded) { $rhd = $candidate; break }
+    Write-Host "  $candidate did not spawn (DLC?)"
+}
+if (-not $rhd) { $Ctx.Result.notes += "no right-hand-drive car could be spawned (all need a DLC the test installs do not own)" }
+foreach ($car in @($rhd, "car_boltatlanta") | Where-Object { $_ }) {
+    if ($car -ne $rhd) { Cmd $a car-spawn "$loader $car 0" | Out-Null }
     Check ((Wait-Ready $a $loader) -and (Wait-Ready $b $loader)) "$car Ready on both"
     Start-Sleep -Seconds 2
     foreach ($side in "left", "right") {
