@@ -50,11 +50,9 @@ public static class PieOptionState
 			if (block.Source != null)
 			{
 				blocks[id] = block;
-				if (!wasEnabled.ContainsKey(id))
-				{
-					wasEnabled[id] = options[id].Enabled;
-					controller.SetEnableOption(id, false);
-				}
+				bool enabled = options[id].Enabled;
+				if (!wasEnabled.ContainsKey(id) || enabled) wasEnabled[id] = enabled;
+				if (enabled) controller.SetEnableOption(id, false);
 			}
 			else
 			{

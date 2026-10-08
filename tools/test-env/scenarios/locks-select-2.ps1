@@ -211,9 +211,13 @@ $same = @($base | Where-Object { $o = $_; $n = @($after | Where-Object { $_.id -
 Check ($same -eq $base.Count -and $after.Count -eq $base.Count) "after B's release the move options are as before ($same of $($base.Count))"
 
 # The guard's pie blocks still go through the shared owner.
+Start-Sleep -Seconds 1
 $null = Cmd $a guard-try "PieMenu:EngineStand"
-Start-Sleep -Milliseconds 1500
-$menu = Cmd $a guard-try "PieState:EngineStand"
+$deadline = (Get-Date).AddSeconds(6)
+do {
+    Start-Sleep -Milliseconds 500
+    $menu = Cmd $a guard-try "PieState:EngineStand"
+} while (-not ($menu.options | Where-Object { $_ -like "engine_new enabled=False" }) -and (Get-Date) -lt $deadline)
 Check (@($menu.options | Where-Object { $_ -like "engine_new enabled=False" }).Count -eq 1) "the guard still locks engine_new ($($menu.options -join ', '))"
 Check (@($menu.options | Where-Object { $_ -like "engine_add enabled=False" }).Count -eq 0) "and leaves engine_add open"
 Cmd $a guard-try "Window:PieMenu" | Out-Null
