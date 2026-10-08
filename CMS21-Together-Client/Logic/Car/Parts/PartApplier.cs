@@ -86,14 +86,14 @@ public static class PartApplier
 	}
 
 	// The game's own ShowMounted also deletes the inventory item, adds XP and switches the game mode. It mounts the
-	// unmountWith members only when a group item is mounted; here the members follow their own records.
+	// unmountWith members only when a group item is mounted; here the members follow their own records. Unlike the
+	// game's, it does not block the parts in unblockOnUnmount: ShowBySaveGame already did.
 	private static IEnumerator ShowMounted(PartScript script)
 	{
 		script.IsUnmounted = false;
 		yield return new WaitForSeconds(MountSettleSeconds);
 		if (script == null) yield break;
 
-		script.UnblockBlockParts(false);
 		foreach (var go in script.enableOnUnmount) go.SetActive(false);
 		foreach (var go in script.disableOnUnmount)
 		{
