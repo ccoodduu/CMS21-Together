@@ -60,3 +60,21 @@ example while the car is not Ready, where the tag shows but the avatar is hidden
 ## Size
 
 S (≈ 1) is fair.
+
+## Review resolution
+
+Applied 2026-10-08. Checked on the branch: `PresenceManager.ApplyRecord` line 75 applies `record.LastMovement` to the
+avatar; `SeatHandle` (line 176) is used by `NameTags` line 49; `SeatEngine.SetSeat` forces a movement packet when the
+seat clears.
+
+- **M1** Fixed. D3: `ApplyRecord` and `ApplyMovement(MovementPacket)` skip the avatar update while
+  `SeatPoses.IsPosed(record)`; task 2.2 checks no jitter with the engine running.
+- **M2** Fixed. D1: `SeatPoses` replaces `SeatHandle`; `NameTags` places the tag above the posed head and hides it while
+  the avatar is hidden. Impact lists both.
+- **m1** D4: one more forced movement packet when the poll sees the seated mode end; step 4 waits for it.
+- **m2** `toSeat` against the handle sampled in `LateUpdate`, plus `maxToSeat` from a per-frame ring buffer; step 2 reads
+  it over the whole lift travel.
+- **m3** Step 7 counts an inactive avatar as passing.
+- **m4** D2 ends the garage pose on a scene change; `ride-along` in 3.1's run checks it.
+- **m5** Task 1.1 logs one RHD car for `SeatLeft`.
+- Size: S (≈ 1).

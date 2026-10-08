@@ -22,12 +22,18 @@ row 6), seat arbitration (`SeatRefused`, row 19 D17), and the same car on every 
   (row 2) and the car rocking keep the avatar in the seat. A car that is moved to another place or parked forces its
   sitters out today (`PresenceManager.EnsureNotSeatedIn`); their next record has no seat and the avatar stands up where
   the player's next movement puts it.
-- **Leaving the seat.** When the record's seat clears, the avatar goes back to the movement stream at once (the leaving
-  client already forces a movement packet, `SeatEngine.SetSeat`).
+- **Leaving the seat.** When the record's seat clears, the avatar goes back to the movement stream at once. The leaving
+  client already forces a movement packet (`SeatEngine.SetSeat`), but before the game has placed the character next to
+  the car, so it sends one more when its poll sees the seated mode end.
 - **Late join.** A joiner gets the players' records in the `players` snapshot (row 6) before the cars are Ready; the
   seat pose waits for the car and is applied when it becomes Ready (retry like row 21's `PlaceAvatars`).
-- **One helper for both scenes.** `RideAlong.TryGetAvatarSeat` and the new garage case share one function
-  (`SeatPoses.TryGet(record, out position, out rotation)`), so the test track and the garage use the same offsets.
+- **One helper for both scenes.** `RideAlong.TryGetAvatarSeat`, the name tags (`NameTags`, today on
+  `PresenceManager.SeatHandle`) and the new garage case share one helper
+  (`SeatPoses`, built from `SeatHandle`), so the test track, the garage and the name tag use the same seat; the tag
+  follows the posed avatar's head.
+- **No stale walking position.** A seated player's presence records still carry the last walking position, and
+  `ApplyRecord` applies it to the avatar (up to 4 records per second with the engine running). While a player is posed,
+  neither `ApplyRecord` nor `ApplyMovement` moves the avatar.
 - **No new packet and no server change.** All inputs exist in the presence record.
 
 Hooks: none new (presence reconcile and the existing `OnLateUpdate`). Packets: none.
@@ -44,10 +50,13 @@ Hooks: none new (presence reconcile and the existing `OnLateUpdate`). Packets: n
 
 ## Impact
 
-- Client: `Logic/Player/PresenceManager.cs` (no hiding while seated, seat pose on create and reconcile),
-  `Logic/Player/SeatPoses.cs` (new; the pose math from `RideAlong.SeatPose`), `Logic/Driving/RideAlong.cs` (uses
-  `SeatPoses`), the `OnLateUpdate` placement.
-- Harness: the dump's `players[]` gains `seatPose` (`seated`, `toSeat` in metres, `side`); scenario `seat-avatars`.
+- Client: `Logic/Player/PresenceManager.cs` (no hiding while seated, seat pose on create and reconcile, no movement
+  apply while posed, `SeatHandle` moves to `SeatPoses`), `Logic/Player/SeatPoses.cs` (new; the handle lookup and the pose
+  math from `RideAlong.SeatPose`), `Logic/Player/NameTags.cs` (tag above the posed head), `Logic/Player/SeatEngine.cs`
+  (one more forced movement packet when the seated mode ends), `Logic/Driving/RideAlong.cs` (uses `SeatPoses`), the
+  `OnLateUpdate` placement.
+- Harness: the dump's `players[]` gains `seatPose` (`seated`, `side`, `toSeat` and `maxToSeat` in metres, from a
+  per-frame ring buffer), verb `seat-pose-reset`; scenario `seat-avatars`.
 - Depends on (merged): row 6 (seat records), row 2 (lifts), row 19 D17 (seat arbitration), row 21 (seat pose code).
 
 ## Open questions
