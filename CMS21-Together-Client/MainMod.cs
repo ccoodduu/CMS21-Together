@@ -118,6 +118,7 @@ namespace CMS21Together
 			if (Client.Instance.IsConnectionValid) Logic.Pings.CoopPings.Update();
 			Logic.Pings.PingMarkers.Update();
 			Logic.Visuals.VisualScope.Update();
+			Logic.Driving.RideAlong.Update();
 			Logic.Driving.DriveCapture.Update();
 			ConnectionStatus.Update();
 			ServerWatchdog.Update();
@@ -136,7 +137,9 @@ namespace CMS21Together
 
 		public override void OnLateUpdate()
 		{
-			if (isModInitialized) Logic.Driving.RemoteCars.Update();
+			if (!isModInitialized) return;
+			Logic.Driving.RemoteCars.Update();
+			Logic.Driving.RideAlong.LateUpdate();
 		}
 
 		public override void OnGUI()
@@ -171,6 +174,7 @@ namespace CMS21Together
 			Logic.Pings.CoopPings.Initialize();
 			Logic.Driving.DriveCapture.Initialize();
 			Logic.Driving.RemoteCars.Initialize();
+			Logic.Driving.RideAlong.Initialize();
 		}
 
 		public override void OnApplicationQuit()

@@ -66,6 +66,7 @@ public static class DriveCapture
 		}
 		if (!active)
 		{
+			if (RideAlong.IsPassenger) return;
 			if (ClientScene.LocalScene == GameScene.TestTrack && GameMode.Get()?.GetCurrentMode() == gameMode.CarDrive && TryFindCar(out var found))
 				Start(found);
 			return;

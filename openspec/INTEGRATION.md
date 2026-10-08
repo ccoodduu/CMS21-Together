@@ -40,6 +40,7 @@ part 2. "Owner" defines it; "Users" only call or subscribe.
 | `ShopListChange { ClientSeq, Removed, Deltas }` → `ShopListState { Entries, Revision, SourcePlayer, SourceSeq, Refused }` (`ShopListEntry`: id, amount, the `ShopListItemDataEx` fields) | C→S / S→all (S→actor when nothing changed) | 23 | — (design `docs/design/shared-shopping-list.md`) |
 | `SeatRefused { CarLoaderID, SeatLeft, HolderPlayerId }` | S→the refused client | 19 (part 3, D17) | 6 (`PlayerHandlers.OnPlayerPresence` keeps the first seat holder and stores the second record without seat and engine; the client leaves with `GameScript.ExitFromInterior(true)` and shows "<name> is sitting there.") |
 | `InventoryGroupItemAction` with `ItemActionType.Update` | S→one client | 19 (part 3, D16) | the stored group as the answer to an `Add` of a group the server has with other content; the client replaces its group |
+| `RideUpdate { DriverId, PassengerId, CarLoaderID, Active, Reason }` (`RideEndReason`: `DriverReturned`, `DriverLeft`, `PassengerLeft`, `PassengerDidNotArrive`, `DriveCancelled`) | S→all in session; running rides S→a client entering the test track | 21 | 13 (`CarAwayRegistry.Granted`/`Released`, new events), 6 (seat records), 17 part 2 (observer car, `RemoteCars.Of`); design `docs/design/ride-along.md` |
 
 Rows 12 and 14a add no packets.
 
@@ -243,6 +244,7 @@ Verbs are globally unique (`Commands.Discover` throws on a duplicate). Existing:
 | 19 | part 3: `inv-send <add|update|remove> <uid> [condition]` (a raw inventory packet for a local item; the condition is written into the local item first) |
 | 22 | `ping <loader> <key>` (no arguments: the status probe as before; with arguments: the part goes under the game's mouse-over and the hotkey's path runs), `ping-spot x,y,z`, `ping-burst <n> <loader> <key>` (raw packets past the client throttle), `ping-markers [clear]`, `input-bindings [binding]` (Rewired keyboard and mouse maps of every player); dump section `pings` (`hotkey`, `defaultHotkey`, `markers[]`, `counters`, `lastSent`) |
 | 23 | `shoplist` (game list, server mirror, `outstanding`, `windowManagerSame`), `shoplist-add`, `shoplist-remove`, `shoplist-clear` (item arguments `<id> [tire\|rim] [width=] [size=] [profile=] [et=] [plate=] [bonus=]`); no dump section |
+| 21 | `ride-state [driverId]` (phase, rides, camera `placed`/`toHead`/`maxDrift`/`customPos`, own track car `kinematic`/`inputsEnabled`/seats, drive capture, the copy's seats, avatars `toSeat`), `ride-probe` (spike: track camera, own car seats and head, copy seats and wheels); dump section `ride` |
 
 | PowerShell helper / server command | Owner (first to land) |
 |---|---|
@@ -258,6 +260,7 @@ Verbs are globally unique (`Commands.Discover` throws on a duplicate). Existing:
 | `tools/test-env/Compare-Database.ps1`, `tools/test-env/fixtures/mod-targets/` | 9 |
 | server commands `password`, `serverinfo` (8); `compat` (9); `desync`, `bugreport` (14); `shoplist` (23); existing `kick`, `stop` (`kick` moves to `Server.Refuse`) | as listed |
 | server command `jobs expire <id>` (expires an open order at once, as the tick does) | 19 (part 3) |
+| server command `away` also lists the rides | 21 |
 | server command `perf` (`perf`, `perf top <n>`, `perf reset`), snapshot line `Client[n] snapshot <id> acked after …`; `tools/test-env/PerfSampler.psm1` (`Get-PerfSample`, `Add-PerfSample`, `Test-PerfWatchdog`, `Add-FrameSample`), `Show-SoakReport.ps1` | 11 |
 
 Scenarios (unique): playtest fixes `car-wheel-swap`, `car-mount-race`; 7 `server-restart`, `profile-safety`, `rejoin`, `latejoin`, `persistence-restart`,
@@ -268,7 +271,7 @@ Scenarios (unique): playtest fixes `car-wheel-swap`, `car-mount-race`; 7 `server
 12 `release-smoke` (marked `# run-all: skip`, run after `Install-ReleaseToTestEnv.ps1`); 14a `guard`; 14
 `desync-autofix`, `resync-key`, `bug-report`; 17 `visual-parts`, `visual-activity`, `visual-latejoin`, `visual-screens` (`# needs: graphics`, `# run-all: skip`), `visual-probe` (spike, `# run-all: skip`), `drive-track`, `drive-latejoin`, `drive-probe` (spike, `# run-all: skip`); 11 `scale-connect`, `soak`, `latejoin-full`, `storm` (all
 `# run-all: lane 3`), `full-garage-fixture` and `perf-probe` (`# run-all: skip`); 22 `ping`; 23 `shopping-list`; 19
-`server-answers` (part 3; `seat-engine` gains the seat race).
+`server-answers` (part 3; `seat-engine` gains the seat race); 21 `ride-along`, `ride-probe` (spike, `# run-all: skip`).
 
 Scale lane and long runs (owner 11, design `multiplayer-soak-and-scale` D1-D9):
 

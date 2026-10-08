@@ -2,6 +2,23 @@
 
 Newest first. One entry per work session.
 
+## 2026-10-08 (15:10–16:10) — row 21 ride-along (test track) ready for merge
+
+- `feat/ride-along` (lane 1): spike `docs/spikes/ride-along.md` (runs `20261008-151452`/`-151836_L1_ride-probe`),
+  design note `docs/design/ride-along.md`. A player seated in a car when its driver's test-track claim is granted
+  travels along, sits in the passenger seat of the observer copy (own track car frozen and hidden, game camera off,
+  camera placed after the copy each frame, mouse look), cannot drive, and returns when the driver drives back, leaves
+  or disconnects. Packet `RideUpdate`; server `Rides`; the riders' avatars sit in the seats on every client.
+- The spike found row 17's observer cars shown turned 180° (positions right, so no check saw it); fixed in
+  `RemoteCars`, and `drive-track` now checks the facing (fails with 180° without the fix: `20261008-153915_L1_drive-track`).
+- Proof: `ride-along` (`20261008-153528_L1_ride-along`, 57 checks: camera at the passenger head ≤ 5 cm while driving
+  50 m, drift 0 over 213 frames, same seat and facing on both games, no drive from the passenger, avatars in the
+  seats, only the driver's mileage, early return, driver disconnect); `Run-All -Lanes 1 -Smoke -Scenarios
+  ride-along,drive-track,test-drive,seat-engine` → `20261008-155713_regression.json` 10/10 (the first batch
+  `20261008-154150` had ride-along FLAKY on a test counter left from drive-track, fixed in the scenario).
+- Not done: the test path (options in the spike); everything a visible game must judge (head height, the crouched
+  avatar in the seat, mouse look, the copy's interior up close, wheels spinning the right way after the 180° fix).
+
 ## 2026-10-08 (14:00–15:10) — row 19 part 3 (server answers, seats) ready for merge
 
 - `change/server-answers` (lane 1): groups 12–13 of `state-merges-and-contention`. Every server path that refuses,

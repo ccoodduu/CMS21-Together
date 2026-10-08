@@ -121,6 +121,10 @@ Save "observer_B_stopped" $carA
 $rest = Distance $carA.position $finalA
 Check ($rest -le 0.3) "B's view of A's car rests where A stopped ($([math]::Round($rest, 3)) m)"
 Check ($carA.snaps -eq 0) "no snaps on B (snaps $($carA.snaps), late $($carA.late), max extrapolation $($carA.maxExtrapolatedMs) ms)"
+$frontA = (Cmd $a ride-state).own.driverSeat.front
+$frontCopy = (Cmd $b ride-state "$idA").copy.driverSeat.front
+$facing = if ($frontA -and $frontCopy) { [math]::Round([math]::Acos([math]::Max(-1, [math]::Min(1, $frontA.x * $frontCopy.x + $frontA.y * $frontCopy.y + $frontA.z * $frontCopy.z))) * 180 / [math]::PI, 1) } else { 999 }
+Check ($facing -le 5) "B shows A's car facing the way it faces on A ($facing degrees between the fronts; ride-along spike: it was turned 180 degrees)"
 
 $beforeB = (Cmd $b drive-probe).capturePosition
 Cmd $b drive-input "0.6 0 3" | Out-Null
