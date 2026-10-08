@@ -161,6 +161,9 @@ namespace CMS21Together
 			Logic.Car.Away.TestDriveSync.Initialize();
 			Logic.Car.Locks.CarLockMirror.Initialize();
 			Logic.Car.Locks.LockLifecycle.Initialize();
+			Logic.Car.Locks.LockPreviews.Initialize();
+			Logic.Car.Locks.LockChooser.Initialize();
+			Logic.Car.Locks.LockPie.Initialize();
 			Logic.Car.Away.PathTestSync.Initialize();
 			Logic.Economy.CarPurchaseSync.Initialize();
 			Logic.Outdoor.OutdoorSession.Initialize();
