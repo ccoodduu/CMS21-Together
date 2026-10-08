@@ -19,6 +19,8 @@ public static class CarPlacementSync
 
 	private static readonly HashSet<int> applying = new HashSet<int>();
 
+	private static readonly HashSet<int> movingLocally = new HashSet<int>();
+
 	public static bool IsApplying(int loader) => applying.Contains(loader);
 	private static readonly Dictionary<int, int> pendingPlaces = new Dictionary<int, int>();
 
@@ -34,15 +36,26 @@ public static class CarPlacementSync
 		int from = __instance.carLoader.GetPlaceNo();
 		int to = (int)__instance.pos;
 		if (from == to) return true;
-		if (CarAwaySync.BlockIfLocked(loader, "move"))
+		if (CarAwaySync.BlockIfLocked(loader, "move") || !Locks.LockCarHooks.Gate(Locks.LockCarHooks.MoveAction(__instance.carLoader, __instance.pos, __instance.movePlayerToCar)))
 		{
 			__result = false;
 			return false;
 		}
+		movingLocally.Add(loader);
 		Log.Info($"[Placement] Loader {loader}: moving {from} -> {to}.");
 		Client.Instance.Send(new CarPlaceChangeRequestPacket { CarLoaderID = loader, FromPlace = from, ToPlace = to });
 		return true;
 	}
+
+	[HarmonyPatch(typeof(NotificationCenter._ChangeCarPos_d__20), nameof(NotificationCenter._ChangeCarPos_d__20.MoveNext))]
+	[HarmonyPostfix]
+	private static void AfterChangeCarPosStep(NotificationCenter._ChangeCarPos_d__20 __instance, bool __result)
+	{
+		if (__result || __instance.carLoader == null || movingLocally.Count == 0) return;
+		movingLocally.Remove(CarLoaderPlaces.Get().GetCarLoaderId(__instance.carLoader));
+	}
+
+	public static bool IsMovingLocally(int loader) => movingLocally.Contains(loader);
 
 	public static void OnPlaceChanged(CarPlaceChangedPacket packet)
 	{

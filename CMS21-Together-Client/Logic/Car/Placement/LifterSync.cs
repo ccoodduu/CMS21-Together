@@ -35,19 +35,22 @@ public static class LifterSync
 
 	[HarmonyPatch(typeof(CarLifter), nameof(CarLifter.Action))]
 	[HarmonyPrefix]
-	private static bool BeforeAction(CarLifter __instance, out (int State, bool Moving) __state)
+	private static bool BeforeAction(CarLifter __instance, int actionType, out (int State, bool Moving) __state)
 	{
 		__state = ((int)__instance.GetState(), __instance.isMoving);
-		if (!Active || applying.Contains(IndexOf(__instance)) || __instance.connectedCarLoader == null) return true;
-		int loader = CarLoaderPlaces.Get().GetCarLoaderId(__instance.connectedCarLoader);
-		return loader < 0 || !CarAwaySync.BlockIfLocked(loader, "lift");
+		int index = IndexOf(__instance);
+		var connected = __instance.GetConnectedCarLoader();
+		if (!Active || applying.Contains(index) || connected == null) return true;
+		int loader = CarLoaderPlaces.Get().GetCarLoaderId(connected);
+		if (loader < 0) return true;
+		return !CarAwaySync.BlockIfLocked(loader, "lift") && Locks.LockCarHooks.Gate(Locks.LockCarHooks.LiftAction(__instance, index, actionType));
 	}
 
 	[HarmonyPatch(typeof(CarLifter), nameof(CarLifter.Action))]
 	[HarmonyPostfix]
-	private static void AfterAction(CarLifter __instance, int actionType, (int State, bool Moving) __state)
+	private static void AfterAction(CarLifter __instance, int actionType, (int State, bool Moving) __state, bool __runOriginal)
 	{
-		if (!Active || __state.Moving || !__instance.isMoving) return;
+		if (!__runOriginal || !Active || __state.Moving || !__instance.isMoving) return;
 		int index = IndexOf(__instance);
 		if (index < 0 || applying.Contains(index)) return;
 		int to = __state.State + (actionType == 0 ? 1 : -1);

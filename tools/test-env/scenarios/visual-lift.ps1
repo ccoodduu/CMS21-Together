@@ -2,7 +2,8 @@
 # Playtest 2026-10-07: B worked on a brake caliper while A moved the lift; A then saw the caliper floating where it
 # had been and the mounted caliper stayed invisible. Here B unscrews and mounts a part of a car on lift 1 while A
 # raises and lowers the lift, also while A's ghost is held at its midpoint. Afterwards A has no ghost or hidden
-# renderer left, the part's renderers draw, and the part sits at the same place relative to the car as on B.
+# renderer left, the part's renderers draw, and the part sits at the same place relative to the car as on B. Since
+# part-locks (D7), A's lift is refused while B holds a lock on the car; the unlocked fast mount still races the lift.
 param($Ctx)
 
 $a, $b = $Ctx.Instances
@@ -99,13 +100,23 @@ if (-not $part) { $part = $candidates[0] }
 $key = $part.key
 Write-Host "part: $key ($($part.id), $($part.bolts) bolts)"
 
-# B unscrews; A raises the lift while B's bolts are half out.
+# B unscrews under a lock; A's lift is refused while B works (part-locks D7) and runs after B's release.
+$lock = Cmd $b lock-take "$loader unmount $key"
+Start-Sleep -Seconds 1
 Cmd $b vfx-unscrew "$loader $key pause 0.5" | Out-Null
 Start-Sleep -Seconds 8
 Cmd $a lift "0 up" | Out-Null
-Wait-Lift "Middle"
+Start-Sleep -Seconds 2
+foreach ($name in $Ctx.Instances) {
+    $lift = @(Cmd $name lifters)[0]
+    Check ($lift.state -eq "OnFloor" -and -not $lift.isMoving) "$name`: the lift stays down while B works on the car ($($lift.state))"
+}
 Cmd $b vfx-unscrew "$loader $key resume" | Out-Null
 Start-Sleep -Seconds 8
+Cmd $b lock-release "$loader" | Out-Null
+Start-Sleep -Seconds 1
+Cmd $a lift "0 up" | Out-Null
+Wait-Lift "Middle"
 Wait-Quiet "after the unmount on a moved lift"
 Wait-Same "unmount on a moved lift"
 Check-Part "unmount on a moved lift" $true

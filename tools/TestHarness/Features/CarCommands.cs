@@ -327,6 +327,13 @@ public static class CarCommands
         return new Dictionary<string, object> { ["engine"] = engine.name, ["group"] = EngineGroup(engine.name)?.UID ?? 0 };
     }
 
+    [HarnessCommand("crane-group")]
+    private static object CraneGroup(string args)
+    {
+        var engine = Loader(args).e_engine_h ?? throw new ArgumentException("the car has no engine");
+        return new Dictionary<string, object> { ["engine"] = engine.name, ["group"] = EngineGroup(engine.name)?.UID ?? 0 };
+    }
+
     [HarnessCommand("crane-in")]
     private static object CraneIn(string args)
     {
