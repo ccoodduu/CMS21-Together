@@ -59,6 +59,7 @@ namespace CMS21_Together_Server.Network
 					Logger.Info("  shoplist          - Show the shared shopping list");
 					Logger.Info("  outdoor [catalog|junkyard|barn|auction] - Show the shared outdoor instances, the car catalog or one scene");
 					Logger.Info("  desync [check]    - Show recent desync repairs; check compares every player now");
+					Logger.Info("  desync interval <s> - Seconds between automatic comparisons until the next restart");
 					Logger.Info("  bugreport         - List the bug-report bundles in BugReports/");
 					Logger.Info("  economy [n]       - Show the last n economy requests and a count per reason");
 					Logger.Info("  economy cases     - Show opened cases that can still be looted");
@@ -105,6 +106,12 @@ namespace CMS21_Together_Server.Network
 					{
 						Logger.Info("[Desync] Checking every player now.");
 						Data.Reconciliation.ReconciliationService.Tick(Data.ServerTime.Time, force: true);
+						break;
+					}
+					if (args.Length > 2 && args[1].ToLower() == "interval" && int.TryParse(args[2], out int interval) && interval > 0)
+					{
+						Data.Reconciliation.ReconciliationService.IntervalSeconds = interval;
+						Logger.Info($"[Desync] Automatic comparisons every {interval} s.");
 						break;
 					}
 					foreach (string line in Data.Reconciliation.ReconciliationService.Describe())

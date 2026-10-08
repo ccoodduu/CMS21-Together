@@ -291,6 +291,24 @@ function Get-Failed($Entry) { ($Entry.passed -eq $false) -or ($Entry.ok -eq $fal
 
 $checkpoints = Read-JsonLines "checkpoints.jsonl"
 if ($checkpoints.Count -gt 0) { $summary.checkpoints = [ordered]@{ n = $checkpoints.Count; failed = @($checkpoints | Where-Object { Get-Failed $_ }).Count } }
+$silentStalls = @()
+for ($i = 1; $i -lt $checkpoints.Count; $i++) {
+    $previous = @(if ($checkpoints[$i - 1].digest) { $checkpoints[$i - 1].digest.notReady })
+    $current = @(if ($checkpoints[$i].digest) { $checkpoints[$i].digest.notReady })
+    $silentStalls += @($current | Where-Object { $previous -contains $_ } | ForEach-Object { "$_ not ready at checkpoints $($checkpoints[$i - 1].index) and $($checkpoints[$i].index)" })
+}
+
+$contention = Read-JsonLines "contention.jsonl"
+if ($contention.Count -gt 0) {
+    $summary.contention = [ordered]@{
+        n = $contention.Count
+        byVerdict = @($contention | Group-Object verdict | ForEach-Object { [pscustomobject]@{ verdict = $_.Name; n = $_.Count } })
+        byKind = @($contention | Group-Object kind | ForEach-Object { [pscustomobject]@{ kind = $_.Name; n = $_.Count; failed = @($_.Group | Where-Object verdict -eq "failed").Count; known = @($_.Group | Where-Object verdict -eq "known gap").Count } })
+    }
+}
+$conservation = @($contention | Where-Object { $_.verdict -eq "failed" -and @($_.rule8).Count -gt 0 })
+$outcomes = @($contention | Where-Object { $_.verdict -eq "failed" -and @($_.rule9).Count -gt 0 })
+$knownGaps = @($contention | Where-Object { $_.verdict -eq "known gap" })
 
 $storms = Read-JsonLines "storms.jsonl"
 if ($storms.Count -gt 0) {
@@ -319,7 +337,7 @@ if ($AllowList -and (Test-Path -LiteralPath $AllowList)) {
 }
 function Test-Allowed([string]$Line) { foreach ($pattern in $allow) { if ($Line -match $pattern) { return $true } }; return $false }
 
-$desyncLines = @($serverLogs | ForEach-Object { Select-String -LiteralPath $_.FullName -Pattern '\[Desync\].*(resending|is persistent)' } | ForEach-Object { $_.Line })
+$desyncLines = @($serverLogs | ForEach-Object { Select-String -LiteralPath $_.FullName -Pattern '\[Desync\].*(resending|is persistent|log only)' } | ForEach-Object { $_.Line })
 $errorLines = @($serverLogs | ForEach-Object { Select-String -LiteralPath $_.FullName -Pattern '\[ERROR\]' } | ForEach-Object { $_.Line } | Where-Object { -not (Test-Allowed $_) })
 $harmonyLines = @(Get-ChildItem -LiteralPath $RunDir -Filter "client_*.log" -File -ErrorAction SilentlyContinue |
     ForEach-Object { Select-String -LiteralPath $_.FullName -Pattern 'HarmonyException' } | ForEach-Object { $_.Line } | Where-Object { -not (Test-Allowed $_) })
@@ -350,7 +368,7 @@ $durationS = [math]::Max($serverDuration, $processDuration)
 $longRun = $durationS -ge 3600
 $rules = @(
     [pscustomobject][ordered]@{ rule = 1; name = "checkpoints equal"; verdict = if (-not $summary.checkpoints) { "n/a" } elseif ($summary.checkpoints.failed) { "FAIL" } else { "PASS" }; detail = if ($summary.checkpoints) { "$($summary.checkpoints.failed) of $($summary.checkpoints.n) failed" } else { "" } }
-    [pscustomobject][ordered]@{ rule = 2; name = "no confirmed desync"; verdict = if (-not $serverLogs.Count) { "n/a" } elseif ($desyncLines.Count) { "FAIL" } else { "PASS" }; detail = @($desyncLines | Select-Object -First 3) -join " / " }
+    [pscustomobject][ordered]@{ rule = 2; name = "no confirmed desync, no silent stall"; verdict = if (-not $serverLogs.Count) { "n/a" } elseif ($desyncLines.Count + $silentStalls.Count) { "FAIL" } else { "PASS" }; detail = @(@($desyncLines) + @($silentStalls) | Select-Object -First 3) -join " / " }
     [pscustomobject][ordered]@{ rule = 3; name = "no unexpected leave"; verdict = "n/a"; detail = "checked by the scenario" }
     [pscustomobject][ordered]@{ rule = 4; name = "no errors"; verdict = if (-not $serverLogs.Count) { "n/a" } elseif ($errorLines.Count + $harmonyLines.Count) { "FAIL" } else { "PASS" }; detail = "$($errorLines.Count) server [ERROR], $($harmonyLines.Count) HarmonyException (not on the allow-list)" }
     [pscustomobject][ordered]@{ rule = 5; name = "storms pass"; verdict = if (-not $summary.storms) { "n/a" } elseif ($summary.storms.failed) { "FAIL" } else { "PASS" }; detail = if ($summary.storms) { "$($summary.storms.failed) of $($summary.storms.n) failed" } else { "" } }
@@ -376,6 +394,16 @@ $rules += [pscustomobject][ordered]@{
     rule = 7; name = "memory and logs over hours"
     verdict = if (-not $longRun) { "n/a" } elseif (@($rule7 | Where-Object verdict -eq "FAIL").Count) { "FAIL" } elseif ($rule7.Count) { "PASS" } else { "n/a" }
     detail = if ($longRun) { @($rule7 | ForEach-Object { "$($_.name) $($_.value) $($_.unit) ($($_.verdict))" }) -join "; " } else { "run shorter than 60 min" }
+}
+$rules += [pscustomobject][ordered]@{
+    rule = 8; name = "contention: no item duplicated or lost"
+    verdict = if (-not $contention.Count) { "n/a" } elseif ($conservation.Count) { "FAIL" } else { "PASS" }
+    detail = @($conservation | Select-Object -First 3 | ForEach-Object { "$($_.index) $($_.kind): $(@($_.rule8) -join '; ')" }) -join " / "
+}
+$rules += [pscustomobject][ordered]@{
+    rule = 9; name = "contention: expected outcome"
+    verdict = if (-not $contention.Count) { "n/a" } elseif ($outcomes.Count) { "FAIL" } else { "PASS" }
+    detail = "$(@($outcomes | Select-Object -First 3 | ForEach-Object { "$($_.index) $($_.kind): $(@($_.rule9) -join '; ')" }) -join ' / ')$(if ($knownGaps.Count) { " ($($knownGaps.Count) known gaps: $(@($knownGaps | Group-Object kind | ForEach-Object { "$($_.Name) $($_.Count)" }) -join ', '))" })"
 }
 $summary.rules = $rules
 

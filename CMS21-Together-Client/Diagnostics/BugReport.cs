@@ -268,8 +268,9 @@ public static class BugReport
 		bool inGarage = Client.Instance != null && Client.Instance.IsConnectionValid && ClientData.IsInitialSyncFinished
 		                && ClientScene.LocalScene == GameScene.Garage && !SyncTracker.InSnapshot;
 		if (!inGarage) return state;
-		var keys = new List<(string Key, string SubKey)> { (DigestMappers.WorldKey, ""), (DigestMappers.InventoryKey, ""), (DigestMappers.PlacementKey, "") };
-		keys.AddRange(CarPartsSync.All.Where(s => s.Registry != null).Select(s => (DigestMappers.CarsKey, s.Loader.ToString())));
+		var keys = DigestMappers.GlobalKeys.Select(k => (Key: k, SubKey: "")).ToList();
+		foreach (var sync in CarPartsSync.All.Where(s => s.Registry != null))
+			keys.AddRange(DigestMappers.CarKeys.Select(k => (k, sync.Loader.ToString())));
 		foreach (var (key, subKey) in keys) state.Add((key, subKey, ClientDigests.Project(key, subKey)));
 		return state;
 	}

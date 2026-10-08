@@ -8,6 +8,10 @@
 # of D6 (allow-list: soak-allow.txt) but goes on to the end unless -StopOnFailure. Every mount makes a new part and
 # every unmount keeps one, so after each checkpoint the soak sells single items down to -InventoryCap (0 = no cap);
 # the sales are ordinary steps in actions.jsonl, so a replay repeats them instead of capping again.
+# -Contention adds the row "contention" (weight -ContentionWeight) of state-merges-and-contention D13
+# (..\SoakContention.ps1): two to four players act on the same part, item, detail, machine, lift or car in a seeded
+# server order; rules 8 (conservation) and 9 (outcome); -ContentionKinds forces the kinds drawn. Each checkpoint's
+# forced digest round covers every key, and a key that is not ready at two checkpoints in a row fails rule 2.
 param(
     $Ctx,
     [double]$Minutes = 10,
@@ -17,7 +21,11 @@ param(
     [string]$Replay = "",
     [int]$InventoryCap = 300,
     [switch]$StopOnFailure,
-    [switch]$NoAutofix
+    [switch]$NoAutofix,
+    [switch]$Contention,
+    [int]$ContentionWeight = 15,
+    [string[]]$ContentionKinds = @(),
+    [switch]$ContentionIncludeKnown
 )
 
 Import-Module (Join-Path $PSScriptRoot "..\ScaleSession.psm1")
@@ -26,6 +34,8 @@ $stormModule = Join-Path $PSScriptRoot "..\StormKinds.psm1"
 if (Test-Path -LiteralPath $stormModule) { Import-Module $stormModule }
 
 $names = @($Ctx.Instances)
+$ContentionKinds = @($ContentionKinds | ForEach-Object { $_ -split '[,\s]+' } | Where-Object { $_ })
+if ($ContentionKinds.Count -gt 0) { $Contention = [switch]$true }
 $runDir = $Ctx.RunDir
 $actionsFile = Join-Path $runDir "actions.jsonl"
 if ($Seed -eq 0) { $Seed = [int](Get-Date -Format "MMddHHmmss") }
@@ -95,9 +105,11 @@ function Resolve-Template([string]$Template) {
 
 # Issues one verb and logs it. "args" is the template when the arguments refer to an earlier step's result, so a
 # replay logs the same text; "sent" is what was sent.
-function Invoke-Step([string]$Actor, [string]$Verb, [string]$Arguments = "", [string]$Template = "", [string]$Action = "", [int]$Step = 0) {
+function Invoke-Step([string]$Actor, [string]$Verb, [string]$Arguments = "", [string]$Template = "", [string]$Action = "", [int]$Step = 0,
+    [int]$Group = 0, [string]$Phase = "", [int]$Member = -1) {
     $script:stepNo = if ($Step -gt 0) { $Step } else { $script:stepNo + 1 }
     $entry = [ordered]@{ step = $script:stepNo; t = (Elapsed); actor = $Actor; verb = $Verb; args = $(if ($Template) { $Template } else { $Arguments }); sent = $Arguments; action = $Action; ok = $false; error = $null; ms = 0 }
+    if ($Group -gt 0) { $entry.group = $Group; $entry.phase = $Phase; $entry.member = $Member }
     $watch = [Diagnostics.Stopwatch]::StartNew()
     $result = $null
     try {
@@ -117,7 +129,7 @@ function Invoke-Step([string]$Actor, [string]$Verb, [string]$Arguments = "", [st
 }
 
 function Add-Marker([string]$Kind, $Data) {
-    Add-JsonLine $actionsFile ([ordered]@{ step = 0; t = (Elapsed); actor = ""; verb = $Kind; args = ($Data | ConvertTo-Json -Compress -Depth 4); ok = $true })
+    Add-JsonLine $actionsFile ([ordered]@{ step = 0; t = (Elapsed); actor = ""; verb = $Kind; args = ($Data | ConvertTo-Json -Compress -Depth 8); ok = $true })
 }
 
 # --- session model -------------------------------------------------------------------------------------------
@@ -140,6 +152,12 @@ function Add-Pending([double]$InSeconds, [string]$Actor, [string]$Verb, [string]
     $pending.Add([pscustomobject]@{ Due = (Get-Date).AddSeconds($InSeconds); Actor = $Actor; Verb = $Verb; Args = $Arguments; Kind = $Kind; Action = $Action })
 }
 
+# Rims and tires leave the wheel-key choice: part-fast-mount of a single wheel part without its group is no player
+# action, and it leaves the parts behind the wheel unblocked on the actor while the receivers block them.
+function Get-WheelKeys([string]$Actor, [int]$Loader) {
+    @(try { Send-HarnessCommand -Instance $Actor -Verb wheel-parts -Arguments "$Loader" | ForEach-Object { $_.key } } catch { })
+}
+
 function Get-ReadyCars([string]$Actor) {
     @(Get-Placement $Actor | Where-Object { $seated.Values -notcontains $_.loader } | Where-Object { Test-Ready $Actor $_.loader })
 }
@@ -157,7 +175,8 @@ function Invoke-Parts([string]$Actor) {
         $cache = $partCache[$car.loader]
         if (-not $cache -or $cache.Car -ne $car.carToLoad) {
             $dumpCar = @((Send-HarnessCommand -Instance $Actor -Verb dump).cars | Where-Object { $_.index -eq $car.loader })[0]
-            $cache = @{ Car = $car.carToLoad; Keys = @($dumpCar.subParts | Where-Object { -not $_.unmounted -and -not $_.blocked } | ForEach-Object { $_.key }) }
+            $wheelKeys = @(Get-WheelKeys $Actor $car.loader)
+            $cache = @{ Car = $car.carToLoad; Keys = @($dumpCar.subParts | Where-Object { -not $_.unmounted -and -not $_.blocked -and $wheelKeys -notcontains $_.key } | ForEach-Object { $_.key }) }
             $partCache[$car.loader] = $cache
         }
         $openKeys = @($open | ForEach-Object { $_.Key })
@@ -332,6 +351,8 @@ function Invoke-Network([string]$Actor) {
     return $true
 }
 
+. (Join-Path $PSScriptRoot "..\SoakContention.ps1")
+
 $catalogue = @(
     @{ Weight = 25; Name = "parts"; Run = ${function:Invoke-Parts} }
     @{ Weight = 10; Name = "cars"; Run = ${function:Invoke-Cars} }
@@ -345,6 +366,7 @@ $catalogue = @(
     @{ Weight = 2; Name = "travel"; Run = ${function:Invoke-Travel} }
     @{ Weight = 5; Name = "network"; Run = ${function:Invoke-Network} }
 )
+if ($Contention) { $catalogue += @{ Weight = $ContentionWeight; Name = "contention"; Run = ${function:Invoke-Contention} } }
 $totalWeight = ($catalogue | ForEach-Object { $_.Weight } | Measure-Object -Sum).Sum
 
 function Invoke-RandomAction {
@@ -376,6 +398,7 @@ function Invoke-DuePending([switch]$All) {
 # --- checkpoints, sampling, rules ----------------------------------------------------------------------------
 $script:checkpointIndex = 0
 $script:capSold = 0
+$script:lastNotReady = @()
 $desyncSeen = @{}
 function Invoke-Quiesce {
     Invoke-DuePending -All
@@ -392,7 +415,7 @@ function Invoke-Quiesce {
 }
 
 function Test-ConfirmedDesyncs {
-    foreach ($line in @(Find-ServerLogLines -ServerDir $Ctx.ServerDir -Since $scenarioStart -Pattern "\[Desync\] .*(resending|is persistent|confirmed \(autofix off\))")) {
+    foreach ($line in @(Find-ServerLogLines -ServerDir $Ctx.ServerDir -Since $scenarioStart -Pattern "\[Desync\] .*(resending|is persistent|confirmed \(autofix off\)|log only)")) {
         if ($desyncSeen.ContainsKey($line)) { continue }
         $desyncSeen[$line] = $true
         Add-Failure 2 "confirmed desync: $line"
@@ -405,6 +428,9 @@ function Invoke-Checkpoint([string]$Label = "") {
     $script:checkpointIndex++
     $checkpoint = Invoke-ScaleCheckpoint -Ctx $Ctx -Index $script:checkpointIndex -Label $Label -Instances $names
     if (-not $checkpoint.Passed) { Add-Failure 1 "checkpoint $($script:checkpointIndex): $($checkpoint.Record.problems -join '; ')" }
+    $notReady = @(if ($checkpoint.Record.digest) { $checkpoint.Record.digest.notReady })
+    foreach ($stalled in @($notReady | Where-Object { $script:lastNotReady -contains $_ })) { Add-Failure 2 "$stalled was not ready at checkpoints $($script:checkpointIndex - 1) and $($script:checkpointIndex)" }
+    $script:lastNotReady = $notReady
     Test-ConfirmedDesyncs
     if ($checkpoint.Dumps) {
         $first = $checkpoint.Dumps[$names[0]]
@@ -496,6 +522,7 @@ if ($replaySteps) {
     $previousT = 0.0
     foreach ($entry in $replaySteps) {
         if ($script:stop) { break }
+        if ($entry.PSObject.Properties["group"] -or $entry.verb -eq "contend") { continue }
         $wait = [math]::Min(10.0, [math]::Max(0.0, [double]$entry.t - $previousT))
         $previousT = [double]$entry.t
         $until = (Get-Date).AddSeconds($wait)
@@ -503,6 +530,7 @@ if ($replaySteps) {
         switch ($entry.verb) {
             "checkpoint" { $data = $entry.args | ConvertFrom-Json; Invoke-Checkpoint $data.label }
             "storm" { $data = $entry.args | ConvertFrom-Json; Invoke-Storm $data.kind ([int]$data.seed) }
+            "contend-start" { Invoke-ContentionReplay $entry $replaySteps }
             default {
                 $template = if ($entry.args -match '\{step:\d+:\w+\}') { $entry.args } else { "" }
                 $arguments = if ($template) { "" } else { "$($entry.args)" }
@@ -547,6 +575,7 @@ $coveredActions = @(Get-Content -LiteralPath $actionsFile | ForEach-Object { ($_
 $missingActions = @($catalogue | ForEach-Object { $_.Name } | Where-Object { $coveredActions -notcontains $_ })
 $Ctx.Result.notes += "seed $Seed, $steps steps, $($script:checkpointIndex) checkpoints, $($script:stormIndex) storms; replay: -ScenarioArgs @{ Replay = '$actionsFile' }"
 $Ctx.Result.notes += "verb errors: $($errorRates -join ', ')"
+if ($Contention -or $script:contentionStats.groups -gt 0) { $Ctx.Result.notes += (Get-ContentionSummary); $Ctx.Result["contention"] = $script:contentionStats }
 if ($script:capSold -gt 0) { $Ctx.Result.notes += "inventory cap $InventoryCap`: sold $($script:capSold) items after checkpoints" }
 if ($noisy.Count -gt 0) { $Ctx.Result.notes += "verbs over 20 % errors (driver bug or a real block): $($noisy -join ', ')" }
 if ($missingActions.Count -gt 0) { $Ctx.Result.notes += "action rows not covered: $($missingActions -join ', ')" }

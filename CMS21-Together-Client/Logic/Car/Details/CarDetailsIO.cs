@@ -309,7 +309,31 @@ public static class CarDetailsIO
 			data.FactoryLicensePlateNumber = plates.FactoryLicensePlateNumber;
 			carLoader.LicensePlatesData = data;
 		}
+		ApplyPlateTexture(carLoader, PlateFront, plates.LicensePlateFrontTex, true);
+		ApplyPlateTexture(carLoader, PlateRear, plates.LicensePlateRearTex, false);
 	}
+
+	public const string PlateFront = "license_plate_front";
+	public const string PlateRear = "license_plate_rear";
+
+	public static void ApplyPlateTexture(CarLoader carLoader, string partName, string texture, bool front)
+	{
+		if (string.IsNullOrEmpty(texture) || texture == PlateTexture(carLoader, front)) return;
+		foreach (var part in carLoader.carParts)
+		{
+			if (part == null || part.name != partName) continue;
+			carLoader.ChangeLicencePlateTexture(part, texture);
+			break;
+		}
+		if (texture == PlateTexture(carLoader, front)) return;
+		var data = carLoader.LicensePlatesData;
+		if (front) data.LicensePlateFrontTex = texture;
+		else data.LicensePlateRearTex = texture;
+		carLoader.LicensePlatesData = data;
+	}
+
+	private static string PlateTexture(CarLoader carLoader, bool front) =>
+		front ? carLoader.LicensePlatesData.LicensePlateFrontTex : carLoader.LicensePlatesData.LicensePlateRearTex;
 
 	private static void ApplyInfo(CarLoader carLoader, ModCarInfo info)
 	{

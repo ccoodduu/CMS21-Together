@@ -12,6 +12,15 @@ public static class DigestMappers
 	public const string InventoryKey = SyncOrder.InventoryKey;
 	public const string CarsKey = SyncOrder.CarsKey;
 	public const string PlacementKey = SyncOrder.CarPlacementKey;
+	public const string DetailsKey = SyncOrder.CarDetailsKey;
+	public const string ToolsKey = SyncOrder.WorkshopToolsKey;
+	public const string WarehouseKey = "warehouse";
+	public const string GarageKey = SyncOrder.GarageKey;
+	public const string JobsKey = SyncOrder.JobsKey;
+
+	public static readonly string[] GlobalKeys = { WorldKey, InventoryKey, PlacementKey, ToolsKey, WarehouseKey, GarageKey, JobsKey };
+
+	public static readonly string[] CarKeys = { CarsKey, DetailsKey };
 
 	public static Projection World(int money, int scraps, int level, int exp) => new Projection()
 		.Add("world", "money", money)
@@ -77,6 +86,62 @@ public static class DigestMappers
 		foreach (var pair in lifterStates) projection.Add($"lift:{pair.Key}", "state", pair.Value);
 		foreach (var pair in carPlaces) projection.Add($"loader:{pair.Key}", "place", pair.Value);
 		foreach (var pair in parkedCars) projection.Add($"slot:{pair.Key}", "car", pair.Value);
+		return projection;
+	}
+
+	public static Projection Details(ModCarDetails details)
+	{
+		var projection = new Projection();
+		foreach (var pair in CarDetailEntries.Split(details))
+		{
+			if (pair.Key == CarDetailEntries.Info) projection.Add(pair.Key, "mileage", ((ModCarInfo)pair.Value).Mileage);
+			else projection.Add(pair.Key, "value", CarDetailEntries.Signature(pair.Value));
+		}
+		return projection;
+	}
+
+	public static Projection Tools(IEnumerable<ToolSlotState> slots)
+	{
+		var projection = new Projection();
+		foreach (var slot in slots)
+		{
+			if (slot == null || slot.IsEmpty || slot.Uid == 0 || !ModTools.IsMachine(slot.Tool)) continue;
+			string id = $"tool:{slot.Tool}";
+			projection.Add(id, "uid", slot.Uid.ToString(CultureInfo.InvariantCulture)).Add(id, "item", slot.Item?.ID ?? slot.Group?.ID)
+				.Add(id, "mounting", slot.Mounting).Add(id, "balanced", slot.Balanced);
+		}
+		return projection;
+	}
+
+	public static Projection Warehouse(IEnumerable<ModItem> items, IEnumerable<ModGroupItem> groups)
+	{
+		var projection = new Projection();
+		AddItems(projection, "wh", items);
+		AddGroups(projection, "wh", groups);
+		return projection;
+	}
+
+	public static Projection Garage(IDictionary<string, bool[]> garageUpgrades, IDictionary<string, bool[]> skills, int barns)
+	{
+		var projection = new Projection().Add("garage", "barns", barns);
+		AddUnlocked(projection, "upgrade", garageUpgrades);
+		AddUnlocked(projection, "skill", skills);
+		return projection;
+	}
+
+	private static void AddUnlocked(Projection projection, string prefix, IDictionary<string, bool[]> levels)
+	{
+		if (levels == null) return;
+		foreach (var pair in levels)
+			for (int i = 0; pair.Value != null && i < pair.Value.Length; i++)
+				if (pair.Value[i]) projection.Add($"{prefix}:{pair.Key}", $"level{i}", true);
+	}
+
+	public static Projection Jobs(IEnumerable<int> orderIds, IEnumerable<KeyValuePair<int, int>> activeJobLoaders)
+	{
+		var projection = new Projection();
+		foreach (int id in orderIds) projection.Add($"order:{id}", "open", true);
+		foreach (var pair in activeJobLoaders) projection.Add($"job:{pair.Key}", "loader", pair.Value);
 		return projection;
 	}
 }

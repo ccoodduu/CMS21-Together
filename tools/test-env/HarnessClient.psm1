@@ -80,7 +80,7 @@ function Wait-HarnessDumpsEqual {
     throw "Timeout after $TimeoutSec s waiting for equal dumps of $Left and $Right (differ: $($differ -join ', '))"
 }
 
-$script:SharedSections = @("stats", "inventory", "cars", "placement", "jobs", "tools", "toolPositions")
+$script:SharedSections = @("stats", "inventory", "cars", "carDetails", "placement", "jobs", "tools", "toolPositions")
 $script:LastDumps = $null
 
 # The dump sections every client of a session must agree on (local, roster, status and the like are per client).

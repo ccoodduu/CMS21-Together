@@ -427,6 +427,15 @@ them. Spike 1.3 lists fields to leave out.
   and `Rim` ids on both clients, so they agree). The `car-details` digest needs no exclusions.
 - **Log-only first** [minor 10]: each new key starts with its resend off (`desync_resend_keys` server setting lists the
   keys whose resend is on). A key's resend is turned on after `desync-soak` is quiet for it.
+- *As built (tasks 9.1-9.4, 2026-10-08):* `DigestMappers.Details` projects each entry's `Signature`, `info` only its
+  mileage; `Tools` skips empty slots, and a slot whose UID is 0 counts as empty (the tire changer and the engine stand
+  report an empty group object, which made the first `desync-autofix` run confirm and resend `workshop-tools` for
+  both clients at once). A loader is "dirty" for the digest only when an entry really differs from the last sent or
+  applied value: the 1 Hz poll marks every Ready car dirty for 0.5 s of each second, and its phase against the 5 s
+  round is fixed, so one client answered `car-details` "not ready" for 74 s in a row. The `workshop-tools` resend is
+  one `ToolSlotUpdate` per machine (the claims stay); `garage` resends `WorldState` and `GarageState`; `warehouse` the
+  inventory snapshot. `desync-soak` (run `20261008-202110_L2_desync-soak`, now with details, the tire changer, the
+  warehouse and orders in its loop) confirmed nothing for any key, so every new key's resend is on by default.
 
 ### D12. Reconciliation rules
 
@@ -440,15 +449,22 @@ them. Spike 1.3 lists fields to leave out.
   `desync_stall_seconds` (server setting, default 120) it logs `[Desync] <key> for client N has not been ready for
   <n> s` once per series and lists open stalls in the `desync` output and the bug report [minor 11]. Before row 18's
   D6, a car is "not ready" during all shared work, so the warning would fire in normal play.
+- *As built:* a series also ends when the key was not asked for `3 × desync_check_interval_seconds × (cars + 1) + 10`
+  seconds (a deleted car, a player on a trip), and the end of a warned series is logged "is ready again". The automatic
+  round runs `desync_check_interval_seconds` after the previous round, forced rounds included; the console command
+  `desync interval <s>` changes it until the next restart (the forced-round steps of `desync-autofix` use it).
 
 ### D13. Soak contention mode [M6]
 
 `soak.ps1 -Contention [-ContentionWeight 15] [-ContentionKinds <list>]` adds a catalogue row `contention`.
-`-ContentionKinds` forces the kinds drawn (for negative controls and debugging). The existing rules (1)–(6) stay.
+`-ContentionKinds` forces the kinds drawn (for negative controls and debugging). The existing rules (1)–(7) stay.
+*Numbering as built:* the soak's rule 7 is "memory and logs over hours" (`multiplayer-soak-and-scale` D6), so the two
+new rules are **rule 8** (conservation) and **rule 9** (outcome); this section keeps the review's names
+"conservation" and "outcome".
 
 **A contention group.**
 - The row picks a seeded kind and 2–4 actors (two on lanes 1 and 2, up to four on lane 3).
-- It snapshots what rule 7 needs: the touched part keys, item ids and UIDs (server `cars`, `cardetails`, and
+- It snapshots what rule 8 needs: the touched part keys, item ids and UIDs (server `cars`, `cardetails`, and
   `item-where`).
 - It sets `net-hold out` on every member, issues each member's verb through `Invoke-Step`, and waits until each
   member's outgoing packet is held.
@@ -485,11 +501,32 @@ merged): the kinds that prove row 18. Until a kind's fix is in, it is listed in 
 | `move-vs-work`, `park-vs-work`, `delete-vs-work` | A `car-move`/`park`/`car-delete`, B mid-unmount | refused | L3, C3 | 2 |
 
 **New rules.**
-- **Rule 7, conservation.** For each contended part: items of that id in the inventory = before + (1 if the key is now
+- **Rule 8 (as drafted: rule 7), conservation.** For each contended part: items of that id in the inventory = before + (1 if the key is now
   unmounted on the server and was not before, −1 for the reverse). For each contended UID: in at most one of
   inventory, warehouse and machine slots, and in none of them if it was mounted or sold.
-- **Rule 8, outcome.** The kind's expected outcome. A kind listed in `scenarios/soak-contention-known.txt` (kind, gap
+- **Rule 9 (as drafted: rule 8), outcome.** The kind's expected outcome. A kind listed in `scenarios/soak-contention-known.txt` (kind, gap
   id, the row that closes it) is reported as "known gap" and counted, not failed.
+
+*As built (tasks 10.1-10.3, 2026-10-08, `tools/test-env/SoakContention.ps1`, lane 2 runs):*
+- The group runner releases member i+1 when the server logged member i's first packet (for lifts and moves that is
+  row 18's lock request) or when the hold reaches 7 s: `net-hold out` also stops heartbeats, and a client the server
+  has not heard for 10 s is dropped (seen once, `20261008-213609_L2_soak`). A member verb that fails makes the group
+  "invalid" (not judged).
+- Settle compares the members' sections, the parts' `blocked` counters left out: `part-fast-mount` without an item
+  does not block on the actor what the receivers block (a harness verb artifact; checkpoints still compare them). The
+  soak's own part choice and the contention keys leave rims and tires out for the same reason.
+- Outcomes come from the server log where a client dump cannot tell: accepted mounts (`inventory … -1`), sales
+  (`[Shop] Sale of …`, a new log line), warehouse moves (`[Inventory] Warehouse move of …`, new), lift steps. A wheel
+  taken off the tire changer may come back as a new group or as its parts; the take check accepts either.
+- Kinds in `soak-contention-known.txt` stay out of the random draw unless `-ContentionIncludeKnown` or
+  `-ContentionKinds` names them: the state they leave behind fails later checkpoints. `Run-Soak.ps1` passes
+  `-Contention` unless `-NoContention`.
+- Replay reruns each group from its `contend-start` marker and logged steps and reports whether the server order was
+  the same (8 of 9 in `20261008-220620_L2_soak`, the replay of `20261008-215819_L2_soak`; in the ninth the lift had no
+  car in the replay, so no member sent anything: a replay repeats actions, not state).
+- `place-same` is a known gap (L4, see the known list). The harness dump's `cars[].index` was the index of
+  `GameScript.carOnScene`, not the loader id, whenever several cars were loaded; it is now the loader id (the soak's
+  part keys and these checks read the wrong car before).
 
 **The checkpoint gains:** the dump section `carDetails`; a forced digest round that expects every loader's `cars` and
 `car-details` and the D11 keys; **no silent stalls** under rule 2 (a key "not ready" at two checkpoints in a row);
