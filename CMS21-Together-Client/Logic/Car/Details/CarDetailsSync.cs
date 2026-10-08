@@ -10,34 +10,37 @@ using CMS21Together.Data;
 using CMS21Together.Logic.Car.Parts;
 using CMS21Together.Network;
 using MelonLoader;
-using Newtonsoft.Json;
 using UnityEngine;
 
 namespace CMS21Together.Logic.Car.Details;
 
-// sync-car-details D4/D7/D9/D10: change detection (1 Hz poll for values without previews, MarkDirty from commit hooks),
-// the spawn snapshot after the part baseline, and the queued apply of remote details once a car is Ready.
+// sync-car-details D4/D7/D9/D10 and state-merges-and-contention D4-D7: change detection per entry (1 Hz poll for values
+// without previews, MarkDirty from commit hooks), the spawn snapshot after the part baseline, the queued apply of
+// remote details once a car is Ready, and the own echo decided per entry.
 public static class CarDetailsSync
 {
 	private const float PollSeconds = 1f;
 	private const float FlushDelaySeconds = 0.5f;
+	private const int MaxSendCopies = 16;
+	private const float SendCopySeconds = 10f;
 
-	private static readonly Dictionary<int, Dictionary<CarDetailSection, string>> lastKnown = new Dictionary<int, Dictionary<CarDetailSection, string>>();
+	private class SendCopy
+	{
+		public int Seq;
+		public float At;
+		public readonly Dictionary<string, string> Signatures = new Dictionary<string, string>();
+		public readonly HashSet<string> ForeignSince = new HashSet<string>();
+	}
+
+	private static readonly Dictionary<int, Dictionary<string, string>> lastKnown = new Dictionary<int, Dictionary<string, string>>();
+	private static readonly Dictionary<int, List<SendCopy>> sendCopies = new Dictionary<int, List<SendCopy>>();
 	private static readonly Dictionary<int, CarDetailSection> dirty = new Dictionary<int, CarDetailSection>();
 	private static readonly Dictionary<int, float> dirtySince = new Dictionary<int, float>();
 	private static readonly HashSet<int> awaiting = new HashSet<int>();
 	private static readonly HashSet<int> applying = new HashSet<int>();
-	private static readonly Dictionary<int, int> latestSeq = new Dictionary<int, int>();
-	private static readonly Dictionary<int, List<ModFluidLevel>> knownFluids = new Dictionary<int, List<ModFluidLevel>>();
 	private static int nextSeq = 1;
 	private static float nextPoll;
 	private static bool subscribed;
-
-	private static readonly CarDetailSection[] Sections =
-	{
-		CarDetailSection.Fluids, CarDetailSection.Wheels, CarDetailSection.Alignment, CarDetailSection.Tuning, CarDetailSection.Paint,
-		CarDetailSection.BodyCosmetics, CarDetailSection.Plates, CarDetailSection.Info, CarDetailSection.Dyno,
-	};
 
 	private static bool Active => ClientScene.IsGarageReady && Client.Instance != null && Client.Instance.IsConnectionValid && SyncTracker.Acked;
 
@@ -51,13 +54,11 @@ public static class CarDetailsSync
 	public static void Reset()
 	{
 		lastKnown.Clear();
+		sendCopies.Clear();
 		dirty.Clear();
 		dirtySince.Clear();
 		awaiting.Clear();
 		applying.Clear();
-		latestSeq.Clear();
-		knownFluids.Clear();
-		previousFluids.Clear();
 	}
 
 	public static bool HoldSpawnSnapshots { get; set; }
@@ -66,10 +67,13 @@ public static class CarDetailsSync
 
 	public static bool IsDirty(int loader) => dirty.ContainsKey(loader);
 
+	public static int KeptSends(int loader) => sendCopies.TryGetValue(loader, out var copies) ? copies.Count : 0;
+
 	public static void OnCarLoading(int loader)
 	{
 		awaiting.Add(loader);
 		lastKnown.Remove(loader);
+		sendCopies.Remove(loader);
 	}
 
 	public static void MarkDirty(CarLoader carLoader, CarDetailSection sections)
@@ -100,10 +104,10 @@ public static class CarDetailsSync
 		var carLoader = CarLoaderPlaces.Get()?.GetCarLoaderByIndex(loader);
 		if (carLoader == null || !carLoader.IsCarLoaded()) return;
 		var details = CarDetailsIO.Read(carLoader, CarDetailsIO.All);
-		Remember(loader, details, CarDetailsIO.All);
+		var signatures = CarDetailEntries.Signatures(details);
+		lastKnown[loader] = new Dictionary<string, string>(signatures);
 		awaiting.Remove(loader);
-		int seq = nextSeq++;
-		latestSeq[loader] = seq;
+		int seq = Keep(loader, signatures);
 		Log.Info($"[CarDetails] Loader {loader}: full snapshot sent.");
 		Client.Instance.Send(new CarDetailsUpdatePacket { CarLoaderID = loader, SpawnSeq = CarPartsSync.SpawnSeq(loader), IsFull = true, ClientSeq = seq, Details = details });
 	}
@@ -179,34 +183,45 @@ public static class CarDetailsSync
 
 	private static bool Flush(int loader, CarDetailSection sections, bool force = false)
 	{
-		if (!force && Busy(loader) || !CarPartsSync.IsReady(loader) || !lastKnown.ContainsKey(loader)) return false;
+		if (!force && Busy(loader) || !CarPartsSync.IsReady(loader) || !lastKnown.TryGetValue(loader, out var known)) return false;
 		var carLoader = CarLoaderPlaces.Get()?.GetCarLoaderByIndex(loader);
 		if (carLoader == null || !carLoader.IsCarLoaded()) return false;
 		var details = CarDetailsIO.Read(carLoader, sections);
-		var changed = CarDetailSection.None;
-		foreach (var section in Sections)
-			if (sections.HasFlag(section) && Signature(details, section) != Known(loader, section)) changed |= section;
-		if (changed == CarDetailSection.None) return false;
-		var send = CarDetailsIO.Read(carLoader, changed);
-		Remember(loader, send, changed);
-		if (send.Fluids != null) send.Fluids = OnlyChanged(loader, send.Fluids);
-		int seq = nextSeq++;
-		latestSeq[loader] = seq;
-		Log.Debug($"[CarDetails] Loader {loader}: {changed} changed.");
-		Client.Instance.Send(new CarDetailsUpdatePacket { CarLoaderID = loader, SpawnSeq = CarPartsSync.SpawnSeq(loader), ClientSeq = seq, Details = send });
+		var signatures = CarDetailEntries.Signatures(details);
+		var changed = new HashSet<string>(signatures.Where(p => !known.TryGetValue(p.Key, out string last) || last != p.Value).Select(p => p.Key));
+		if (changed.Count == 0) return false;
+		var (send, wheelMask, alignmentMask) = DetailsMerge.Only(details, DetailsMerge.AllWheels, DetailsMerge.AllAlignment, changed);
+		var sent = signatures.Where(p => changed.Contains(p.Key)).ToDictionary(p => p.Key, p => p.Value);
+		foreach (var pair in sent) known[pair.Key] = pair.Value;
+		int seq = Keep(loader, sent);
+		Log.Debug($"[CarDetails] Loader {loader}: update {seq} sent with {changed.Count} entries ({string.Join(", ", changed.OrderBy(e => e, StringComparer.Ordinal).Take(8))}).");
+		Client.Instance.Send(new CarDetailsUpdatePacket
+		{
+			CarLoaderID = loader, SpawnSeq = CarPartsSync.SpawnSeq(loader), ClientSeq = seq, Details = send, WheelMask = wheelMask, AlignmentMask = alignmentMask
+		});
 		dirty.Remove(loader);
 		return true;
 	}
 
-	public static void OnUpdate(CarDetailsUpdatePacket packet, int snapshotId)
+	private static int Keep(int loader, IDictionary<string, string> signatures)
 	{
-		if (packet.SourceClientId == Client.Instance.ID && latestSeq.TryGetValue(packet.CarLoaderID, out int latest) && packet.ClientSeq < latest)
-		{
-			Count(packet, snapshotId);
-			return;
-		}
-		MelonCoroutines.Start(ApplyWhenReady(packet, snapshotId));
+		int seq = nextSeq++;
+		if (!sendCopies.TryGetValue(loader, out var copies)) sendCopies[loader] = copies = new List<SendCopy>();
+		var copy = new SendCopy { Seq = seq, At = Time.realtimeSinceStartup };
+		foreach (var pair in signatures) copy.Signatures[pair.Key] = pair.Value;
+		copies.Add(copy);
+		Prune(copies);
+		return seq;
 	}
+
+	private static void Prune(List<SendCopy> copies)
+	{
+		float now = Time.realtimeSinceStartup;
+		copies.RemoveAll(c => now - c.At > SendCopySeconds);
+		while (copies.Count > MaxSendCopies) copies.RemoveAt(0);
+	}
+
+	public static void OnUpdate(CarDetailsUpdatePacket packet, int snapshotId) => MelonCoroutines.Start(ApplyWhenReady(packet, snapshotId));
 
 	private static IEnumerator ApplyWhenReady(CarDetailsUpdatePacket packet, int snapshotId)
 	{
@@ -219,16 +234,58 @@ public static class CarDetailsSync
 		}
 		var carLoader = CarLoaderPlaces.Get()?.GetCarLoaderByIndex(loader);
 		if (carLoader != null && carLoader.IsCarLoaded() && CarPartsSync.SpawnSeq(loader) == packet.SpawnSeq)
-		{
-			applying.Add(loader);
-			try { CarDetailsIO.Apply(carLoader, packet.Details); }
-			finally { applying.Remove(loader); }
-			var sections = Present(packet.Details);
-			Remember(loader, CarDetailsIO.Read(carLoader, sections), sections);
-			if (packet.IsFull) awaiting.Remove(loader);
-			if (packet.IsFull) Log.Info($"[CarDetails] Loader {loader}: details applied ({sections}).");
-		}
+			Apply(loader, carLoader, packet);
 		Count(packet, snapshotId);
+	}
+
+	private static void Apply(int loader, CarLoader carLoader, CarDetailsUpdatePacket packet)
+	{
+		var details = packet.Details;
+		int wheelMask = packet.WheelMask;
+		var alignmentMask = packet.AlignmentMask;
+		var carried = DetailsMerge.CarriedSignatures(details, wheelMask, alignmentMask);
+		bool own = Client.Instance != null && packet.SourceClientId == Client.Instance.ID;
+		if (own)
+		{
+			var copy = TakeCopy(loader, packet.ClientSeq);
+			if (copy != null)
+			{
+				var apply = new HashSet<string>(carried.Where(p => copy.ForeignSince.Contains(p.Key) || !copy.Signatures.TryGetValue(p.Key, out string sent) || sent != p.Value).Select(p => p.Key));
+				if (apply.Count == 0)
+				{
+					if (packet.IsFull) awaiting.Remove(loader);
+					return;
+				}
+				Log.Debug($"[CarDetails] Loader {loader}: own update {packet.ClientSeq} came back with {apply.Count} entries the server changed ({string.Join(", ", apply.Take(8))}).");
+				(details, wheelMask, alignmentMask) = DetailsMerge.Only(details, wheelMask, alignmentMask, apply);
+				carried = DetailsMerge.CarriedSignatures(details, wheelMask, alignmentMask);
+			}
+		}
+		else if (sendCopies.TryGetValue(loader, out var copies))
+		{
+			foreach (var copy in copies)
+				foreach (string entry in carried.Keys)
+					if (copy.Signatures.ContainsKey(entry)) copy.ForeignSince.Add(entry);
+		}
+
+		applying.Add(loader);
+		try { CarDetailsIO.Apply(carLoader, details, wheelMask, alignmentMask); }
+		finally { applying.Remove(loader); }
+		var now = CarDetailEntries.Signatures(CarDetailsIO.Read(carLoader, Present(details)));
+		if (!lastKnown.TryGetValue(loader, out var known)) lastKnown[loader] = known = new Dictionary<string, string>();
+		foreach (string entry in carried.Keys)
+			if (now.TryGetValue(entry, out string signature)) known[entry] = signature;
+		if (packet.IsFull) awaiting.Remove(loader);
+		if (packet.IsFull) Log.Info($"[CarDetails] Loader {loader}: details applied ({Present(details)}).");
+	}
+
+	private static SendCopy TakeCopy(int loader, int seq)
+	{
+		if (!sendCopies.TryGetValue(loader, out var copies)) return null;
+		Prune(copies);
+		var copy = copies.FirstOrDefault(c => c.Seq == seq);
+		if (copy != null) copies.Remove(copy);
+		return copy;
 	}
 
 	private static void Count(CarDetailsUpdatePacket packet, int snapshotId)
@@ -247,33 +304,9 @@ public static class CarDetailsSync
 		if (details.BodyCosmetics != null) sections |= CarDetailSection.BodyCosmetics;
 		if (details.Plates != null) sections |= CarDetailSection.Plates;
 		if (details.Info != null) sections |= CarDetailSection.Info;
+		if (details.Dyno != null) sections |= CarDetailSection.Dyno;
 		return sections;
 	}
-
-	private static List<ModFluidLevel> OnlyChanged(int loader, List<ModFluidLevel> fluids)
-	{
-		if (!previousFluids.TryGetValue(loader, out var before) || before == null) return fluids;
-		return fluids.Where(f => !before.Any(b => b.Type == f.Type && b.Id == f.Id && Math.Round(b.Level, 3) == Math.Round(f.Level, 3) && Math.Round(b.Condition, 3) == Math.Round(f.Condition, 3))).ToList();
-	}
-
-	private static readonly Dictionary<int, List<ModFluidLevel>> previousFluids = new Dictionary<int, List<ModFluidLevel>>();
-
-	private static void Remember(int loader, ModCarDetails details, CarDetailSection sections)
-	{
-		if (sections.HasFlag(CarDetailSection.Fluids) && details.Fluids != null)
-		{
-			previousFluids[loader] = knownFluids.TryGetValue(loader, out var lastFluids) ? lastFluids : null;
-			knownFluids[loader] = details.Fluids.Select(f => new ModFluidLevel { Type = f.Type, Id = f.Id, Level = f.Level, Condition = f.Condition }).ToList();
-		}
-		if (!lastKnown.TryGetValue(loader, out var known)) lastKnown[loader] = known = new Dictionary<CarDetailSection, string>();
-		foreach (var section in Sections)
-			if (sections.HasFlag(section)) known[section] = Signature(details, section);
-	}
-
-	private static string Known(int loader, CarDetailSection section) =>
-		lastKnown.TryGetValue(loader, out var known) && known.TryGetValue(section, out string value) ? value : null;
-
-	private static readonly JsonSerializerSettings Rounded = new JsonSerializerSettings { FloatFormatHandling = FloatFormatHandling.String, Converters = { new RoundingConverter() } };
 
 	public static string Signature(ModCarDetails details, CarDetailSection section)
 	{
@@ -290,14 +323,6 @@ public static class CarDetailsSync
 			CarDetailSection.Dyno => details.Dyno,
 			_ => null,
 		};
-		return JsonConvert.SerializeObject(value, Rounded);
-	}
-
-	private sealed class RoundingConverter : JsonConverter
-	{
-		public override bool CanConvert(Type objectType) => objectType == typeof(float) || objectType == typeof(double);
-		public override void WriteJson(JsonWriter writer, object value, JsonSerializer serializer) => writer.WriteValue(Math.Round(Convert.ToDouble(value), 3));
-		public override object ReadJson(JsonReader reader, Type objectType, object existingValue, JsonSerializer serializer) => throw new NotSupportedException();
-		public override bool CanRead => false;
+		return CarDetailEntries.Signature(value);
 	}
 }

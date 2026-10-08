@@ -96,6 +96,7 @@ namespace CMS21_Together_Server.Network
 					Logger.Info("Cars:");
 					foreach (string line in CarPartsStore.Describe())
 						Logger.Info($"  {line}");
+					Logger.Info($"  {Handlers.CarPartsHandlers.DescribeCounters()}");
 					break;
 
 				case "desync":

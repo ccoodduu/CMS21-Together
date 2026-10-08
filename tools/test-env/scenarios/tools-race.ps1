@@ -125,7 +125,34 @@ Start-Sleep -Seconds 5; $standBuilt = (Cmd $b dump).tools.EngineStand1.uid -ne 0
 if (-not $standBuilt) { $note = "engine stand steps skipped: the game's build coroutine throws when the harness drives it (also disconnected); hand check"; Write-Host "NOTE: $note"; $Ctx.Result.notes += $note; Cmd $a tool-stand-reset | Out-Null }
 else {
     Wait-Same "engine on the stand" 60 | Out-Null
-    $engines = @((Cmd $a dump).inventory.groups | Where-Object { $_.ID -eq $engineId }).Count
+    # Two players unmount the same stand part, in both orders: one change is accepted, the other rolled back.
+    foreach ($order in @(@($a, $b), @($b, $a))) {
+        $key = (Cmd $a tool-stand-part "EngineStand1 auto unmount").key
+        Cmd $a tool-stand-part "EngineStand1 $key mount" | Out-Null
+        Wait-Same "stand part $key back on" | Out-Null
+        $before = @((Cmd $a dump).inventory.items).Count
+        Hold "on"
+        Cmd $order[0] tool-stand-part "EngineStand1 $key unmount" | Out-Null
+        Cmd $order[1] tool-stand-part "EngineStand1 $key unmount" | Out-Null
+        Start-Sleep -Seconds 2
+        Hold "off"
+        $d = Wait-Same "both unmount stand part $key ($($order[0]) first)"
+        Check (@($d.inventory.items).Count -eq $before + 1) "one item came off stand part $key ($($order[0]) first)"
+        Check (@($d.tools.EngineStand1.unmountedParts) -contains $key) "stand part $key is off on both"
+    }
+    # A stand part change while the other player takes the engine off the stand: rejected and rolled back.
+    $before = @((Cmd $a dump).inventory.items).Count
+    Cmd $b net-hold "out" | Out-Null
+    Cmd $b tool-stand-part "EngineStand1 auto unmount" | Out-Null
+    Start-Sleep -Seconds 1
+    Cmd $a tool-take "EngineStand1" | Out-Null
+    Start-Sleep -Seconds 2
+    Cmd $b net-hold "off" | Out-Null
+    $d = Wait-Same "a stand part change against the engine's take-off"
+    Check (@($d.inventory.items).Count -eq $before) "B's stand part change was rolled back"
+    Cmd $a tool-put "EngineStand1 $(@($d.inventory.groups | Where-Object { $_.ID -eq $engineId })[-1].UID)" | Out-Null
+    Wait-Same "engine back on the stand" 60 | Out-Null
+    $engines =@((Cmd $a dump).inventory.groups | Where-Object { $_.ID -eq $engineId }).Count
     Hold "on"
     Cmd $a tool-take "EngineStand1" | Out-Null
     Cmd $b tool-take "EngineStand1" | Out-Null

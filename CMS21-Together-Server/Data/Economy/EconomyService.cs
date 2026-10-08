@@ -85,7 +85,7 @@ namespace CMS21_Together_Server.Data.Economy
 				return;
 			}
 
-			outcome.Effect?.Invoke();
+			outcome.Effect?.Invoke(client);
 			int moneyBefore = world.Money, scrapsBefore = world.Scraps, levelBefore = world.Level, expBefore = world.Exp, barnsBefore = world.Barns;
 			world.Money = (int)Math.Max(0, Math.Min(MaxMoney, (long)world.Money + outcome.Money));
 			world.Scraps = Math.Max(0, world.Scraps + outcome.Scraps);
@@ -143,10 +143,10 @@ namespace CMS21_Together_Server.Data.Economy
 			while (ledger.Count > LedgerSize) ledger.Dequeue();
 		}
 
-		public static void RemoveItem(ModItem item)
+		public static void RemoveItem(ModItem item, int remover)
 		{
 			GameDataManager.CurrentState.InventoryState.InventoryItems.RemoveAll(i => i.UID == item.UID);
-			Cars.InventoryChanges.NoteRemoved(item.UID, Cars.InventoryChanges.UnknownRemover);
+			Cars.InventoryChanges.NoteRemoved(item, remover);
 			Server.SendToClients(new InventoryItemActionPacket { Action = ItemActionType.Remove, Item = item });
 		}
 

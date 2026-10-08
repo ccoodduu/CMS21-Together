@@ -42,6 +42,26 @@ public static class PartChangeTracker
 
 	public static bool IsPending(int loader) => dirty.Contains(loader) || mechanicalDirty.Contains(loader);
 
+	public static bool SendNow(int loader)
+	{
+		var sync = CarPartsSync.Get(loader);
+		var carLoader = CarLoaderPlaces.Get()?.GetCarLoaderByIndex(loader);
+		if (sync.State != LoaderSyncState.Ready || sync.Registry == null || carLoader == null || ApplyingRemote.IsActive(loader)) return false;
+		if (InProgress(carLoader)) return false;
+		var body = new List<CarBodyPartUpdatePacket>();
+		var sub = new List<CarSubPartUpdatePacket>();
+		CarPartsSync.CaptureAll(carLoader, sync.Registry, body, sub);
+		var changedBody = body.Where(r => !sync.Body.TryGetValue(r.Key, out var last) || !PartRecords.SameState(r, last)).ToList();
+		var changedSub = sub.Where(r => !sync.Sub.TryGetValue(r.Key, out var last) || !PartRecords.SameState(r, last)).ToList();
+		stability.Remove(loader);
+		dirty.Remove(loader);
+		mechanicalDirty.Remove(loader);
+		if (changedBody.Count == 0 && changedSub.Count == 0) return true;
+		Log.Info($"[Parts] Loader {loader}: sending the pending change at once ({changedBody.Count} body, {changedSub.Count} mechanical).");
+		Send(sync, changedBody, changedSub);
+		return true;
+	}
+
 	public static List<string> TakeSentKeys(int txId)
 	{
 		if (!sentKeys.TryGetValue(txId, out var keys)) return new List<string>();
@@ -135,11 +155,19 @@ public static class PartChangeTracker
 			SubParts = sub
 		};
 		foreach (var record in body)
-			if (sync.Body.TryGetValue(record.Key, out var last) && last.Unmounted != record.Unmounted)
+		{
+			sync.Body.TryGetValue(record.Key, out var last);
+			record.Changed = PartMasks.For(record, last);
+			if (last != null && last.Unmounted != record.Unmounted)
 				change.Preconditions.Add(new PartPrecondition { Key = record.Key, WasUnmounted = last.Unmounted });
+		}
 		foreach (var record in sub)
-			if (sync.Sub.TryGetValue(record.Key, out var last) && last.Unmounted != record.Unmounted)
+		{
+			sync.Sub.TryGetValue(record.Key, out var last);
+			record.Changed = PartMasks.For(record, last);
+			if (last != null && last.Unmounted != record.Unmounted)
 				change.Preconditions.Add(new PartPrecondition { Key = record.Key, WasUnmounted = last.Unmounted });
+		}
 
 		change.InventoryDelta = PartTransactions.TakeFor(sync.Loader, body.Select(r => r.Key).Concat(sub.Select(r => r.Key)), change.TxId);
 		foreach (var record in body) sync.Body[record.Key] = record;
@@ -149,7 +177,7 @@ public static class PartChangeTracker
 			Details.CarDetailsSync.FlushBeforeChange(sync.Loader);
 		Client.Instance.Send(change);
 		Locks.LockLifecycle.OnChangeSent(sync.Loader);
-		Log.Debug($"[Parts] Loader {sync.Loader}: change {change.TxId} sent ({body.Count} body, {sub.Count} mechanical, {change.Preconditions.Count} preconditions).");
+		Log.Debug($"[Parts] Loader {sync.Loader}: change {change.TxId} sent ({body.Count} body, {sub.Count} mechanical, {change.Preconditions.Count} preconditions; Changed = {PartMasks.Describe(body, sub)}).");
 	}
 
 	private static bool InProgress(CarLoader carLoader)

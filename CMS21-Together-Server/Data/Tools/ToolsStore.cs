@@ -52,8 +52,9 @@ namespace CMS21_Together_Server.Data.Tools
 			string reason = Check(clientId, current, incoming, packet.ExpectedUid);
 			if (reason != null)
 			{
-				Server.SendToClient(new ToolSlotRejectedPacket { Current = current, Reason = reason, ClientSeq = packet.ClientSeq }, clientId);
-				Logger.Info($"[Tools] {incoming.Tool}: update from client {clientId} rejected ({reason}).");
+				var outcome = IsPut(current, incoming) ? PutRefused(clientId, incoming) : SlotItemOutcome.Unchanged;
+				Server.SendToClient(new ToolSlotRejectedPacket { Current = current, Reason = reason, ClientSeq = packet.ClientSeq, Item = outcome }, clientId);
+				Logger.Info($"[Tools] {incoming.Tool}: update from client {clientId} rejected ({reason}; item {outcome}).");
 				return;
 			}
 
@@ -74,7 +75,47 @@ namespace CMS21_Together_Server.Data.Tools
 			string id = incoming.Item?.ID ?? incoming.Group?.ID ?? "";
 			if (IdPrefixes.TryGetValue(incoming.Tool, out string prefix) && !id.StartsWith(prefix, StringComparison.Ordinal)) return $"'{id}' does not fit";
 			var other = State.Slots.Values.FirstOrDefault(s => s.Tool != incoming.Tool && !s.IsEmpty && s.Uid == incoming.Uid);
-			return other != null ? $"{incoming.Uid} is on {other.Tool}" : null;
+			if (other != null) return $"{incoming.Uid} is on {other.Tool}";
+			if (!IsPut(current, incoming)) return null;
+			int itemHolder = CarLocks.ItemHolder(incoming.Uid, clientId);
+			if (itemHolder >= 0) return $"{incoming.Uid} held by player {itemHolder}";
+			if (InInventory(incoming.Uid)) return null;
+			if (InventoryChanges.RemovedByOther(incoming.Uid, clientId)) return $"{incoming.Uid} used by player {InventoryChanges.Remover(incoming.Uid)}";
+			if (!InventoryChanges.Seen(incoming.Uid))
+			{
+				InventoryChanges.Count("unknownSlotItem");
+				Logger.Info($"[Tools] {incoming.Tool}: client {clientId} puts {incoming.Uid} '{id}', which the server never saw; accepted.");
+			}
+			return null;
+		}
+
+		private static bool IsPut(ToolSlotState current, ToolSlotState incoming) => !incoming.IsEmpty && incoming.Uid != current.Uid;
+
+		private static bool InInventory(long uid)
+		{
+			var inventory = GameDataManager.CurrentState.InventoryState;
+			return inventory.InventoryItems.Any(i => i.UID == uid) || inventory.InventoryGroupItems.Any(g => g.UID == uid);
+		}
+
+		private static SlotItemOutcome PutRefused(int clientId, ToolSlotState incoming)
+		{
+			long uid = incoming.Uid;
+			if (InInventory(uid)) return SlotItemOutcome.Unchanged;
+			if (InventoryChanges.RemovedByOther(uid, clientId)) return SlotItemOutcome.Gone;
+			if (!InventoryChanges.RemovedBy(uid, clientId) || !InventoryChanges.TryTakeCopy(uid, out var item, out var group)) return SlotItemOutcome.Unchanged;
+			var inventory = GameDataManager.CurrentState.InventoryState;
+			if (item != null)
+			{
+				inventory.InventoryItems.Add(item);
+				Server.SendToClients(new InventoryItemActionPacket { Action = ItemActionType.Add, Item = item }, clientId);
+			}
+			else
+			{
+				inventory.InventoryGroupItems.Add(group);
+				Server.SendToClients(new InventoryGroupItemActionPacket { Action = ItemActionType.Add, GroupItem = group }, clientId);
+			}
+			Logger.Info($"[Tools] {incoming.Tool}: {uid} is back in the inventory after client {clientId}'s refused put.");
+			return SlotItemOutcome.Returned;
 		}
 
 		private static ToolSlotState Normalize(ToolSlotState incoming, ToolSlotState current)
@@ -118,30 +159,52 @@ namespace CMS21_Together_Server.Data.Tools
 		public static void OnPartChange(int clientId, ToolPartChangePacket change)
 		{
 			var slot = Slot(change.Tool);
-			string conflict = slot.IsEmpty || slot.Uid != change.EngineUid ? $"engine {change.EngineUid} is not on {change.Tool}" : FindConflict(slot, change);
+			string conflict = slot.IsEmpty || slot.Uid != change.EngineUid ? $"engine {change.EngineUid} is not on {change.Tool}" : FindConflict(slot, change, clientId);
 			if (conflict != null)
 			{
 				var reject = new ToolPartChangeResultPacket { Tool = change.Tool, EngineUid = change.EngineUid, TxId = change.TxId, Accepted = false, Reason = conflict };
 				foreach (var record in change.SubParts)
-					if (slot.Parts.TryGetValue(record.Key, out var stored)) reject.SubParts.Add(stored);
+					if (slot.Parts.TryGetValue(record.Key, out var stored)) reject.SubParts.Add(PartRecordMerge.WithChanged(stored, PartFields.All));
 				reject.RestoreUids.AddRange(InventoryChanges.StillHeld(change.Delta));
 				Server.SendToClient(reject, clientId);
 				Logger.Info($"[Tools] {change.Tool}: part change {change.TxId} from client {clientId} rejected: {conflict}");
 				return;
 			}
 
-			foreach (var record in change.SubParts) slot.Parts[record.Key] = record;
+			var preconditions = change.Preconditions.GroupBy(p => p.Key).ToDictionary(g => g.Key, g => g.First());
+			var relay = new ToolPartChangePacket { Tool = change.Tool, EngineUid = change.EngineUid, TxId = change.TxId, Preconditions = change.Preconditions, Delta = change.Delta };
+			var result = new ToolPartChangeResultPacket { Tool = change.Tool, EngineUid = change.EngineUid, TxId = change.TxId, Accepted = true };
+			var dropped = new List<string>();
+			foreach (var record in change.SubParts)
+			{
+				slot.Parts.TryGetValue(record.Key, out var stored);
+				var outcome = PartRecordMerge.Normalise(stored, record, preconditions.TryGetValue(record.Key, out var pre) ? pre : null);
+				if (outcome.Record != null)
+				{
+					outcome.Record.Changed = PartFields.None;
+					slot.Parts[record.Key] = outcome.Record;
+					if (outcome.Written != PartFields.None) relay.SubParts.Add(PartRecordMerge.WithChanged(outcome.Record, outcome.Written));
+				}
+				else dropped.Add($"{record.Key} ({outcome.Outcome} {outcome.Stale})");
+				if (slot.Parts.TryGetValue(record.Key, out var now) && PartRecordMerge.Differ(now, record) is var differ && differ != PartFields.None)
+					result.SubParts.Add(PartRecordMerge.WithChanged(now, differ));
+			}
 			InventoryChanges.Apply(change.Delta, clientId);
-			Server.SendToClient(new ToolPartChangeResultPacket { Tool = change.Tool, EngineUid = change.EngineUid, TxId = change.TxId, Accepted = true }, clientId);
-			Server.SendToClients(change, clientId);
-			Logger.Info($"[Tools] {change.Tool}: part change {change.TxId} from client {clientId} ({change.SubParts.Count} parts, inventory +{change.Delta.AddedItems.Count + change.Delta.AddedGroups.Count} -{change.Delta.RemovedItemUids.Count + change.Delta.RemovedGroupUids.Count}).");
+			Server.SendToClient(result, clientId);
+			Server.SendToClients(relay, clientId);
+			Logger.Info($"[Tools] {change.Tool}: part change {change.TxId} from client {clientId} ({change.SubParts.Count} parts, relayed {relay.SubParts.Count}, returned {result.SubParts.Count}{(dropped.Count > 0 ? $", dropped {string.Join(", ", dropped)}" : "")}, inventory +{change.Delta.AddedItems.Count + change.Delta.AddedGroups.Count} -{change.Delta.RemovedItemUids.Count + change.Delta.RemovedGroupUids.Count}).");
 		}
 
-		private static string FindConflict(ToolSlotState slot, ToolPartChangePacket change)
+		private static string FindConflict(ToolSlotState slot, ToolPartChangePacket change, int clientId)
 		{
 			foreach (var precondition in change.Preconditions)
 				if (slot.Parts.TryGetValue(precondition.Key, out var stored) && stored.Unmounted != precondition.WasUnmounted)
 					return $"{precondition.Key} is already {(stored.Unmounted ? "unmounted" : "mounted")}";
+			var inventory = GameDataManager.CurrentState.InventoryState;
+			foreach (long uid in change.Delta.RemovedItemUids)
+				if (inventory.InventoryItems.All(i => i.UID != uid) && InventoryChanges.RemovedByOther(uid, clientId)) return $"item {uid} is gone";
+			foreach (long uid in change.Delta.RemovedGroupUids)
+				if (inventory.InventoryGroupItems.All(g => g.UID != uid) && InventoryChanges.RemovedByOther(uid, clientId)) return $"group {uid} is gone";
 			return null;
 		}
 
@@ -200,6 +263,7 @@ namespace CMS21_Together_Server.Data.Tools
 
 		public static IEnumerable<string> Describe()
 		{
+			yield return $"items: unknownSlotItem {InventoryChanges.Counter("unknownSlotItem")}, removeMissing {InventoryChanges.Counter("removeMissing")}";
 			foreach (var tool in Enum.GetValues(typeof(ModToolId)).Cast<ModToolId>().Where(ModTools.IsMachine))
 			{
 				var slot = Slot(tool);

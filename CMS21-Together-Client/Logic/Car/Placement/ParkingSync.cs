@@ -49,6 +49,43 @@ public static class ParkingSync
 		overriddenUnpark.Clear();
 	}
 
+	private const float DrainSeconds = 1f;
+	private static readonly Dictionary<IntPtr, float> draining = new Dictionary<IntPtr, float>();
+
+	[HarmonyPatch(typeof(NotificationCenter._MoveCarToParking_d__19), nameof(NotificationCenter._MoveCarToParking_d__19.MoveNext))]
+	[HarmonyPrefix]
+	private static bool BeforeParkStep(NotificationCenter._MoveCarToParking_d__19 __instance, ref bool __result)
+	{
+		if (__instance.__1__state != 0 || !Active || applying || __instance.carLoader == null) return true;
+		int loader = CarLoaderPlaces.Get().GetCarLoaderId(__instance.carLoader);
+		if (loader < 0 || !Parts.CarPartsSync.IsReady(loader)) return true;
+		float now = Time.realtimeSinceStartup;
+		if (!draining.TryGetValue(__instance.Pointer, out float since))
+		{
+			since = now;
+			draining[__instance.Pointer] = since;
+			Parts.PartChangeTracker.SendNow(loader);
+		}
+		if (CarDrain.Settled(loader))
+		{
+			draining.Remove(__instance.Pointer);
+			Details.CarDetailsSync.FlushNow(loader, Details.CarDetailsIO.All);
+			return true;
+		}
+		if (now - since > DrainSeconds)
+		{
+			draining.Remove(__instance.Pointer);
+			Log.Info($"[Parking] Loader {loader}: own part change still settling after {DrainSeconds:0} s; park refused.");
+			ModNotify.ShowToast(CarDrain.TryAgain);
+			__result = false;
+			return false;
+		}
+		Parts.PartChangeTracker.SendNow(loader);
+		// MoveNext answers true without running: the park coroutine waits a frame for the own change to settle.
+		__result = true;
+		return false;
+	}
+
 	[HarmonyPatch(typeof(CarLoader), nameof(CarLoader.SaveCarToFile), typeof(int), typeof(bool))]
 	[HarmonyPostfix]
 	private static void AfterSaveCarToFile(CarLoader __instance, int index, bool toParking)
@@ -84,7 +121,7 @@ public static class ParkingSync
 	private static IEnumerator SendUnpark(CarLoader carLoader, int loader, int slot)
 	{
 		float deadline = Time.realtimeSinceStartup + LoadTimeoutSeconds;
-		while (!carLoader.IsCarLoaded() && Time.realtimeSinceStartup < deadline) yield return null;
+		while ((string.IsNullOrEmpty(carLoader.carToLoad) || !carLoader.IsCarLoaded()) && Time.realtimeSinceStartup < deadline) yield return null;
 		deadline = Time.realtimeSinceStartup + 2f;
 		while (carLoader.GetPlaceNo() < 0 && Time.realtimeSinceStartup < deadline) yield return null;
 		CarSpawnHooks.Release(loader);

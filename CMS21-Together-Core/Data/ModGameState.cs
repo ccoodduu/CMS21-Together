@@ -32,6 +32,16 @@ public class ParkingLot
 {
 	public int UnlockedLevels;
 	public Dictionary<int, ParkedCar> Slots = new Dictionary<int, ParkedCar>();
+	public Dictionary<Guid, ParkedRecord> Records = new Dictionary<Guid, ParkedRecord>();
+}
+
+public class ParkedRecord
+{
+	public Guid CarId;
+	public List<CarBodyPartUpdatePacket> Body = new List<CarBodyPartUpdatePacket>();
+	public List<CarSubPartUpdatePacket> Sub = new List<CarSubPartUpdatePacket>();
+	public string EngineSwap;
+	public ModCarDetails Details;
 }
 
 public class ToolsState
@@ -61,6 +71,7 @@ public class CarLoaderEntry
 	public bool HasBaseline;
 	public string EngineSwap;
 	public ParkedCar FromParking;
+	public ParkedRecord ParkedRecord;
 
 	[JsonIgnore] public int SpawnedBy = NoClient;
 

@@ -21,7 +21,7 @@ namespace CMS21_Together_Server.Data.Economy
 		public int Barns;
 		public EconomyRefusal Refusal;
 		public string Note;
-		public Action Effect;
+		public Action<int> Effect;
 		public Action<int> Answer;
 
 		public static EconomyOutcome Refused(EconomyRefusal refusal, string note) => new EconomyOutcome { Refusal = refusal, Note = note };
@@ -163,7 +163,7 @@ namespace CMS21_Together_Server.Data.Economy
 				: r.Money != 0 || r.Scraps != 0;
 			if (otherKinds || amount < min || amount > max) return Invalid($"card {amount} outside {min}..{max} at level {level}");
 
-			var outcome = new EconomyOutcome { Effect = () => opened.Looted = true };
+			var outcome = new EconomyOutcome { Effect = _ => opened.Looted = true };
 			if (r.Reason == EconomyReason.CrateMoney) outcome.Money = amount;
 			else if (r.Reason == EconomyReason.CrateScrap) outcome.Scraps = amount;
 			else outcome.Exp = amount;
@@ -198,7 +198,7 @@ namespace CMS21_Together_Server.Data.Economy
 			{
 				Money = -cost,
 				Note = r.Money != -cost ? $"client asked {r.Money} for {points} points" : $"{points} points",
-				Effect = GarageUpgradeHandler.ResetPointSkills,
+				Effect = _ => GarageUpgradeHandler.ResetPointSkills(),
 			};
 		}
 
@@ -219,7 +219,7 @@ namespace CMS21_Together_Server.Data.Economy
 				{
 					Money = r.Money,
 					Note = $"loader {loader} ({entry.Spawn?.CarToLoad})",
-					Effect = () =>
+					Effect = _ =>
 					{
 						CarPartsStore.ClearLoader(loader, ClearReason.Sold);
 						Server.SendToClients(new CarSpawnDeletePacket { CarLoaderID = loader });
@@ -235,7 +235,7 @@ namespace CMS21_Together_Server.Data.Economy
 				{
 					Money = r.Money,
 					Note = $"parking slot {slot} ({car.CarToLoad})",
-					Effect = () =>
+					Effect = _ =>
 					{
 						ParkingService.TryRemove(slot, id);
 						ParkingService.BroadcastSlot(slot);
@@ -264,7 +264,7 @@ namespace CMS21_Together_Server.Data.Economy
 				scraps = r.Scraps;
 				note += " (not in the database, client amount)";
 			}
-			return new EconomyOutcome { Scraps = scraps, Note = note, Effect = () => EconomyService.RemoveItem(item) };
+			return new EconomyOutcome { Scraps = scraps, Note = note, Effect = client => EconomyService.RemoveItem(item, client) };
 		}
 
 		private static EconomyOutcome ScrapPerCondition(EconomyRequestPacket r)
@@ -276,7 +276,7 @@ namespace CMS21_Together_Server.Data.Economy
 			{
 				Scraps = scraps,
 				Note = $"{items.Count} items at or below {r.Arg}%",
-				Effect = () => { foreach (var item in items) EconomyService.RemoveItem(item); },
+				Effect = client => { foreach (var item in items) EconomyService.RemoveItem(item, client); },
 			};
 		}
 
@@ -292,7 +292,7 @@ namespace CMS21_Together_Server.Data.Economy
 			{
 				Scraps = -cost,
 				Note = $"{item.ID} to quality {target}{(r.Scraps != -cost ? $", client cost {-r.Scraps}" : "")}",
-				Effect = () =>
+				Effect = _ =>
 				{
 					item.Quality = target;
 					EconomyService.ReplaceItem(item);
@@ -313,7 +313,7 @@ namespace CMS21_Together_Server.Data.Economy
 			{
 				Money = -price,
 				Note = $"{plates.Count} plates '{plates[0].LPData?.Custom}'",
-				Effect = () =>
+				Effect = _ =>
 				{
 					long uid = InventoryHandlers.GenerateNewUID();
 					foreach (var plate in plates)
@@ -331,7 +331,7 @@ namespace CMS21_Together_Server.Data.Economy
 			var item = State.InventoryState.InventoryItems.FirstOrDefault(i => i.UID == r.ItemUid);
 			if (item == null) return EconomyOutcome.Refused(EconomyRefusal.Gone, $"map {r.ItemUid} is not in the inventory");
 			if (!IsBarnMap(item.ID)) return Invalid($"{item.ID} is not a barn map");
-			return new EconomyOutcome { Barns = 1, Note = item.ID, Effect = () => EconomyService.RemoveItem(item) };
+			return new EconomyOutcome { Barns = 1, Note = item.ID, Effect = client => EconomyService.RemoveItem(item, client) };
 		}
 
 		public static bool IsBarnMap(string id) =>

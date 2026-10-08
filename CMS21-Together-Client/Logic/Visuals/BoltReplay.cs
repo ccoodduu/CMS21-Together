@@ -65,7 +65,7 @@ public static class BoltReplay
 
 	private static void OnApplying(int loader, List<CarBodyPartUpdatePacket> body, List<CarSubPartUpdatePacket> sub)
 	{
-		foreach (var record in sub)
+		foreach (var record in sub.Where(r => r.Changed == PartFields.None || (r.Changed & (PartFields.Mount | PartFields.All)) != 0))
 		foreach (var effect in Active.Where(e => e.Loader == loader && e.Key == record.Key).ToList())
 			effect.Commit();
 	}

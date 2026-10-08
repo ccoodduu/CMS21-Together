@@ -7,7 +7,7 @@
 # Steps: an update of an item another player mounted; an update and a repair of an item the server no longer has; an
 # add of a stored item with other values; a repair of an item another player mounted; a skill both unlock; a car both
 # park; a car both delete; an order from a client that is not the generator; an accept of an order that just expired;
-# a job both end.
+# a job both end; a part transaction dropped with its car (I7).
 param($Ctx)
 
 Import-Module (Join-Path $PSScriptRoot "..\ScaleSession.psm1")
@@ -294,6 +294,21 @@ Wait-Same "jobs" "both ended the same job" { param($d) @($d.jobs.active | Where-
 Wait-Same "stats" "both ended the same job" | Out-Null
 Assert-ServerMatch "world" "both ended the same job"
 Assert-ServerMatch "car-placement" "both ended the same job"
+
+# I7: B's part transaction (its unmount and the item it gave) is dropped with the car A deletes; B rolls it back.
+Cmd $a car-spawn "3 $car 0" | Out-Null
+Wait-Ready $a 3 | Out-Null; Wait-Ready $b 3 | Out-Null
+Start-Sleep -Seconds 3
+Hold $b "out"
+Cmd $b part-fast-unmount "3" | Out-Null
+Start-Sleep -Seconds 2
+Cmd $a car-delete "3" | Out-Null
+Start-Sleep -Seconds 3
+Hold $b "off"
+Start-Sleep -Seconds 3
+$tx = @((Dump $b).parts.transactions | Where-Object { $_.loader -eq 3 })
+Check ($tx.Count -eq 0) "B keeps no part transaction for the deleted car ($($tx | ConvertTo-Json -Compress))"
+Assert-ServerMatch "inventory" "a part transaction dropped with its car"
 
 $Ctx.Result.notes += $failures
 $Ctx.Result.passed = ($failures.Count -eq 0)

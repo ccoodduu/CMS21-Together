@@ -101,8 +101,12 @@ public static class EngineStandParts
 	{
 		var change = new ToolPartChangePacket { Tool = stand.Tool, EngineUid = stand.AppliedUid, TxId = nextTxId++, SubParts = changed };
 		foreach (var record in changed)
-			if (stand.Known.TryGetValue(record.Key, out var last) && last.Unmounted != record.Unmounted)
+		{
+			stand.Known.TryGetValue(record.Key, out var last);
+			record.Changed = PartMasks.For(record, last);
+			if (last != null && last.Unmounted != record.Unmounted)
 				change.Preconditions.Add(new PartPrecondition { Key = record.Key, WasUnmounted = last.Unmounted });
+		}
 		change.Delta = PartTransactions.TakeFor(PseudoLoader(stand.Tool), changed.Select(r => r.Key), change.TxId);
 		var mirror = ToolSync.Mirror(stand.Tool);
 		foreach (var record in changed)
@@ -111,32 +115,34 @@ public static class EngineStandParts
 			mirror.Parts[record.Key] = record;
 		}
 		Client.Instance.Send(change);
-		Log.Info($"[Tools] {stand.Tool}: part change {change.TxId} sent ({changed.Count} parts, {change.Preconditions.Count} preconditions).");
+		Log.Info($"[Tools] {stand.Tool}: part change {change.TxId} sent ({changed.Count} parts, {change.Preconditions.Count} preconditions; Changed = {PartMasks.Describe(new CarBodyPartUpdatePacket[0], changed)}).");
 	}
 
 	public static void OnRemoteChange(ToolPartChangePacket change)
 	{
 		var stand = ToolSync.Machine(change.Tool) as EngineStandSync;
 		if (stand == null) return;
-		var keys = change.SubParts.Select(r => r.Key).ToList();
-		PartTransactions.AbortFor(PseudoLoader(change.Tool), keys);
+		PartTransactions.AbortFor(PseudoLoader(change.Tool), PartChanges.AbortKeys(new CarBodyPartUpdatePacket[0], change.SubParts));
 		PartChanges.ApplyInventory(change.Delta);
 		var mirror = ToolSync.Mirror(change.Tool);
 		if (mirror.Uid != change.EngineUid) return;
-		foreach (var record in change.SubParts) mirror.Parts[record.Key] = record;
+		foreach (var record in change.SubParts) mirror.Parts[record.Key] = Merge(mirror.Parts, record);
 		if (stand.AppliedUid == change.EngineUid) ApplyRecords(stand, change.SubParts);
 	}
 
 	public static void OnResult(ToolPartChangeResultPacket result)
 	{
 		PartTransactions.OnResult(new CarPartsChangeResultPacket { TxId = result.TxId, Accepted = result.Accepted, RestoreUids = result.RestoreUids });
-		if (result.Accepted) return;
-		Log.Warn($"[Tools] {result.Tool}: part change {result.TxId} rejected ({result.Reason}); restoring the server's state.");
+		if (result.Accepted && result.SubParts.Count == 0) return;
+		if (!result.Accepted) Log.Warn($"[Tools] {result.Tool}: part change {result.TxId} rejected ({result.Reason}); restoring the server's state.");
 		var stand = ToolSync.Machine(result.Tool) as EngineStandSync;
 		var mirror = ToolSync.Mirror(result.Tool);
-		foreach (var record in result.SubParts) mirror.Parts[record.Key] = record;
+		foreach (var record in result.SubParts) mirror.Parts[record.Key] = Merge(mirror.Parts, record);
 		if (stand != null && stand.AppliedUid == result.EngineUid) ApplyRecords(stand, result.SubParts);
 	}
+
+	private static CarSubPartUpdatePacket Merge(Dictionary<string, CarSubPartUpdatePacket> known, CarSubPartUpdatePacket record) =>
+		PartRecordMerge.WithGroups(known.TryGetValue(record.Key, out var last) ? last : null, record, record.Changed == PartFields.None ? PartFields.All : record.Changed);
 
 	public static void ApplyRecords(EngineStandSync stand, IEnumerable<CarSubPartUpdatePacket> records)
 	{
@@ -145,8 +151,9 @@ public static class EngineStandParts
 		{
 			foreach (var record in records)
 			{
-				if (stand.Known.TryGetValue(record.Key, out var local) && PartRecords.SameState(record, local)) continue;
-				if (PartApplier.Apply(null, stand.Registry, record)) stand.Known[record.Key] = record;
+				var groups = record.Changed == PartFields.None ? PartFields.All : record.Changed;
+				if (groups.HasFlag(PartFields.All) && stand.Known.TryGetValue(record.Key, out var local) && PartRecords.SameState(record, local)) continue;
+				if (PartApplier.Apply(null, stand.Registry, record, groups)) stand.Known[record.Key] = Merge(stand.Known, record);
 			}
 		}
 	}

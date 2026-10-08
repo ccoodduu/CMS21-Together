@@ -1,4 +1,5 @@
 using System;
+using System.Linq;
 using CMS21_Together_Core;
 using CMS21_Together_Core.Data;
 using CMS21_Together_Core.Network;
@@ -60,6 +61,18 @@ namespace CMS21_Together_Server.Network.Handlers
 				return;
 			}
 
+			if (entry.HasBaseline)
+			{
+				var record = new ParkedRecord
+				{
+					CarId = request.Car.Id, EngineSwap = entry.EngineSwap,
+					Body = entry.BodyParts.Values.Select(r => PartRecordMerge.WithChanged(r, PartFields.None)).ToList(),
+					Sub = entry.SubParts.Values.Select(r => PartRecordMerge.WithChanged(r, PartFields.None)).ToList(),
+					Details = CarDetailsStore.IsValid(request.CarLoaderID, out var details) ? details : null,
+				};
+				ParkingService.KeepRecord(record);
+				Logger.Info($"[Parking] Loader {request.CarLoaderID}: kept the server's {record.Body.Count + record.Sub.Count} part records{(record.Details != null ? " and details" : "")} with the parked car.");
+			}
 			CarPartsStore.ClearLoader(request.CarLoaderID, ClearReason.Parked);
 			Server.SendToClients(new CarSpawnDeletePacket { CarLoaderID = request.CarLoaderID }, client);
 			Logger.Info($"[Parking] Loader {request.CarLoaderID} ({request.Car.CarToLoad}) parked in slot {slot} by client {client}.");
@@ -114,6 +127,7 @@ namespace CMS21_Together_Server.Network.Handlers
 				return;
 			}
 
+			var parkedRecord = ParkingService.TakeRecord(car.Id);
 			ParkingService.TryRemove(request.Slot, car.Id);
 			var entry = CarPartsStore.RegisterSpawn(new CarSpawnResponsePacket
 			{
@@ -126,6 +140,7 @@ namespace CMS21_Together_Server.Network.Handlers
 				CarDataVersion = (byte)car.SaveVersion
 			}, client);
 			entry.FromParking = car;
+			entry.ParkedRecord = parkedRecord;
 			Server.SendToClients(entry.Spawn, client);
 			Logger.Info($"[Parking] Slot {request.Slot} ({car.CarToLoad}) unparked to loader {request.CarLoaderID} by client {client}.");
 			ParkingService.BroadcastSlot(request.Slot);

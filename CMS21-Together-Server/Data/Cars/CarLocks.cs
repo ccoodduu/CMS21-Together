@@ -367,6 +367,9 @@ namespace CMS21_Together_Server.Data.Cars
 			Logger.Info($"[Locks] Client {clientId} flipped {key} on loader {loader}, which client {holder} holds shared; accepted.");
 		}
 
+		public static int ItemHolder(long uid, int exceptClient) =>
+			locks.Values.Where(l => l.Owner != exceptClient && l.Items.Contains(uid)).Select(l => l.Owner).DefaultIfEmpty(-1).First();
+
 		public static bool HeldByOther(int loader, int clientId) => locks.Values.Any(l => l.Loader == loader && l.Owner != clientId);
 
 		public const string BusyPark = "park";

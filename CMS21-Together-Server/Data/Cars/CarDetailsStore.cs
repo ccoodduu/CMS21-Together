@@ -36,8 +36,28 @@ namespace CMS21_Together_Server.Data.Cars
 			       && details.HasSnapshot && details.SpawnSeq == car.SpawnSeq;
 		}
 
+		private static readonly Dictionary<int, int> dropFirstFull = new Dictionary<int, int>();
+
+		public static void StoreParked(int loader, int spawnSeq, ModCarDetails parked)
+		{
+			var details = JsonConvert.DeserializeObject<ModCarDetails>(JsonConvert.SerializeObject(parked));
+			details.SpawnSeq = spawnSeq;
+			details.HasSnapshot = true;
+			State.Details[loader] = details;
+			dropFirstFull[loader] = spawnSeq;
+			missingSince.Remove(loader);
+			Logger.Info($"[CarDetails] Loader {loader}: details of the parked car restored for SpawnSeq {spawnSeq}.");
+			Server.SendToClients(new CarDetailsUpdatePacket { CarLoaderID = loader, SpawnSeq = spawnSeq, IsFull = true, SourceClientId = -1, Details = details });
+		}
+
 		public static void OnUpdate(int clientId, CarDetailsUpdatePacket packet)
 		{
+			if (packet.IsFull && dropFirstFull.TryGetValue(packet.CarLoaderID, out int parkedSeq) && parkedSeq == packet.SpawnSeq)
+			{
+				dropFirstFull.Remove(packet.CarLoaderID);
+				Logger.Info($"[CarDetails] Loader {packet.CarLoaderID}: full snapshot from client {clientId} dropped, the parked car's details stand.");
+				return;
+			}
 			if (!State.LoadedCars.TryGetValue(packet.CarLoaderID, out var car) || car.SpawnSeq != packet.SpawnSeq || packet.Details == null)
 			{
 				Logger.Debug($"[CarDetails] Update for loader {packet.CarLoaderID} (SpawnSeq {packet.SpawnSeq}) from client {clientId} dropped.");
@@ -59,58 +79,14 @@ namespace CMS21_Together_Server.Data.Cars
 			}
 			else
 			{
-				Merge(stored, incoming);
+				DetailsMerge.Merge(stored, incoming, packet.WheelMask, packet.AlignmentMask);
 			}
 			missingSince.Remove(packet.CarLoaderID);
+			if (!packet.IsFull)
+				Logger.Debug($"[CarDetails] Loader {packet.CarLoaderID}: update {packet.ClientSeq} from client {clientId} ({string.Join(", ", DetailsMerge.CarriedSignatures(incoming, packet.WheelMask, packet.AlignmentMask).Keys.Take(8))}).");
 			packet.Details = incoming;
 			packet.SourceClientId = clientId;
 			Server.SendToClients(packet);
-		}
-
-		private static void Merge(ModCarDetails stored, ModCarDetails incoming)
-		{
-			if (incoming.Fluids != null)
-			{
-				stored.Fluids ??= new List<ModFluidLevel>();
-				foreach (var fluid in incoming.Fluids)
-				{
-					stored.Fluids.RemoveAll(f => f.Type == fluid.Type && f.Id == fluid.Id);
-					stored.Fluids.Add(fluid);
-				}
-			}
-			if (incoming.BodyCosmetics != null)
-			{
-				stored.BodyCosmetics ??= new List<ModBodyCosmetics>();
-				foreach (var part in incoming.BodyCosmetics)
-				{
-					stored.BodyCosmetics.RemoveAll(p => p.PartIndex == part.PartIndex);
-					stored.BodyCosmetics.Add(part);
-				}
-			}
-			if (incoming.Tuning != null)
-			{
-				if (stored.Tuning == null) stored.Tuning = incoming.Tuning;
-				else
-				{
-					if (incoming.Tuning.Gearbox != null)
-					{
-						stored.Tuning.Gearbox = incoming.Tuning.Gearbox;
-						stored.Tuning.GearboxPartKey = incoming.Tuning.GearboxPartKey;
-					}
-					foreach (var module in incoming.Tuning.Modules)
-					{
-						stored.Tuning.Modules.RemoveAll(m => m.PartKey == module.PartKey);
-						stored.Tuning.Modules.Add(module);
-					}
-				}
-			}
-			if (incoming.Wheels != null) stored.Wheels = incoming.Wheels;
-			if (incoming.Alignment != null) stored.Alignment = incoming.Alignment;
-			if (incoming.Paint != null) stored.Paint = incoming.Paint;
-			if (incoming.Plates != null) stored.Plates = incoming.Plates;
-			if (incoming.Info != null) stored.Info = incoming.Info;
-			if (incoming.BonusParts != null) stored.BonusParts = incoming.BonusParts;
-			if (incoming.Dyno != null) stored.Dyno = incoming.Dyno;
 		}
 
 		private static ModCarDetails Clamp(ModCarDetails details)

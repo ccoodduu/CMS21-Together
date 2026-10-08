@@ -30,9 +30,10 @@ namespace CMS21_Together_Server.Network.Handlers
 				return;
 			}
 
-			string conflict = !OnlyExamines(entry, change) && CarAwayRegistry.Blocks(change.CarLoaderID, (int)clientId, $"change {change.TxId}")
+			var normalised = Normalise(entry, change, (int)clientId);
+			string conflict = !OnlyExamines(change) && CarAwayRegistry.Blocks(change.CarLoaderID, (int)clientId, $"change {change.TxId}")
 				? "the car is away"
-				: FindConflict(entry, change, (int)clientId);
+				: FindConflict(entry, change, normalised, (int)clientId);
 			if (conflict != null)
 			{
 				var reject = new CarPartsChangeResultPacket
@@ -41,65 +42,169 @@ namespace CMS21_Together_Server.Network.Handlers
 					Accepted = false, Reason = conflict, Revision = entry.Revision
 				};
 				foreach (var record in change.BodyParts)
-					if (entry.BodyParts.TryGetValue(record.PartIndex, out var stored)) reject.BodyParts.Add(stored);
+					if (entry.BodyParts.TryGetValue(record.PartIndex, out var stored)) reject.BodyParts.Add(PartRecordMerge.WithChanged(stored, PartFields.All));
 				foreach (var record in change.SubParts)
-					if (entry.SubParts.TryGetValue(CarSubPartIdentity.BuildKey(record.PartIndexPath), out var stored)) reject.SubParts.Add(stored);
+					if (entry.SubParts.TryGetValue(CarSubPartIdentity.BuildKey(record.PartIndexPath), out var stored)) reject.SubParts.Add(PartRecordMerge.WithChanged(stored, PartFields.All));
 				reject.RestoreUids.AddRange(InventoryChanges.StillHeld(change.InventoryDelta));
 				Server.SendToClient(reject, (int)clientId);
 				Logger.Info($"[Cars] Change {change.TxId} from client {clientId} on loader {change.CarLoaderID} rejected: {conflict}");
 				return;
 			}
 
-			var merged = new List<CarSubPartUpdatePacket>();
 			entry.Revision++;
-			foreach (var record in change.BodyParts)
+			var relay = new CarPartsChangePacket
 			{
-				record.Revision = entry.Revision;
-				entry.BodyParts[record.PartIndex] = record;
-			}
-			foreach (var record in change.SubParts)
+				CarLoaderID = change.CarLoaderID, SpawnSeq = change.SpawnSeq, TxId = change.TxId, Revision = entry.Revision,
+				Preconditions = change.Preconditions, InventoryDelta = change.InventoryDelta
+			};
+			var result = new CarPartsChangeResultPacket
 			{
-				string key = CarSubPartIdentity.BuildKey(record.PartIndexPath);
-				if (entry.SubParts.TryGetValue(key, out var stored) && stored.IsExamined && !record.IsExamined)
+				CarLoaderID = change.CarLoaderID, SpawnSeq = change.SpawnSeq, TxId = change.TxId, Accepted = true, Revision = entry.Revision
+			};
+			foreach (var (sent, outcome) in normalised.Body)
+			{
+				if (outcome.Record != null)
 				{
-					record.IsExamined = true;
-					merged.Add(record);
+					outcome.Record.Revision = entry.Revision;
+					outcome.Record.Changed = PartFields.None;
+					entry.BodyParts[sent.PartIndex] = outcome.Record;
+					if (outcome.Written != PartFields.None) relay.BodyParts.Add(PartRecordMerge.WithChanged(outcome.Record, outcome.Written));
 				}
-				record.Revision = entry.Revision;
-				entry.SubParts[key] = record;
+				if (entry.BodyParts.TryGetValue(sent.PartIndex, out var now))
+				{
+					var differ = PartRecordMerge.Differ(now, sent);
+					if (differ != PartFields.None) result.BodyParts.Add(PartRecordMerge.WithChanged(now, differ));
+				}
+			}
+			foreach (var (sent, outcome) in normalised.Sub)
+			{
+				string key = CarSubPartIdentity.BuildKey(sent.PartIndexPath);
+				if (outcome.Record != null)
+				{
+					outcome.Record.Revision = entry.Revision;
+					outcome.Record.Changed = PartFields.None;
+					entry.SubParts[key] = outcome.Record;
+					if (outcome.Written != PartFields.None) relay.SubParts.Add(PartRecordMerge.WithChanged(outcome.Record, outcome.Written));
+				}
+				if (entry.SubParts.TryGetValue(key, out var now))
+				{
+					var differ = PartRecordMerge.Differ(now, sent);
+					if (differ != PartFields.None) result.SubParts.Add(PartRecordMerge.WithChanged(now, differ));
+				}
 			}
 			InventoryChanges.Apply(change.InventoryDelta, (int)clientId);
 
 			CarLocks.ReleaseCommitted((int)clientId, entry, change.CarLoaderID);
-			change.Revision = entry.Revision;
-			Server.SendToClient(new CarPartsChangeResultPacket
-			{
-				CarLoaderID = change.CarLoaderID, SpawnSeq = change.SpawnSeq, TxId = change.TxId, Accepted = true, Revision = entry.Revision, SubParts = merged
-			}, (int)clientId);
-			Server.SendToClients(change, (int)clientId);
-			Logger.Info($"[Cars] Change {change.TxId} from client {clientId} on loader {change.CarLoaderID}: revision {entry.Revision} ({change.BodyParts.Count} body, {change.SubParts.Count} mechanical, inventory +{change.InventoryDelta.AddedItems.Count + change.InventoryDelta.AddedGroups.Count} -{change.InventoryDelta.RemovedItemUids.Count + change.InventoryDelta.RemovedGroupUids.Count})."); 
+			Server.SendToClient(result, (int)clientId);
+			Server.SendToClients(relay, (int)clientId);
+			Logger.Info($"[Cars] Change {change.TxId} from client {clientId} on loader {change.CarLoaderID}: revision {entry.Revision} ({change.BodyParts.Count} body, {change.SubParts.Count} mechanical, relayed {relay.BodyParts.Count + relay.SubParts.Count}, returned {result.BodyParts.Count + result.SubParts.Count}{normalised.Summary}, inventory +{change.InventoryDelta.AddedItems.Count + change.InventoryDelta.AddedGroups.Count} -{change.InventoryDelta.RemovedItemUids.Count + change.InventoryDelta.RemovedGroupUids.Count}).");
 		}
 
-		private static bool OnlyExamines(CMS21_Together_Core.Data.CarLoaderEntry entry, CarPartsChangePacket change)
+		private class NormalisedChange
 		{
-			if (change.BodyParts.Count > 0 || change.Preconditions.Count > 0 || change.InventoryDelta.RemovedItemUids.Count > 0 || change.InventoryDelta.RemovedGroupUids.Count > 0)
-				return false;
+			public readonly List<(CarBodyPartUpdatePacket Sent, Normalised<CarBodyPartUpdatePacket> Outcome)> Body = new List<(CarBodyPartUpdatePacket, Normalised<CarBodyPartUpdatePacket>)>();
+			public readonly List<(CarSubPartUpdatePacket Sent, Normalised<CarSubPartUpdatePacket> Outcome)> Sub = new List<(CarSubPartUpdatePacket, Normalised<CarSubPartUpdatePacket>)>();
+			public string Summary = "";
+
+			public IEnumerable<string> FlippedKeys(CarPartsChangePacket change)
+			{
+				var preconditions = new HashSet<string>(change.Preconditions.Select(p => p.Key));
+				foreach (var (sent, outcome) in Body)
+					if (preconditions.Contains(sent.Key) || Flips(outcome.Written)) yield return sent.Key;
+				foreach (var (sent, outcome) in Sub)
+					if (preconditions.Contains(sent.Key) || Flips(outcome.Written)) yield return sent.Key;
+			}
+
+			private static bool Flips(PartFields written) => written.HasFlag(PartFields.Mount) || written.HasFlag(PartFields.All);
+		}
+
+		private static bool OverlayParked(CMS21_Together_Core.Data.CarLoaderEntry entry, int loader)
+		{
+			var parked = entry.ParkedRecord;
+			int replaced = 0, dropped = 0;
+			foreach (var record in parked.Body)
+			{
+				if (!entry.BodyParts.TryGetValue(record.PartIndex, out var uploaded)) { dropped++; continue; }
+				if (PartRecordMerge.Differ(uploaded, record) == PartFields.None) continue;
+				var kept = PartRecordMerge.WithChanged(record, PartFields.None);
+				kept.Revision = entry.Revision;
+				entry.BodyParts[record.PartIndex] = kept;
+				replaced++;
+			}
+			foreach (var record in parked.Sub)
+			{
+				string key = CarSubPartIdentity.BuildKey(record.PartIndexPath);
+				if (!entry.SubParts.TryGetValue(key, out var uploaded)) { dropped++; continue; }
+				if (PartRecordMerge.Differ(uploaded, record) == PartFields.None) continue;
+				var kept = PartRecordMerge.WithChanged(record, PartFields.None);
+				kept.Revision = entry.Revision;
+				entry.SubParts[key] = kept;
+				replaced++;
+			}
+			for (int i = 0; i < dropped; i++) Count("parkedRecordsDropped");
+			Logger.Info($"[Parking] Loader {loader}: the unparked car's baseline took {replaced} of the parked part records ({dropped} did not resolve).");
+			if (parked.Details != null) CarDetailsStore.StoreParked(loader, entry.SpawnSeq, parked.Details);
+			return replaced > 0;
+		}
+
+		private static readonly Dictionary<string, int> counters = new Dictionary<string, int>();
+
+		public static int Counter(string name) => counters.TryGetValue(name, out int value) ? value : 0;
+
+		private static void Count(string name) => counters[name] = Counter(name) + 1;
+
+		public static string DescribeCounters() => $"part records: staleMerged {Counter("staleMerged")}, staleDropped {Counter("staleDropped")}, skippedNoMask {Counter("skippedNoMask")}, parkedRecordsDropped {Counter("parkedRecordsDropped")}";
+
+		private static NormalisedChange Normalise(CMS21_Together_Core.Data.CarLoaderEntry entry, CarPartsChangePacket change, int clientId)
+		{
+			var preconditions = change.Preconditions.GroupBy(p => p.Key).ToDictionary(g => g.Key, g => g.First());
+			var result = new NormalisedChange();
+			var dropped = new List<string>();
+			int staleMerged = 0;
+			foreach (var record in change.BodyParts)
+			{
+				entry.BodyParts.TryGetValue(record.PartIndex, out var stored);
+				var outcome = PartRecordMerge.Normalise(stored, record, preconditions.TryGetValue(record.Key, out var pre) ? pre : null);
+				result.Body.Add((record, outcome));
+				Note(record.Key, outcome, dropped, ref staleMerged);
+			}
 			foreach (var record in change.SubParts)
 			{
-				if (!entry.SubParts.TryGetValue(CarSubPartIdentity.BuildKey(record.PartIndexPath), out var stored)) return false;
-				bool examined = record.IsExamined;
-				int revision = record.Revision;
-				record.IsExamined = stored.IsExamined;
-				record.Revision = stored.Revision;
-				bool same = Newtonsoft.Json.JsonConvert.SerializeObject(record) == Newtonsoft.Json.JsonConvert.SerializeObject(stored);
-				record.IsExamined = examined;
-				record.Revision = revision;
-				if (!same) return false;
+				entry.SubParts.TryGetValue(CarSubPartIdentity.BuildKey(record.PartIndexPath), out var stored);
+				var outcome = PartRecordMerge.Normalise(stored, record, preconditions.TryGetValue(record.Key, out var pre) ? pre : null);
+				result.Sub.Add((record, outcome));
+				Note(record.Key, outcome, dropped, ref staleMerged);
 			}
-			return true;
+			if (dropped.Count > 0)
+				Logger.Info($"[Cars] Change {change.TxId} from client {clientId} on loader {change.CarLoaderID}: dropped {string.Join(", ", dropped)}.");
+			if (dropped.Count > 0 || staleMerged > 0) result.Summary = $", {dropped.Count} dropped, {staleMerged} stale merged";
+			return result;
 		}
 
-		private static string FindConflict(CMS21_Together_Core.Data.CarLoaderEntry entry, CarPartsChangePacket change, int clientId)
+		private static void Note<T>(string key, Normalised<T> outcome, List<string> dropped, ref int staleMerged) where T : class
+		{
+			switch (outcome.Outcome)
+			{
+				case MergeOutcome.StaleDropped:
+					Count("staleDropped");
+					dropped.Add($"{key} (stale {outcome.Stale.ToString().Replace(", ", "|")})");
+					break;
+				case MergeOutcome.Skipped:
+					Count("skippedNoMask");
+					dropped.Add($"{key} (no Changed mask)");
+					break;
+				case MergeOutcome.StaleMerged:
+					Count("staleMerged");
+					staleMerged++;
+					break;
+			}
+		}
+
+		private static bool OnlyExamines(CarPartsChangePacket change) =>
+			change.BodyParts.Count == 0 && change.Preconditions.Count == 0 && change.InventoryDelta.RemovedItemUids.Count == 0 && change.InventoryDelta.RemovedGroupUids.Count == 0
+			&& change.SubParts.All(r => r.Changed == PartFields.Examined);
+
+		private static string FindConflict(CMS21_Together_Core.Data.CarLoaderEntry entry, CarPartsChangePacket change, NormalisedChange normalised, int clientId)
 		{
 			foreach (var precondition in change.Preconditions)
 			{
@@ -112,7 +217,7 @@ namespace CMS21_Together_Server.Network.Handlers
 				if (stored.Value != precondition.WasUnmounted) return $"{precondition.Key} changed already";
 			}
 
-			foreach (string key in FlippedKeys(entry, change))
+			foreach (string key in normalised.FlippedKeys(change))
 			{
 				int holder = CarLocks.ExclusiveOwner(change.CarLoaderID, key, clientId);
 				if (holder >= 0) return $"{key} is locked by player {holder}";
@@ -136,15 +241,7 @@ namespace CMS21_Together_Server.Network.Handlers
 			return null;
 		}
 
-		private static IEnumerable<string> FlippedKeys(CMS21_Together_Core.Data.CarLoaderEntry entry, CarPartsChangePacket change)
-		{
-			foreach (var record in change.BodyParts)
-				if (entry.BodyParts.TryGetValue(record.PartIndex, out var stored) && stored.Unmounted != record.Unmounted) yield return record.Key;
-			foreach (var record in change.SubParts)
-				if (entry.SubParts.TryGetValue(CarSubPartIdentity.BuildKey(record.PartIndexPath), out var stored) && stored.Unmounted != record.Unmounted) yield return record.Key;
-		}
-
-			[PacketHandler(PacketTypes.CarPartsResyncRequest)]
+	[PacketHandler(PacketTypes.CarPartsResyncRequest)]
 			[AllowBeforeSync]
 		public static void OnResyncRequest(long clientId, CarPartsResyncRequestPacket packet)
 		{
@@ -181,7 +278,9 @@ namespace CMS21_Together_Server.Network.Handlers
 
 			CarPartsStore.StoreBaseline(entry, packet.EngineSwap,
 				batches.SelectMany(b => b.BodyParts), batches.SelectMany(b => b.SubParts));
-			CarPartsStore.SendSnapshot(packet.CarLoaderID, entry, CarPartsSnapshotPacket.LiveSnapshot, except: (int)clientId);
+			bool replaced = entry.ParkedRecord != null && OverlayParked(entry, packet.CarLoaderID);
+			entry.ParkedRecord = null;
+			CarPartsStore.SendSnapshot(packet.CarLoaderID, entry, CarPartsSnapshotPacket.LiveSnapshot, except: replaced ? CMS21_Together_Core.Data.CarLoaderEntry.NoClient : (int)clientId);
 			GameDataManager.RequestSave();
 		}
 	}

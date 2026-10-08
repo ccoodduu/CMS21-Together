@@ -22,8 +22,9 @@ public static class PartApplier
 
 	public static string EffectiveId(PartScript script) => PartKeys.EffectiveId(script.id, script.tunedID);
 
-	public static bool Apply(CarLoader carLoader, PartRegistry registry, CarBodyPartUpdatePacket record)
+	public static bool Apply(CarLoader carLoader, PartRegistry registry, CarBodyPartUpdatePacket record, PartFields fields = PartFields.All)
 	{
+		bool all = fields == PartFields.None || fields.HasFlag(PartFields.All);
 		var part = registry.Body(record.Key);
 		if (part == null || part.name != record.PartName)
 		{
@@ -31,25 +32,26 @@ public static class PartApplier
 			return false;
 		}
 
-		if (part.Unmounted != record.Unmounted)
+		if ((all || fields.HasFlag(PartFields.Mount)) && part.Unmounted != record.Unmounted)
 		{
 			if (record.Unmounted) carLoader.TakeOffCarPartFromSave(part.name);
 			else carLoader.TakeOnCarPartFromSave(part.name);
 		}
-		if (part.Switched != record.Switched) carLoader.SwitchCarPart(part, true, record.Switched);
-		if (!string.IsNullOrEmpty(record.TunedID) && part.TunedID != record.TunedID) carLoader.TunePart(part.name, record.TunedID);
-		if (record.State != null)
+		if ((all || fields.HasFlag(PartFields.Switched)) && part.Switched != record.Switched) carLoader.SwitchCarPart(part, true, record.Switched);
+		if ((all || fields.HasFlag(PartFields.Identity)) && !string.IsNullOrEmpty(record.TunedID) && part.TunedID != record.TunedID) carLoader.TunePart(part.name, record.TunedID);
+		if (record.State != null && (all || fields.HasFlag(PartFields.Condition)))
 		{
 			carLoader.SetCondition(part, record.State.Condition);
 			carLoader.SetDent(part, record.State.Dent);
-			part.Quality = record.State.Quality;
 		}
+		if (record.State != null && (all || fields.HasFlag(PartFields.Quality))) part.Quality = record.State.Quality;
 		carLoader.UpdateCarBodyPart(part);
 		return true;
 	}
 
-	public static bool Apply(CarLoader carLoader, PartRegistry registry, CarSubPartUpdatePacket record)
+	public static bool Apply(CarLoader carLoader, PartRegistry registry, CarSubPartUpdatePacket record, PartFields fields = PartFields.All)
 	{
+		bool all = fields == PartFields.None || fields.HasFlag(PartFields.All);
 		var script = registry.Sub(record.Key);
 		if (script == null || (script.id != record.PartId && !IsWheelPart(script)))
 		{
@@ -57,20 +59,23 @@ public static class PartApplier
 			return false;
 		}
 
-		if (EffectiveId(script) != record.EffectiveId) script.TunePart(record.EffectiveId);
-		// SetConditionNormal throws after storing Condition while the part's highlighter is not set up yet.
-		if (script.ho != null) script.SetConditionNormal(record.Condition);
-		else
+		if ((all || fields.HasFlag(PartFields.Identity)) && EffectiveId(script) != record.EffectiveId) script.TunePart(record.EffectiveId);
+		if (all || fields.HasFlag(PartFields.Condition))
 		{
-			script.Condition = Mathf.Clamp01(record.Condition);
-			script.UpdateShaderParams(true);
+			// SetConditionNormal throws after storing Condition while the part's highlighter is not set up yet.
+			if (script.ho != null) script.SetConditionNormal(record.Condition);
+			else
+			{
+				script.Condition = Mathf.Clamp01(record.Condition);
+				script.UpdateShaderParams(true);
+			}
 		}
-		script.Quality = record.Quality;
-		script.IsExamined = record.IsExamined;
-		script.UpdateDust(record.Dust, true);
-		if (record.MountObjectData != null) script.SetMountObjectData(ToGame(record.MountObjectData));
+		if (all || fields.HasFlag(PartFields.Quality)) script.Quality = record.Quality;
+		if (all || fields.HasFlag(PartFields.Examined)) script.IsExamined = record.IsExamined;
+		if (all || fields.HasFlag(PartFields.Dust)) script.UpdateDust(record.Dust, true);
+		if ((all || fields.HasFlag(PartFields.Bolts)) && record.MountObjectData != null) script.SetMountObjectData(ToGame(record.MountObjectData));
 
-		if (script.IsUnmounted != record.Unmounted)
+		if ((all || fields.HasFlag(PartFields.Mount)) && script.IsUnmounted != record.Unmounted)
 		{
 			if (record.Unmounted)
 			{
@@ -106,7 +111,7 @@ public static class PartApplier
 	{
 		script.IsUnmounted = false;
 		yield return new WaitForSeconds(MountSettleSeconds);
-		if (script == null) yield break;
+		if (script == null || script.IsUnmounted) yield break;
 
 		foreach (var go in script.enableOnUnmount) go.SetActive(false);
 		foreach (var go in script.disableOnUnmount)

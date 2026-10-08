@@ -64,8 +64,14 @@ public static class PartGhosts
 		}
 	}
 
+	private const PartFields MovingGroups = PartFields.Mount | PartFields.Switched | PartFields.All;
+
+	private static bool Moves(PartFields changed) => changed == PartFields.None || (changed & MovingGroups) != 0;
+
 	private static void OnApplying(int loader, List<CarBodyPartUpdatePacket> body, List<CarSubPartUpdatePacket> sub)
 	{
+		body = body.Where(r => Moves(r.Changed)).ToList();
+		sub = sub.Where(r => Moves(r.Changed)).ToList();
 		mounting.Clear();
 		var sync = CarPartsSync.Get(loader);
 		var carLoader = CarLoaderPlaces.Get()?.GetCarLoaderByIndex(loader);
@@ -102,6 +108,8 @@ public static class PartGhosts
 
 	private static void OnApplied(int loader, List<CarBodyPartUpdatePacket> body, List<CarSubPartUpdatePacket> sub)
 	{
+		body = body.Where(r => Moves(r.Changed)).ToList();
+		sub = sub.Where(r => Moves(r.Changed)).ToList();
 		var sync = CarPartsSync.Get(loader);
 		var carLoader = CarLoaderPlaces.Get()?.GetCarLoaderByIndex(loader);
 		using (VisualScope.Enter())

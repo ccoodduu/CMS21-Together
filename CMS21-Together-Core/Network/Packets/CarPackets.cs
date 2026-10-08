@@ -93,6 +93,7 @@ namespace CMS21_Together_Core.Network.Packets
         public string TunedID;
         public ModItem State;
         public int Revision;
+        [System.Runtime.Serialization.OptionalField] public PartFields Changed;
 
         [Newtonsoft.Json.JsonIgnore]
         public string Key => PartKeys.Body(PartIndex);
@@ -122,6 +123,7 @@ namespace CMS21_Together_Core.Network.Packets
         public float Dust;
         public ModMountObjectData MountObjectData;
         public int Revision;
+        [System.Runtime.Serialization.OptionalField] public PartFields Changed;
 
         [Newtonsoft.Json.JsonIgnore]
         public string Key => PartKeys.Sub(PartIndexPath);
@@ -239,6 +241,22 @@ namespace CMS21_Together_Core.Network.Packets
         public int SourceClientId;
         public int ClientSeq;
         public CMS21_Together_Core.Data.GameType.ModCarDetails Details;
+        [System.Runtime.Serialization.OptionalField] public int WheelMask;
+        [System.Runtime.Serialization.OptionalField] public AlignmentFields AlignmentMask;
+    }
+
+    [Flags]
+    public enum AlignmentFields
+    {
+        None = 0,
+        FL = 1,
+        FR = 2,
+        RL = 4,
+        RR = 8,
+        LampLH = 16,
+        LampLV = 32,
+        LampRH = 64,
+        LampRV = 128
     }
 
     [Serializable]

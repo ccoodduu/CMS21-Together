@@ -31,8 +31,8 @@ public static class PartTransactions
 	}
 
 	private static readonly List<Transaction> open = new List<Transaction>();
-	private static readonly Dictionary<int, (InventoryDelta Delta, Dictionary<long, ModItem> Items, Dictionary<long, ModGroupItem> Groups)> committed =
-		new Dictionary<int, (InventoryDelta, Dictionary<long, ModItem>, Dictionary<long, ModGroupItem>)>();
+	private static readonly Dictionary<int, (int Loader, InventoryDelta Delta, Dictionary<long, ModItem> Items, Dictionary<long, ModGroupItem> Groups)> committed =
+		new Dictionary<int, (int, InventoryDelta, Dictionary<long, ModItem>, Dictionary<long, ModGroupItem>)>();
 
 	public static void Reset()
 	{
@@ -40,7 +40,35 @@ public static class PartTransactions
 		committed.Clear();
 	}
 
-	public static void DropLoader(int loader) => open.RemoveAll(t => t.Loader == loader);
+	public const int Detached = int.MinValue;
+
+	public static void DropLoader(int loader, bool keepCommitted = false)
+	{
+		foreach (var tx in open.Where(t => t.Loader == loader).ToList())
+		{
+			open.Remove(tx);
+			if (tx.AbortedUntil > 0f || tx.Delta.IsEmpty) continue;
+			Log.Info($"[Parts] Loader {loader}: the car is gone; undoing the open transaction for {string.Join(",", tx.Keys)}.");
+			Revert(tx.Delta, tx.RemovedItems.Keys.Concat(tx.RemovedGroups.Keys), tx.RemovedItems, tx.RemovedGroups);
+		}
+		foreach (var pair in committed.Where(c => c.Value.Loader == loader).ToList())
+		{
+			if (keepCommitted)
+			{
+				committed[pair.Key] = (Detached, pair.Value.Delta, pair.Value.Items, pair.Value.Groups);
+				continue;
+			}
+			committed.Remove(pair.Key);
+			Log.Info($"[Parts] Loader {loader}: the car is gone; undoing change {pair.Key}, whose result has not arrived.");
+			var tx = pair.Value;
+			Revert(tx.Delta, tx.Items.Keys.Concat(tx.Groups.Keys), tx.Items, tx.Groups);
+		}
+	}
+
+	public static List<object> Describe() =>
+		open.Select(t => t.Loader).Concat(committed.Values.Select(c => c.Loader)).Distinct().OrderBy(l => l)
+			.Select(l => (object)new { loader = l, open = open.Count(t => t.Loader == l), committed = committed.Values.Count(c => c.Loader == l) })
+			.ToList();
 
 	public static void Open(int loader, IEnumerable<string> keys, IEnumerable<string> itemIds)
 	{
@@ -74,7 +102,7 @@ public static class PartTransactions
 	public static void OpenForBody(int loader, int index, CarPart part) =>
 		Open(loader, new[] { PartKeys.Body(index) }, new[] { part.GetIDWithTuned(), part.name });
 
-	public static bool HasOpen(int loader) => open.Any(t => t.Loader == loader) || committed.Count > 0;
+	public static bool HasOpen(int loader) => open.Any(t => t.Loader == loader) || committed.Values.Any(c => c.Loader == loader);
 
 	public static bool HoldsInventoryChanges => open.Any(t => !t.Delta.IsEmpty) || committed.Count > 0;
 
@@ -148,7 +176,7 @@ public static class PartTransactions
 			foreach (var pair in tx.RemovedGroups) groups[pair.Key] = pair.Value;
 			open.Remove(tx);
 		}
-		if (!delta.IsEmpty) committed[txId] = (delta, items, groups);
+		if (!delta.IsEmpty) committed[txId] = (loader, delta, items, groups);
 		return delta;
 	}
 
