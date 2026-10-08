@@ -265,6 +265,25 @@ public static class LockCommands
         return new { ended };
     }
 
+    private static readonly List<object> gateReports = new List<object>();
+    private static bool gateSubscribed;
+
+    [HarnessCommand("lock-reports")]
+    private static object LockReports(string args)
+    {
+        if (!gateSubscribed)
+        {
+            gateSubscribed = true;
+            LockGate.Reported += (action, report) => gateReports.Add(new
+            {
+                kind = action.Set?.Kind.ToString(), key = action.TargetKey, result = report.Result, waitedMs = Math.Round(report.WaitedMs),
+                prefetched = action.PrefetchedLockId != 0, started = report.Started,
+            });
+        }
+        if ((args ?? "").Trim() == "clear") gateReports.Clear();
+        return gateReports.ToList();
+    }
+
     [HarnessCommand("lock-tracked")]
     private static object LockTracked(string args) =>
         LockLifecycle.All.Select(t => (object)new { lockId = t.LockId, kind = t.Kind.ToString(), key = t.MainKey, phase = t.Phase.ToString(), ending = t.EndingSince >= 0f, itemPicked = t.ItemPicked }).ToList();
