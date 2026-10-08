@@ -257,6 +257,15 @@ namespace CMS21_Together_Server.Data.Jobs
 			if (active != null) ReopenActive(active, "its car was lost");
 		}
 
+		public static bool ReopenNow(int jobId)
+		{
+			var active = State.ActiveJobs.FirstOrDefault(j => j.Job.id == jobId);
+			if (active == null) return false;
+			DeleteJobCar(jobId);
+			ReopenActive(active, "server command");
+			return true;
+		}
+
 		private static void ReopenActive(ActiveJobEntry active, string why)
 		{
 			State.ActiveJobs.Remove(active);
