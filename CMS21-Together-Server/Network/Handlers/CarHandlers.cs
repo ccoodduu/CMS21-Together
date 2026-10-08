@@ -44,6 +44,19 @@ namespace CMS21_Together_Server.Network.Handlers
                 return;
             }
 
+            var occupant = CarPartsStore.Get(packet.CarLoaderID);
+            if (occupant != null)
+            {
+                Logger.Info($"[Cars] Spawn of {packet.CarToLoad} on loader {packet.CarLoaderID} from client {clientId} refused: the loader holds {occupant.Spawn?.CarToLoad} (SpawnSeq {occupant.SpawnSeq}, spawned by client {occupant.SpawnedBy}).");
+                Server.SendToClient(new CarSpawnRejectedPacket { CarLoaderID = packet.CarLoaderID, Reason = "Another car is already in that place." }, (int)clientId);
+                if (occupant.HasBaseline)
+                {
+                    CarPartsStore.SendSnapshot(packet.CarLoaderID, occupant, CarPartsSnapshotPacket.LiveSnapshot, only: (int)clientId);
+                    CarDetailsStore.SendTo(packet.CarLoaderID, (int)clientId);
+                }
+                return;
+            }
+
             var entry = CarPartsStore.RegisterSpawn(new CarSpawnResponsePacket
             {
                 CarLoaderID = packet.CarLoaderID,
