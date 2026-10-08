@@ -5,7 +5,9 @@
 # 10 s), a quiesced checkpoint every -CheckEveryMinutes (all clients equal on every shared section plus a forced
 # digest round), and optionally a storm kind every -StormEveryMinutes. Every issued verb goes to actions.jsonl;
 # -Replay <actions.jsonl> issues the same verbs, actors and arguments in the same order. The run fails on the rules
-# of D6 (allow-list: soak-allow.txt) but goes on to the end unless -StopOnFailure.
+# of D6 (allow-list: soak-allow.txt) but goes on to the end unless -StopOnFailure. Every mount makes a new part and
+# every unmount keeps one, so after each checkpoint the soak sells single items down to -InventoryCap (0 = no cap);
+# the sales are ordinary steps in actions.jsonl, so a replay repeats them instead of capping again.
 param(
     $Ctx,
     [double]$Minutes = 10,
@@ -13,6 +15,7 @@ param(
     [double]$CheckEveryMinutes = 0,
     [double]$StormEveryMinutes = 0,
     [string]$Replay = "",
+    [int]$InventoryCap = 300,
     [switch]$StopOnFailure,
     [switch]$NoAutofix
 )
@@ -372,6 +375,7 @@ function Invoke-DuePending([switch]$All) {
 
 # --- checkpoints, sampling, rules ----------------------------------------------------------------------------
 $script:checkpointIndex = 0
+$script:capSold = 0
 $desyncSeen = @{}
 function Invoke-Quiesce {
     Invoke-DuePending -All
@@ -407,8 +411,21 @@ function Invoke-Checkpoint([string]$Label = "") {
         $script:tireUid = [long]$first.tools.TireChanger.uid
         $active = @($first.jobs.active)
         $script:jobActive = if ($active.Count -gt 0) { $active[0].id } else { $null }
+        if (-not $replaySteps -and $InventoryCap -gt 0 -and $Label -ne "end") { Invoke-InventoryCap @($first.inventory.items).Count }
     }
     $partCache.Clear()
+}
+
+function Invoke-InventoryCap([int]$Items) {
+    $excess = $Items - $InventoryCap
+    if ($excess -le 0) { return }
+    $actor = Pick (Get-EligibleActors)
+    if (-not $actor) { return }
+    Write-Host "inventory $Items items > cap $InventoryCap; $actor sells $excess"
+    for ($i = 0; $i -lt $excess; $i++) {
+        if (-not (Invoke-Step $actor sell-item -Action "inventory-cap")) { break }
+        $script:capSold++
+    }
 }
 
 $script:watchdogReason = $null
@@ -530,6 +547,7 @@ $coveredActions = @(Get-Content -LiteralPath $actionsFile | ForEach-Object { ($_
 $missingActions = @($catalogue | ForEach-Object { $_.Name } | Where-Object { $coveredActions -notcontains $_ })
 $Ctx.Result.notes += "seed $Seed, $steps steps, $($script:checkpointIndex) checkpoints, $($script:stormIndex) storms; replay: -ScenarioArgs @{ Replay = '$actionsFile' }"
 $Ctx.Result.notes += "verb errors: $($errorRates -join ', ')"
+if ($script:capSold -gt 0) { $Ctx.Result.notes += "inventory cap $InventoryCap`: sold $($script:capSold) items after checkpoints" }
 if ($noisy.Count -gt 0) { $Ctx.Result.notes += "verbs over 20 % errors (driver bug or a real block): $($noisy -join ', ')" }
 if ($missingActions.Count -gt 0) { $Ctx.Result.notes += "action rows not covered: $($missingActions -join ', ')" }
 $Ctx.Result.notes += @($failures | Select-Object -First 30)

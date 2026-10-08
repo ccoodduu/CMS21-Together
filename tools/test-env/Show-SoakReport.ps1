@@ -3,6 +3,7 @@ param(
     [Parameter(Mandatory = $true, Position = 0)][string]$RunDir,
     [int]$Top = 10,
     [double]$SlopeSkipMinutes = 10,
+    [double]$BaselineMinutes = 10,
     [string]$AllowList = ""
 )
 
@@ -80,6 +81,42 @@ function Get-GrowthPerHour($Points) {
 }
 
 function Round-To($Value, [int]$Digits = 1) { if ($null -eq $Value) { $null } else { [math]::Round([double]$Value, $Digits) } }
+
+# Samples: Key (a PID or ""), Age (uptime in s, or elapsed s when -AgeFromFirstSample), Time, PrivateMb, SaveBytes.
+# A new process starts where the key changes or the uptime goes back.
+function Get-ServerProcesses($Samples, [switch]$AgeFromFirstSample) {
+    $segments = New-Object System.Collections.Generic.List[object]
+    $current = $null
+    foreach ($sample in $Samples) {
+        if (-not $current -or "$($sample.Key)" -ne "$($current.Key)" -or ($null -ne $sample.Age -and $sample.Age -lt $current.LastAge)) {
+            $current = [pscustomobject]@{ Key = $sample.Key; LastAge = $sample.Age; Samples = New-Object System.Collections.Generic.List[object] }
+            $segments.Add($current)
+        }
+        $current.Samples.Add($sample)
+        $current.LastAge = $sample.Age
+    }
+    $index = 0
+    foreach ($segment in $segments) {
+        $index++
+        $s = $segment.Samples.ToArray()
+        $offset = if ($AgeFromFirstSample) { $s[0].Age } else { 0 }
+        $base = @($s | Where-Object { $_.Age - $offset -ge $BaselineMinutes * 60 } | Select-Object -First 1)
+        $ratio = if ($base.Count -and $base[0].PrivateMb -gt 0) { $s[-1].PrivateMb / $base[0].PrivateMb } else { $null }
+        [pscustomobject][ordered]@{
+            process = $index
+            pid = $segment.Key
+            started = $s[0].Time
+            lifeMin = Round-To (($s[-1].Age - $offset) / 60)
+            privateStartMb = Round-To $s[0].PrivateMb
+            privateBaseMb = if ($base.Count) { Round-To $base[0].PrivateMb } else { $null }
+            privateEndMb = Round-To $s[-1].PrivateMb
+            privateMaxMb = Round-To (Get-Max @($s | ForEach-Object { $_.PrivateMb }))
+            endPerBase = Round-To $ratio 3
+            saveBaseMb = if ($base.Count -and $null -ne $base[0].SaveBytes) { Round-To ($base[0].SaveBytes / $MB) 2 } else { $null }
+            saveEndMb = if ($null -ne $s[-1].SaveBytes) { Round-To ($s[-1].SaveBytes / $MB) 2 } else { $null }
+        }
+    }
+}
 
 function New-Verdict([string]$Name, $Value, $Limit, [string]$Unit, [string]$Kind = "budget") {
     $verdict = if ($null -eq $Value) { "n/a" } elseif ($Value -le $Limit) { "PASS" } elseif ($Kind -eq "rule") { "FAIL" } else { "WARN" }
@@ -207,6 +244,7 @@ if ($processRows.Count -gt 0) {
         }
         [pscustomobject][ordered]@{
             role = $role
+            pids = @($processRows | Where-Object { $_."${role}_running" -eq "1" } | ForEach-Object { $_."${role}_pid" } | Select-Object -Unique).Count
             samples = $points.Count
             cpuAvgPct = Round-To (Get-Average @($points | ForEach-Object { $_.Cpu }))
             cpuP95Pct = Round-To (Get-Percentile @($points | ForEach-Object { $_.Cpu }) 95)
@@ -292,6 +330,22 @@ if (Test-Path -LiteralPath $resultPath) {
     $memoryAbort = @((Get-Content -LiteralPath $resultPath -Raw | ConvertFrom-Json).notes | Where-Object { "$_" -match 'aborted: memory' }) | Select-Object -First 1
 }
 
+$serverProcesses = @()
+if ($perfLines.Count -gt 0) {
+    $saveBytes = $null
+    $serverProcesses = @(Get-ServerProcesses @($serverPoints | ForEach-Object {
+        if ($_.Line.save -and $null -ne $_.Line.save.bytes) { $saveBytes = [double]$_.Line.save.bytes }
+        $age = if ($null -ne $_.Line.uptimeS) { [double]$_.Line.uptimeS } else { $_.X }
+        [pscustomobject]@{ Key = ""; Age = $age; Time = $_.Line.t; PrivateMb = $_.Line.privateBytes / $MB; SaveBytes = $saveBytes }
+    }))
+    $summary.server.processes = $serverProcesses.Count
+} elseif ($processRows.Count -gt 0 -and $processRows[0].PSObject.Properties.Name -contains "server_pid") {
+    $serverProcesses = @(Get-ServerProcesses -AgeFromFirstSample @($processRows | Where-Object { $_.server_running -eq "1" } | ForEach-Object {
+        [pscustomobject]@{ Key = $_.server_pid; Age = Get-Number $_.elapsedS; Time = $_.time; PrivateMb = Get-Number $_.server_privateMb; SaveBytes = $null }
+    }))
+}
+if ($serverProcesses.Count) { $summary.serverProcesses = $serverProcesses }
+
 $durationS = [math]::Max($serverDuration, $processDuration)
 $longRun = $durationS -ge 3600
 $rules = @(
@@ -304,8 +358,13 @@ $rules = @(
 )
 $rule7 = @()
 if ($longRun) {
-    if ($summary.server -and $summary.server.privateAt10MinMb) {
-        $rule7 += New-Verdict "server private end / minute 10" ($summary.server.privateEndMb / $summary.server.privateAt10MinMb) 1.5 "x" "rule"
+    $judged = @($serverProcesses | Where-Object { $null -ne $_.endPerBase })
+    if ($judged.Count) {
+        $worst = $judged | Sort-Object endPerBase -Descending | Select-Object -First 1
+        $short = $serverProcesses.Count - $judged.Count
+        $save = if ($null -ne $worst.saveBaseMb) { ", save $($worst.saveBaseMb) -> $($worst.saveEndMb) MB" } else { "" }
+        $name = "server private end / minute $BaselineMinutes per process (worst of $($judged.Count)$(if ($short) { ", $short shorter not judged" }): #$($worst.process) $($worst.privateBaseMb) -> $($worst.privateEndMb) MB$save)"
+        $rule7 += New-Verdict $name $worst.endPerBase 1.5 "x" "rule"
     }
     if ($summary.server) { $rule7 += New-Verdict "server Log/ growth" $summary.server.logGrowthMbPerH 50 "MB/h" "rule" }
     foreach ($process in @($summary.processes)) {
@@ -348,9 +407,13 @@ if ($summary.server) {
     Write-Host "Timings (ms):"
     $summary.timings | Format-Table -AutoSize | Out-String -Width 200 | Write-Host
 }
+if ($serverProcesses.Count) {
+    Write-Host "Server processes (rule 7 compares each with its own minute $BaselineMinutes; save = last save written so far):"
+    $serverProcesses | Format-Table process, pid, started, lifeMin, privateStartMb, privateBaseMb, privateEndMb, privateMaxMb, endPerBase, saveBaseMb, saveEndMb -AutoSize | Out-String -Width 220 | Write-Host
+}
 if ($summary.processes) {
     Write-Host ("Processes (min commit headroom {0} GB, min free RAM {1} GB):" -f $summary.system.minCommitHeadroomGb, $summary.system.minFreeRamGb)
-    $summary.processes | Format-Table role, samples, cpuAvgPct, cpuP95Pct, privateStartMb, privateEndMb, privateSlopeMbPerH, workingSlopeMbPerH, handlesMax -AutoSize | Out-String -Width 200 | Write-Host
+    $summary.processes | Format-Table role, pids, samples, cpuAvgPct, cpuP95Pct, privateStartMb, privateEndMb, privateSlopeMbPerH, workingSlopeMbPerH, handlesMax -AutoSize | Out-String -Width 200 | Write-Host
 }
 if ($summary.frames) { $summary.frames | Format-Table -AutoSize | Out-String -Width 200 | Write-Host }
 if ($summary.joins) { Write-Host "Joins:"; $summary.joins | Format-Table -AutoSize | Out-String -Width 200 | Write-Host }
