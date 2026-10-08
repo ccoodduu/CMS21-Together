@@ -36,6 +36,7 @@ part 2. "Owner" defines it; "Users" only call or subscribe.
 | `PlayerActivity { PlayerId, State }` (`PlayerActivityState { Kind, CarLoaderID, PartKey, ToolType, ModTool, Progress }`); `PlayerPresenceRecord.Activity` (`[OptionalField]`, never saved) | C→S→same scene | 17 | 6 (roster carries it to late joiners); server drops more than 8/s per client and clears it on scene change |
 | `CarDriveStart { PlayerId, DriveId, Scene, CarLoaderID, CarToLoad, CarBlob, CarBlobVersion }`, `CarDriveState { PlayerId, DriveId, Seq, Payload }` (36-byte `DriveStateCodec`, unreliable, ≤ 15/s, server cap 20/s), `CarDriveStop { PlayerId, DriveId, FinalPose }` | C→S→same scene | 17 (part 2) | 13 (`CarLoaderID` = the away car; a start for a car away with someone else is dropped), 2 (`NewCarDataCodec` blob), 6 (scene relay; running drives sent on scene entry; stopped on scene change and leave). Test track only (no garage driving, spike 8.1); no `CarAwayKind.Driving` |
 | `CarLockRequest { RequestId, CarLoaderID, SpawnSeq, Kind, X, S, Items, ExtendLockId, OtherLoaderID, OtherSpawnSeq }` → `CarLockResult { RequestId, LockId, Granted, Refusal, HolderPlayerId, ConflictKey }` (`RequestId = 0`: a refusal without a request, `CarBusy` for park, delete, job end, lift, move); `CarLockUpdate` (full record, `OwnerPlayerId = -1` = released, also in the `cars` snapshot), `CarLockRelease`, `CarLockRenew`; `ServerInfo` + `LockScope`, `LockExpirySeconds`; `ParkRefusal.Busy` | both | 18 | 1, 2, 3, 5b, 13, 17 (claims view) |
+| `CoopPing { PlayerId, Scene, CarLoaderID, PartKey, Position }` | C→S→same scene | 22 | relay only, no state (not saved, not in a snapshot); the server drops a ping from a stale scene or a scene without avatars and more than one per 0.4 s per player, and turns a ping with an unknown loader or key into a spot ping |
 | `ShopListChange { ClientSeq, Removed, Deltas }` → `ShopListState { Entries, Revision, SourcePlayer, SourceSeq, Refused }` (`ShopListEntry`: id, amount, the `ShopListItemDataEx` fields) | C→S / S→all (S→actor when nothing changed) | 23 | — (design `docs/design/shared-shopping-list.md`) |
 
 Rows 12 and 14a add no packets.
@@ -150,6 +151,7 @@ guard. Key bindings end in `Hotkey` (the redaction rule skips them).
 | `CMS21Together.EnableDevTools`, `DbExportHotkey` | 9 (part 2, exporter) |
 | `CMS21Together.ResyncHotkey`, `BugReportHotkey` | 14 |
 | `CMS21Together.RemoteVisuals` (default true) | 17 |
+| `CMS21Together.PingHotkey` (default `Mouse2`, the middle mouse button) | 22 |
 | `CMS21Together_Guard.Mode`, `Allow`, `Deny` | 14a |
 
 Hotkeys (unique; row 14a's trace task 1.1 checks that the game binds none of F7–F9):
@@ -160,6 +162,7 @@ Hotkeys (unique; row 14a's trace task 1.1 checks that the game binds none of F7�
 | F7 | resync (garage reload) | 14 |
 | F8 | bug report | 14 |
 | F9 | session panel | 8 |
+| Mouse2 (middle mouse button) | ping the part or spot under the cursor (the game binds nothing to it; `ping` checks the Rewired maps) | 22 |
 | unbound | database export (`EnableDevTools`) | 9 |
 
 ## Bug-report bundle (owner 14 (d); row 12's `Collect-Logs.ps1` produces the offline subset)
@@ -211,6 +214,7 @@ Verbs are globally unique (`Commands.Discover` throws on a duplicate). Existing:
 | 11 | `perf` (frame time over 10 s, managed and IL2CPP heap, scene, `syncAcked`), `fps-cap <n>` |
 | 17 | `vfx-trace`, `vfx-probe` (spike), `vfx-unscrew`, `vfx-tool`, `vfx-hold`, `vfx-enable`, `vfx-parts`, `vfx-switch`, `vfx-stand`; dump section `visuals`; part 2: `drive-trace`, `drive-pie`, `drive-probe`, `drive-input`, `drive-input-state`, `drive-stop`, `drive-history`, `drive-codec-check`, `drive-blob`, `drive-ghost-test`, `drive-start`; dump section `remoteCars` (`local`, `cars[]`) |
 | 18 | `lock-take <loader> <kind> <key...> [bare] [items <uid...>] [release]` and `lock-take result <id>`, `lock-release`, `lock-renew on|off`, `lock-counters [reset]`, `lock-try <loader> unmount <key>|mount <key> [uid|group <uid...>]|body <index>|crane-out|fill <type> <id> [level <x>] [nocar]|drain <type> <id>|oil|lift <lifter> up|down [nogate]|move <place> [nogate] ... [finish|hold|release]` and `lock-try result <id>`, `lock-chooser <loader> <key> open|close`, `lock-hover <loader> <key>`, `lock-idle <bolt s> <chooser s>|default`, `lock-tracked`, `lock-watch <loader> <fluidKey>|report|off` (fluid level at each release), `lock-fluid <loader> <fluidKey>`, `lock-tool-end` (ends an active refill or extractor), `lock-reports [clear]` (every gate report: kind, result, `waitedMs`, prefetched), `lock-trace` (spike: `on|off|report|state|reinvoke|relations`), `lock-probe` (spike), `lock-click <loader> <key> hold <ms>` (input shim), `cardetails-flush <loader> [applying <ms>]`; dump section `locks` (`mirror`, `pending`, `counters`, `answers`, `lastMessage`); `lock-click status` reports `label`, `hoverFrames`, `partMouseOverFrames`; `LockSession.psm1` (`Get-ServerLocks`, `Request-Lock`, `Wait-LockMirror`) |
+| 22 | `ping <loader> <key>` (no arguments: the status probe as before; with arguments: the part goes under the game's mouse-over and the hotkey's path runs), `ping-spot x,y,z`, `ping-burst <n> <loader> <key>` (raw packets past the client throttle), `ping-markers [clear]`, `input-bindings [binding]` (Rewired keyboard and mouse maps of every player); dump section `pings` (`hotkey`, `defaultHotkey`, `markers[]`, `counters`, `lastSent`) |
 | 23 | `shoplist` (game list, server mirror, `outstanding`, `windowManagerSame`), `shoplist-add`, `shoplist-remove`, `shoplist-clear` (item arguments `<id> [tire\|rim] [width=] [size=] [profile=] [et=] [plate=] [bonus=]`); no dump section |
 
 | PowerShell helper / server command | Owner (first to land) |
@@ -234,8 +238,8 @@ Scenarios (unique): playtest fixes `car-wheel-swap`, `car-mount-race`; 7 `server
 `jobs-restart`; 4 `car-details`, `car-details-latejoin`; 5a `tools-slots`, `tools-race`, `tools-latejoin`;
 5b `tools-car-effects`; 8 `join-ui`, `join-coldstart`, `host-from-game`, `session-admin`; 9 `compat-refusal`, `compat-mods-probe` (run-all: skip; needs real mods copied into A);
 12 `release-smoke` (marked `# run-all: skip`, run after `Install-ReleaseToTestEnv.ps1`); 14a `guard`; 14
-`desync-autofix`, `resync-key`, `bug-report`; 17 `visual-parts`, `visual-activity`, `visual-latejoin`, `visual-screens` (`# needs: graphics`, `# run-all: skip`), `visual-probe` (spike, `# run-all: skip`), `drive-track`, `drive-latejoin`, `drive-probe` (spike, `# run-all: skip`); 23 `shopping-list`; 11 `scale-connect`, `soak`, `latejoin-full`, `storm` (all
-`# run-all: lane 3`), `full-garage-fixture` and `perf-probe` (`# run-all: skip`).
+`desync-autofix`, `resync-key`, `bug-report`; 17 `visual-parts`, `visual-activity`, `visual-latejoin`, `visual-screens` (`# needs: graphics`, `# run-all: skip`), `visual-probe` (spike, `# run-all: skip`), `drive-track`, `drive-latejoin`, `drive-probe` (spike, `# run-all: skip`); 11 `scale-connect`, `soak`, `latejoin-full`, `storm` (all
+`# run-all: lane 3`), `full-garage-fixture` and `perf-probe` (`# run-all: skip`); 22 `ping`; 23 `shopping-list`.
 
 Scale lane and long runs (owner 11, design `multiplayer-soak-and-scale` D1-D9):
 
@@ -260,7 +264,7 @@ regression; the full set runs when a change touches mod code the path table cann
 before a release. Every scenario, skipped ones included, carries a `# areas: a, b` header line (vocabulary and the
 path → area table in `tools/test-env/TestAreas.psm1`: `connect`, `presence`, `guard`, `cars`, `parts`,
 `placement`, `details`, `jobs`, `economy`, `tools`, `testdrive`, `persistence`, `resync`, `hosting`, `bugreport`,
-`release`, `visuals`, `driving` (row 17), `outdoor` (row 15), `locks` (row 18) and `shoplist` (row 23)); `smoke` in the list puts it in the smoke set (`latejoin`, `car-live`, `junkyard-trip`, `guard`,
+`release`, `visuals`, `driving` (row 17), `outdoor` (row 15), `locks` (row 18), `ping` (row 22) and `shoplist` (row 23)); `smoke` in the list puts it in the smoke set (`latejoin`, `car-live`, `junkyard-trip`, `guard`,
 `tools-latejoin`). A `# run-all: lane 3` line makes a scenario a scale-lane scenario (`Run-All -Lanes 3` only).
 **A new scenario must carry `# areas:`**; a new source folder needs a row in the table, or its
 changes run the full set.

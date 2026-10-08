@@ -56,6 +56,7 @@ public static class ClientData
 		Logic.Visuals.PartGhosts.Reset();
 		Logic.Visuals.ActivityCapture.Reset();
 		Logic.Visuals.RemoteActivity.Reset();
+		Logic.Pings.CoopPings.Reset();
 		Logic.Driving.DriveCapture.Reset();
 		Logic.Driving.RemoteCars.Reset();
 	}

@@ -16,6 +16,9 @@ public static class PlayerSettings
 	private static MelonPreferences_Entry<string> sessionPanelHotkey;
 	private static MelonPreferences_Entry<string> bugReportHotkey;
 	private static MelonPreferences_Entry<bool> remoteVisuals;
+	private static MelonPreferences_Entry<string> pingHotkey;
+
+	public const string DefaultPingKey = "Mouse2";
 
 	public static string NameOverride { get; set; }
 
@@ -32,7 +35,11 @@ public static class PlayerSettings
 		sessionPanelHotkey = category.CreateEntry("SessionPanelHotkey", "F9", description: "Key that opens the session panel (players, ping, kick, Steam friends).");
 		bugReportHotkey = category.CreateEntry("BugReportHotkey", "F8", description: "Key that saves a bug report (logs, settings, mod list, shared state) to UserData\\CMS21Together\\BugReports; when connected the server and the other players save theirs with the same id.");
 		remoteVisuals = category.CreateEntry("RemoteVisuals", true, description: "Show other players' work as it happens (parts moving off and on, bolts turning, the avatar working with a tool). Off: their changes still apply, without animation.");
+		pingHotkey = category.CreateEntry("PingHotkey", DefaultPingKey, description: "Key that pings the part or spot you look at: the other players in your scene see it marked with your name for a few seconds, also through walls. Mouse2 = middle mouse button; None = off.");
 	}
+
+	public static UnityEngine.KeyCode PingKey =>
+		System.Enum.TryParse(pingHotkey?.Value, true, out UnityEngine.KeyCode key) ? key : UnityEngine.KeyCode.Mouse2;
 
 	public static UnityEngine.KeyCode BugReportKey =>
 		System.Enum.TryParse(bugReportHotkey?.Value, true, out UnityEngine.KeyCode key) ? key : UnityEngine.KeyCode.F8;
