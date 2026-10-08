@@ -1,4 +1,4 @@
-# areas: connect, ui
+# areas: connect
 # A click on the mod's main-menu panels must not also click the game's menu underneath (playtest 2026-10-08: Host
 # opened the CMS 2026 news link). For every panel the probe points at a grid over the panel; no point may have the
 # game's EventSystem enabled with a game button under it, and the game's menu must work again outside the panels.
