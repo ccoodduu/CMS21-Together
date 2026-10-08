@@ -92,6 +92,16 @@ namespace CMS21_Together_Server.Network.Handlers
         [PacketHandler(PacketTypes.WarehouseAction)]
         public static void HandleWarehouseAction(long clientId, WarehouseActionPacket packet)
         {
+            var inventory = GameDataManager.CurrentState.InventoryState;
+            int before = inventory.WarehouseItems.Count + inventory.WarehouseGroupItems.Count;
+            MoveWarehouse(clientId, packet);
+            bool moved = inventory.WarehouseItems.Count + inventory.WarehouseGroupItems.Count != before;
+            long uid = packet.IsGroupItem ? packet.GroupItem?.UID ?? 0 : packet.Item?.UID ?? 0;
+            Logger.Info($"[Inventory] Warehouse move of {uid} {(packet.ToWarehouse ? "to" : "from")} the warehouse from client {clientId}: {(moved ? "moved" : "not there, ignored")}.");
+        }
+
+        private static void MoveWarehouse(long clientId, WarehouseActionPacket packet)
+        {
             var state = GameDataManager.CurrentState;
             
             if (packet.ToWarehouse)

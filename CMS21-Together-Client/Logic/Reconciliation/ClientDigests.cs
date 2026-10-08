@@ -4,17 +4,30 @@ using CMS21_Together_Core.Data.Digest;
 using CMS21_Together_Core.Logging;
 using CMS21_Together_Core.Network.Packets;
 using CMS21Together.Data;
+using CMS21Together.Logic.Car.Away;
+using CMS21Together.Logic.Car.Details;
+using CMS21Together.Logic.Car.Locks;
 using CMS21Together.Logic.Car.Parts;
+using CMS21Together.Logic.Hook;
+using CMS21Together.Logic.Jobs;
+using CMS21Together.Logic.Tools;
+using CMS21Together.Logic.Tools.CarTools;
+using CMS21Together.Network.Handlers;
 using CMS21Together.Network;
 using CMS21Together.UI;
 
 namespace CMS21Together.Logic.Reconciliation;
 
-// Client half of desync-detection-and-resync D1/D2: answers the server's digest requests with hashes of the local
-// game state, projected through the same Core mappers the server uses.
+// Client half of desync-detection-and-resync D1/D2 and state-merges-and-contention D11: answers the server's digest
+// requests with hashes of the local game state, projected through the same Core mappers the server uses, or "not
+// ready" while that state is being changed.
 public static class ClientDigests
 {
+	private const float WarehouseMoveSeconds = 3f;
+
 	public static Dictionary<string, string> HeldWrong { get; } = new Dictionary<string, string>();
+
+	public static HashSet<string> HeldNotReady { get; } = new HashSet<string>();
 
 	public static void OnRequest(StateDigestRequestPacket request)
 	{
@@ -34,8 +47,9 @@ public static class ClientDigests
 	public static StateDigestPacket FullDigest(DigestTrigger trigger)
 	{
 		var digest = new StateDigestPacket { Seq = -1, Trigger = trigger };
-		var keys = new List<(string Key, string SubKey)> { (DigestMappers.WorldKey, ""), (DigestMappers.InventoryKey, ""), (DigestMappers.PlacementKey, "") };
-		keys.AddRange(CarPartsSync.All.Where(s => s.Registry != null).Select(s => (DigestMappers.CarsKey, s.Loader.ToString())));
+		var keys = DigestMappers.GlobalKeys.Select(k => (Key: k, SubKey: "")).ToList();
+		foreach (var sync in CarPartsSync.All.Where(s => s.Registry != null))
+			keys.AddRange(DigestMappers.CarKeys.Select(k => (k, sync.Loader.ToString())));
 		foreach (var (key, subKey) in keys)
 		{
 			var projection = Project(key, subKey);
@@ -59,10 +73,12 @@ public static class ClientDigests
 		HeldWrong.ContainsKey(key) ? 0xBADBADBADUL : projection.Hash();
 
 	private static string Describe(DesyncNoticePacket notice) =>
-		notice.Key == DigestMappers.CarsKey ? $"car on loader {notice.SubKey}" : notice.Key;
+		notice.Key == DigestMappers.CarsKey ? $"car on loader {notice.SubKey}"
+		: notice.Key == DigestMappers.DetailsKey ? $"car details on loader {notice.SubKey}" : notice.Key;
 
 	public static Projection Project(string key, string subKey)
 	{
+		if (HeldNotReady.Contains(key)) return null;
 		switch (key)
 		{
 			case DigestMappers.WorldKey:
@@ -73,9 +89,93 @@ public static class ClientDigests
 				return int.TryParse(subKey, out int loader) ? Car(loader) : null;
 			case DigestMappers.PlacementKey:
 				return Placement();
+			case DigestMappers.DetailsKey:
+				return int.TryParse(subKey, out int detailsLoader) ? Details(detailsLoader) : null;
+			case DigestMappers.ToolsKey:
+				return Tools();
+			case DigestMappers.WarehouseKey:
+				return Warehouse();
+			case DigestMappers.GarageKey:
+				return Garage();
+			case DigestMappers.JobsKey:
+				return Jobs();
 			default:
 				return null;
 		}
+	}
+
+	private static Projection Details(int loader)
+	{
+		var carLoader = CarLoaderPlaces.Get()?.GetCarLoaderByIndex(loader);
+		if (carLoader == null || !carLoader.IsCarLoaded() || !CarPartsSync.IsReady(loader) || CarAwaySync.All.ContainsKey(loader)) return null;
+		if (OilBinHooks.IsDraining(carLoader) || LockLifecycle.All.Any(t => t.Loader == loader && t.FlushFluids)) return null;
+		var details = CarDetailsIO.Read(carLoader, CarDetailsIO.All);
+		return CarDetailsSync.IsSettled(loader, details) ? DigestMappers.Details(details) : null;
+	}
+
+	private static Projection Tools()
+	{
+		if (ToolSync.IsBusy || ToolSync.SentRecently || WheelBalancerOpen()) return null;
+		return DigestMappers.Tools(ToolSync.Machines.Where(m => m.Present).Select(m => m.ReadLocal()));
+	}
+
+	private static bool WheelBalancerOpen()
+	{
+		var window = CMS.UI.WindowManager.Instance?.GetWindowByID<CMS.UI.Windows.WheelBalanceWindow>(CMS.UI.WindowID.WheelBalance);
+		return window != null && window.isActive;
+	}
+
+	private static Projection Warehouse()
+	{
+		if (InventoryHandlers.FullSyncOpen || UnityEngine.Time.realtimeSinceStartup - NotificationCenterItemsHook.LastWarehouseMoveAt < WarehouseMoveSeconds) return null;
+		var warehouse = Singleton<GameManager>.Instance?.Warehouse;
+		var all = warehouse?.GetAllItemsAndGroups();
+		if (all == null) return null;
+		var items = new List<CMS21_Together_Core.Data.GameType.ModItem>();
+		var groups = new List<CMS21_Together_Core.Data.GameType.ModGroupItem>();
+		for (int i = 0; i < all.Count; i++)
+		{
+			var group = all[i].TryCast<GroupItem>();
+			if (group != null) groups.Add(group.ToModGroupItem());
+			else
+			{
+				var item = all[i].TryCast<Item>();
+				if (item != null) items.Add(item.ToModItem());
+			}
+		}
+		return DigestMappers.Warehouse(items, groups);
+	}
+
+	private static Projection Garage()
+	{
+		var system = GameData.Instance?.GarageTools?.upgradeSystem;
+		if (system == null || system.UpgradesForMoney == null || system.UpgradesForPoints == null) return null;
+		return DigestMappers.Garage(Unlocked(system.UpgradesForMoney), Unlocked(system.UpgradesForPoints), GlobalData.BarnsAmount);
+	}
+
+	private static Dictionary<string, bool[]> Unlocked(Il2CppSystem.Collections.Generic.List<Upgrade> upgrades)
+	{
+		var result = new Dictionary<string, bool[]>();
+		foreach (var upgrade in upgrades)
+		{
+			if (upgrade?.Unlocked == null || string.IsNullOrEmpty(upgrade.ID)) continue;
+			var levels = new bool[upgrade.Unlocked.Length];
+			for (int i = 0; i < levels.Length; i++) levels[i] = upgrade.Unlocked[i];
+			result[upgrade.ID] = levels;
+		}
+		return result;
+	}
+
+	private static Projection Jobs()
+	{
+		var generator = Singleton<GameManager>.Instance?.OrderGenerator;
+		if (generator == null || JobsSync.PendingTake >= 0) return null;
+		var orders = new List<int>();
+		for (int i = 0; generator.jobs != null && i < generator.jobs.Count; i++) orders.Add(generator.jobs[i].id);
+		var active = new List<KeyValuePair<int, int>>();
+		for (int i = 0; generator.selectedJobs != null && i < generator.selectedJobs.Count; i++)
+			active.Add(new KeyValuePair<int, int>(generator.selectedJobs[i].id, generator.selectedJobs[i].carLoaderID));
+		return DigestMappers.Jobs(orders, active);
 	}
 
 	private static Projection Inventory()

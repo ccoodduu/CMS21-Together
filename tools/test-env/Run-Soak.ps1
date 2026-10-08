@@ -5,6 +5,8 @@ for -Hours with a seed, then Show-SoakReport.ps1 on its run folder. Storms every
 (-StormEveryMinutes overrides, 0 = none). It waits until nobody has touched the PC for 10 minutes before it starts
 the games (-Now skips that; -MaxWaitHours gives up). -Replay <actions.jsonl> repeats a previous run's actions.
 -InventoryCap sets the soak's inventory ceiling (default: the scenario's 300; 0 = none).
+Contention groups (state-merges-and-contention D13, weight 15) are part of every run; -NoContention leaves them out and
+-ContentionKinds a,b forces the kinds drawn.
 #>
 param(
     [double]$Hours = 0.25,
@@ -16,6 +18,8 @@ param(
     [string]$Replay = "",
     [int]$InventoryCap = -1,
     [switch]$StopOnFailure,
+    [switch]$NoContention,
+    [string[]]$ContentionKinds = @(),
     [switch]$Deploy,
     [switch]$Now,
     [double]$MaxWaitHours = 12
@@ -39,6 +43,8 @@ if (-not $Now) {
 $scenarioArgs = @{ Minutes = [math]::Round($Hours * 60, 2); Seed = $Seed; StormEveryMinutes = $StormEveryMinutes; CheckEveryMinutes = $CheckEveryMinutes }
 if ($Replay) { $scenarioArgs.Replay = (Resolve-Path -LiteralPath $Replay).Path }
 if ($StopOnFailure) { $scenarioArgs.StopOnFailure = $true }
+if (-not $NoContention) { $scenarioArgs.Contention = $true }
+if ($ContentionKinds.Count -gt 0) { $scenarioArgs.ContentionKinds = $ContentionKinds }
 if ($InventoryCap -ge 0) { $scenarioArgs.InventoryCap = $InventoryCap }
 Write-Host "SOAK lane $Lane, $Hours h, seed $Seed, storms every $StormEveryMinutes min$(if ($Headless) { ", headless $($Headless -join ',')" })"
 

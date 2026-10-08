@@ -54,6 +54,32 @@ Newest first. One entry per work session.
 - Soak report: rule 7 judged per server process (`ba1e757`; today's soak 1.08x, pass); soak inventory capped at 300.
 - In progress: snapshot-after-delete guard (lane 1); row 19 part 2 (digests, stall warning, soak contention; lane 2).
 - Playtest build `0.6.0-dev.1067` and checklist on the Desktop.
+## 2026-10-08 (19:50–22:40) — row 19 part 2 (detection, soak contention) on lane 2
+
+- `change/state-merges-2` (lane 2), groups 9 and 10.1-10.4 of `state-merges-and-contention`.
+  - Digests for car details (per car), machines, warehouse, garage (skills, upgrades, barns) and jobs; "not ready"
+    keeps a pending mismatch (expires after four asks); the forced round asks every car and key; a stall warning
+    (`desync_stall_seconds`, log and bug report only); `desync_resend_keys` (log-only first; `desync-soak` was quiet,
+    so all keys resend by default). Proof `desync-autofix` (`20261008-201238_L2`; the not-ready step fails without the
+    change, `20261008-201632_L2`), `desync-soak` `20261008-202110_L2`.
+  - Soak: `carDetails` in the checkpoint, every key in its forced round, a key not ready at two checkpoints in a row
+    fails rule 2; `-Contention` (`SoakContention.ps1`, 14 first-pass kinds, rules 8 conservation and 9 outcome, the
+    known list, replay with the server order). Lane-2 runs: `20261008-215819_L2_soak` 9 of 9 groups passed, its replay
+    `20261008-220620_L2_soak` reproduced the server order of 8 of 9; gap 9 reverted fails rule 8
+    (`20261008-221624_L2_soak`). Smoke and touched scenarios `20261008-222205_regression.json` (12 of 12).
+- Real drift the new digests and contention found:
+  - Plate textures were never applied on receivers (job car with "Monaco" plates; `car-details:4` persistent). Fixed
+    (`CarDetailsIO.ApplyPlates`), proof `car-details` gains a plate texture step (fails without, `20261008-210336_L2`).
+  - `place-same` (L4): a move whose lock was granted is refused because the other player's move lock still holds the
+    car at the target place; the mover's game has swapped both cars and keeps them, and the placement resend does not
+    always undo it (persistent). Not fixed, listed as known gap, kept out of the random draw.
+  - A car unparked while the other player was at the junkyard came up on that player's return with 7 parts examined
+    that the server has unexamined; one `cars` resend repaired it. Reproducible with the replay above. Not followed up.
+- Harness fixes: the dump's `cars[].index` is now the loader id (it was the `carOnScene` index, so the soak's part keys
+  pointed at the wrong car whenever several cars were loaded: the "no part" verb errors of the 4-hour soak);
+  `part-fast-mount` of a rim without its group leaves the parts behind it unblocked on the actor only, so the soak
+  keeps wheel parts out of item-less mounts.
+- Not done: task 10.5 (row 18's contention kinds), the lane-3 runs (10.1, 10.3, 11.1: the user's).
 
 ## 2026-10-08 (17:00–19:45) — row 19 part 1 (state merges) ready for merge
 

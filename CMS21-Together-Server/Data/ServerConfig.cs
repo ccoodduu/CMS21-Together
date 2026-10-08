@@ -22,6 +22,8 @@ namespace CMS21_Together_Server.Data
 		public int BackupCount { get; private set; } = 5;
 		public int DesyncCheckIntervalSeconds { get; private set; } = 5;
 		public bool DesyncAutofix { get; private set; } = true;
+		public List<string> DesyncResendKeys { get; private set; } = ParseList(DefaultResendKeys);
+		public int DesyncStallSeconds { get; private set; } = 120;
 		public string ServerName { get; private set; } = "CMS21 Together Server";
 		public string PublicAddress { get; private set; } = string.Empty;
 		public string GameVersion { get; private set; } = "auto";
@@ -72,6 +74,14 @@ namespace CMS21_Together_Server.Data
 			new[] { "perf_log_interval_seconds", "# Seconds between lines of Log/perf_<start>.jsonl (traffic, CPU, memory, handler times). 0 = off", "perf_log_interval_seconds = 0" },
 		};
 
+		private const string DefaultResendKeys = "world, inventory, cars, car-placement, car-details, workshop-tools, warehouse, garage, jobs";
+
+		private static readonly string[][] DesyncKeyLines =
+		{
+			new[] { "desync_resend_keys", "# Kinds of state the server resends when a player's copy is confirmed out of sync, comma separated (world, inventory, cars, car-placement, car-details, workshop-tools, warehouse, garage, jobs). Others are only logged", "desync_resend_keys = " + DefaultResendKeys },
+			new[] { "desync_stall_seconds", "# Seconds a player's state may stay not comparable in a row before the server logs a warning", "desync_stall_seconds = 120" },
+		};
+
 		private static readonly string[][] LockKeyLines =
 		{
 			new[] { "lock_scope", "# What a part lock also covers: connected (the parts it is fixed to, its fluids, the car) or part (only that part and the car)", "lock_scope = connected" },
@@ -86,7 +96,7 @@ namespace CMS21_Together_Server.Data
 			new[] { "outdoor_fill_all_spawn_points", "# Fill every car spawn point of a shared junkyard (True/False)", "outdoor_fill_all_spawn_points = False" },
 		};
 
-		private static string[][] OptionalKeyLines => HostingKeyLines.Concat(CompatibilityKeyLines).Concat(EconomyKeyLines).Concat(DiagnosticsKeyLines).Concat(LockKeyLines).Concat(OutdoorKeyLines).ToArray();
+		private static string[][] OptionalKeyLines => HostingKeyLines.Concat(CompatibilityKeyLines).Concat(EconomyKeyLines).Concat(DiagnosticsKeyLines).Concat(DesyncKeyLines).Concat(LockKeyLines).Concat(OutdoorKeyLines).ToArray();
 
 		public void ApplyArguments(string[] args)
 		{
@@ -145,7 +155,7 @@ namespace CMS21_Together_Server.Data
 		public string Describe() =>
 			$"name '{ServerName}', port {Port}, max players {MaxPlayers}, steam {UseSteam}, public address '{PublicAddress}', autosave {AutosaveIntervalSeconds}s, backups {BackupCount}, " +
 			$"password {Masked(Password)}{(PasswordSteam ? " (also Steam)" : "")}, admin key {Masked(AdminKey)}, new sessions {NewSessionDifficulty}, " +
-			$"travel fees {TravelFees}, max car sale {MaxCarSalePrice}, max car purchase {MaxCarPurchasePrice}, perf log {(PerfLogIntervalSeconds > 0 ? $"{PerfLogIntervalSeconds}s" : "off")}, lock scope {LockScope}, lock expiry {LockExpirySeconds}s, shared outdoor scenes {OutdoorScenes.Format(SharedOutdoorScenes)}, car selector {CarSelector}, outdoor rejoin grace {OutdoorRejoinGraceSeconds}s, fill all spawn points {OutdoorFillAllSpawnPoints}, game version {GameVersion}, mods required [{string.Join(", ", ModsRequired)}], ignored [{string.Join(", ", ModsIgnored)}], gameplay [{string.Join(", ", ModsGameplay)}]";
+			$"travel fees {TravelFees}, max car sale {MaxCarSalePrice}, max car purchase {MaxCarPurchasePrice}, perf log {(PerfLogIntervalSeconds > 0 ? $"{PerfLogIntervalSeconds}s" : "off")}, desync resend [{string.Join(", ", DesyncResendKeys)}], desync stall {DesyncStallSeconds}s, lock scope {LockScope}, lock expiry {LockExpirySeconds}s, shared outdoor scenes {OutdoorScenes.Format(SharedOutdoorScenes)}, car selector {CarSelector}, outdoor rejoin grace {OutdoorRejoinGraceSeconds}s, fill all spawn points {OutdoorFillAllSpawnPoints}, game version {GameVersion}, mods required [{string.Join(", ", ModsRequired)}], ignored [{string.Join(", ", ModsIgnored)}], gameplay [{string.Join(", ", ModsGameplay)}]";
 
 		public static ServerConfig LoadOrCreate()
 		{
@@ -268,6 +278,12 @@ namespace CMS21_Together_Server.Data
 							break;
 						case "desync_autofix":
 							if (bool.TryParse(value, out bool autofix)) config.DesyncAutofix = autofix;
+							break;
+						case "desync_resend_keys":
+							config.DesyncResendKeys = ParseList(value);
+							break;
+						case "desync_stall_seconds":
+							if (int.TryParse(value, out int stall) && stall >= 5) config.DesyncStallSeconds = stall;
 							break;
 						case "server_name":
 							config.ServerName = value.Replace("\"", "");

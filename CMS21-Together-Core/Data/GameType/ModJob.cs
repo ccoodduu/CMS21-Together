@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Runtime.Serialization;
 
 namespace CMS21_Together_Core.Data.GameType;
 
@@ -45,6 +46,7 @@ public class ModJob
 	public bool IconTypeOil;
 	public bool IconTypeBody;
 	public bool IconTypeTuning;
+	[OptionalField] public int PrepSeed;
 }
 
 [Serializable]

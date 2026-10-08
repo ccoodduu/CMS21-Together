@@ -51,6 +51,8 @@ public static class ToolSync
 	private static readonly HashSet<ModToolId> applyRequested = new HashSet<ModToolId>();
 	private static readonly HashSet<ModToolId> applyRunning = new HashSet<ModToolId>();
 	private static int nextSeq = 1;
+	private static float lastSendAt = float.MinValue;
+	private const float SendSettleSeconds = 2f;
 
 	public static bool Trace { get; set; }
 
@@ -68,6 +70,8 @@ public static class ToolSync
 	public static bool IsApplyingRemote(ModToolId tool) => applying.ContainsKey(tool);
 
 	public static bool IsBusy => applyRunning.Count > 0;
+
+	public static bool SentRecently => Time.realtimeSinceStartup - lastSendAt < SendSettleSeconds;
 
 	public static void Reset()
 	{
@@ -126,6 +130,7 @@ public static class ToolSync
 		int seq = nextSeq++;
 		pending[seq] = new PendingUpdate { Previous = previous, Attempted = state, Added = added, SentAt = now };
 		slots[state.Tool] = state;
+		lastSendAt = now;
 		Log.Info($"[Tools] {state.Tool}: local change {previous.Uid} -> {state.Uid}.");
 		Client.Instance.Send(new ToolSlotUpdatePacket { State = state, ExpectedUid = previous.Uid, ClientSeq = seq });
 	}
