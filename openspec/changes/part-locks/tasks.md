@@ -1,21 +1,21 @@
 # Tasks
 
-> **Resume here (2026-10-08, 08:00).** Branch `change/part-locks`, worktree `CMS21-Together-wt/part-locks`.
+> **Resume here (2026-10-08, 13:20).** Branch `change/part-locks`, worktree `CMS21-Together-wt/part-locks`.
 >
-> - **Done and committed:** groups 1-4, 5.1 (switch-over `562aa10`), 5.2, 5.3; `locks-connected`. `63b6837` leaves
->   audit gap 3 to row 19. `005182f` (wip) holds `LockSelection` (9.1), `LockPrefetch` (10.1) and `lock-hover`.
-> - **In the working tree, built, not run yet (lane 1 was the soak's until about 12:30):**
->   - 6.1/6.2: the chooser-built group mounts through `NotificationCenter.MountGroup`, which needs the `mountGroup`
->     that `Raycast.PartSelectMount` sets (spike doc 1.2); the gate restores it on the re-invoked `ActionMount`.
->     Extensions never release the lock they extend; `lock-try … mount <key> group <uid…>`; `locks-race` caliper step.
->   - 7: `LockFluidHooks` (refill, extractor, oil bin; release after `FlushNow`), `FlushBeforeChange` in
->     `PartChangeTracker.Send`; `locks-fluid`; `lock-try fill|drain|oil`, `lock-watch`, `lock-fluid`, `lock-tool-end`.
->   - 8: `LockCarHooks` (lift in `LifterSync`, move and swap in `CarPlacementSync`), Busy messages; `locks-car`
->     (with P8), `visual-lift` updated, `locks-leak` gains prefetch abort, refill without a car and moving lift.
->   - 9.2: `locks-select` (with `lock-click` label and mouse-over recording). P10 in `locks-race`, X4 in `resync-key`.
-> - **Next step:** `Run-Session -Lane 1 -Deploy -Scenarios tools-car-effects,tools-latejoin,visual-activity,visual-latejoin,visual-lift,visual-parts,economy-latejoin,car-gone-inflight,test-drive`
->   (5.1's remaining proof), then `locks-race`, `locks-fluid`, `locks-car`, `locks-leak`, `locks-select`,
->   `resync-key`, `car-placement`, `car-placement-race`, `car-details`; then the smoke set; then commit per group.
+> - **Done and committed:** groups 1-9 and 10.4 (2.2/2.3 keep their "in code" notes). Open: 10.1's 8-of-10
+>   latency measure, 10.2, 10.3, group 11. Group commits: `350e5aa` (6.1-6.3), `1e3dfb7` (7), `fbbb555` (8), `536f3d6`
+>   (9.2, 10.1, 10.4 test steps); `005182f` holds 9.1/10.1's code. Main merged up to `a5dd030` (soak fixes).
+> - **Proof (lane 1):** 5.1's rest: `tools-car-effects`, `visual-activity`, `visual-latejoin`, `visual-lift`,
+>   `visual-parts`, `economy-latejoin`, `car-gone-inflight`, `test-drive` (`20261008-120125` … `121023`) and
+>   `tools-latejoin` (`121238`, after `crane-group`). New work: see the task marks. After the last main merge, the
+>   smoke set plus the lock scenarios pass (`20261008-124403_regression.json`, 16 of 16).
+> - **Open risks:** a job end the server refuses is not given back to the client (the client now refuses locally
+>   first); `CarLifter.isMoving` can stay true for a long time after a swap onto a lift (seen headless; main's
+>   `a5dd030` lift-state fix may be the cause's other half), so `locks-car` lifts before the swaps; the caliper race
+>   with both clients held ends with "item already gone" rather than a server item refusal (`--check-locks` covers
+>   that refusal).
+> - **Next step:** 10.1's latency measure with 10.2 `locks-latency`, 10.3 `locks-latejoin`, then group 11 (scale on
+>   lane 3, verification, playtest checklist, docs).
 
 **Row 18: playtest fix, landing before the next Steam playtest.** It fixes findings 1 and 4 of 2026-10-07, plus the
 coolant and connected-part races.
@@ -203,48 +203,59 @@ coolant and connected-part races.
 
 ## 6. Connected parts and items
 
-- [ ] 6.1 Item step: the `SelectPartToMount(BaseItem)` gate sends `ExtendLockId` with the item UID, or the group UID
+- [x] 6.1 Item step: the `SelectPartToMount(BaseItem)` gate sends `ExtendLockId` with the item UID, or the group UID
       and its member UIDs (B1). A denial shows the message, and the slot phase stays until its back-out or idle. Done
       when `lock-try mount <key> <uid>` for a caliper-with-piston group shows the known member UIDs in the lock's
       `items` on both clients, and the mount commits (`finish`).
-- [ ] 6.2 `scenarios/locks-connected.ps1` (`# areas: locks, parts`) per D13, with the pair from 1.3. `locks-race`
+      **Done (2026-10-08):** `lock-try … mount <key> group <uid…>`: each pick extends the slot lock (the items show in the lock on both clients), `SubmitGroupItem` → `NotificationCenter.MountGroup` → `SelectPartToMount` passes on the picked slot and `DoMount` commits (`locks-race` `20261008-123257`). The server refuses an item another lock holds even after it left the inventory (`--check-locks`).
+- [x] 6.2 `scenarios/locks-connected.ps1` (`# areas: locks, parts`) per D13, with the pair from 1.3. `locks-race`
       gains the caliper-with-piston step: A and B mount the same group into two calipers' slots, one is granted,
       and no item is lost or duplicated. Done when both pass.
-- [ ] 6.3 Row 19 review P10: `locks-race` gains a body-panel step (both players take off the same door or hood at
+      **Done (2026-10-08):** `locks-connected` (`20261008-123701`); `locks-race` with the caliper step (`20261008-123257`). With both clients' incoming held, the loser finds the item already gone; the server-side item refusal is covered by `--check-locks`.
+- [x] 6.3 Row 19 review P10: `locks-race` gains a body-panel step (both players take off the same door or hood at
       once; one commits, the other is refused, the panel reaches the inventory once). Done when `locks-race` passes.
+      **Done (2026-10-08):** `locks-race` (`20261008-121425`, `20261008-123257`).
 
 ## 7. Fluids
 
-- [ ] 7.1 Gates on `FluidRefill.Use` (no button in `Context`, design.md D1), `FluidExtractor.Use` and `CarLoader.UseOilbin`, with the
+- [x] 7.1 Gates on `FluidRefill.Use` (no button in `Context`, design.md D1), `FluidExtractor.Use` and `CarLoader.UseOilbin`, with the
       D5 lifecycle and release after `FlushNow`. `PartChangeTracker.Send` flushes `Fluids` before a change that flips
       a part whose lock holds an `f:` key [M5]. Done when `tools-car-effects` and `car-details` pass.
-- [ ] 7.2 `scenarios/locks-fluid.ps1` (`# areas: locks, details, parts`) per D13, including the order check that the
+      **Done (2026-10-08):** `LockFluidHooks`; `tools-car-effects` (`20261008-120125`), `car-details` (`20261008-122737`). `FluidRefill.Use` only opens the refill view, so no button in `Context` (design.md D1).
+- [x] 7.2 `scenarios/locks-fluid.ps1` (`# areas: locks, details, parts`) per D13, including the order check that the
       server's level after a reservoir unmount is 0 before B sees the release. Done when it passes.
+      **Done (2026-10-08):** `locks-fluid` (`20261008-121555`): both orders, two coolant parts, the drained level on B before A's release, brake fluid at release, oil bin, extractor.
 
 ## 8. Car-level lock
 
-- [ ] 8.1 `LifterSync` gate (`Kind = Lift`, release when the local `isMoving` falls, 30 s cap). `CarPlacementSync`
+- [x] 8.1 `LifterSync` gate (`Kind = Lift`, release when the local `isMoving` falls, 30 s cap). `CarPlacementSync`
       gate (block state 0, `Move` with linked records for a swap, restart `ChangeCarPos`, release at the end). The
       local moving check of D7 in the gate and the hover check [M3]. Done when `car-placement`,
       `car-placement-race` and `test-drive` pass.
-- [ ] 8.2 Client messages for the `Busy` refusals of park, delete and job end (2.3), through each feature's existing
+      **Done (2026-10-08):** `LockCarHooks` in `LifterSync`/`CarPlacementSync`; `car-placement` (`20261008-122601`), `car-placement-race` (`20261008-124007`; the second press is now refused by the first press's car lock), `test-drive` (`20261008-123041`).
+- [x] 8.2 Client messages for the `Busy` refusals of park, delete and job end (2.3), through each feature's existing
       refusal path. Done when `purchases` and `jobs` still pass and a scripted park of a car B works on shows
       the message on A.
-- [ ] 8.3 `scenarios/locks-car.ps1` (`# areas: locks, placement, testdrive, jobs`) per D13, including `net-delay 150`
+      **Done (2026-10-08):** Busy refusals show "<name> is working on this car."; `purchases` (`20261008-122915`), `jobs` (`20261008-122817`), park and delete in `locks-car` (`20261008-123821`). The job end is refused on the client before the native `EndJob` runs, because a server-refused job end does not give the job back to the client (open risk, see the resume note).
+- [x] 8.3 `scenarios/locks-car.ps1` (`# areas: locks, placement, testdrive, jobs`) per D13, including `net-delay 150`
       on B for the lift window and the park, delete and job-end steps. `visual-lift` is updated to D7's
       expectation. Done when both pass.
-- [ ] 8.4 Row 19 review P8: `locks-car` ends with a car removed while its owner holds a lock on it: no lock is left on
+      **Done (2026-10-08):** `locks-car` (`20261008-123821`), `visual-lift` (`20261008-120552`).
+- [x] 8.4 Row 19 review P8: `locks-car` ends with a car removed while its owner holds a lock on it: no lock is left on
       the server or in either mirror, and a part of the next car on that loader can be locked (and is refused to the
       other player). Done when `locks-car` passes.
+      **Done (2026-10-08):** `locks-car` (`20261008-123821`).
 
 ## 9. Hover
 
-- [ ] 9.1 `LockSelection.cs`: highlight suppression (`PartScript.SetMouseOver(bool)`,
+- [x] 9.1 `LockSelection.cs`: highlight suppression (`PartScript.SetMouseOver(bool)`,
       `InteractiveObject.SetMouseOver(bool, Color)`), the label override, interior parts, own locks exempt, and
       `GameScript.SetPartMouseOver` untouched [M2]. Done when `lock-hover` on a locked part reports
       `highlighted false` with the label, and `highlighted true` on a free part.
-- [ ] 9.2 `scenarios/locks-select.ps1` (`# areas: locks, parts, guard`, guard on `Enforce`) per D13, with the
+      **Done (2026-10-08):** `locks-select` (`20261008-121658`): `lock-hover` on a locked part `highlighted false` with the label, `highlighted true` on a free part.
+- [x] 9.2 `scenarios/locks-select.ps1` (`# areas: locks, parts, guard`, guard on `Enforce`) per D13, with the
       `lock-click` steps if 3.3 exists. Done when it passes.
+      **Done (2026-10-08):** `locks-select` (`20261008-121658`), including `lock-click`: label while hovering, the part stays the mouse-over part, the completed hold is refused, and after the release the hold uses the prefetched lock.
 
 ## 10. Latency and late join
 
@@ -252,12 +263,14 @@ coolant and connected-part races.
       release on abort or move-off, and the gate using the prefetched lock. The abort step is added to `locks-leak`.
       Done when `locks-leak` passes, and with `lock-click … hold` at `net-delay 80`, `waitedMs` is 0 in at least 8 of
       10 tries.
+      **In code (2026-10-08):** Prefetch in code and used (`locks-select` `20261008-121658`), the abort step passes in `locks-leak` (`20261008-121739`). Open: the `waitedMs` 0 in 8 of 10 at `net-delay 80` (goes with `locks-latency`, 10.2).
 - [ ] 10.2 `scenarios/locks-latency.ps1` (`# areas: locks, parts, connect`) per D13, with `lock_expiry_seconds = 10`.
       Done when it passes in under 2 minutes.
 - [ ] 10.3 `scenarios/locks-latejoin.ps1` (`# areas: locks, persistence, visuals`) per D13. Done when it passes.
-- [ ] 10.4 Row 19 review X4: `resync-key` gains a lock step: A and B each hold a part lock when B resyncs; B's lock is
+- [x] 10.4 Row 19 review X4: `resync-key` gains a lock step: A and B each hold a part lock when B resyncs; B's lock is
       released, A's stays on the server and is back in B's mirror after the reload, and A's release reaches B. Done when
       `resync-key` passes.
+      **Done (2026-10-08):** `resync-key` (`20261008-122035`).
 
 ## 11. Scale, verification and docs
 
