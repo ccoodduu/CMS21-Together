@@ -51,7 +51,7 @@ part 2. "Owner" defines it; "Users" only call or subscribe.
 | `RaceStartRequest { Scene, Laps }` → `RaceRefused { Reason }` or `RaceCountdown { RaceId, Scene, Laps, Participants, StartInMs }` (S→players on the race track); `RaceLap { RaceId, Lap, LapMs }`, `RaceQuit { RaceId }` (C→S); `RaceResult { RaceId, Order }` (S→all in session); `WorldState.RaceResults` (`[OptionalField]`, last 10) | both | 27b (drafted) | 27a (`LastTime` hook, track set), 17 part 2 (`ActiveDrives`), 19 part 3 (D16) |
 | `ServerInfoPacket.TrackCollisions` (`[OptionalField]`, server config `track_collisions`) | S→C | 27c (drafted) | 17 part 2 (`RemoteCars` copy, `DriveInterpolator` snap), 21 (ride-along copy), 27b (start rule) |
 | `GarageLookUpdate`, `GarageLookClaim` → `GarageLookClaimResult`; `GarageState.Look` (`ModGarageLook { MaterialIndexes, TexturePack, SectionCount }`, `[OptionalField]`; save section `garage` v2) | both | 28 (drafted) | 14/19 (`garage` digest includes the look; the client digests its last applied server look) |
-| `JobStatsAward { JobId, Stats, MissionFinished }` (S → contributors, stats derived by the server in `OnJobEnd`; no client report); active job `Contributors` (`[OptionalField]`, `PlayerRecords.ShortKey`) | both | 30 (drafted) | 3 (`JobsService.OnJobEnd`, mission counters in `JobRemoved`), 18, 19 part 1 (sources of contributions) |
+| `JobStatsAward { JobId, Stats, MissionFinished }` (S → contributors, stats derived by the server in `OnJobEnd`; no client report); active job `Contributors` (`[OptionalField]`, `PlayerRecords.ShortKey`; `jobs` section v2) | both | 30 | 3 (`JobsService.OnJobEnd`, mission counters in `JobRemoved`), 18, 19 part 1 (sources of contributions) |
 | `OrderRequest { RequestId }`; `OrderGeneratedPacket.RequestId`, `.Reason` (`OrderRequestReason`: `None`, `NoCar`, `NotReady`, `Busy`, `Disabled`, `HarnessOff`; `[OptionalField]`); `JobsState.Clock` (`OrderClock { OrderTimer, NextOrderTime = 10 }`, `[OptionalField]`) | S→generator / generator→S | 16 (order clock) | the server asks the elected garage client for an order when its clock is due; the client answers with the order or with no job and a reason. `docs/design/server-order-clock.md` |
 
 Rows 12 and 14a add no packets; rows 26 (`shared-salon`, drafted: guard entries and a proof only) and 29 (`seated-avatars`, drafted) add none either.
@@ -272,6 +272,7 @@ Verbs are globally unique (`Commands.Discover` throws on a duplicate). Existing:
 | 16 | `jobcar-digest <jobId> [rows]` (an active job's car: body and sub part records, car details sections, the job's tasks with their part ids; `hash` and one hash per section; `rows` adds the rows), `jobcar-trace on|off|report` (the Unity random state around each step of `TakeJob`, `TakeMission`, `LoadCar` and `SetRandomColorPanels`, and around `PlaceAtPosition` and `PrepareJob`) |
 | 16 (order clock) | `orders-timer [<timer> <next>]` (set or read the native `OrderGenerator.orderTimer`/`nextOrderTime`), `orders-ttl <seconds>|off` (a sticky `timeToEnd` for every order the client generates); `orders-autogen off` also answers server order requests with `HarnessOff`; `orders-generate` goes through `JobsSync.GenerateOrder(0)` while connected |
 | 21 | `ride-state [driverId]` (phase, rides, camera `placed`/`toHead`/`maxDrift`/`customPos`, own track car `kinematic`/`inputsEnabled`/seats, drive capture, the copy's seats, avatars `toSeat`), `ride-probe` (spike: track camera, own car seats and head, copy seats and wheels); dump section `ride` |
+| 30 | `stats-trace on|off|report` (job stats counted at `SteamAchievements.IncrementStat`: `stat_finish_order`, `stat_bonus_exp`, `stat_bonus_money`, `stat_finish_allmissions`), `orders-generate [ttl|-] [money|exp]` (a bonus on the next generated order), `job-finish <id> [complete]` (marks the job completed after the mod's `CheckJob`) |
 
 | PowerShell helper / server command | Owner (first to land) |
 |---|---|
@@ -288,6 +289,7 @@ Verbs are globally unique (`Commands.Discover` throws on a duplicate). Existing:
 | server commands `password`, `serverinfo` (8); `compat` (9); `desync`, `bugreport` (14); `shoplist` (23); existing `kick`, `stop` (`kick` moves to `Server.Refuse`) | as listed |
 | server command `jobs expire <id>` (expires an open order at once, as the tick does) | 19 (part 3) |
 | server command `jobs reopen <id>` (deletes an active job's car and opens the original order again, the lost-car path) | 16 (seeded job cars) |
+| server commands `jobs contributors <jobId>`, `jobs stats-to <contributors|garage|finisher>`; config `job_stats_to`; `--check-jobs` covers `JobContributors` | 30 |
 | server command `jobs` prints the order clock (`clock t / next s, open of limit (level), running|frozen, request`) | 16 (order clock) |
 | server log lines `[Shop] Sale of …` and `[Inventory] Warehouse move of …` (the soak contention's server order) | 19 (part 2) |
 | server command `away` also lists the rides | 21 |
@@ -301,7 +303,7 @@ Scenarios (unique): playtest fixes `car-wheel-swap`, `car-mount-race`; 7 `server
 12 `release-smoke` (marked `# run-all: skip`, run after `Install-ReleaseToTestEnv.ps1`); 14a `guard`; 14
 `desync-autofix`, `resync-key`, `bug-report`; 17 `visual-parts`, `visual-activity`, `visual-latejoin`, `visual-screens` (`# needs: graphics`, `# run-all: skip`), `visual-probe` (spike, `# run-all: skip`), `drive-track`, `drive-latejoin`, `drive-probe` (spike, `# run-all: skip`); 11 `scale-connect`, `soak`, `latejoin-full`, `storm` (all
 `# run-all: lane 3`), `full-garage-fixture` and `perf-probe` (`# run-all: skip`); 22 `ping`; 23 `shopping-list`; 16 `jobs-seeded` (seeded job cars); 16 `jobs-clock` (order clock); 19
-`server-answers` (part 3; `seat-engine` gains the seat race), `merges-probe` (part 1 spikes 1.2, 1.3 and the 1.4 setters, `# run-all: skip`), `car-stale-record`, `details-concurrent`, `tools-item-race`, `park-stale`, `car-snapshot-after-delete` (part 1; `car-gone-inflight` gains park and job end, `server-answers` the dropped transaction, `tools-race` two stand-part steps, `locks-fluid` two fills at once); 21 `ride-along`, `ride-probe` (spike, `# run-all: skip`); 24 `locks-select-2`; 20 `race-hardening`.
+`server-answers` (part 3; `seat-engine` gains the seat race), `merges-probe` (part 1 spikes 1.2, 1.3 and the 1.4 setters, `# run-all: skip`), `car-stale-record`, `details-concurrent`, `tools-item-race`, `park-stale`, `car-snapshot-after-delete` (part 1; `car-gone-inflight` gains park and job end, `server-answers` the dropped transaction, `tools-race` two stand-part steps, `locks-fluid` two fills at once); 21 `ride-along`, `ride-probe` (spike, `# run-all: skip`); 30 `job-stats`; 24 `locks-select-2`; 20 `race-hardening`.
 
 Scale lane and long runs (owner 11, design `multiplayer-soak-and-scale` D1-D9):
 
@@ -389,9 +391,8 @@ sees (hidden, kept parked, or a guard message); rows that land before this is de
 
 1. ~~Row 13 is not drafted~~ — merged 2026-10-06: the away claim, test drive fold, dyno details section and test path
    `specialState` are on `main`; 5b's dyno trigger calls `DynoSync.Commit`.
-2. **Steam stats for non-finishers** depend on row 3's trace finding a callable game entry point for the job's
-   stats/achievements. Recommendation: if none exists, accept "finisher only" as a known gap rather than calling
-   Steamworks directly (the harness instances share one Steam account and cannot verify it).
+2. ~~Steam stats for non-finishers~~ — row 30: the server derives the job's stats and the contributors' games call
+   `PlatformManager.IncrementStat`; the harness counts the calls with Steam writes blocked.
 3. **Balancer reservation entry points** (minigame open, take) are only known after row 5a's manual trace (task
    1.3, needs the user). Recommendation: schedule that session before row 5a group 7.
 4. **Interim client-computed values** (spawner's roll in row 1, order generation and payout in row 3) are marked as
