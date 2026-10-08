@@ -96,7 +96,7 @@ public static class ClientDigests
 		var carLoader = CarLoaderPlaces.Get()?.GetCarLoaderByIndex(loader);
 		var sync = CarPartsSync.All.FirstOrDefault(s => s.Loader == loader);
 		if (carLoader == null || sync?.Registry == null || !CarPartsSync.IsReady(loader) || sync.Pending.Count > 0) return null;
-		if (PartChangeTracker.IsPending(loader) || PartTransactions.HasOpen(loader) || PartClaims.Held(loader).Count > 0) return null;
+		if (PartChangeTracker.IsPending(loader) || PartTransactions.HasOpen(loader)) return null;
 		var body = new List<CarBodyPartUpdatePacket>();
 		var sub = new List<CarSubPartUpdatePacket>();
 		CarPartsSync.CaptureAll(carLoader, sync.Registry, body, sub);

@@ -25,7 +25,10 @@ public static class PartHooks
 
 	[HarmonyPatch(typeof(CarLoader), nameof(CarLoader.TakeOffCarPart), typeof(string))]
 	[HarmonyPostfix]
-	private static void AfterTakeOffCarPart(CarLoader __instance) => MarkLoader(__instance);
+	private static void AfterTakeOffCarPart(CarLoader __instance, bool __runOriginal)
+	{
+		if (__runOriginal) MarkLoader(__instance);
+	}
 
 	[HarmonyPatch(typeof(CarLoader), nameof(CarLoader.SwitchCarPart), typeof(string))]
 	[HarmonyPostfix]

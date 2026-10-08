@@ -41,7 +41,7 @@ Details and reasons in `openspec/changes/part-locks/proposal.md` (reviewed, see 
 Not questions for the user; open bugs from the first playtest, fixed one by one.
 
 1. **Ghost stuck when the lift moves (row 17):** a remote mount's ghost stayed at its world position after the lift
-   moved, and the real caliper stayed hidden (`forceRenderingOff`) until the scene was reloaded. Not reproduced by `visual-lift` (fast mount and unscrew while the lift moves, held ghost: no ghost or hidden renderer left, 2026-10-07); the playtest mount ran with bolts. Row 18 `part-locks` D7 (no lift or move while another player holds a lock on the car) removes the situation.
+   moved, and the real caliper stayed hidden (`forceRenderingOff`) until the scene was reloaded. Not reproduced by `visual-lift` (fast mount and unscrew while the lift moves, held ghost: no ghost or hidden renderer left, 2026-10-07); the playtest mount ran with bolts. Row 18 `part-locks` D7 (no lift or move while another player holds a lock on the car) removes the situation. **Fixed by row 18** (`change/part-locks`): the lift is refused while a friend works on the car (`visual-lift`, `locks-car`).
 2. **Server keeps running** after the host returned to the main menu (the user typed `/exit`). By design (session-hosting spec: leaving keeps hosting; Stop on the Host tab or quitting the game stops it); my advice to "go to the main menu" was wrong. Idea: a main-menu notice "your server is still running".
 3. **Persistent car desync** on wheels: `s:3.22.4.tunedId` empty on the host vs `tire_sport` on the server.
    **Fixed** (`c369763`): the game writes a tire's tuned id as empty or equal to its id, and TunePart also changes a
@@ -49,7 +49,8 @@ Not questions for the user; open bugs from the first playtest, fixed one by one.
    rim and tire ids. `car-wheel-swap` (own wheel, then a new rim and tire type) proves it.
 4. **Rollback after a rejected mount** (same item taken by both players) left the loser's inventory out of sync
    until F7. **Fixed** (`f9557c0`): the rejection gave the loser back the item the other player had mounted; it now
-   restores only items the server still has. `car-mount-race` proves it.
+   restores only items the server still has. `car-mount-race` proves it. Row 18 removes the race itself: the item is
+   locked when it is picked, so the second player is refused before mounting (`locks-race`).
 5. **F7 on a friend's client** logs `Error in handler WorldState: Object reference not set`. **Fixed** (`c81fd05`):
    UIManager is missing while the garage reloads; the refresh is skipped then. `resync-key` sends money changes
    during the reload.

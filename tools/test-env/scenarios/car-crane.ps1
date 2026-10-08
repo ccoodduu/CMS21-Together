@@ -57,6 +57,13 @@ $same = Wait-Same "spawn"
 Check ($same[0].stateHash -eq $same[1].stateHash) "B has A's car in the same state"
 
 $out = Send-HarnessCommand -Instance $a -Verb crane-out -Arguments "$loader"
+# The crane waits for the engine lock (part-locks), so the group appears a round trip after the call.
+$deadline = (Get-Date).AddSeconds(10)
+while ($out.group -eq 0 -and (Get-Date) -lt $deadline) {
+    Start-Sleep -Milliseconds 300
+    $uids = Group-Uids (Send-HarnessCommand -Instance $a -Verb dump) $out.engine
+    if ($uids.Count -gt 0) { $out.group = $uids[-1] }
+}
 Write-Host "A takes out $($out.engine) (group $($out.group))"
 Check ($out.group -ne 0) "the crane put an engine group into A's inventory"
 Start-Sleep -Seconds 2

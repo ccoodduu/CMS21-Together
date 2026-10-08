@@ -90,6 +90,7 @@ public static class CarPartsSync
 	public static void OnSpawnAck(CarSpawnAckPacket packet)
 	{
 		ownBaselinePending.Add(packet.CarLoaderID);
+		Locks.CarLockMirror.ForgetLoader(packet.CarLoaderID, packet.SpawnSeq);
 		var sync = Get(packet.CarLoaderID);
 		sync.SpawnSeq = packet.SpawnSeq;
 		sync.Revision = 0;
@@ -102,6 +103,7 @@ public static class CarPartsSync
 	public static void OnRemoteSpawn(CarSpawnResponsePacket spawn)
 	{
 		var sync = Get(spawn.CarLoaderID);
+		Locks.CarLockMirror.ForgetLoader(spawn.CarLoaderID, spawn.SpawnSeq);
 		sync.SpawnSeq = spawn.SpawnSeq;
 		sync.CarToLoad = spawn.CarToLoad;
 		sync.Registry = null;
@@ -114,6 +116,7 @@ public static class CarPartsSync
 		Visuals.VisualScope.CancelLoader(loader, "car deleted");
 		ownBaselinePending.Remove(loader);
 		loaders.Remove(loader);
+		PartTransactions.DropLoader(loader);
 	}
 
 	private static IEnumerator UploadWhenSettled(LoaderSync sync, int spawnSeq)

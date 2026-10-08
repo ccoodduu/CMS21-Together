@@ -99,14 +99,14 @@ foreach ($name in $Ctx.Instances) { Check (Wait-Ready $name 0) "$name has loader
 Start-Sleep -Seconds 3
 $repair = Send-HarnessCommand -Instance $b -Verb part-unmount -Arguments "0"
 Start-Sleep -Seconds 3
-Send-HarnessCommand -Instance $b -Verb part-claim -Arguments "0 $($repair.key)" | Out-Null
+Send-HarnessCommand -Instance $b -Verb lock-take -Arguments "0 unmount $($repair.key) bare" | Out-Null
 Start-Sleep -Seconds 1
 $mark = Get-ServerLogMark
 Send-HarnessCommand -Instance $a -Verb econ-sell-car -Arguments "0 20000" | Out-Null
 Check ([bool](Economy-Line $mark "CarSale\(0\) refused Busy")) "A cannot sell the car B works on"
 Start-Sleep -Seconds 2
 Check ((Has-Car $a 0) -and (Has-Car $b 0)) "the car stays for both after the refused sale"
-Send-HarnessCommand -Instance $b -Verb part-claim -Arguments "0 $($repair.key) release" | Out-Null
+Send-HarnessCommand -Instance $b -Verb lock-take -Arguments "0 unmount $($repair.key) release" | Out-Null
 Start-Sleep -Seconds 2
 
 $before = (Dump $a).stats.money

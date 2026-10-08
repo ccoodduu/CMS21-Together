@@ -4,6 +4,8 @@
 # both take the same parked car onto the same loader (one copy), a parking swap, a priced arrival and a level unlock.
 param($Ctx)
 
+Import-Module (Join-Path $PSScriptRoot "..\LockSession.psm1")
+
 $a, $b = $Ctx.Instances
 $car = "car_boltatlanta"
 $failures = @()
@@ -55,6 +57,7 @@ Send-HarnessCommand -Instance $a -Verb car-spawn -Arguments "0 $car 0" | Out-Nul
 Wait-Ready $a 0 | Out-Null; Wait-Ready $b 0 | Out-Null
 Send-HarnessCommand -Instance $a -Verb car-move -Arguments "0 CarLifter1" | Out-Null
 Wait-SamePlacement "car on lift 1" { param($p) @($p.cars | Where-Object { $_.loader -eq 0 -and $_.inPlace -eq "CarLifter1" }).Count -eq 1 } | Out-Null
+foreach ($name in $Ctx.Instances) { Wait-LockMirror $name { param($l) @($l.mirror).Count -eq 0 } "the move's car lock ended" -TimeoutSec 15 | Out-Null }
 
 $mark = Get-ServerLogMark
 Hold "on"
@@ -63,7 +66,7 @@ Send-HarnessCommand -Instance $b -Verb lift -Arguments "0 up" | Out-Null
 Start-Sleep -Seconds 1
 Hold "off"
 Wait-SamePlacement "both raised lift 0 at once" { param($p) @($p.lifters | Where-Object { $_.index -eq 0 -and $_.state -eq "Middle" }).Count -eq 1 } | Out-Null
-Check ([bool](Wait-ServerLog -Pattern "Lift 0 0->1 from client \d+ refused" -After $mark -TimeoutSec 5)) "the second lift press was refused"
+Check ([bool](Wait-ServerLog -Pattern "Lift 0 0->1 from client \d+ refused|\(Lift\) denied: Held" -After $mark -TimeoutSec 5)) "the second lift press was refused (by the lift rule, or since part-locks by the car lock of the first)"
 Send-HarnessCommand -Instance $a -Verb lift -Arguments "0 down" | Out-Null
 Wait-SamePlacement "lift back down" { param($p) @($p.lifters | Where-Object { $_.index -eq 0 -and $_.state -eq "OnFloor" }).Count -eq 1 } | Out-Null
 

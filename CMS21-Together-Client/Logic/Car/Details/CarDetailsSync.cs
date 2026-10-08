@@ -28,6 +28,7 @@ public static class CarDetailsSync
 	private static readonly HashSet<int> awaiting = new HashSet<int>();
 	private static readonly HashSet<int> applying = new HashSet<int>();
 	private static readonly Dictionary<int, int> latestSeq = new Dictionary<int, int>();
+	private static readonly Dictionary<int, List<ModFluidLevel>> knownFluids = new Dictionary<int, List<ModFluidLevel>>();
 	private static int nextSeq = 1;
 	private static float nextPoll;
 	private static bool subscribed;
@@ -55,6 +56,8 @@ public static class CarDetailsSync
 		awaiting.Clear();
 		applying.Clear();
 		latestSeq.Clear();
+		knownFluids.Clear();
+		previousFluids.Clear();
 	}
 
 	public static bool HoldSpawnSnapshots { get; set; }
@@ -125,22 +128,74 @@ public static class CarDetailsSync
 		}
 	}
 
-	private static void Flush(int loader, CarDetailSection sections)
+	public enum FlushResult
 	{
-		if (awaiting.Contains(loader) || applying.Contains(loader) || !CarPartsSync.IsReady(loader) || !lastKnown.ContainsKey(loader)) return;
+		Sent,
+		Unchanged,
+		Deferred,
+		NotReady
+	}
+
+	private const float FlushNowWaitSeconds = 1f;
+
+	public static float TestApplyingUntil { get; set; }
+
+	private static bool Busy(int loader) => awaiting.Contains(loader) || applying.Contains(loader) || Time.realtimeSinceStartup < TestApplyingUntil;
+
+	public static FlushResult FlushNow(int loader, CarDetailSection sections, Action done = null)
+	{
+		if (!CarPartsSync.IsReady(loader) || !lastKnown.ContainsKey(loader))
+		{
+			done?.Invoke();
+			return FlushResult.NotReady;
+		}
+		if (Busy(loader))
+		{
+			Log.Info($"[CarDetails] Loader {loader}: flush of {sections} deferred (awaiting or applying details).");
+			MelonCoroutines.Start(FlushWhenFree(loader, sections, done));
+			return FlushResult.Deferred;
+		}
+		var result = Flush(loader, sections) ? FlushResult.Sent : FlushResult.Unchanged;
+		done?.Invoke();
+		return result;
+	}
+
+	public static void FlushBeforeChange(int loader)
+	{
+		if (!CarPartsSync.IsReady(loader) || !lastKnown.ContainsKey(loader)) return;
+		if (Busy(loader)) Log.Info($"[CarDetails] Loader {loader}: fluids flushed ahead of a part change although details are being applied.");
+		Flush(loader, CarDetailSection.Fluids, force: true);
+	}
+
+	private static IEnumerator FlushWhenFree(int loader, CarDetailSection sections, Action done)
+	{
+		float deadline = Time.realtimeSinceStartup + FlushNowWaitSeconds;
+		while (Busy(loader) && Time.realtimeSinceStartup < deadline) yield return null;
+		bool forced = Busy(loader);
+		bool sent = Flush(loader, sections, force: true);
+		Log.Info($"[CarDetails] Loader {loader}: deferred flush of {sections} {(sent ? "sent" : "had no change")}{(forced ? " after 1 s although still busy" : "")}.");
+		done?.Invoke();
+	}
+
+	private static bool Flush(int loader, CarDetailSection sections, bool force = false)
+	{
+		if (!force && Busy(loader) || !CarPartsSync.IsReady(loader) || !lastKnown.ContainsKey(loader)) return false;
 		var carLoader = CarLoaderPlaces.Get()?.GetCarLoaderByIndex(loader);
-		if (carLoader == null || !carLoader.IsCarLoaded()) return;
+		if (carLoader == null || !carLoader.IsCarLoaded()) return false;
 		var details = CarDetailsIO.Read(carLoader, sections);
 		var changed = CarDetailSection.None;
 		foreach (var section in Sections)
 			if (sections.HasFlag(section) && Signature(details, section) != Known(loader, section)) changed |= section;
-		if (changed == CarDetailSection.None) return;
+		if (changed == CarDetailSection.None) return false;
 		var send = CarDetailsIO.Read(carLoader, changed);
 		Remember(loader, send, changed);
+		if (send.Fluids != null) send.Fluids = OnlyChanged(loader, send.Fluids);
 		int seq = nextSeq++;
 		latestSeq[loader] = seq;
 		Log.Debug($"[CarDetails] Loader {loader}: {changed} changed.");
 		Client.Instance.Send(new CarDetailsUpdatePacket { CarLoaderID = loader, SpawnSeq = CarPartsSync.SpawnSeq(loader), ClientSeq = seq, Details = send });
+		dirty.Remove(loader);
+		return true;
 	}
 
 	public static void OnUpdate(CarDetailsUpdatePacket packet, int snapshotId)
@@ -195,8 +250,21 @@ public static class CarDetailsSync
 		return sections;
 	}
 
+	private static List<ModFluidLevel> OnlyChanged(int loader, List<ModFluidLevel> fluids)
+	{
+		if (!previousFluids.TryGetValue(loader, out var before) || before == null) return fluids;
+		return fluids.Where(f => !before.Any(b => b.Type == f.Type && b.Id == f.Id && Math.Round(b.Level, 3) == Math.Round(f.Level, 3) && Math.Round(b.Condition, 3) == Math.Round(f.Condition, 3))).ToList();
+	}
+
+	private static readonly Dictionary<int, List<ModFluidLevel>> previousFluids = new Dictionary<int, List<ModFluidLevel>>();
+
 	private static void Remember(int loader, ModCarDetails details, CarDetailSection sections)
 	{
+		if (sections.HasFlag(CarDetailSection.Fluids) && details.Fluids != null)
+		{
+			previousFluids[loader] = knownFluids.TryGetValue(loader, out var lastFluids) ? lastFluids : null;
+			knownFluids[loader] = details.Fluids.Select(f => new ModFluidLevel { Type = f.Type, Id = f.Id, Level = f.Level, Condition = f.Condition }).ToList();
+		}
 		if (!lastKnown.TryGetValue(loader, out var known)) lastKnown[loader] = known = new Dictionary<CarDetailSection, string>();
 		foreach (var section in Sections)
 			if (sections.HasFlag(section)) known[section] = Signature(details, section);

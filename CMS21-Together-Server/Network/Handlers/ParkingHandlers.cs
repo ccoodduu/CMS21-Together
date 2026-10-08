@@ -36,6 +36,7 @@ namespace CMS21_Together_Server.Network.Handlers
 			if (request.Price != 0 || entry == null) refusal = ParkRefusal.Invalid;
 			else if (entry.Spawn.IsJob) refusal = ParkRefusal.JobCar;
 			else if (CarAwayRegistry.Blocks(request.CarLoaderID, client, "park")) refusal = ParkRefusal.Taken;
+			else if (CarLocks.RefuseBusy(request.CarLoaderID, client, CarLocks.BusyPark)) refusal = ParkRefusal.Busy;
 			int slot = -1;
 			if (refusal == ParkRefusal.None && !ParkingService.TryAdd(request.Car, request.PreferredSlot, out slot)) refusal = ParkRefusal.ParkingFull;
 
@@ -50,6 +51,7 @@ namespace CMS21_Together_Server.Network.Handlers
 				giveBack.CarDataVersion = (byte)request.Car.SaveVersion;
 				Server.SendToClient(giveBack, client);
 				if (entry.HasBaseline) CarPartsStore.SendSnapshot(request.CarLoaderID, entry, CarPartsSnapshotPacket.LiveSnapshot, only: client);
+				CarDetailsStore.SendTo(request.CarLoaderID, client);
 				return;
 			}
 

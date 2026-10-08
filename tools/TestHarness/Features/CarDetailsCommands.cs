@@ -13,6 +13,16 @@ public static class CarDetailsCommands
         CarDetailSection.BodyCosmetics, CarDetailSection.Plates, CarDetailSection.Info, CarDetailSection.Dyno,
     };
 
+    [HarnessCommand("cardetails-flush")]
+    private static object FlushNow(string args)
+    {
+        var parts = (args ?? "").Split(new[] { ' ' }, StringSplitOptions.RemoveEmptyEntries);
+        if (parts.Length < 1) throw new ArgumentException("usage: cardetails-flush <loader> [applying <ms>]");
+        if (parts.Length == 3 && parts[1] == "applying")
+            CarDetailsSync.TestApplyingUntil = UnityEngine.Time.realtimeSinceStartup + int.Parse(parts[2]) / 1000f;
+        return new { result = CarDetailsSync.FlushNow(int.Parse(parts[0]), CarDetailSection.Fluids).ToString() };
+    }
+
     [HarnessCommand("cardetails-show")]
     private static object Show(string args)
     {

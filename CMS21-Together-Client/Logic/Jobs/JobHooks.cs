@@ -105,6 +105,11 @@ public static class JobHooks
 		if (!Connected || job == null || carLoader == null) return true;
 		int loader = CarLoaderPlaces.Get().GetCarLoaderId(carLoader);
 		if (loader >= 0 && CarAwaySync.BlockIfLocked(loader, "job end")) return false;
+		if (loader >= 0 && Car.Locks.LockGate.Active && Car.Locks.CarLockMirror.OtherOwnerOn(loader) is int holder && holder >= 0)
+		{
+			Car.Locks.LockMessages.Refuse(Car.Locks.LockMessages.Busy(holder));
+			return false;
+		}
 		JobHelper.CheckJob(carLoader, ref job);
 		JobEndContext.Begin(job, loader);
 		return true;

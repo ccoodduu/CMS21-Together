@@ -18,6 +18,10 @@ public static class CarPlacementSync
 	public static event Action<int> BeforeRemoteCarMove;
 
 	private static readonly HashSet<int> applying = new HashSet<int>();
+
+	private static readonly HashSet<int> movingLocally = new HashSet<int>();
+
+	public static bool IsApplying(int loader) => applying.Contains(loader);
 	private static readonly Dictionary<int, int> pendingPlaces = new Dictionary<int, int>();
 
 	private static bool Active => ClientScene.IsGarageReady && Client.Instance != null && Client.Instance.IsConnectionValid;
@@ -32,11 +36,12 @@ public static class CarPlacementSync
 		int from = __instance.carLoader.GetPlaceNo();
 		int to = (int)__instance.pos;
 		if (from == to) return true;
-		if (CarAwaySync.BlockIfLocked(loader, "move"))
+		if (CarAwaySync.BlockIfLocked(loader, "move") || !Locks.LockCarHooks.Gate(Locks.LockCarHooks.MoveAction(__instance.carLoader, __instance.pos, __instance.movePlayerToCar)))
 		{
 			__result = false;
 			return false;
 		}
+		movingLocally.Add(loader);
 		var other = CarLoaderPlaces.Get().GetCarLoaderForPlace((CarPlace)to);
 		int toLift = LiftStateAfterArrival(__instance.carLoader, to);
 		int fromLift = other == null ? 0 : LiftStateAfterArrival(other, from);
@@ -44,6 +49,16 @@ public static class CarPlacementSync
 		Client.Instance.Send(new CarPlaceChangeRequestPacket { CarLoaderID = loader, FromPlace = from, ToPlace = to, ToLiftState = toLift, FromLiftState = fromLift });
 		return true;
 	}
+
+	[HarmonyPatch(typeof(NotificationCenter._ChangeCarPos_d__20), nameof(NotificationCenter._ChangeCarPos_d__20.MoveNext))]
+	[HarmonyPostfix]
+	private static void AfterChangeCarPosStep(NotificationCenter._ChangeCarPos_d__20 __instance, bool __result)
+	{
+		if (__result || __instance.carLoader == null || movingLocally.Count == 0) return;
+		movingLocally.Remove(CarLoaderPlaces.Get().GetCarLoaderId(__instance.carLoader));
+	}
+
+	public static bool IsMovingLocally(int loader) => movingLocally.Contains(loader);
 
 	// ChangeCarPos raises the lift to Middle when the car it puts on a lift misses a wheel or has wheels of different
 	// sizes on one axle (native NotificationCenter.<ChangeCarPos>d__20 states 4 and 6).

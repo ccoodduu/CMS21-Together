@@ -52,6 +52,7 @@ namespace CMS21_Together_Server.Network
 					Logger.Info("  jobs              - Show orders, active jobs and the order generator");
 					Logger.Info("  cardetails <id>   - Show the stored details of a loader");
 					Logger.Info("  away              - Show cars on the test track, test path or dyno");
+					Logger.Info("  locks             - Show the part, fluid and car locks and the lock counters");
 					Logger.Info("  tools             - Show the workshop machines, tool positions and claims");
 					Logger.Info("  outdoor [catalog|junkyard|barn|auction] - Show the shared outdoor instances, the car catalog or one scene");
 					Logger.Info("  desync [check]    - Show recent desync repairs; check compares every player now");
@@ -109,6 +110,11 @@ namespace CMS21_Together_Server.Network
 				case "bugreport":
 					foreach (string line in Data.Diagnostics.BugReportWriter.Describe())
 						Logger.Info(line);
+					break;
+
+				case "locks":
+					foreach (string line in CarLocks.Describe(Data.ServerTime.Time))
+						Logger.Info($"[Locks] {line}");
 					break;
 
 				case "away":
