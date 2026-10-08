@@ -108,6 +108,7 @@ public static class CarPartsSync
 	public static void OnRemoteSpawn(CarSpawnResponsePacket spawn)
 	{
 		var sync = Get(spawn.CarLoaderID);
+		deletedSpawnSeq.Remove(spawn.CarLoaderID);
 		Locks.CarLockMirror.ForgetLoader(spawn.CarLoaderID, spawn.SpawnSeq);
 		DropOnNewSpawn(sync, spawn.SpawnSeq);
 		sync.SpawnSeq = spawn.SpawnSeq;
