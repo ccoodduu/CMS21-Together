@@ -66,6 +66,7 @@ function Start-Ride([string]$Label) {
     $script:mark = Get-ServerLogMark
     $script:toastsB = @(Toasts $b).Count
     $script:toastsA = @(Toasts $a).Count
+    $script:captureB = (Cmd $b ride-state).capture
     Cmd $a testdrive-go "0" | Out-Null
     $ride = try { Wait-ServerLog -Pattern "\[Ride\] Client $idB sits in car 0 \(right\) and rides along with client $idA" -After $mark -TimeoutSec 20 } catch { $null }
     Check ([bool]$ride) "${Label}: the server puts Bob on Ann's test drive ($ride)"
@@ -98,7 +99,9 @@ $seated = Start-Ride "ride1"
 $toast = @(Toasts $b | Select-Object -Skip $toastsB)
 Check (@($toast | Where-Object { $_ -eq "Riding along with Ann." }).Count -ge 1) "Bob was told he rides along ($($toast -join ' | '))"
 Check ($seated.own.kinematic -and $seated.own.inputsEnabled -eq 0 -and $seated.hiddenRenderers -gt 0) "Bob's own track car is frozen and hidden (kinematic $($seated.own.kinematic), inputs on $($seated.own.inputsEnabled), $($seated.hiddenRenderers) renderers hidden)"
-Check ($seated.capture.drives -eq 0 -and $seated.capture.sent -eq 0) "Bob streams no drive of his own (drives $($seated.capture.drives), states $($seated.capture.sent))"
+$newDrives = $seated.capture.drives - $captureB.drives
+$newStates = $seated.capture.sent - $captureB.sent
+Check (-not $seated.capture.active -and $newDrives -eq 0 -and $newStates -eq 0) "Bob streams no drive of his own (active $($seated.capture.active), new drives $newDrives, new states $newStates)"
 Check ($seated.camera.customPos -and $seated.camera.toHead -ge 0 -and $seated.camera.toHead -le 0.05) "Bob's camera sits at the passenger head of Ann's car ($($seated.camera.toHead) m, game camera off $($seated.camera.customPos), head measured $($seated.headMeasured))"
 $stateA = Wait-Ride $a { param($s) $av = Avatar $s $idB; $av -and $av.active -and $av.toSeat -ge 0 -and $av.toSeat -le 0.05 } 30
 Save "ride1_seated_A" $stateA
@@ -162,7 +165,7 @@ $afterB = Cmd $b ride-state
 $restA2 = Cmd $a ride-state
 $moved = Distance $ownBefore $afterB.own.position
 $starts = @(Get-ServerLogLines | Select-Object -Skip $markInput | Where-Object { $_ -match "\[Drive\] Player $idB drives" })
-Check ($moved -le 0.05 -and $afterB.capture.drives -eq 0 -and $starts.Count -eq 0) "Bob's input drives nothing (own car moved $([math]::Round($moved, 3)) m, drives $($afterB.capture.drives), server drive starts $($starts.Count))"
+Check ($moved -le 0.05 -and $afterB.capture.drives -eq $captureB.drives -and $starts.Count -eq 0) "Bob's input drives nothing (own car moved $([math]::Round($moved, 3)) m, new drives $($afterB.capture.drives - $captureB.drives), server drive starts $($starts.Count))"
 Check ((Distance $restA.own.passengerSeat.world $restA2.own.passengerSeat.world) -le 0.1) "Ann's car did not move from Bob's input"
 Check ($afterB.camera.toHead -le 0.05) "Bob is still in his seat ($($afterB.camera.toHead) m)"
 
