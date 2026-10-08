@@ -33,6 +33,9 @@ public static class JobsSync
 	public static bool MissionPending => Time.realtimeSinceStartup - missionAskedAt < MissionAnswerSeconds;
 	public static int PendingTake { get; private set; } = -1;
 	public static bool AcceptBypass { get; private set; }
+	public static bool ServingRequest { get; private set; }
+	public static int RequestId { get; private set; }
+	private static bool madeOrder;
 
 	private static OrderGenerator Generator => Singleton<GameManager>.Instance?.OrderGenerator;
 
@@ -71,6 +74,42 @@ public static class JobsSync
 		IsGenerator = packet.IsGenerator;
 		Log.Info($"[Jobs] Order generator: {(IsGenerator ? "this client" : "another client")}.");
 		if (mirror != null && CanApply) OfferMission();
+	}
+
+	public static void OnOrderRequest(OrderRequestPacket packet)
+	{
+		var reason = !IsGenerator || !CanApply || !NotificationCenter.IsGameReady ? OrderRequestReason.NotReady
+			: !GameSettings.CanGenerateOrders ? OrderRequestReason.Disabled
+			: PendingTake >= 0 || IsApplying ? OrderRequestReason.Busy
+			: GenerateOrder(packet.RequestId) ? OrderRequestReason.None
+			: OrderRequestReason.NoCar;
+		if (reason != OrderRequestReason.None) AnswerRequest(packet.RequestId, reason);
+	}
+
+	public static void AnswerRequest(int requestId, OrderRequestReason reason)
+	{
+		string text = $"[Jobs] Order request {requestId}: no order ({reason}).";
+		if (reason == OrderRequestReason.NoCar || reason == OrderRequestReason.Disabled) Log.Info(text);
+		else Log.Debug(text);
+		Client.Instance.Send(new OrderGeneratedPacket { RequestId = requestId, Reason = reason, MaxOpenOrders = GlobalData.GetMaxOrdersAmount() });
+	}
+
+	public static void OrderSent() => madeOrder = true;
+
+	public static bool GenerateOrder(int requestId)
+	{
+		var generator = Generator;
+		madeOrder = false;
+		ServingRequest = true;
+		RequestId = requestId;
+		try { generator.GenerateNewJob(); }
+		finally
+		{
+			ServingRequest = false;
+			RequestId = 0;
+			GlobalData.Jobs = generator.jobs?.Count ?? 0;
+		}
+		return madeOrder;
 	}
 
 	public static void OnOrderAdded(OrderAddedPacket packet)

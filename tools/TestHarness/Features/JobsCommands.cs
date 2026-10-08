@@ -23,6 +23,15 @@ public static class JobsCommands
     [HarmonyPrefix]
     private static bool BeforeUpdate() => autogen;
 
+    [HarmonyPatch(typeof(CMS21Together.Logic.Jobs.JobsSync), nameof(CMS21Together.Logic.Jobs.JobsSync.OnOrderRequest))]
+    [HarmonyPrefix]
+    private static bool BeforeOrderRequest(CMS21_Together_Core.Network.Packets.OrderRequestPacket packet)
+    {
+        if (autogen) return true;
+        CMS21Together.Logic.Jobs.JobsSync.AnswerRequest(packet.RequestId, CMS21_Together_Core.Network.Packets.OrderRequestReason.HarnessOff);
+        return false;
+    }
+
     [HarmonyPatch(typeof(OrderGenerator), "GenerateNewJob")]
     [HarmonyPrefix]
     private static void BeforeGenerateNewJob(out int __state) => __state = Generator.Jobs?.Count ?? 0;
@@ -80,6 +89,8 @@ public static class JobsCommands
     {
         nextTtl = float.TryParse((args ?? "").Trim(), out float ttl) ? ttl : -1f;
         int before = Generator.Jobs?.Count ?? 0;
+        bool connected = CMS21Together.Network.Client.Instance != null && CMS21Together.Network.Client.Instance.IsConnectionValid;
+        if (connected) return new { before, sent = CMS21Together.Logic.Jobs.JobsSync.GenerateOrder(0) };
         Generator.GenerateNewJob();
         return new { before, after = Generator.Jobs?.Count ?? 0 };
     }

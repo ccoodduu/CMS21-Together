@@ -19,6 +19,9 @@ public static class JobHandlers
 	[PacketHandler(PacketTypes.OrderGeneratorRole)]
 	public static void OnRole(long clientId, OrderGeneratorRolePacket packet) => JobsSync.OnRole(packet);
 
+	[PacketHandler(PacketTypes.OrderRequest)]
+	public static void OnOrderRequest(long clientId, OrderRequestPacket packet) => JobsSync.OnOrderRequest(packet);
+
 	[PacketHandler(PacketTypes.OrderAdded)]
 	public static void OnOrderAdded(long clientId, OrderAddedPacket packet) => JobsSync.OnOrderAdded(packet);
 

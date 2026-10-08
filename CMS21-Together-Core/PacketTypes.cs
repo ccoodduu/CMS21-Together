@@ -140,5 +140,7 @@ public enum PacketTypes
 
 	SeatRefused,
 
-	RideUpdate
+	RideUpdate,
+
+	OrderRequest
 }
