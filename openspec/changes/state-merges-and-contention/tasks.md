@@ -245,8 +245,12 @@ Independent of row 18 and of parts 1 and 2 (except that the dropped-transaction 
 
 ## 13. Part 3: verification and docs
 
-- [ ] 13.1 Two-instance verification: `server-answers`, `seat-engine`, the `economy`, `jobs`, `placement`, `presence`
+- [x] 13.1 Two-instance verification: `server-answers`, `seat-engine`, the `economy`, `jobs`, `placement`, `presence`
       and `inventory`-touching areas, and the smoke set. Done when all are green and their run ids are in STATUS.md.
-- [ ] 13.2 Docs: INTEGRATION.md (the rule "no silent drops" with D16's table, `SeatRefused`, the verbs and the server
+      Done 2026-10-08 within the test budget (smoke set plus this part's scenarios and the ones tasks 12.2–12.4 name,
+      plus `economy-trades` and `tools-slots`; not all 36 scenarios of the four areas):
+      `20261008-143432_regression.json` and, after merging main, `20261008-145330_regression.json` with
+      `20261008-150317_L1_seat-engine` (STATUS.md).
+- [x] 13.2 Docs: INTEGRATION.md (the rule "no silent drops" with D16's table, `SeatRefused`, the verbs and the server
       command); the audit rows I3, I7, E4, M8, C4, J2, J4, J5 marked "answered" and S1 marked fixed; ROADMAP status.
-      Done when part 3 is merged.
+      Done when part 3 is merged. Written 2026-10-08 on `change/server-answers`.
