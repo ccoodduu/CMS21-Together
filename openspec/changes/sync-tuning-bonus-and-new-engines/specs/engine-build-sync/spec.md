@@ -14,9 +14,9 @@ work on it SHALL be shared as for any engine on the stand.
 - **WHEN** player A builds a new engine on the empty engine stand
 - **THEN** player B sees the same engine block on the stand with no parts mounted
 
-### Requirement: A build never destroys an engine
-Building a new engine SHALL be refused while an engine is on the stand, with a message, and two builds at the same
-moment SHALL leave one engine on the stand.
+### Requirement: A build never destroys or duplicates an engine
+Building a new engine SHALL be refused while an engine is on the stand, with a message. Two builds at the same moment
+SHALL leave one engine on the stand and SHALL NOT add the other build's engine to the shared inventory.
 
 #### Scenario: Stand occupied
 - **WHEN** an engine is on the stand and player A tries to build a new one
@@ -24,4 +24,5 @@ moment SHALL leave one engine on the stand.
 
 #### Scenario: Two builds at once
 - **WHEN** players A and B build a new engine on the empty stand at the same moment
-- **THEN** one engine is on the stand for both, and the other player is told the stand is taken
+- **THEN** one engine is on the stand for both, the other player is told the stand is taken, and the shared inventory
+  has no extra engine

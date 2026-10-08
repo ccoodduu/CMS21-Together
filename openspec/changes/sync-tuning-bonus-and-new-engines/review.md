@@ -183,3 +183,34 @@ own remains a good choice. Merge tuning first: it is the cheapest and unblocks `
   as a counter in the dump, so a soak shows it.
 - The `Tune` lock blocks a dyno run by another player (`HeldByOther`) and park, delete and lift (`RefuseBusy`). This is
   intended, but name it in the spec ("other work on the car goes on" is not quite true).
+
+## Review resolution
+
+Applied 2026-10-08. Claims checked against main (`LockHooks.BodyModes`/`BodyMountAction`, `ToolSync.Compensate`,
+`LockKeys.IsWellFormed`, `ItemConverter`, `CarLockRefusal.Stale`).
+
+- **B1** Fixed. The fit is gated in the existing `SelectPartToMount` prefix through a bonus branch in `BodyMountAction`
+  (`x:<slot>` + item lock); the removal is sent from `SelectPartToMount`/`BodyMount` postfixes after the `RemoveAt`; the
+  `TakeOffBonusPart` prefix gates only the remove path (D4, proposal hook list, task 3.2).
+- **M1** Fixed. `CarLockRequestPacket.Expect` carries the slot state the client sees; the server refuses as `Stale` and
+  sends the stored entry (D4); `car-bonus` has the `net-hold` step and the spec a "slot filled a moment ago" scenario.
+- **M2** Fixed. 1.1b timeboxed with the `withFade = false` and engine-id checks; server self-check `ToolsCheck` (D5,
+  4.2); `tool-stand-create` runs `CreateEngineAction`; the old-code failure is "no refusal toast, `CreateEngineAction`
+  ran"; build steps go to `docs/playtest.md` unless 1.1b drives the build (4.4).
+- **M3** Fixed. `Compensate` drops a refused created group (D5); spec and 4.4 check the inventory. The "gap-9 rule"
+  wording is gone.
+- **M4** Fixed. `PendingCreated` is the built group's UID from a `SetEngineOnEngineStand` postfix, cleared on the send,
+  `ClearEngineStand`, scene change and `Reset` (D5).
+- **M5** Fixed. `ToolSync` defers a remote apply for stand 1 while a local created build is pending (D5).
+- **M6** Fixed. `car-tuning` applies the gearbox alone first and checks `t:gearbox` before any ECU apply; old-code
+  failure stated with `guard-allow Window:Tune` (2.5).
+- **M7** Fixed (default: carry). `ItemConverter` carries `TuningData`/`GearboxData` (D6, task 2.3); task 1.2 confirms
+  the game fills them, otherwise it becomes a non-goal; try-it line in 5.1.
+- **m1** `tune` synthetic key on every `Tune` lock (D2). **m2** `IsWellFormed`/`Exists` for `x:` and `tune` (D4, 3.2).
+  **m3** `CarLockResultPacket.HolderKind` (D2). **m4** `TuneIdleSeconds = 300` (D2, spec). **m5** receiver paint check
+  and fallback (D3, 1.3). **m6** `TryDeleteBonusPart` on the receiver's remove (D3). **m7** wording corrected (proposal,
+  D3). **m8** noted in 5.1; the INTEGRATION row 4 line is corrected in this commit. **m9** item id named in 1.2. **m10**
+  stand 1 explicit (D5). **m11** "the car salon (row 26)".
+- Risks: slot mismatch counter `bonusSlotMismatch` (D3); the `Tune` lock's effect on dyno/park/delete/lift is in the
+  spec.
+- Size: tuning ≈ 1, bonus ≈ 3, engine ≈ 1.5–2; total M ≈ 5–6.

@@ -23,9 +23,13 @@ later and after a server restart. The part SHALL move between the shared invento
 - **THEN** B sees the bonus parts in the same paint
 
 ### Requirement: One player per bonus slot
-Two players SHALL NOT change the same bonus slot at the same time; the player who is refused SHALL be told why and keep
-their item.
+Two players SHALL NOT change the same bonus slot at the same time, and a fit SHALL NOT replace a part that another
+player has just fitted; the player who is refused SHALL be told why and keep their item.
 
 #### Scenario: Both click the same slot
 - **WHEN** players A and B try to fit a part to the same slot at the same moment
 - **THEN** one part is fitted, the other player is told who is working there and still has their item
+
+#### Scenario: Slot filled a moment ago
+- **WHEN** player A has fitted a part and player B, whose game does not show it yet, fits another part to the same slot
+- **THEN** B is refused, keeps their item, and then sees A's part in the slot
