@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Runtime.Serialization;
 using CMS21_Together_Core.Data.GameType;
 using Newtonsoft.Json;
 
@@ -27,6 +28,7 @@ public class ActiveJobEntry
 	public ModJob Job;
 	public int CarLoaderId = -1;
 	public float OriginalSeconds;
+	[OptionalField] public ModJob OrderJob;
 }
 
 [Serializable]

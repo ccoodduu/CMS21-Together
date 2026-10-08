@@ -13,6 +13,7 @@ using CMS21_Together_Core.Data.Outdoor;
 using CMS21_Together_Core.Logging;
 using CMS21_Together_Core.Network.Packets;
 using CMS21Together.Logic.Player;
+using CMS21Together.Logic.Seeding;
 using CMS21Together.Network;
 using CMS21Together.UI;
 using HarmonyLib;
@@ -142,7 +143,7 @@ public static class AuctionSync
 
 	private static void ComputeValues(AuctionManager manager, AuctionType auctionType, AuctionCarData data)
 	{
-		Reseed.WithSeed(data.Seed, () =>
+		SeededStreams.WithSeed(data.Seed, () =>
 		{
 			data.Rating = AuctionHelper.GetRatingForCar(auctionType);
 			data.Value = CarBundleLoaderExtension.GetCarValue(Singleton<GameManager>.Instance.CarBundleLoader, data.Car, data.Version);

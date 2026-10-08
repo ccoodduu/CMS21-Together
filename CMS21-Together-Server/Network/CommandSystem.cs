@@ -51,6 +51,7 @@ namespace CMS21_Together_Server.Network
 					Logger.Info("  placement         - Show lifts, car places and parking slots");
 					Logger.Info("  jobs              - Show orders, active jobs and the order generator");
 					Logger.Info("  jobs expire <id>  - Expire an open order now");
+					Logger.Info("  jobs reopen <id>  - Delete an active job's car and open the order again");
 					Logger.Info("  cardetails <id>   - Show the stored details of a loader");
 					Logger.Info("  away              - Show cars on the test track, test path or dyno");
 					Logger.Info("  locks             - Show the part, fluid and car locks and the lock counters");
@@ -172,6 +173,12 @@ namespace CMS21_Together_Server.Network
 					{
 						if (int.TryParse(args[2], out int expireId) && Data.Jobs.JobsService.ExpireNow(expireId)) break;
 						Logger.Warn($"No open order {args[2]} to expire.");
+						break;
+					}
+					if (args.Length > 2 && args[1].ToLower() == "reopen")
+					{
+						if (int.TryParse(args[2], out int reopenId) && Data.Jobs.JobsService.ReopenNow(reopenId)) break;
+						Logger.Warn($"No active job {args[2]} to reopen.");
 						break;
 					}
 					Logger.Info("Jobs:");

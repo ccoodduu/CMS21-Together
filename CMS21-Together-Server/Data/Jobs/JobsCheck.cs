@@ -16,13 +16,13 @@ namespace CMS21_Together_Server.Data.Jobs
 			{
 				id = 7, carFile = "car_boltatlanta", configVersion = 2, timeToEnd = 123.5f, PaintType = ModPaintType.Metallic,
 				carColor = new ModColor { r = 0.1f, g = 0.2f, b = 0.3f, a = 1f }, jobType = new[] { true, false, true },
-				IsMission = true, MissionID = 3, TotalPayout = 1500, XP = 90, IconTypeBrakes = true,
+				IsMission = true, MissionID = 3, TotalPayout = 1500, XP = 90, IconTypeBrakes = true, PrepSeed = -123456789,
 			};
 			job.jobTasks.Add(new ModJobTask { type = "brakes", subtype = "front", moneySpent = 40, Done = true });
 			job.jobTasks[0].Parts.Add(new ModJobPart { ID = "tarcza_1", Name = "Brake disc", Done = true, Found = true });
 			var state = new JobsState { NextJobId = 8, Missions = new ModMissionState { MissionsFinished = 2, IsStoryMissionInProgress = true } };
 			state.Orders.Add(new OrderEntry { Job = job, RemainingSeconds = 99f });
-			state.ActiveJobs.Add(new ActiveJobEntry { Job = job, CarLoaderId = 1, OriginalSeconds = 300f });
+			state.ActiveJobs.Add(new ActiveJobEntry { Job = job, OrderJob = job, CarLoaderId = 1, OriginalSeconds = 300f });
 
 			string original = JsonConvert.SerializeObject(state);
 			var formatter = new BinaryFormatter();
