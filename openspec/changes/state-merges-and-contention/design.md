@@ -353,7 +353,9 @@ rejected part mount keeps today's behaviour (log only) [minor 13].
 `RemovedByOther` would reject. With row 18's item locks that window becomes the normal case.
 
 **After row 18's switch-over** (task 8.3): `ToolsStore.Check` also refuses a put of a UID in another owner's `CarLocks`
-item lock (`Returned`, row 18's item message).
+item lock (`Returned`, row 18's item message). Implemented as the reason "<uid> held by player N" (the client shows
+"<name> is mounting this part."); a put refused because another client removed the item says "used by player N", and
+the client names that player.
 
 **Alternatives considered:**
 - *Make the machine put one transaction that carries its inventory removal.* Needs a put window per machine to capture
@@ -368,6 +370,13 @@ item lock (`Returned`, row 18's item message).
   transaction for that loader (per loader, task 3.5), then calls row 18's `FlushNow(loader, All)`, then sends. If the
   1 s runs out, the action is refused locally with "Try again in a moment." The parts change and the details go out on
   the same ordered stream before the park request, so the server has the parker's own changes when it parks.
+  *As built (task 6.3):* the park waits in a prefix on the park coroutine's `MoveNext` (`NotificationCenter.
+  MoveCarToParking`), which answers "still running" for up to 1 s without running the game's step, and
+  `PartChangeTracker.SendNow` sends a stable pending change at once instead of after three polls. The game's
+  `DeleteCar` has no point before its effect where a wait is safe (it runs inside other game flows), so a local delete
+  sends the pending change and details at once (`SendNow`, `FlushNow`) and does not wait. A local removal keeps the
+  loader's committed transactions until their result (the server accepted them before the delete); a remote removal
+  rolls them back (task 3.5).
 - **At park** (`ParkFromGarage`, accepted, before `ClearLoader`): if the loader has a baseline, the server copies its
   body and mechanical records, its engine-swap flag and its valid details into `ParkedRecord { CarId, Body, Sub,
   EngineSwap, Details }` under `PlacementState.Parking.Records[ParkedCar.Id]`. The blob is stored as today. A parked

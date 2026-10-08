@@ -2,6 +2,29 @@
 
 Newest first. One entry per work session.
 
+## 2026-10-08 (17:00–19:45) — row 19 part 1 (state merges) ready for merge
+
+- `change/state-merges-1` (lane 1), groups 1–8 of `state-merges-and-contention`, merged with main (row 24 included).
+  - Spikes (design D1, D9, D11): examine tools change only `IsExamined`; a real mount writes the item's fields with
+    the mount state; machines only ever put items the putter removed itself; no car detail entry drifts on its own.
+  - Gap 3: part records carry a `Changed` mask; the server merges per field group after a base check (mount, switch,
+    effective id, quality: user decision) and drops stale records; receivers write only the written groups; a local
+    transaction is aborted only for mount or identity changes; `ShowMounted` rechecks (P11); committed transactions
+    per loader (P7). Proof `car-stale-record` (fails on main in 4 of 5 steps).
+  - Gap 6: car details travel, merge and are remembered per entry; the own echo is decided per entry, so a pour is
+    never set back. Proof `details-concurrent`.
+  - Gap 9: a machine put of an item another player used is refused ("<name> used this part."); the server puts the
+    putter's own item back on a refused put. Proof `tools-item-race` (incl. mount against sale and the warehouse).
+  - Gap 10: a parked car keeps the server's part records and details; the park waits up to 1 s for the parker's own
+    change. Proof `park-stale` (incl. restart and the unparker leaving).
+  - Row 18 tie-ins: `car-stale-record` step 6, `locks-fluid` two fills at once, item lock against a machine put.
+- Verification: `20261008-190450_regression.json` (25 scenarios plus server-saves, all green; `economy-trades` FLAKY).
+  The batch failure: B unmounted a part locally without sending it (harness `part-unmount`), the digest resent the
+  car snapshot just as A sold the car, and B rebuilt the deleted car from that snapshot (a snapshot applied after the
+  car's delete). Pre-existing race, not fixed here.
+- Seen once, not followed up: in `tools-item-race`, A's `placeNo` read -1 after the tire changer race while B's read 0.
+- Next: part 2 (digests, soak contention) after the user's merge.
+
 ## 2026-10-08 (15:00–17:30) — row 19 part 3, ride-along, freeze fix; playtest build dev.1049
 
 - `main` = `9ac5e12`. Row 19 part 3 merged (`2a066ca`): every refused/ignored/overridden server action answers the

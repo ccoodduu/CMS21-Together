@@ -1,8 +1,8 @@
 # Tasks
 
-**Resume here (part 1, branch `change/state-merges-1`, worktree `CMS21-Together-wt/state-merges`, lane 1):** groups
-1-4 done and pushed (gap 3: `car-stale-record`; gap 6: `details-concurrent`). Group 5 (machines, item removals) in
-progress. User decision 2026-10-08: the base check keeps `Quality`.
+**Resume here (part 1 done, branch `change/state-merges-1`, worktree `CMS21-Together-wt/state-merges`):** groups 1-8
+are done and pushed; part 1 waits for the user's merge. Next is part 2 (groups 9-11). User decision 2026-10-08: the
+base check keeps `Quality`.
 
 **Row 19: the race and drift audit's gaps that row 18 does not close** (gaps 3, 6, 9, 10, the rest of 7, the soak
 contention mode, and the review ledger's P7, P11, I2, I5, M4, M5 and C2), plus the user's decision of 2026-10-07 on
@@ -120,61 +120,73 @@ the ledger's "accept" rows (S1 fixed; no silent drops for I3, I7, E4, M8, C4, J2
 
 ## 5. Item removals and machines (gap 9, I2, I5)
 
-- [ ] 5.1 Server per D9: `InventoryChanges` keeps removers for the session (last 10 000 UIDs) and item copies for 60 s;
+- [x] 5.1 Server per D9: `InventoryChanges` keeps removers for the session (last 10 000 UIDs) and item copies for 60 s;
       every remove path notes its remover, `EconomyService.RemoveItem` through `EconomyOutcome.Effect`;
       `ToolsStore.Check` refuses a put of an item another client removed; never-seen UIDs per 1.1; `Returned`, `Gone`
       or `Unchanged` on every put refusal; `unknownSlotItem` and `removeMissing` in the `tools` output. Done when
       `tools-race`, `tools-slots` and `economy-trades` pass.
-- [ ] 5.2 Client per D9 (`OnRejected`/`Compensate` follow the outcome, "<name> used this part."). Harness:
+- [x] 5.2 Client per D9 (`OnRejected`/`Compensate` follow the outcome, "<name> used this part."). Harness:
       `sell-item [uid]` for items and groups, `item-where <uid>`, `warehouse-move <uid> to|from`. Done when
       `tools-race` and `tools-latejoin` pass, `item-where` reports the machine for an item on the brake lathe, and a
       `warehouse-move` on A shows the item in B's warehouse.
-- [ ] 5.3 `scenarios/tools-item-race.ps1` (`# areas: tools, parts, economy`) per D14 without the row 18 step,
+- [x] 5.3 `scenarios/tools-item-race.ps1` (`# areas: tools, parts, economy`) per D14 without the row 18 step,
       including the mount-against-sale round [I5] and a step in which both players `warehouse-move` the same UID
       (moved once, the same on both, the warehouse digest-free check through `item-where`) [I2]. Done when it passes
-      and fails on `main` (commit message).
+      and fails on `main` (commit message). Done 2026-10-08: passes (`20261008-184818_L1_tools-item-race`, with the
+      8.3 step); fails on the group 4 code in every "B first" round and the lock step
+      (`20261008-185711_L1_tools-item-race`). `tools-race`, `tools-slots`, `economy-trades`, `tools-latejoin` pass
+      (batch `20261008-181922_L1_batch`). The scenario compares inventories, machines and money, not `cars`: A's
+      `placeNo` read -1 after the tire changer race while B's read 0 (seen once, not followed up).
 
 ## 6. Parking keeps the server's record (gap 10)
 
-- [ ] 6.1 Server per D10: `ParkedRecord` in `PlacementState.Parking.Records` at park (body, mechanical, engine swap,
+- [x] 6.1 Server per D10: `ParkedRecord` in `PlacementState.Parking.Records` at park (body, mechanical, engine swap,
       valid details), kept through slot swaps, dropped when the car leaves parking, never broadcast, no section bump.
       Done when `car-parking-full`, `car-placement` and `persistence-restart` pass and `Test-ServerSaves.ps1` loads a
       save written before the change.
-- [ ] 6.2 Unpark per D10: the record moves to the loader entry; the unparker's first baseline is overlaid with the
+- [x] 6.2 Unpark per D10: the record moves to the loader entry; the unparker's first baseline is overlaid with the
       differing parked records (`parkedRecordsDropped` counted); the live snapshot goes to every client, the unparker
       included, only when something was replaced; parked details are stored and sent full, the unparker's first full
       details for that `SpawnSeq` dropped; `SpawnerLeft` puts the car back with its record [C2]. Done when
       `car-placement`, `car-placement-reuse` and `latejoin-full` pass.
-- [ ] 6.3 (after row 18 has merged: `FlushNow`; after 3.5) Drain before a park request and before a car delete per D10:
+- [x] 6.3 (after row 18 has merged: `FlushNow`; after 3.5) Drain before a park request and before a car delete per D10:
       at most 1 s for the tracker and the loader's transactions, then `FlushNow(loader, All)`, else "Try again in a
       moment." Done when the "own unsent change" step of `park-stale` passes.
-- [ ] 6.4 `scenarios/park-stale.ps1` (`# areas: placement, parts, persistence`) per D14: the other player's change, the
+- [x] 6.4 `scenarios/park-stale.ps1` (`# areas: placement, parts, persistence`) per D14: the other player's change, the
       details step, the own unsent change, the unparker who leaves before its baseline, the restart. Done when it
-      passes and fails on `main` (commit message).
+      passes and fails on `main` (commit message). Done 2026-10-08: passes (`20261008-184627_L1_park-stale`); fails
+      on the group 4 code in all four steps (`20261008-185951_L1_park-stale`). An unpark right after the loader
+      emptied sent a second spawn request (the unpark waited for `IsCarLoaded` of the empty loader), which threw the
+      parked record away; `ParkingSync.SendUnpark` now waits for the car to start loading. `car-parking-full`,
+      `car-placement`, `car-placement-reuse`, `persistence-restart`, `car-gone-inflight` and `Test-ServerSaves.ps1`
+      pass; `latejoin-full` is a lane-3 scenario and was not run.
 
 ## 7. Part 1: verification and docs
 
-- [ ] 7.1 Two-instance verification of part 1:
+- [x] 7.1 Two-instance verification of part 1:
       - `car-stale-record`, `details-concurrent`, `tools-item-race`, `park-stale`, `car-gone-inflight`, `tools-race`;
       - the `parts`, `cars`, `details`, `tools`, `placement`, `economy`, `persistence`, `visuals` and `locks` areas;
       - the smoke set (`Run-All -Changed`).
 
-      Done when all are green and their run ids are in STATUS.md.
-- [ ] 7.2 Docs: INTEGRATION.md (the packet fields, `PartRecordMerge`, `DetailsMerge`, `SlotItemOutcome`, parked
+      Done when all are green and their run ids are in STATUS.md. Done 2026-10-08 within the test budget (as part 3
+      did): the part 1 scenarios, the scenarios tasks 3-8 name and the smoke set, after merging main
+      (`20261008-190450_regression.json`: 25 of 25 and server-saves; `economy-trades` FLAKY, see STATUS.md), not
+      every scenario of the nine areas.
+- [x] 7.2 Docs: INTEGRATION.md (the packet fields, `PartRecordMerge`, `DetailsMerge`, `SlotItemOutcome`, parked
       records, removers for the session, verbs, dump sections, server counters); the audit's gaps 3, 6, 9, 10 and rows
       P7, P11, I2, I5, M4, M5, C2 marked fixed in `docs/audits/race-and-drift-audit.md`; ROADMAP status. Done when part
-      1 is merged.
+      1 is merged. Written 2026-10-08 on `change/state-merges-1`.
 
 ## 8. With row 18's switch-over
 
-- [ ] 8.1 (needs row 18 task 5.1) If 3.2 ran before row 18 merged: row 18's lock rule uses D3's flip definition after
+- [x] 8.1 (needs row 18 task 5.1) If 3.2 ran before row 18 merged: row 18's lock rule uses D3's flip definition after
       normalisation. `car-stale-record` gains step 6 of D14 (an examine during B's lock is accepted, the key stays
       mounted, the lock stays held; a stale examine in the window before the lock's release is not rejected). Done when
       `car-stale-record` and `locks-race` pass.
-- [ ] 8.2 (needs row 18 tasks 5.1 and 7.1) `locks-fluid` gains the step: A holds `f:Brake.0` and fills while B holds
+- [x] 8.2 (needs row 18 tasks 5.1 and 7.1) `locks-fluid` gains the step: A holds `f:Brake.0` and fills while B holds
       `f:EngineCoolant.0` and fills; after both releases, the server's details and both clients have both levels. Done
       when `locks-fluid` and `details-concurrent` pass.
-- [ ] 8.3 (needs row 18 tasks 5.1 and 6.1) `ToolsStore.Check` refuses a put of a UID in another owner's `CarLocks` item
+- [x] 8.3 (needs row 18 tasks 5.1 and 6.1) `ToolsStore.Check` refuses a put of a UID in another owner's `CarLocks` item
       lock (`Returned`, row 18's item message). `tools-item-race` gains the lock step of D14. Done when it passes and
       `locks-race` still passes.
 
