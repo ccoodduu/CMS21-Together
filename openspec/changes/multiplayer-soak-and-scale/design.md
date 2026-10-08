@@ -189,8 +189,10 @@ Fail (any of):
    scenario's allow-list (each with a reason and the owning row).
 5. A storm step whose checks fail (D8).
 6. Watchdog stop (D2).
-7. Runs ≥ 60 min: server private bytes at the end > 1.5 × the value at minute 10; the server log or any client's
-   `Latest.log` growing more than 50 MB/h.
+7. Runs ≥ 60 min: in any server process, private bytes at its end > 1.5 × its own value at its minute 10 (storms
+   restart the server, and each new process loads a larger save; the report lists every process with the save size
+   beside it, and a process that ends before minute 10 is not judged); the server log or any client's `Latest.log`
+   growing more than 50 MB/h.
 
 Budgets (initial values, reported as `WARN` and noted in STATUS until the user confirms them, open question 1):
 average download per client ≤ 50 kB/s and peak 10 s window ≤ 1 MB/s outside snapshots; average upload ≤ 20 kB/s;
