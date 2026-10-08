@@ -2,6 +2,24 @@
 
 Newest first. One entry per work session.
 
+## 2026-10-08/09 (23:15–00:45) — order clock, menu click fix, rows 25–31 drafted and reviewed
+
+- `main` = `310f9c3`. Server-owned order clock merged (`6b5dccd`): the server runs the order timer only while a
+  generator is elected, freezes order expiry with it, owns the open-order limit (small `GetMaxOrdersAmount` table)
+  and asks the generator for an order with `OrderRequest`; the client's own timer no longer makes orders. Proof
+  `jobs-clock` fails on the old code (`20261008-232825_L1_jobs-clock`) and passes (`20261008-232021_L1_jobs-clock`);
+  `20261008-233426_regression.json` (smoke, jobs scenarios, every scenario using `orders-autogen`).
+- Menu click-through fixed (`60ef3ce`): the game's EventSystem is off while the pointer is over a mod panel (playtest:
+  Host opened the CMS 2026 news link). Proof `menu-click-through` fails on the old code (`20261009-002947`,
+  `20261009-003214`) and passes (`20261009-003510`); the headless games have no game button under the panels, so the
+  scenario checks the mechanism; the real click is a hand check.
+- Test tools: parallel Run-All calls take turns on the shared server-saves test (`310f9c3`, named mutex).
+- Rows 25–31 drafted, reviewed by two agents and revised (`92895cb`): 25 tuning/bonus parts/new engines, 26 salon (cut
+  to a purchase proof), 27a race and speed track, 27b races (race track, start in the F9 panel), 27c collisions (spike
+  first), 28 garage look, 29 seated avatars, 30 job achievements for every contributor, 31 faster remote cars (≈3 s
+  without frame spikes). User decisions in QUESTIONS.md.
+- In progress: rows 29, 26, 30 (lane 1); `place-same` and examined-flag drift (lane 2).
+
 ## 2026-10-08 (22:00–23:15) — row 19 part 2 and seeded job cars merged; playtest build dev.1102
 
 - `main` = `63c146e`. Row 19 part 2 merged (`23c46ef`; smoke plus touched scenarios `20261008-224024_regression.json`).
