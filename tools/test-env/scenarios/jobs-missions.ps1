@@ -131,7 +131,7 @@ $max = (Send-HarnessCommand -Instance $a -Verb missions-state).maxOrders
 $mark = Get-ServerLogMark
 for ($i = 0; $i -le $max; $i++) { Send-HarnessCommand -Instance $a -Verb orders-generate -Arguments "900" | Out-Null; Start-Sleep -Milliseconds 300 }
 $jobs = Wait-Jobs "the regular orders are at the limit ($max)" { param($j) @(Regular $j).Count -eq $max } 30
-Check ([bool](Try-ServerLog "refused: \d+ open orders, the generator's limit is $max" $mark 5)) "a regular order over the limit was refused"
+Check ([bool](Try-ServerLog "refused: \d+ open orders, the limit is $max" $mark 5)) "a regular order over the limit was refused"
 
 $moneyBefore = (Send-HarnessCommand -Instance $a -Verb dump).stats.money
 $mark = Get-ServerLogMark

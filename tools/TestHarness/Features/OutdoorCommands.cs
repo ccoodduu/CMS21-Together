@@ -9,6 +9,7 @@ using CMS.UI.Logic.Auction;
 using CMS.UI.Windows;
 using CMS21_Together_Core.Data.Outdoor;
 using CMS21Together.Logic.Outdoor;
+using CMS21Together.Logic.Seeding;
 using HarmonyLib;
 using MelonLoader;
 using UnityEngine;
@@ -115,7 +116,7 @@ public static class OutdoorCommands
 		MelonLogger.Msg($"[Harness] outdoor-trace {line}");
 	}
 
-	private static string RandomState() => Reseed.Current.ToString();
+	private static string RandomState() => SeededStreams.Current.ToString();
 
 	[HarmonyPatch(typeof(JunkyardGenerator._Generate_d__18), nameof(JunkyardGenerator._Generate_d__18.MoveNext))]
 	[HarmonyPrefix]

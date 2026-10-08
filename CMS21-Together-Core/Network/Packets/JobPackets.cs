@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Runtime.Serialization;
 using CMS21_Together_Core.Data;
 using CMS21_Together_Core.Data.GameType;
 
@@ -10,6 +11,16 @@ namespace CMS21_Together_Core.Network.Packets
         Accept,
         Decline,
         AbortTake
+    }
+
+    public enum OrderRequestReason
+    {
+        None,
+        NoCar,
+        NotReady,
+        Busy,
+        Disabled,
+        HarnessOff
     }
 
     public enum JobRemovedReason
@@ -42,6 +53,15 @@ namespace CMS21_Together_Core.Network.Packets
     {
         public ModJob Job;
         public int MaxOpenOrders;
+        [OptionalField] public int RequestId;
+        [OptionalField] public OrderRequestReason Reason;
+    }
+
+    [Serializable]
+    [NetworkPacket(PacketTypes.OrderRequest)]
+    public class OrderRequestPacket : INetworkData
+    {
+        public int RequestId;
     }
 
     [Serializable]

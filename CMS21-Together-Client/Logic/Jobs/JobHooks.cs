@@ -20,7 +20,11 @@ public static class JobHooks
 
 	[HarmonyPatch(typeof(OrderGenerator), "GenerateNewJob")]
 	[HarmonyPrefix]
-	private static void BeforeGenerate(OrderGenerator __instance, out int __state) => __state = __instance.jobs?.Count ?? 0;
+	private static bool BeforeGenerate(OrderGenerator __instance, out int __state)
+	{
+		__state = __instance.jobs?.Count ?? 0;
+		return !Connected || JobsSync.ServingRequest;
+	}
 
 	[HarmonyPatch(typeof(OrderGenerator), "GenerateNewJob")]
 	[HarmonyPostfix]
@@ -54,7 +58,8 @@ public static class JobHooks
 			{
 				Log.Info($"[Jobs] Generated order {job.carFile}{(job.IsMission ? $" (mission {GlobalData.MissionsFinished})" : "")}.");
 				if (job.IsMission) JobsSync.MissionAsked();
-				Client.Instance.Send(new OrderGeneratedPacket { Job = ModJobConverter.ToMod(job), MaxOpenOrders = GlobalData.GetMaxOrdersAmount() });
+				Client.Instance.Send(new OrderGeneratedPacket { Job = ModJobConverter.ToMod(job), MaxOpenOrders = GlobalData.GetMaxOrdersAmount(), RequestId = job.IsMission ? 0 : JobsSync.RequestId });
+				if (!job.IsMission) JobsSync.OrderSent();
 				job.StopTimer();
 				jobs.Remove(job);
 			}
