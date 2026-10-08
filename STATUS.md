@@ -2,6 +2,15 @@
 
 Newest first. One entry per work session.
 
+## 2026-10-09 (01:50) — paused for the night
+
+- Paused at the user's request; agents finish their current run, push and stop.
+- Not merged yet: `feat/seated-avatars` (row 29, built; proof `seat-avatars` fails on the old client
+  `20261009-000552_L1` and passes `20261009-002305_L1`; smoke set still to confirm), `feat/shared-salon` (row 26, in
+  progress), `fix/place-same` (lane 2, in progress). Row 30 not started.
+- To resume: read the agents' last reports (branch commit messages), run smoke on each branch with main merged in,
+  merge; then row 30, the next soak with contention (row 19 task 10.5 still open), and rows 28, 25, 27a in that order.
+
 ## 2026-10-08/09 (23:15–00:45) — order clock, menu click fix, rows 25–31 drafted and reviewed
 
 - `main` = `310f9c3`. Server-owned order clock merged (`6b5dccd`): the server runs the order timer only while a
