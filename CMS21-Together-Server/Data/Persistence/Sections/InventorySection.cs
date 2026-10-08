@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using CMS21_Together_Core.Data;
 using CMS21_Together_Core.Data.GameType;
 using CMS21_Together_Core.Network.Packets;
@@ -61,6 +62,7 @@ namespace CMS21_Together_Server.Data.Persistence.Sections
 
 				batch.IsLastBatch = invItemIdx >= invItems.Count && invGroupIdx >= invGroups.Count
 					&& whItemIdx >= whItems.Count && whGroupIdx >= whGroups.Count;
+				if (batch.IsLastBatch) batch.UidFloor = HighestUidInRange(clientId);
 
 				Server.SendToClient(batch, clientId);
 				batches++;
@@ -69,6 +71,21 @@ namespace CMS21_Together_Server.Data.Persistence.Sections
 			} while (true);
 
 			return batches;
+		}
+
+		public static long HighestUidInRange(int playerId)
+		{
+			var state = GameDataManager.CurrentState;
+			var inventory = state.InventoryState;
+			var items = (inventory.InventoryItems ?? new List<ModItem>()).Concat(inventory.WarehouseItems ?? new List<ModItem>());
+			var groups = (inventory.InventoryGroupItems ?? new List<ModGroupItem>()).Concat(inventory.WarehouseGroupItems ?? new List<ModGroupItem>()).ToList();
+			var slots = state.ToolsState?.Slots?.Values.ToList() ?? new List<ToolSlotState>();
+			groups.AddRange(slots.Where(s => s.Group != null).Select(s => s.Group));
+			var uids = items.Select(i => i.UID)
+				.Concat(slots.Where(s => s.Item != null).Select(s => s.Item.UID))
+				.Concat(groups.Select(g => g.UID))
+				.Concat(groups.SelectMany(g => g.ItemList ?? new List<ModItem>()).Select(i => i.UID));
+			return uids.Where(uid => UidRanges.Contains(playerId, uid)).DefaultIfEmpty(0).Max();
 		}
 	}
 }

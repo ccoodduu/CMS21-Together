@@ -171,6 +171,7 @@ namespace CMS21Together.Network.Handlers
                 if (packet.IsLastBatch)
                 {
                     Log.Success("[InventoryHandlers] Inventory sync complete!");
+                    Logic.UidRange.ServerFloor = packet.UidFloor;
                     ClientData.IsInventorySynced = true;
                     if (syncQueue.Count == 0)
                     {

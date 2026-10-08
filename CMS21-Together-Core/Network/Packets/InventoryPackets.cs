@@ -22,6 +22,7 @@ public class InventorySyncPacket : INetworkData
     public List<ModGroupItem> InventoryGroupItems;
     public List<ModItem> WarehouseItems;
     public List<ModGroupItem> WarehouseGroupItems;
+    [System.Runtime.Serialization.OptionalField] public long UidFloor;
 }
 
 [Serializable]
