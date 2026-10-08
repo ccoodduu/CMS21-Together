@@ -254,6 +254,48 @@ public static class CarCommands
         return new Dictionary<string, object> { ["key"] = parts[1], ["id"] = script.id };
     }
 
+    [HarnessCommand("part-blocks")]
+    private static object PartBlocks(string args)
+    {
+        var carLoader = Loader((args ?? "").Trim());
+        var registry = PartRegistry.Build(carLoader);
+        var actual = new SortedDictionary<string, int>(StringComparer.Ordinal);
+        foreach (string key in registry.SubKeys)
+        {
+            int count = registry.Sub(key).blockedNo;
+            if (count != 0) actual[key] = count;
+        }
+        var counts = PartBlocking.ExpectedCounts(registry);
+        var expected = new SortedDictionary<string, int>(StringComparer.Ordinal);
+        foreach (string key in registry.SubKeys)
+            if (counts.TryGetValue(registry.Sub(key).GetInstanceID(), out int count)) expected[key] = count;
+        var neighbours = new SortedDictionary<string, List<string>>(StringComparer.Ordinal);
+        foreach (string key in registry.SubKeys)
+        {
+            var keys = PartBlocking.BlockedBy(registry.Sub(key))
+                .Select(n => registry.TryGetSubPath(n, out var path) ? CMS21_Together_Core.Network.Packets.PartKeys.Sub(path) : null)
+                .Where(k => k != null).OrderBy(k => k, StringComparer.Ordinal).ToList();
+            if (keys.Count > 0) neighbours[key] = keys;
+        }
+        var candidates = neighbours.Keys
+            .Where(k => !registry.Sub(k).IsUnmounted && !registry.Sub(k).IsBlocked() && registry.Sub(k).GetUnmountWith().Count == 0)
+            .OrderByDescending(k => neighbours[k].Count).ToList();
+        return new Dictionary<string, object> { ["actual"] = actual, ["expected"] = expected, ["blocks"] = neighbours, ["candidates"] = candidates };
+    }
+
+    [HarnessCommand("part-special")]
+    private static object PartSpecial(string args)
+    {
+        var parts = (args ?? "").Split(new[] { ' ' }, StringSplitOptions.RemoveEmptyEntries);
+        if (parts.Length != 2) throw new ArgumentException("usage: part-special <loader> <specialGroup>");
+        var registry = PartRegistry.Build(Loader(parts[0]));
+        int group = int.Parse(parts[1]);
+        return registry.SubKeys.OrderBy(k => k, StringComparer.Ordinal)
+            .Where(k => registry.Sub(k).partProperty != null && (int)registry.Sub(k).partProperty.SpecialGroup == group)
+            .Select(k => new { key = k, id = registry.Sub(k).id, unmounted = registry.Sub(k).IsUnmounted, unmountWith = registry.Sub(k).GetUnmountWith().Count })
+            .ToList();
+    }
+
     [HarnessCommand("part-twins")]
     private static object PartTwins(string args)
     {
