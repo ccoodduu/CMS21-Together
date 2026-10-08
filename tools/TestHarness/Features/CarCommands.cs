@@ -112,6 +112,14 @@ public static class CarCommands
         return cars;
     }
 
+    [HarnessCommand("car-resync")]
+    private static object CarResync(string args)
+    {
+        int loader = int.Parse((args ?? "").Trim());
+        CMS21Together.Network.Client.Instance.Send(new CMS21_Together_Core.Network.Packets.CarPartsResyncRequestPacket { CarLoaderID = loader, SpawnSeq = CarPartsSync.SpawnSeq(loader), Reason = "harness" });
+        return "resync requested";
+    }
+
     [HarnessCommand("car-request")]
     private static object CarRequest(string args)
     {
