@@ -60,6 +60,7 @@ public static class LifterSync
 
 	public static void OnLifterState(LifterStatePacket packet, int snapshotId)
 	{
+		if (CarPlacementSync.KeepLifterUntilLocalMoveEnds(packet, snapshotId)) return;
 		MelonCoroutines.Start(Apply(packet, snapshotId));
 	}
 
@@ -77,7 +78,7 @@ public static class LifterSync
 		try
 		{
 			float deadline = Time.realtimeSinceStartup + CarWaitSeconds;
-			while ((lifter.isMoving || CarPlacementSync.HasLocalMove || lifter.GetConnectedCarLoader() == null && packet.State != 0) && Time.realtimeSinceStartup < deadline)
+			while ((lifter.isMoving || lifter.GetConnectedCarLoader() == null && packet.State != 0) && Time.realtimeSinceStartup < deadline)
 				yield return new WaitForSeconds(0.25f);
 
 			if (lifter.GetConnectedCarLoader() == null && packet.State != 0)
