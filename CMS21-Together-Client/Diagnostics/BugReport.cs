@@ -68,6 +68,7 @@ public static class BugReport
 	public static readonly List<Record> Recent = new List<Record>();
 
 	private static float lastReport = -CooldownSeconds;
+	private static float lastUpdateAt = -1f;
 
 	public static string Folder => System.IO.Path.Combine(MelonUtils.UserDataDirectory, "CMS21Together", "BugReports");
 
@@ -119,7 +120,9 @@ public static class BugReport
 
 	public static void Update()
 	{
-		float frameMs = Time.unscaledDeltaTime * 1000f;
+		float now = Time.realtimeSinceStartup;
+		float frameMs = lastUpdateAt < 0f ? 0f : (now - lastUpdateAt) * 1000f;
+		lastUpdateAt = now;
 		foreach (var record in Recent)
 		{
 			if (record.Done) continue;
