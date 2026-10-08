@@ -43,6 +43,9 @@ slot close on refusal) lands before it in M1; where a task names a row 8 piece t
 
 ## 6. Part 2 — game-data exporter (lands with row 16)
 
+> Moved to `server-game-logic` (row 16 part 1, task group 2; user decision 2026-10-06, fifth round). The tasks below
+> stay as written for reference and are checked off there, not here.
+
 - [ ] 6.1 Find in the stubs and with a logging spike where the game keeps garage-upgrade and player-upgrade data (`Upgrade`, `NewUpgradeSystemData`, `UpgradesHelper`, skill data) and how the committed `garage_upgrade_database.json`/`player_upgrade_database.json` map to it; write the mapping into design.md D8. Done when design.md holds it.
 - [ ] 6.2 `Tools/DatabaseExporter/` with `IDatabaseTable` and the three tables of D8 plus `meta.json`; refuses while connected and when a gameplay mod is loaded; harness `db-export <dir>`; `CMS21Together.EnableDevTools` preference binds a key (`CMS21Together.DbExportHotkey`, default unbound). Register `db-export` in `INTEGRATION.md`. Verify an export on a test install diffs equal to the committed files apart from `HaveDLC` (a small PowerShell diff that ignores that field, kept as `tools/test-env/Compare-Database.ps1`).
 - [ ] 6.3 Commit `Database/meta.json` from that export; verify the server logs its game version at start and `compat` shows the game-version source as "database".

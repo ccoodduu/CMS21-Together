@@ -3,6 +3,25 @@
 Open questions that block a decision. Each has the default we work with until answered.
 Answered ones move to the bottom with the answer.
 
+## Open — row 16 server-game-logic (2026-10-08)
+
+Details in `openspec/changes/server-game-logic/proposal.md` (drafted, not reviewed yet).
+
+1. **Game tables** leave the repo and the release zips. Developers export at build/deploy time, a hosting player's
+   game exports before "Host", and a dedicated-server owner copies an export. **Default:** yes, history not rewritten.
+2. **"Identical" for orders** means value-for-value under the same seed if the server can reproduce Unity's random
+   generator; otherwise equal in distribution. **Default:** accept the fallback if the spike fails.
+3. **Deliberate differences:** no `GlobalData.Jobs` drift, no DLC release-day boost, only cars every player can
+   load, an optional `TuningBonus` record field if needed. **Default:** accept.
+4. **Orders while nobody is in the garage:** row 3's rule stays; `orders_while_away` turns them on. **Default:** off.
+5. **Car sale price differs from the window:** the server's price is paid with a "Sold for <amount>" message.
+   **Default:** yes.
+6. **Stay client-computed and bounded:** fluid refill, part repair, crate cards, plates, salon price, Work XP.
+   **Default:** yes.
+7. **Payout and prices** go straight to the server's value once their proofs pass; `shadow` stays a setting.
+   **Default:** yes.
+8. **Split:** part 1 (data, orders, seeded job cars), then part 2 (payout and prices). **Default:** yes.
+
 ## Open — row 19 state-merges-and-contention (2026-10-08)
 
 Details in `openspec/changes/state-merges-and-contention/proposal.md` (reviewed, see `review.md`).

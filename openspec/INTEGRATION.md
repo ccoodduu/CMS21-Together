@@ -182,6 +182,8 @@ Server `server_config.ini` (missing keys take their defaults and are appended; e
 | `desync_check_interval_seconds` (5, 0 = off), `desync_autofix` (true) | 14 |
 | `perf_log_interval_seconds` (0 = off; > 0 writes `Log/perf_<start>.jsonl`) | 11 |
 | `lock_scope` (`connected`; `part` = only the part and `car`), `lock_expiry_seconds` (90, min 5); server `--check-locks`, console command `locks` | 18 |
+| `orders` (`server`; `client` = elected generator), `orders_while_away` (False); `Database/cars.json`, `orders.json`, `missions.json`; server `--check-gamelogic`, console command `gamelogic` (planned) | 16 part 1 |
+| `job_payout`, `car_prices` (`server`/`shadow`/`client`); `Database/item_faults.json`, `tuning.json` (planned) | 16 part 2 |
 
 Client MelonPreferences — one scheme: category `CMS21Together` for everything, plus `CMS21Together_Guard` for the
 guard. Key bindings end in `Hotkey` (the redaction rule skips them).
@@ -190,7 +192,7 @@ guard. Key bindings end in `Hotkey` (the redaction rule skips them).
 |---|---|
 | `CMS21Together.PlayerName` | 6 |
 | `CMS21Together.LastJoinTarget`, `DevHotkeys`, `AdvertisePresence`, `AdminKey` (secret), `ServerPath`, `SessionPanelHotkey` | 8 |
-| `CMS21Together.EnableDevTools`, `DbExportHotkey` | 9 (part 2, exporter) |
+| `CMS21Together.EnableDevTools`, `DbExportHotkey` | 16 part 1 (exporter, moved from row 9) |
 | `CMS21Together.ResyncHotkey`, `BugReportHotkey` | 14 |
 | `CMS21Together.RemoteVisuals` (default true) | 17 |
 | `CMS21Together.PingHotkey` (default `Mouse2`, the middle mouse button) | 22 |
@@ -380,7 +382,9 @@ sees (hidden, kept parked, or a guard message); rows that land before this is de
 3. **Balancer reservation entry points** (minigame open, take) are only known after row 5a's manual trace (task
    1.3, needs the user). Recommendation: schedule that session before row 5a group 7.
 4. **Interim client-computed values** (spawner's roll in row 1, order generation and payout in row 3) are marked as
-   interim; ROADMAP row 16 (`server-game-logic`, maintained by the coordinator) replaces them.
+   interim; ROADMAP row 16 (`server-game-logic`, maintained by the coordinator) replaces them. Drafted 2026-10-08:
+   part 1 moves order generation to the server and seeds the job car's roll, part 2 moves payout/XP and prices; each
+   interim path stays as the fallback when the server has no exported tables.
 5. **Digests for rows 3 (`jobs`), 4 (`car-details:<loader>`) and 5a (`workshop-tools`)** are not in their drafts.
    Recommendation: each adds one task when it lands after row 14 (b) ("register an `IClientDigest`/`IServerDigest`
    with a Core mapper for your DTO; `desync-autofix`-style check"); until then drift there is fixed only by the
@@ -388,5 +392,6 @@ sees (hidden, kept parked, or a guard message); rows that land before this is de
 6. **Row 7 follow-ups from rows 8/9/14a** (row 7's draft not edited here): task 5.3 calls row 8's
    `ConnectionStatus.Disconnected(reason)` instead of its own menu message; `--command-file` is a supported option; if
    row 14a's audit shows `GarageLoader.Save(bool)` bypasses `GameDataManager.Save(int)`, row 7 blocks it too.
-7. **Row 9's milestone split** (exporter with row 16 in M3, tuning in M6) keeps row 9 open until M6 — a user question
-   (move the exporter into row 16 and the tuning into a follow-up change?).
+7. ~~**Row 9's milestone split**~~ — answered 2026-10-06 (fifth round): the exporter moved into row 16. Row 16's
+   draft (2026-10-08) owns it as part 1 group 2, including `db-export`, `CMS21Together.EnableDevTools` and
+   `CMS21Together.DbExportHotkey`; row 9 keeps only the tuning (group 7).
