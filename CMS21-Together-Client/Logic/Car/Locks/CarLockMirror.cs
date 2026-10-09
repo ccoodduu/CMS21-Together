@@ -48,6 +48,7 @@ public sealed class LockAnswer
 	public CarLockRefusal Refusal;
 	public int Holder = -1;
 	public string ConflictKey;
+	public CarLockKind HolderKind;
 	public float WaitedMs;
 }
 
@@ -55,6 +56,7 @@ public sealed class LockConflict
 {
 	public int Holder;
 	public string Key;
+	public CarLockKind? Kind;
 	public CarLockRefusal Refusal = CarLockRefusal.Held;
 }
 
@@ -228,15 +230,15 @@ public static class CarLockMirror
 			{
 				if (!keys.TryGetValue(key, out var holders)) continue;
 				int other = OtherOwner(holders.X);
-				if (other >= 0) return new LockConflict { Holder = other, Key = key };
+				if (other >= 0) return new LockConflict { Holder = other, Key = key, Kind = records[holders.X].Kind };
 				int sharedBy = holders.S.FirstOrDefault(id => OtherOwner(id) >= 0);
-				if (sharedBy != 0) return new LockConflict { Holder = records[sharedBy].Owner, Key = records[sharedBy].X.FirstOrDefault() ?? key };
+				if (sharedBy != 0) return new LockConflict { Holder = records[sharedBy].Owner, Key = records[sharedBy].X.FirstOrDefault() ?? key, Kind = records[sharedBy].Kind };
 			}
 			foreach (string key in set.S)
 			{
 				if (!keys.TryGetValue(key, out var holders)) continue;
 				int other = OtherOwner(holders.X);
-				if (other >= 0) return new LockConflict { Holder = other, Key = key };
+				if (other >= 0) return new LockConflict { Holder = other, Key = key, Kind = records[holders.X].Kind };
 			}
 		}
 		foreach (long uid in set.Items)
@@ -325,7 +327,7 @@ public static class CarLockMirror
 		var answer = new LockAnswer
 		{
 			Outcome = result.Granted ? LockOutcome.Granted : LockOutcome.Denied, LockId = result.LockId, Refusal = result.Refusal,
-			Holder = result.HolderPlayerId, ConflictKey = result.ConflictKey, WaitedMs = (Time.realtimeSinceStartup - request.SentAt) * 1000f
+			Holder = result.HolderPlayerId, ConflictKey = result.ConflictKey, HolderKind = result.HolderKind, WaitedMs = (Time.realtimeSinceStartup - request.SentAt) * 1000f
 		};
 		Count(result.Granted ? "granted" : $"denied.{result.Refusal}");
 		try { request.Done?.Invoke(answer); }

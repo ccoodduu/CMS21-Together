@@ -85,6 +85,14 @@ namespace CMS21Together.Data
                 };
             }
 
+            var tuning = item.tuningData;
+            if (tuning.IsTuned || tuning.Values != null)
+                modItem.TuningData = new ModTuningData { IsTuned = tuning.IsTuned, Values = tuning.Values == null ? null : (short[])tuning.Values, TuningValue = tuning.TuningValue };
+
+            var gearbox = item.GearboxData;
+            if (gearbox.GearRatio != null && gearbox.GearRatio.Length > 0 || gearbox.FinalDriveRatio != 0f)
+                modItem.GearboxData = new ModGearboxData { GearRatio = gearbox.GearRatio == null ? null : (float[])gearbox.GearRatio, FinalDriveRatio = gearbox.FinalDriveRatio };
+
             return modItem;
         }
 
@@ -180,8 +188,17 @@ namespace CMS21Together.Data
             bool[] stuck = mount?.IsStuck ?? new bool[0];
             if (stuck.Length != condition.Length) System.Array.Resize(ref stuck, condition.Length);
             item.MountObjectData = new MountObjectData { ParentPath = mount?.ParentPath ?? "", Condition = condition, IsStuck = stuck };
+            ApplyTuning(modItem, item);
 
             return item;
+        }
+
+        private static void ApplyTuning(ModItem source, Item target)
+        {
+            if (source.TuningData != null)
+                target.tuningData = new CMS.Containers.TuningData { IsTuned = source.TuningData.IsTuned, Values = source.TuningData.Values, TuningValue = source.TuningData.TuningValue };
+            if (source.GearboxData != null)
+                target.GearboxData = new GearboxData { GearRatio = source.GearboxData.GearRatio, FinalDriveRatio = source.GearboxData.FinalDriveRatio };
         }
 
         public static void CopyInto(ModItem source, Item target)
@@ -199,6 +216,7 @@ namespace CMS21Together.Data
             target.WheelData = fresh.WheelData;
             if (source.Color != null) target.Color = fresh.Color;
             if (source.TintColor != null) target.TintColor = fresh.TintColor;
+            ApplyTuning(source, target);
         }
 
         public static GroupItem ToGameGroupItem(this ModGroupItem modGroupItem)
