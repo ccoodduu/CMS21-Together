@@ -22,7 +22,7 @@ function Wait-InGarage([string]$Name) {
     } | Out-Null
 }
 function Look([string]$Name) { (Cmd $Name dump).garageLook }
-function Toasts([string]$Name) { @((Cmd $Name session).toasts) }
+function Toasts([string]$Name) { @((Cmd $Name dump).session.toasts) }
 function Indexes($Look) { ($Look.indexes | ForEach-Object { "$_" }) -join "," }
 function Materials($Look) { ($Look.materials | ForEach-Object { "$_" }) -join "," }
 function Server-Look {
@@ -95,8 +95,10 @@ Check ($previewA.indexes[2] -eq 3 -and $previewA.indexes[0] -eq 5) "A's preview 
 
 $mark = Get-ServerLogMark
 foreach ($round in 1..2) { Send-ServerCommand "desync check"; Start-Sleep -Seconds 4 }
-$desync = @(Get-ServerLogLines | Select-Object -Skip $mark | Where-Object { $_ -match "\[Desync\] garage for client \d+: mismatch" })
-Check ($desync.Count -eq 0) "no garage digest mismatch while A has the window open ($($desync -join ' | '))"
+$checkLines = @(Get-ServerLogLines | Select-Object -Skip $mark)
+$desync = @($checkLines | Where-Object { $_ -match "\[Desync\] garage for client \d+: mismatch" })
+$matched = @($checkLines | Where-Object { $_ -match "\[Desync\] garage for client \d+: match\." })
+Check ($matched.Count -ge 2 -and $desync.Count -eq 0) "the garage digest matches and is never a mismatch while A has the window open ($($matched.Count) matches; $($desync -join ' | '))"
 
 $beforeB = Look $b
 Cmd $b look-open | Out-Null
