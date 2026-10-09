@@ -126,10 +126,19 @@ Answered by the user on 2026-10-08 (evening):
 - **Blocked features to open in multiplayer:** race track (base-game tracks only, DLC tracks stay blocked), tuning
   window, bonus parts, building new engines, the showroom, garage customization (everything visual). Save/load,
   benchmark, tutorial, photo location and changing garages stay blocked. Drafts on `change/singleplayer-features`.
+- **Rows 25–31 (evening):** the user meant the car salon, not the Showroom viewer; the salon change is cut to a
+  purchase proof and guard clean-up. Race track and speed track both come (row 27a); races with a shared start only on
+  the race track (row 27b); collisions between players' cars on the tracks are wanted, cheap form after a spike (row
+  27c); the long wait before another player's car appears is to be fixed (row 31); seated avatars in the garage (row
+  29) and job achievements for everyone who worked on the job (row 30) are wanted. No in-game "save now" button, no
+  automatic reconnect, no text chat.
+- **Row 27b:** a race is started with a "Start race" button in the F9 session panel, shown only on the race track
+  (not the game's own restart, which stays a personal restart). **Row 31:** about 3 s until another player's car
+  appears is fine, as long as loading it gives no big frame spike (no frame over 0.13 s, as in the freeze fix).
 
 
 - **Answered by the user on 2026-10-08 (row 19 part 1):** the defaults of "Open — row 19" stand; the part record base check also compares the part's quality (a part replaced by one of another quality never takes a stale edit), as recommended.
-- **Answered by the user on 2026-10-08:** no collisions between driven cars for now (row 17 part 2 keeps cars passing through each other); ride-along (row 21) is wanted. Ping (row 22) is wanted; a shared shopping list (row 23) is wanted; row 17 #8 (other car appears after ~10 s) is fine for now; no Unity project for playermodel.bundle (#3 stays the procedural pose); asking LvxMagick maybe later; the 1.0 release waits; the Drive pie option may open the map (merged 2026-10-08); the LvxBetterCarSpawns-based car selector (row 15 group 11) is dropped: the mod was hidden by its author on 2026-09-11 for permission issues (it spawned DLC cars players did not own); the server keeps its own selector, which limits DLC cars to the DLC every connected player owns; task split in the job view, more orders for more players, gestures and an end-of-session scoreboard are not.
+- **Answered by the user on 2026-10-08:** no collisions between driven cars for now (row 17 part 2 keeps cars passing through each other; *superseded the same evening: collisions on the tracks are wanted, row 27c, spike first*); ride-along (row 21) is wanted. Ping (row 22) is wanted; a shared shopping list (row 23) is wanted; row 17 #8 (other car appears after ~10 s) is fine for now (*later the same evening: to be fixed at some point, row 31*); no Unity project for playermodel.bundle (#3 stays the procedural pose); asking LvxMagick maybe later; the 1.0 release waits; the Drive pie option may open the map (merged 2026-10-08); the LvxBetterCarSpawns-based car selector (row 15 group 11) is dropped: the mod was hidden by its author on 2026-09-11 for permission issues (it spawned DLC cars players did not own); the server keeps its own selector, which limits DLC cars to the DLC every connected player owns; task split in the job view, more orders for more players, gestures and an end-of-session scoreboard are not.
 - **Answered by the user on 2026-10-07 (late evening), row 19 ledger:** S1 (two players in one seat) is fixed in
   row 19 (server arbitrates, the second is refused and leaves the seat). For I3, I7, E4, M8, C4, J2, J4, J5 the
   server's choice stays, but every refused, ignored or overridden action must reach the acting client with the

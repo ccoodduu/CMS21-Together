@@ -2,13 +2,18 @@
 <#
 Server-only checks of save robustness (no game needed): crash-safe writes, backups, start copies, fallback,
 quarantine, refusal, --check-save and saving on /stop and window close. Runs in its own copy of the server
-(CMS21-TestInstalls\ServerSaveTest, port 7807) built by Deploy-Mod.ps1 from this worktree.
+(CMS21-TestInstalls\ServerSaveTest, port 7807) built by Deploy-Mod.ps1 from this worktree. That folder is shared by
+every worktree, so parallel Run-All calls take turns through a named mutex; it is released when the process exits.
 #>
 param([string]$Configuration = "Release")
 
 $ErrorActionPreference = "Stop"
 $repo = Resolve-Path (Join-Path $PSScriptRoot "..\..")
 Import-Module (Join-Path $PSScriptRoot "HarnessClient.psm1") -Force
+
+$folderLock = New-Object System.Threading.Mutex($false, "Global\CMS21TogetherServerSaveTest")
+try { $locked = $folderLock.WaitOne([TimeSpan]::FromMinutes(20)) } catch [System.Threading.AbandonedMutexException] { $locked = $true }
+if (-not $locked) { throw "Another run kept the server-saves test busy for 20 minutes; giving up." }
 
 $serverDir = "$env:USERPROFILE\CMS21-TestInstalls\ServerSaveTest"
 $exe = Join-Path $serverDir "CMS21_Together_Server.exe"

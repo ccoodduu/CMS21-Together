@@ -95,7 +95,9 @@ namespace CMS21Together
 		{
 			if (!isModInitialized )
 				return;
-			
+
+			ImguiInputShield.Update();
+
 			if (PlayerSettings.DevHotkeys && Input.GetKeyDown(KeyCode.F5))
 			{
 				string target = string.IsNullOrWhiteSpace(PlayerSettings.LastJoinTarget) ? "127.0.0.1" : PlayerSettings.LastJoinTarget;

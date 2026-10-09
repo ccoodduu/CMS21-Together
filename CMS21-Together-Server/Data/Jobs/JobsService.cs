@@ -17,6 +17,7 @@ namespace CMS21_Together_Server.Data.Jobs
 	public static class JobsService
 	{
 		private const float ClaimTimeoutSeconds = 60f;
+		private const float MaxTickDelta = 1f;
 		private const int MaxPayout = 1_000_000;
 		private const int MaxXp = 10_000;
 
@@ -39,6 +40,7 @@ namespace CMS21_Together_Server.Data.Jobs
 		{
 			generator = CarLoaderEntry.NoClient;
 			checkedLoadedJobs = false;
+			OrderClockService.Reset();
 			foreach (var order in State.Orders)
 			{
 				order.Status = OrderStatus.Open;
@@ -104,7 +106,17 @@ namespace CMS21_Together_Server.Data.Jobs
 				return;
 			}
 			var job = packet.Job;
-			if (job == null) return;
+			if (job == null)
+			{
+				OrderClockService.OnAnswer(clientId, packet, ServerTime.Time);
+				return;
+			}
+			if (!job.IsMission && OrderClockService.IsStale(packet.RequestId))
+			{
+				Logger.Info($"[Jobs] Order from client {clientId} refused: it answers request {packet.RequestId}, which is no longer open; answering with the jobs state.");
+				SendSnapshot(clientId);
+				return;
+			}
 			if (job.IsMission && HasMission())
 			{
 				Logger.Info($"[Jobs] Mission order from client {clientId} refused: a story mission is already open or active; answering with the jobs state.");
@@ -112,9 +124,11 @@ namespace CMS21_Together_Server.Data.Jobs
 				return;
 			}
 			int open = State.Orders.Count;
-			if (!job.IsMission && packet.MaxOpenOrders > 0 && open >= packet.MaxOpenOrders)
+			OrderClockService.CheckReportedLimit(packet.MaxOpenOrders);
+			int limit = packet.MaxOpenOrders > 0 ? System.Math.Min(OrderClockService.Limit, packet.MaxOpenOrders) : OrderClockService.Limit;
+			if (!job.IsMission && open >= limit)
 			{
-				Logger.Info($"[Jobs] Order from client {clientId} refused: {open} open orders, the generator's limit is {packet.MaxOpenOrders}; answering with the jobs state.");
+				Logger.Info($"[Jobs] Order from client {clientId} refused: {open} open orders, the limit is {limit}; answering with the jobs state.");
 				SendSnapshot(clientId);
 				return;
 			}
@@ -123,6 +137,7 @@ namespace CMS21_Together_Server.Data.Jobs
 			var entry = new OrderEntry { Job = job, RemainingSeconds = job.timeToEnd, Status = OrderStatus.Open };
 			State.Orders.Add(entry);
 			if (job.IsMission) State.Missions.CurrentMissionDone = false;
+			else OrderClockService.OnOrderAccepted();
 			Logger.Info($"[Jobs] Order {job.id}: {job.carFile}{(job.IsMission ? $" (mission {State.Missions.MissionsFinished})" : "")}, {entry.RemainingSeconds:0} s.");
 			Server.SendToClients(new OrderAddedPacket { Job = job, RemainingSeconds = entry.RemainingSeconds });
 		}
@@ -147,6 +162,7 @@ namespace CMS21_Together_Server.Data.Jobs
 					order.Status = OrderStatus.Claimed;
 					order.ClaimedBy = clientId;
 					order.ClaimedAt = now;
+					if (!order.Job.IsMission) OrderClockService.OnRegularTaken();
 					Logger.Info($"[Jobs] Order {order.Job.id} claimed by client {clientId}.");
 					Server.SendToClient(new OrderActionResultPacket { JobId = packet.JobId, Action = packet.Action, Approved = true }, clientId);
 					Server.SendToClients(new JobRemovedPacket { JobId = order.Job.id, Reason = JobRemovedReason.Taken }, clientId);
@@ -244,6 +260,7 @@ namespace CMS21_Together_Server.Data.Jobs
 				return;
 			}
 			State.ActiveJobs.Remove(active);
+			OrderClockService.OnJobEnded();
 			world.Money += packet.Payout;
 			StatsHandlers.ApplyExp(packet.Xp);
 			if (active.Job.IsMission) FinishMission();
@@ -299,7 +316,7 @@ namespace CMS21_Together_Server.Data.Jobs
 
 		public static void Tick(float now)
 		{
-			float delta = lastTick < 0f ? 0f : now - lastTick;
+			float delta = lastTick < 0f ? 0f : System.Math.Min(now - lastTick, MaxTickDelta);
 			lastTick = now;
 			if (!checkedLoadedJobs)
 			{
@@ -313,6 +330,7 @@ namespace CMS21_Together_Server.Data.Jobs
 			}
 			if (!Server.Clients.Values.Any(c => c.IsConnected)) return;
 
+			bool running = OrderClockService.Running(generator);
 			foreach (var order in State.Orders.ToList())
 			{
 				if (order.Status == OrderStatus.Claimed)
@@ -324,11 +342,12 @@ namespace CMS21_Together_Server.Data.Jobs
 					}
 					continue;
 				}
-				if (order.Job.IsMission) continue;
+				if (order.Job.IsMission || !running) continue;
 				order.RemainingSeconds -= delta;
 				if (order.RemainingSeconds > 0f) continue;
 				Expire(order);
 			}
+			OrderClockService.Tick(now, delta, generator);
 		}
 
 		public static bool ExpireNow(int jobId)
@@ -349,6 +368,7 @@ namespace CMS21_Together_Server.Data.Jobs
 		public static IEnumerable<string> Describe()
 		{
 			yield return $"generator: {(generator == CarLoaderEntry.NoClient ? "nobody" : $"client {generator}")}, next id {State.NextJobId}, missions finished {State.Missions.MissionsFinished}";
+			yield return OrderClockService.Describe(generator, ServerTime.Time);
 			foreach (var order in State.Orders)
 				yield return $"  order {order.Job.id}: {order.Job.carFile} {order.Status}{(order.Status == OrderStatus.Claimed ? $" by {order.ClaimedBy}" : "")}, {order.RemainingSeconds:0} s{(order.Job.IsMission ? ", mission" : "")}";
 			foreach (var active in State.ActiveJobs)

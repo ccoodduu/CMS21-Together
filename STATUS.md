@@ -2,6 +2,50 @@
 
 Newest first. One entry per work session.
 
+## 2026-10-09 (01:50) — paused for the night
+
+- Paused at the user's request; agents finish their current run, push and stop.
+- Not merged yet: `feat/seated-avatars` (row 29, built; proof `seat-avatars` fails on the old client
+  `20261009-000552_L1` and passes `20261009-002305_L1`; smoke set still to confirm), `feat/shared-salon` (row 26, in
+  progress), `fix/place-same` (lane 2, in progress). Row 30 not started.
+- Lane 1 branches at the pause, all pushed, none merged:
+  - `feat/seated-avatars` (row 29) done: proof `seat-avatars` fails `20261009-000552_L1`, passes `20261009-002305_L1`;
+    smoke and touched areas pass. Hand check 3.2 (right-hand-drive car) open.
+  - `feat/shared-salon` (row 26) done: proof `salon-buy` fails `20261009-005105_L1`, passes `20261009-011548_L1`;
+    `20261009-011825_regression.json` passes. README "Planned" paragraph conflicts with seated-avatars.
+  - `feat/shared-job-achievements` (row 30) built: old code fails `20261009-010925_L1_job-stats`; the new run
+    `20261009-013204_L1` had 2 scenario-side failures fixed in `951a803`, not re-run. Resume with
+    `Run-Session.ps1 -Lane 1 -Deploy -Scenario job-stats` in `CMS21-Together-wt\jobstats`. New question in QUESTIONS.md
+    (upgrade achievements, default buyer only).
+- `fix/place-same` (`5a8fb16`, paused): place-same fixed (move lock covers the target place, refused moves answer
+  with every car's place then lift states; proof `car-place-same` fails on `84beea6` `20261008-231901_L2` and passes
+  `20261008-232642_L2`); examined flags after an unpark fixed (snapshot waits for `LoadCarFromFile`; proof
+  `park-return` fails `20261008-233419_L2`, passes `20261008-233709_L2`); smoke plus 20 touched scenarios pass
+  (`20261009-011337_regression.json`). Open before merge: `locks-select-2` fails in batch on the branch (passes alone;
+  base batch `20261009-014747` passes): check which 2 pie move options differ after B's release
+  (`LockPie.CarBlocked`/`CarLockMirror.Conflict` with the new place check), then a 15-min soak
+  `-ContentionKinds place-same`; remove the `place-same-base` worktree afterwards.
+- To resume: read the agents' last reports (branch commit messages), run smoke on each branch with main merged in,
+  merge; then row 30, the next soak with contention (row 19 task 10.5 still open), and rows 28, 25, 27a in that order.
+
+## 2026-10-08/09 (23:15–00:45) — order clock, menu click fix, rows 25–31 drafted and reviewed
+
+- `main` = `310f9c3`. Server-owned order clock merged (`6b5dccd`): the server runs the order timer only while a
+  generator is elected, freezes order expiry with it, owns the open-order limit (small `GetMaxOrdersAmount` table)
+  and asks the generator for an order with `OrderRequest`; the client's own timer no longer makes orders. Proof
+  `jobs-clock` fails on the old code (`20261008-232825_L1_jobs-clock`) and passes (`20261008-232021_L1_jobs-clock`);
+  `20261008-233426_regression.json` (smoke, jobs scenarios, every scenario using `orders-autogen`).
+- Menu click-through fixed (`60ef3ce`): the game's EventSystem is off while the pointer is over a mod panel (playtest:
+  Host opened the CMS 2026 news link). Proof `menu-click-through` fails on the old code (`20261009-002947`,
+  `20261009-003214`) and passes (`20261009-003510`); the headless games have no game button under the panels, so the
+  scenario checks the mechanism; the real click is a hand check.
+- Test tools: parallel Run-All calls take turns on the shared server-saves test (`310f9c3`, named mutex).
+- Rows 25–31 drafted, reviewed by two agents and revised (`92895cb`): 25 tuning/bonus parts/new engines, 26 salon (cut
+  to a purchase proof), 27a race and speed track, 27b races (race track, start in the F9 panel), 27c collisions (spike
+  first), 28 garage look, 29 seated avatars, 30 job achievements for every contributor, 31 faster remote cars (≈3 s
+  without frame spikes). User decisions in QUESTIONS.md.
+- In progress: rows 29, 26, 30 (lane 1); `place-same` and examined-flag drift (lane 2).
+
 ## 2026-10-08 (22:00–23:15) — row 19 part 2 and seeded job cars merged; playtest build dev.1102
 
 - `main` = `63c146e`. Row 19 part 2 merged (`23c46ef`; smoke plus touched scenarios `20261008-224024_regression.json`).

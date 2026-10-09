@@ -38,4 +38,12 @@ public class JobsState
 	public List<ActiveJobEntry> ActiveJobs = new List<ActiveJobEntry>();
 	public int NextJobId = 1;
 	public ModMissionState Missions = new ModMissionState();
+	[OptionalField] public OrderClock Clock = new OrderClock();
+}
+
+[Serializable]
+public class OrderClock
+{
+	public float OrderTimer;
+	public float NextOrderTime = 10f;
 }
