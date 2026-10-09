@@ -53,15 +53,18 @@ cannot drift apart:
 - the tuning window, bonus (visual tuning) parts and building a new engine on the engine stand;
 - the separate Parking scene (the garage parking works); the showroom, the main menu's car viewer, is single-player
   only;
-- garage customization, the tutorial, and saving or loading from the game's menus (the server saves the session).
+- the tutorial, and saving or loading from the game's menus (the server saves the session).
 
 Also not yet:
 
 - Steam achievements and stats for a finished job go only to the player who hands it back.
 - Gameplay mods are refused by the server; visual mods are fine.
 
-Planned: the race track, the tuning window, bonus parts, building new engines, garage customization and achievements
-for everyone who worked on a job. The DLC tracks, the photo location, the tutorial and saving or loading stay
+- A texture pack for the garage is shared by its id only: a player who does not have it installed sees the default
+  garage textures.
+
+Planned: the race track, the tuning window, bonus parts, building new engines and achievements for everyone who
+worked on a job. The DLC tracks, the photo location, the tutorial and saving or loading stay
 blocked.
 
 ## Get started
@@ -88,6 +91,9 @@ the game, click **Multiplayer** in the main menu.
   server. The junkyard, a barn and the auction are shared by everyone who is there at the same time; the next trip
   after everyone has left is a new one, as in the game. Coming back to the garage always loads the shared garage
   from the server.
+- **Garage look:** the walls, floors, machines and gates you pick at the garage-look computer, and the texture pack,
+  are the same for everyone and kept by the server. One player customises at a time ("<name> is customising the
+  garage."); the others see the new look when that player closes the window.
 - **Shopping list:** the group shares one shopping list. What anyone adds, removes or clears shows up for everyone,
   and the server keeps it with the session.
 - **Test drive together:** players who are on the test track at the same time see each other's car drive (it
