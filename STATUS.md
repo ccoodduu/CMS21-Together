@@ -2,6 +2,24 @@
 
 Newest first. One entry per work session.
 
+## 2026-10-09/10 (23:00–01:40) — playtest 3 (dev.1169/1170), findings
+
+- New session start values (`e159fff`): `new_session_money` 4000 and `new_session_level` 1 by default (the game's
+  `ProfileData.InitGlobalData`); test lanes keep 12500 / 8. Playtest builds `0.6.0-dev.1169`, then `dev.1170` from
+  `fix/mount-replay-target`. Save, logs and bug reports: `Desktop\CMS21-Together-playtest-20261009`.
+- **Mount into the wrong slot (fixed on `fix/mount-replay-target`, proof pending):** after the lock grant the item
+  gate replayed `GameScript.SelectPartToMount`, which mounts into the part under the mouse at that moment; when the
+  mouse moved during the round trip the item replaced a mounted part's identity (pads into the brake disc slot,
+  rollers into the engine block and head as `TunedID`). The save was repaired by hand (`13.2`, `13.6` of
+  `car_griffintyro` from backup `bak5`).
+- **Remote-mounted part shows the old part's wear until F7 (fixed, proof pending):** shader values are now updated
+  when `ShowMounted` shows the part.
+- **No buy popup or sound in the shop (fixed, proof pending):** the buy hook now shows `PopUp_NewItem` and plays `Popup`.
+- **Open:** tires missing and rims hollow on both players although cars, details and server agree (wheel shape is not
+  rebuilt after our wheel apply; mounting again and F7 do not help); a wheel ghost stuck in the air at the friend's
+  name tag (only on the receiving player); magenta wheels (only on the receiving player; car sold before a test);
+  no remote oil drain animation; the bonus parts (row 25 part 2) and `fix/place-same` branches are paused.
+
 ## 2026-10-09 (22:00–23:00) — row 25 part 1, tuning at the dyno (`feat/tuning-window`, lane 1)
 
 - `GearboxTab.ApplyAction` marks the car's tuning dirty; one tuner per car through the new lock kind `Tune` (keys
