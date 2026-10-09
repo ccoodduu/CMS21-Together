@@ -71,6 +71,12 @@ namespace CMS21_Together_Server
 				return;
 			}
 
+			if (Array.IndexOf(args, "--check-garage-look") >= 0)
+			{
+				Environment.Exit(Data.Garage.GarageLookCheck.Run());
+				return;
+			}
+
 			if (Array.IndexOf(args, "--check-digest") >= 0)
 			{
 				Environment.Exit(Data.Reconciliation.DigestCheck.Run());
@@ -126,6 +132,7 @@ namespace CMS21_Together_Server
 			Data.Presence.Rides.Initialize();
 			Data.Cars.CarLocks.Initialize(Config.LockScope, Config.LockExpirySeconds);
 			Data.Tools.ToolsStore.Initialize();
+			Data.Garage.GarageLookService.Initialize();
 			Data.Outdoor.OutdoorInstances.Configure(Config.SharedOutdoorScenes, Config.CarSelector, Config.OutdoorRejoinGraceSeconds, Config.OutdoorFillAllSpawnPoints);
 			Data.Outdoor.OutdoorInstances.Initialize();
 			Network.Handlers.VisualHandlers.Initialize();

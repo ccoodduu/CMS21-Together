@@ -1,6 +1,8 @@
 using System;
 using CMS21_Together_Core.Data;
+using CMS21_Together_Core.Data.GameType;
 using CMS21_Together_Core.Network.Packets;
+using CMS21_Together_Server.Data.Garage;
 using CMS21_Together_Server.Network;
 using CMS21_Together_Server.Network.Handlers;
 using Newtonsoft.Json.Linq;
@@ -11,7 +13,7 @@ namespace CMS21_Together_Server.Data.Persistence.Sections
 	public class GarageSection : ISaveSection, ISnapshotProvider
 	{
 		public string Key => SyncOrder.GarageKey;
-		public int Version => 1;
+		public int Version => 2;
 		int ISnapshotProvider.SyncOrder => SyncOrder.Garage;
 
 		public JToken Save()
@@ -23,7 +25,10 @@ namespace CMS21_Together_Server.Data.Persistence.Sections
 
 		public void Load(JToken data)
 		{
-			GameDataManager.CurrentState.GarageState = data.ToObject<GarageState>();
+			var state = data.ToObject<GarageState>();
+			state.Look = (state.Look ?? new ModGarageLook()).Clamped();
+			GameDataManager.CurrentState.GarageState = state;
+			GarageLookService.ResetRuntime();
 		}
 
 		public void Reset()
@@ -34,9 +39,16 @@ namespace CMS21_Together_Server.Data.Persistence.Sections
 			foreach (var upgrade in GameDatabase.PlayerUpgrades.PointUpgrades)
 				state.PlayerUpgradeLevels[upgrade.ID] = upgrade.UnlockedLevels.ToArray();
 			GameDataManager.CurrentState.GarageState = state;
+			GarageLookService.ResetRuntime();
 		}
 
-		public JToken Migrate(JToken data, int fromVersion) => throw new NotSupportedException($"No migration from garage v{fromVersion}.");
+		public JToken Migrate(JToken data, int fromVersion)
+		{
+			if (fromVersion != 1) throw new NotSupportedException($"No migration from garage v{fromVersion}.");
+			var garage = (JObject)data;
+			garage[nameof(GarageState.Look)] = JObject.FromObject(new ModGarageLook());
+			return garage;
+		}
 
 		public int SendSnapshot(int clientId)
 		{

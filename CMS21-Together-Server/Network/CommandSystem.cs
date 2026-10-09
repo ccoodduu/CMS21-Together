@@ -57,6 +57,7 @@ namespace CMS21_Together_Server.Network
 					Logger.Info("  locks             - Show the part, fluid and car locks and the lock counters");
 					Logger.Info("  tools             - Show the workshop machines, tool positions and claims");
 					Logger.Info("  shoplist          - Show the shared shopping list");
+					Logger.Info("  look              - Show the garage look (materials, texture pack, section count) and who is customising");
 					Logger.Info("  outdoor [catalog|junkyard|barn|auction] - Show the shared outdoor instances, the car catalog or one scene");
 					Logger.Info("  desync [check]    - Show recent desync repairs; check compares every player now");
 					Logger.Info("  desync interval <s> - Seconds between automatic comparisons until the next restart");
@@ -189,6 +190,12 @@ namespace CMS21_Together_Server.Network
 				case "tools":
 					Logger.Info("Tools:");
 					foreach (string line in Data.Tools.ToolsStore.Describe())
+						Logger.Info($"  {line}");
+					break;
+
+				case "look":
+					Logger.Info("Garage look:");
+					foreach (string line in Data.Garage.GarageLookService.Describe())
 						Logger.Info($"  {line}");
 					break;
 

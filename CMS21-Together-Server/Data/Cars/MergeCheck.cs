@@ -201,9 +201,12 @@ namespace CMS21_Together_Server.Data.Cars
 			state.WorldState.Barns = 2;
 			var upgrades = new Dictionary<string, bool[]> { ["carwash"] = new[] { false }, ["lifter"] = new[] { true, false, false } };
 			var skills = new Dictionary<string, bool[]> { ["faster_unmount"] = new[] { true, true, false }, ["cheaper_parking"] = new[] { false } };
-			SameHash("garage", state, DigestMappers.GarageKey, "", DigestMappers.Garage(upgrades, skills, 2));
+			state.GarageState.Look = new ModGarageLook { MaterialIndexes = new[] { -1, 3, -1 }, TexturePack = "pack", SectionCount = 41 };
+			var look = new ModGarageLook { MaterialIndexes = new[] { -1, 3 }, TexturePack = "pack", SectionCount = 41 };
+			SameHash("garage", state, DigestMappers.GarageKey, "", DigestMappers.Garage(upgrades, skills, 2, look));
+			DifferentHash("garage look", state, DigestMappers.GarageKey, "", DigestMappers.Garage(upgrades, skills, 2, new ModGarageLook { MaterialIndexes = new[] { -1, 4 }, TexturePack = "pack" }));
 			skills["cheaper_parking"][0] = true;
-			DifferentHash("garage", state, DigestMappers.GarageKey, "", DigestMappers.Garage(upgrades, skills, 2));
+			DifferentHash("garage", state, DigestMappers.GarageKey, "", DigestMappers.Garage(upgrades, skills, 2, look));
 
 			state.JobsState.Orders.Add(new OrderEntry { Job = new ModJob { id = 5 }, Status = OrderStatus.Claimed });
 			state.JobsState.Orders.Add(new OrderEntry { Job = new ModJob { id = 4 } });

@@ -8,6 +8,7 @@ using CMS21Together.Logic.Car.Away;
 using CMS21Together.Logic.Car.Details;
 using CMS21Together.Logic.Car.Locks;
 using CMS21Together.Logic.Car.Parts;
+using CMS21Together.Logic.Garage;
 using CMS21Together.Logic.Hook;
 using CMS21Together.Logic.Jobs;
 using CMS21Together.Logic.Tools;
@@ -150,7 +151,8 @@ public static class ClientDigests
 	{
 		var system = GameData.Instance?.GarageTools?.upgradeSystem;
 		if (system == null || system.UpgradesForMoney == null || system.UpgradesForPoints == null) return null;
-		return DigestMappers.Garage(Unlocked(system.UpgradesForMoney), Unlocked(system.UpgradesForPoints), GlobalData.BarnsAmount);
+		if (GarageLookSync.LastApplied == null || GarageLookSync.IsApplying) return null;
+		return DigestMappers.Garage(Unlocked(system.UpgradesForMoney), Unlocked(system.UpgradesForPoints), GlobalData.BarnsAmount, GarageLookSync.LastApplied);
 	}
 
 	private static Dictionary<string, bool[]> Unlocked(Il2CppSystem.Collections.Generic.List<Upgrade> upgrades)

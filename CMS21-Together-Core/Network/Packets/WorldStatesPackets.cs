@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Runtime.Serialization;
 using CMS21_Together_Core.Data.Enum;
+using CMS21_Together_Core.Data.GameType;
 
 namespace CMS21_Together_Core.Network.Packets;
 
@@ -29,6 +30,7 @@ public class GarageState : INetworkData
 	public Dictionary<string, bool[]> GarageUpgradeLevels = new Dictionary<string, bool[]>();
 	public Dictionary<string, bool[]> PlayerUpgradeLevels = new Dictionary<string, bool[]>();
 	public int AvailablePoints;
+	[OptionalField] public ModGarageLook Look = new ModGarageLook();
 }
 
 [Serializable]

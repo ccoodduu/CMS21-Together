@@ -121,12 +121,20 @@ public static class DigestMappers
 		return projection;
 	}
 
-	public static Projection Garage(IDictionary<string, bool[]> garageUpgrades, IDictionary<string, bool[]> skills, int barns)
+	public static Projection Garage(IDictionary<string, bool[]> garageUpgrades, IDictionary<string, bool[]> skills, int barns, ModGarageLook look)
 	{
 		var projection = new Projection().Add("garage", "barns", barns);
 		AddUnlocked(projection, "upgrade", garageUpgrades);
 		AddUnlocked(projection, "skill", skills);
+		AddLook(projection, look ?? new ModGarageLook());
 		return projection;
+	}
+
+	private static void AddLook(Projection projection, ModGarageLook look)
+	{
+		projection.Add("look", "pack", string.IsNullOrEmpty(look.TexturePack) ? "" : look.TexturePack);
+		for (int i = 0; look.MaterialIndexes != null && i < look.MaterialIndexes.Length; i++)
+			if (look.MaterialIndexes[i] != ModGarageLook.DefaultMaterial) projection.Add("look", $"section{i}", look.MaterialIndexes[i]);
 	}
 
 	private static void AddUnlocked(Projection projection, string prefix, IDictionary<string, bool[]> levels)
