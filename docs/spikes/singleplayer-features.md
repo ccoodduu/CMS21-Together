@@ -83,7 +83,18 @@ ROADMAP rows 25–30 (user wishes of 2026-10-08). Static decompile (setup in `na
   materials each, all `SelectedMaterialIndex = -1` in a session profile; no texture packs installed.
 - Runtime: `SetMaterialIndexForSection(2, 3)` then `UpdateMaterials(2, false)` throws `IndexOutOfRangeException`
   (with and without the cached material list, which held 5 entries); the index is stored, the renderer is flagged
-  replaced, the material does not change. The window fills a per-section cache in `FillVariants` first.
+  replaced, the material does not change. Corrected by the row 28 review and spike: `UpdateMaterials(int, bool)`
+  ignores the section's index and passes the manager's `currentMaterialIndex`, which is 0 after `Init`, so the
+  renderer code read `ProjectMaterials[-1]`; `cachedMaterialsList` is only a scratch list for `GetSharedMaterials`.
+- Row 28 spike (`20261009-212145_L1_garage-look-probe`, headless): the per-section coroutine
+  `UpdateMaterials(RendererData, i, k + 1, restore)` sets a material and restores the default (`restore: true`), and
+  `SelectedMaterialIndex` follows (the per-renderer coroutine calls `SetMaterialIndexForSection`), so
+  `GarageLookManager.Save` writes the same indexes into the profile. Times: 2 sections 0.4 s, 1 restore 0.07 s,
+  all 41 sections to material 0 28.6 s (the 330-renderer decal section loads one material per renderer with
+  `Resources.LoadAsync`, at least one frame each), all 41 back to default 2.7 s. `SetActiveTexturePack` with an
+  unknown id and `SetDefaultTexturePack` throw nothing (no pack installed; the default pack's id is `Default`).
+  `ShowGarageCustomization` (`<ShowGarageCustomization>d__73`) disables input and fades out in its first step, so
+  the gate is a `GameScript.ClickIO` prefix for `#garageLook` (its only caller).
 
 ## 7. Steam stats
 

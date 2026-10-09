@@ -2,6 +2,20 @@
 
 Newest first. One entry per work session.
 
+## 2026-10-09 (21:00–22:00) — row 28 shared garage look built (`feat/shared-garage-look`, lane 1)
+
+- The server keeps the garage look (`ModGarageLook` in the `garage` state, section v2 with migration) and broadcasts
+  every change; one player customises at a time (claim at the `#garageLook` click, "<name> is customising the
+  garage."); every client applies the look per section with the game's own `UpdateMaterials` coroutine; texture
+  packs by id (not installed: default textures and one notice); the `garage` digest uses the last applied look.
+  Guard: `Window GarageCustomization` allowed. Server command `look`, self-check `--check-garage-look`.
+- Spike 1.1 (`20261009-212145_L1_garage-look-probe`): gate confirmed in `ClickIO` (the coroutine fades in its first
+  step), apply and restore confirmed; all 41 sections take 28.6 s (330-renderer decal section), so the `garage`
+  snapshot no longer waits for the apply (D4 changed; digest "not ready" while it runs).
+- Proof `garage-look` fails on the old code (`20261009-212616_L1`, worktree of `main` with only the harness and the
+  scenario) and passes (`20261009-213011_L1`). Smoke plus `garage-look`, `desync-autofix`, `resync-key` and
+  `server-saves` pass (`20261009-213313_regression.json`); `--check-garage-look`, `--check-merges`, `--check-digest`
+  pass.
 ## 2026-10-09 (20:30–21:30) — rows 29, 26 and 30 merged; playtest build dev.1156
 
 - `main` = `f4be6e4`. Seated avatars (row 29) and the car salon (row 26) merged through `integrate/seated-salon`

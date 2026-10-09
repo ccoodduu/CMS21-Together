@@ -144,5 +144,8 @@ public enum PacketTypes
 
 	OrderRequest,
 
-	JobStatsAward
+	JobStatsAward,
+	GarageLookUpdate,
+	GarageLookClaim,
+	GarageLookClaimResult
 }

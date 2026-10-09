@@ -53,14 +53,16 @@ cannot drift apart:
 - the tuning window, bonus (visual tuning) parts and building a new engine on the engine stand;
 - the separate Parking scene (the garage parking works); the showroom, the main menu's car viewer, is single-player
   only;
-- garage customization, the tutorial, and saving or loading from the game's menus (the server saves the session).
+- the tutorial, and saving or loading from the game's menus (the server saves the session).
 
 Also not yet:
 
 - Gameplay mods are refused by the server; visual mods are fine.
+- A texture pack for the garage is shared by its id only: a player who does not have it installed sees the default
+  garage textures.
 
-Planned: the race track, the tuning window, bonus parts, building new engines and garage customization. The DLC
-tracks, the photo location, the tutorial and saving or loading stay blocked.
+Planned: the race track, the tuning window, bonus parts and building new engines. The DLC tracks, the photo
+location, the tutorial and saving or loading stay blocked.
 
 ## Get started
 
@@ -86,6 +88,9 @@ the game, click **Multiplayer** in the main menu.
   server. The junkyard, a barn and the auction are shared by everyone who is there at the same time; the next trip
   after everyone has left is a new one, as in the game. Coming back to the garage always loads the shared garage
   from the server.
+- **Garage look:** the walls, floors, machines and gates you pick at the garage-look computer, and the texture pack,
+  are the same for everyone and kept by the server. One player customises at a time ("<name> is customising the
+  garage."); the others see the new look when that player closes the window.
 - **Job achievements:** when a job is finished, the Steam stats and achievements for it (finished orders, the XP and
   money bonus, the last story mission) count for every connected player who worked on it: who took the order, who
   changed, examined or locked a part of its car, and who finished it. The host can give them to everyone in the garage

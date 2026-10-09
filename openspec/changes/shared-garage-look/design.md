@@ -85,7 +85,8 @@ and the per-renderer coroutine `<UpdateMaterials>d__21`.
 
 ### D4. Late join and trips
 
-The `garage` snapshot handler (`GarageUpgrades`) passes the look to D3's apply. This is the main path: a joiner's
+The `garage` snapshot handler (`GarageUpgrades`) passes the look to D3's apply and does not wait for it (spike
+results below). This is the main path: a joiner's
 garage has already loaded the empty session profile's look, and the apply changes the differing sections. After a trip,
 the garage loads from the session profile, which already holds the look, so the apply finds nothing to change.
 
@@ -113,6 +114,36 @@ difference once (`garageLook.sectionCountMismatch` in the dump).
 - [The per-section call has a side effect the load path avoids] → task 1.1 applies, resets and re-applies sections in a
   loaded garage and reads the renderers back.
 - [The apply takes longer than the scenario's bound] → task 1.1 measures it; the scenario uses the measured bound.
+
+## Spike results (task 1.1, 2026-10-09)
+
+Decompile `garagelook_clean`, `garagelook2_clean`, `garagelook3_clean`; run `20261009-212145_L1_garage-look-probe`
+(headless test installs).
+
+- **D2 confirmed, gate in `GameScript.ClickIO`.** `<ShowGarageCustomization>d__73` disables input
+  (`InputManager.ChangeInput(0, …)`) and starts `ScreenFader.NormalFadeIn` in its first step, before
+  `WindowManager.Show(42)`; `ClickIO` is the only caller of `ShowGarageCustomization`. The prefix checks
+  `IOMouseOverType == "#garageLook"`. In the run, A's click asked for the claim, the window opened on the grant (faded
+  during the fade, not faded 2 s later, mode `UI`); B's click was refused ("Player1 is customising the garage.") with
+  no fade and mode `Garage`.
+- **D3 confirmed.** The 4-argument `UpdateMaterials` is a coroutine of nested coroutines (`d__21` → `d__23` per
+  renderer → `<ProcessRendererData>d__26`, which loads the material with `Resources.LoadAsync` and waits a frame
+  until it is done). The client steps it with its nested coroutines itself (`RunNative`), one apply at a time, as the
+  renderers share the manager's `cachedMaterialsList` across those frames. Section 2 → 3 and section 0 → 5 change the
+  renderers' materials, section 2 back to -1 with `restore: true` shows the original material again, and
+  `SelectedMaterialIndex` follows each time; `GarageLookManager.Save` then writes the same indexes into the profile
+  (the client calls it, and `TexturePackManager.Save`, after every apply instead of writing the profile itself).
+- **Times:** 2 sections 0.42 s, one restore 0.07 s, all 41 sections to material 0 28.6 s (the decal section has 330
+  renderers, one async load each), all 41 back to default 2.7 s (restore is synchronous). So the `garage` snapshot
+  does not wait for the apply (D4 changed): a joiner with a heavily customised garage would otherwise pass the 30 s
+  no-progress timeout of the initial sync. While an apply runs the client's `garage` digest is "not ready" and a
+  `#garageLook` click shows "The garage look is still being updated." The scenario bound is 10 s (two sections).
+- **D5:** `SetActiveTexturePack("not-installed")` and `SetDefaultTexturePack()` throw nothing; no pack is installed in
+  the test installs and the default pack's id is `Default` (the client treats it as null). `SetActiveTexturePack`
+  starts `LoadTextures` itself.
+- An unknown pack id from the server is kept by a player who does not have it: the window close sends the pack it had
+  when the window opened unless the player picked another one there, so a player without the pack does not reset it
+  for everyone by closing the window.
 
 ## Migration Plan
 

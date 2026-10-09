@@ -107,7 +107,7 @@ public static class GuardRules
 		Planned(GuardKind.Window, "NewSaveWindow", Never, "Saving"),
 		Planned(GuardKind.Window, "SaveDetails", Never, "Saving"),
 		Planned(GuardKind.Window, "RevertBackup", Never, "Restoring a backup"),
-		Planned(GuardKind.Window, "GarageCustomization", Never, "Garage customization"),
+		Allow(GuardKind.Window, "GarageCustomization", "row 28", "Garage customization"),
 		Planned(GuardKind.Window, "Tutorial", Never, "The tutorial"),
 		Planned(GuardKind.Window, "TutorialEnd", Never, "The tutorial"),
 

@@ -6,7 +6,7 @@
 
 $script:KnownAreas = @(
     "connect", "presence", "guard", "cars", "parts", "placement", "details", "jobs", "economy", "tools",
-    "testdrive", "persistence", "resync", "hosting", "bugreport", "release", "visuals", "driving", "outdoor", "locks", "ping", "shoplist"
+    "testdrive", "persistence", "resync", "hosting", "bugreport", "release", "visuals", "driving", "outdoor", "locks", "ping", "shoplist", "garage"
 )
 
 $script:PathAreaTable = @'
@@ -31,6 +31,7 @@ tools/TestHarness/Features/Outdoor*                            outdoor, economy,
 tools/TestHarness/Features/Purchase*                           economy
 tools/TestHarness/Features/GeneratorProbe*                     jobs
 tools/TestHarness/Features/Jobs*                               jobs
+tools/TestHarness/Features/GarageLook*                         garage
 tools/TestHarness/Features/Guard*                              guard
 tools/TestHarness/Features/Join*                               connect, hosting
 tools/TestHarness/Features/PlacementTrace*                     placement
@@ -57,6 +58,7 @@ CMS21-Together-*/Network/Handlers/Car*                         cars, parts
 CMS21-Together-*/Network/Handlers/Digest*                      resync
 CMS21-Together-*/Network/Handlers/Economy*                     economy
 CMS21-Together-*/Network/Handlers/Outdoor*                     outdoor, economy, presence
+CMS21-Together-*/Network/Handlers/GarageLook*                  garage
 CMS21-Together-*/Network/Handlers/GarageUpgrade*               economy, placement
 CMS21-Together-*/Network/Handlers/Inventory*                   parts, economy
 CMS21-Together-*/Network/Handlers/Job*                         jobs
@@ -82,6 +84,7 @@ CMS21-Together-Core/Network/Packets/Diagnostics*               bugreport
 CMS21-Together-Core/Network/Packets/Economy*                   economy
 CMS21-Together-Core/Network/Packets/Outdoor*                   outdoor, economy, presence
 CMS21-Together-Core/Data/Outdoor/*                             outdoor, economy, presence
+CMS21-Together-Core/Network/Packets/GarageLook*                garage
 CMS21-Together-Core/Network/Packets/Garage*                    economy, placement
 CMS21-Together-Core/Network/Packets/Inventory*                 parts, economy
 CMS21-Together-Core/Network/Packets/Job*                       jobs
@@ -108,6 +111,7 @@ CMS21-Together-Core/Data/UidRanges.cs                          parts
 CMS21-Together-Core/Data/ParkingLayout.cs                      placement
 CMS21-Together-Core/Data/Player*                               presence, persistence
 CMS21-Together-Core/Data/GameType/ModJob*                      jobs
+CMS21-Together-Core/Data/GameType/ModGarageLook*               garage
 CMS21-Together-Core/Data/GameType/ModTool*                     tools
 CMS21-Together-Core/Data/GameType/ModCarDetails*               details
 CMS21-Together-Core/Data/GameType/ModPaint*                    details, tools
@@ -127,6 +131,7 @@ CMS21-Together-Client/Logic/Car/CarDlc.cs                      cars, connect
 CMS21-Together-Client/Logic/Car/*                              cars
 CMS21-Together-Client/Logic/Economy/*                          economy
 CMS21-Together-Client/Logic/Outdoor/*                          outdoor, economy, presence
+CMS21-Together-Client/Logic/Garage/GarageLook*                 garage, resync
 CMS21-Together-Client/Logic/Garage/*                           economy, placement
 CMS21-Together-Client/Logic/Hook/CarSpawnHooks.cs              cars
 CMS21-Together-Client/Logic/Hook/InventoryHook.cs              parts, economy
@@ -168,6 +173,7 @@ CMS21-Together-Server/Data/Placement/*                         placement
 CMS21-Together-Server/Data/Presence/*                          presence, persistence
 CMS21-Together-Server/Data/Reconciliation/*                    resync
 CMS21-Together-Server/Data/Tools/*                             tools
+CMS21-Together-Server/Data/Garage/*                            garage
 CMS21-Together-Server/Data/CompatibilityPolicy.cs              connect
 CMS21-Together-Server/Data/ModCheck.cs                         connect
 CMS21-Together-Server/Data/SharedDlc.cs                        connect, cars

@@ -132,15 +132,6 @@ public static class SpFeatureProbeCommands
         return new { section = parts[0], material = parts[1], hadCache, cache = manager.cachedMaterialsList?.Count ?? -1, before, error };
     }
 
-    [HarnessCommand("look-read")]
-    private static object LookRead(string args)
-    {
-        var manager = GarageLookManager.Instance ?? throw new InvalidOperationException("no GarageLookManager");
-        var section = manager.GetSections()[int.Parse((args ?? "0").Trim())];
-        var renderer = section.RendererData != null && section.RendererData.Length > 0 ? section.RendererData[0] : null;
-        return new { selected = section.SelectedMaterialIndex, material = renderer?.Renderer == null ? null : MaterialName(renderer.Renderer, renderer.MaterialNo), replaced = renderer != null && renderer.Replaced };
-    }
-
     [HarnessCommand("stand-new")]
     private static object StandNew(string args)
     {

@@ -55,7 +55,18 @@ time. In a session, **F9** shows the players with their ping, your Steam friends
 - Orders and jobs, test drive, test path and dyno, and the workshop machines and car tools.
 - Trips to the junkyard, barns, auction and car salon; bought cars go to the shared parking. In the car salon you pick
   the version, rims, tyres and paint as in the game, and the money is taken once from the shared money.
+- The garage's look (walls, floors, machines, gates at the garage-look computer) is the same for everyone and kept by
+  the server; one player customises at a time.
 - **F7** reloads the garage from the server if something looks wrong.
+
+## Please try: the garage look
+
+1. **Customise the garage** at the garage-look computer and close the window. Your friends should see the new walls
+   and floors a moment later. Report: anything that looked different for them.
+2. **Click the computer while a friend customises.** You should see "<name> is customising the garage." and nothing
+   opens. Report: a black screen or a window that opened anyway.
+3. **Reset a wall to its default** and close; then let a friend open and close the window without changing anything.
+   The wall should stay default for everyone.
 
 ## Please try: parts in use (locks)
 
