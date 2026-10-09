@@ -2,6 +2,19 @@
 
 Newest first. One entry per work session.
 
+## 2026-10-09 (20:30–21:30) — rows 29, 26 and 30 merged; playtest build dev.1156
+
+- `main` = `f4be6e4`. Seated avatars (row 29) and the car salon (row 26) merged through `integrate/seated-salon`
+  (`20261009-203236_regression.json`: smoke, `seat-avatars`, `salon-buy`, `seat-engine`, `ride-along`, `purchases`;
+  `seat-avatars` FLAKY once in the batch: B's car was rebuilt late after the move and A left the seat 3 s after the
+  engine started; passed alone and in the next batch). Job achievements for every contributor (row 30) merged
+  (`f4be6e4`; proof `job-stats` fails `20261009-010925_L1`, passes `20261009-203134_L1`;
+  `20261009-205357_regression.json`: smoke, jobs area, `job-stats`, `seat-avatars`, `salon-buy`).
+- Playtest build `0.6.0-dev.1156` on the Desktop with checklist items for the menu fix, seated players, the salon,
+  achievements and the order clock.
+- In progress: `fix/place-same` (lane 2: the `locks-select-2` batch failure, then a 15-min contention soak); row 28
+  garage look (lane 1).
+
 ## 2026-10-09 (01:50) — paused for the night
 
 - Paused at the user's request; agents finish their current run, push and stop.
