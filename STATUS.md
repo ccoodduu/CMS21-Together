@@ -27,6 +27,19 @@ Newest first. One entry per work session.
   `-ContentionKinds place-same`; remove the `place-same-base` worktree afterwards.
 - To resume: read the agents' last reports (branch commit messages), run smoke on each branch with main merged in,
   merge; then row 30, the next soak with contention (row 19 task 10.5 still open), and rows 28, 25, 27a in that order.
+## 2026-10-09 (00:45–02:00) — row 26 shared salon built (`feat/shared-salon`, lane 1)
+
+- Harness `salon-buy` drives the car salon as a player does (configurator, version window, rims, summary tab,
+  location window); `travel Salon` loads `Auto_salon`. The purchase path needed no change: `GameScript.BuyCar` gets
+  the configurator's car, and after an unpark both players have the chosen version and rim.
+- Guard: `Window CarVersion` allowed ("Car version (car salon)", it never passes `WindowManager.Show`, checked with the
+  guard's decisions); `Scene`/`Window Showroom` are "The showroom (main menu only)".
+- Proof `salon-buy`: fails on the old guard rules (`20261009-005105_L1_salon-buy`, guard step; the purchase steps of
+  that run failed on a harness bug fixed since) and passes (`20261009-011548_L1_salon-buy`): configured purchase paid
+  once and parked once for both, server `NoMoney` refusal answered, local refusal sends nothing.
+- Smoke plus `salon-buy` (with the guard-decision check, `20261009-015035_L1_salon-buy`), `purchases`, `locks-select`,
+  `locks-select-2` and `server-saves`: all passed (`20261009-011825_regression.json`).
+uns\*_regression.json` on the branch's worktree.
 
 ## 2026-10-08/09 (23:15–00:45) — order clock, menu click fix, rows 25–31 drafted and reviewed
 

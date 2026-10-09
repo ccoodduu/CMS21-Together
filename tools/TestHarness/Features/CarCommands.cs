@@ -142,7 +142,7 @@ public static class CarCommands
     private static object CarLoaded(string args)
     {
         var carLoader = Loader(args);
-        return new Dictionary<string, object> { ["car"] = carLoader.carToLoad, ["loaded"] = !string.IsNullOrEmpty(carLoader.carToLoad) && carLoader.IsCarLoaded() };
+        return new Dictionary<string, object> { ["car"] = carLoader.carToLoad, ["loaded"] = !string.IsNullOrEmpty(carLoader.carToLoad) && carLoader.IsCarLoaded(), ["configVersion"] = carLoader.ConfigVersion };
     }
 
     [HarnessCommand("car-ready")]

@@ -50,8 +50,9 @@ While you are connected, the game blocks these with "... is not supported in mul
 cannot drift apart:
 
 - the race track, the other tracks and the photo location;
-- the tuning window, car versions, bonus (visual tuning) parts and building a new engine on the engine stand;
-- the showroom and the separate Parking scene (the garage parking works);
+- the tuning window, bonus (visual tuning) parts and building a new engine on the engine stand;
+- the separate Parking scene (the garage parking works); the showroom, the main menu's car viewer, is single-player
+  only;
 - garage customization, the tutorial, and saving or loading from the game's menus (the server saves the session).
 
 Also not yet:
@@ -59,9 +60,9 @@ Also not yet:
 - Steam achievements and stats for a finished job go only to the player who hands it back.
 - Gameplay mods are refused by the server; visual mods are fine.
 
-Planned: the race track, the tuning window, bonus parts, building new engines, the showroom, garage customization
-and achievements for everyone who worked on a job. The DLC tracks, the photo location, the tutorial and saving or
-loading stay blocked.
+Planned: the race track, the tuning window, bonus parts, building new engines, garage customization and achievements
+for everyone who worked on a job. The DLC tracks, the photo location, the tutorial and saving or loading stay
+blocked.
 
 ## Get started
 

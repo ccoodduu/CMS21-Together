@@ -231,6 +231,7 @@ public static class JoinCommands
             ["gameDifficulty"] = GameDifficulty(),
             ["pings"] = ClientData.PlayerPings.ToDictionary(p => p.Key.ToString(), p => (object)p.Value),
             ["toasts"] = ModNotify.History.Select(t => t.Text).ToList(),
+            ["messages"] = ModNotify.Messages.Select(m => $"{m.Title}: {m.Text}").ToList(),
             ["panel"] = MultiplayerMenuModel.Panel.ToString().ToLowerInvariant(),
             ["host"] = HostStatus(),
             ["sessionPanel"] = MultiplayerMenuModel.SessionPanelOpen,

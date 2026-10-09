@@ -55,6 +55,7 @@ public static class GuardCommands
         ["blocks"] = FeatureGuard.Blocks.Select(block => block.ToString()).ToList(),
         ["keys"] = FeatureGuard.Blocks.Select(block => block.Key).Distinct().ToList(),
         ["lastMessage"] = GuardNotice.LastText,
+        ["decided"] = FeatureGuard.RecentDecisions.Keys.OrderBy(k => k, StringComparer.Ordinal).ToList(),
     };
 
     [HarnessCommand("guard-rules")]
