@@ -95,6 +95,7 @@ namespace CMS21_Together_Server.Network.Handlers
 			InventoryChanges.Apply(change.InventoryDelta, (int)clientId);
 
 			CarLocks.ReleaseCommitted((int)clientId, entry, change.CarLoaderID);
+			Data.Jobs.JobContributors.OnCarChange(change.CarLoaderID, (int)clientId, OnlyExamines(change) ? "examine" : "part change");
 			Server.SendToClient(result, (int)clientId);
 			Server.SendToClients(relay, (int)clientId);
 			Logger.Info($"[Cars] Change {change.TxId} from client {clientId} on loader {change.CarLoaderID}: revision {entry.Revision} ({change.BodyParts.Count} body, {change.SubParts.Count} mechanical, relayed {relay.BodyParts.Count + relay.SubParts.Count}, returned {result.BodyParts.Count + result.SubParts.Count}{normalised.Summary}, inventory +{change.InventoryDelta.AddedItems.Count + change.InventoryDelta.AddedGroups.Count} -{change.InventoryDelta.RemovedItemUids.Count + change.InventoryDelta.RemovedGroupUids.Count}).");

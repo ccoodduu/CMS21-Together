@@ -116,6 +116,7 @@ with its default when the server starts. Changes take effect at the next start.
 | `travel_fees` | `True` | Charge the travel fee for trips to the junkyard, barns and the auction, for every player |
 | `max_car_sale_price` | `5000000` | Highest price a player may sell a car for |
 | `max_car_purchase_price` | `5000000` | Highest price a player may pay for a car |
+| `job_stats_to` | `contributors` | Who gets the Steam stats and achievements of a finished job besides its finisher: `contributors` (players who worked on it), `garage` (everyone in the garage) or `finisher` (nobody else). The server command `jobs stats-to <rule>` changes it until the next start |
 | `log_level` | `1` | `1` = detailed log (helps with bug reports), `0` = less |
 
 Command-line arguments override the file for one run: `--password <pw>`, `--admin-key <key>`,

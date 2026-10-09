@@ -57,15 +57,12 @@ cannot drift apart:
 
 Also not yet:
 
-- Steam achievements and stats for a finished job go only to the player who hands it back.
 - Gameplay mods are refused by the server; visual mods are fine.
-
 - A texture pack for the garage is shared by its id only: a player who does not have it installed sees the default
   garage textures.
 
-Planned: the race track, the tuning window, bonus parts, building new engines and achievements for everyone who
-worked on a job. The DLC tracks, the photo location, the tutorial and saving or loading stay
-blocked.
+Planned: the race track, the tuning window, bonus parts and building new engines. The DLC tracks, the photo
+location, the tutorial and saving or loading stay blocked.
 
 ## Get started
 
@@ -94,6 +91,10 @@ the game, click **Multiplayer** in the main menu.
 - **Garage look:** the walls, floors, machines and gates you pick at the garage-look computer, and the texture pack,
   are the same for everyone and kept by the server. One player customises at a time ("<name> is customising the
   garage."); the others see the new look when that player closes the window.
+- **Job achievements:** when a job is finished, the Steam stats and achievements for it (finished orders, the XP and
+  money bonus, the last story mission) count for every connected player who worked on it: who took the order, who
+  changed, examined or locked a part of its car, and who finished it. The host can give them to everyone in the garage
+  instead, or only to the finisher (`job_stats_to` in `server_config.ini`).
 - **Shopping list:** the group shares one shopping list. What anyone adds, removes or clears shows up for everyone,
   and the server keeps it with the session.
 - **Test drive together:** players who are on the test track at the same time see each other's car drive (it
