@@ -48,6 +48,7 @@ public static class LockLifecycle
 
 	public static float ChooserIdleSeconds { get; set; } = 60f;
 	public static float BoltIdleSeconds { get; set; } = 300f;
+	public static float TuneIdleSeconds { get; set; } = 300f;
 
 	private static readonly Dictionary<int, TrackedLock> tracked = new Dictionary<int, TrackedLock>();
 
@@ -67,6 +68,8 @@ public static class LockLifecycle
 	}
 
 	public static TrackedLock Get(int lockId) => tracked.TryGetValue(lockId, out var t) ? t : null;
+
+	public static IEnumerable<TrackedLock> OfKind(CarLockKind kind) => tracked.Values.Where(t => t.Kind == kind).ToList();
 
 	public static TrackedLock ForPart(int loader, string key) =>
 		tracked.Values.FirstOrDefault(t => t.Loader == loader && CarLockMirror.Get(t.LockId)?.X.Contains(key) == true);
@@ -177,6 +180,9 @@ public static class LockLifecycle
 				case CarLockKind.Crane:
 				case CarLockKind.BodyPart:
 					if (now - t.StartedAt > CarLockSeconds && !PartChangeTracker.IsPending(t.Loader)) Release(t, "no commit in time");
+					break;
+				case CarLockKind.Tune:
+					if (now - t.LastProgressAt > TuneIdleSeconds) LockTuneHooks.CloseIdle(t);
 					break;
 			}
 		}

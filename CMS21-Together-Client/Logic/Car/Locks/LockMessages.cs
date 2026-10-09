@@ -24,11 +24,12 @@ public static class LockMessages
 		string name = Name(conflict.Holder);
 		if (conflict.Refusal == CarLockRefusal.Away && CarAwaySync.LockedForMe(loader, out _, out var kind))
 			return $"{name} has this car {CarAwaySync.Activity(kind)}.";
-		return ForKey(loader, name, conflict.Key, targetKey);
+		return ForKey(loader, name, conflict.Key, targetKey, conflict.Kind);
 	}
 
-	public static string ForKey(int loader, string name, string key, string targetKey)
+	public static string ForKey(int loader, string name, string key, string targetKey, CarLockKind? holderKind = null)
 	{
+		if (holderKind == CarLockKind.Tune || key == LockKeys.Tune) return Tuning(name);
 		if (targetKey == LockKeys.Car) return $"{name} is working on this car.";
 		if (key == null || key == targetKey) return $"{name} is working on this part.";
 		if (key == LockKeys.Car) return $"{name} is working on this car.";
@@ -42,6 +43,8 @@ public static class LockMessages
 	public static string Moving(int loader, int holder) => holder >= 0 ? $"{Name(holder)} is moving this car." : "This car is moving.";
 
 	public static string Busy(int holder) => $"{Name(holder)} is working on this car.";
+
+	public static string Tuning(string name) => $"{name} is tuning this car.";
 
 	public static string ItemTag(int holder) => $"{Name(holder)} is mounting this";
 

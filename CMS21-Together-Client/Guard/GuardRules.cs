@@ -85,7 +85,7 @@ public static class GuardRules
 		Allow(GuardKind.Window, "ExamineReport", "row 3", "The examination report"),
 		Allow(GuardKind.Window, "WheelsAlignment", "row 4", "Wheel alignment"),
 		Allow(GuardKind.Window, "LampAlignment", "row 4", "Headlamp alignment"),
-		Planned(GuardKind.Window, "Tune", "row 4", "Tuning"),
+		Allow(GuardKind.Window, "Tune", "row 25", "Tuning"),
 		Allow(GuardKind.Window, "Tinting", "row 4", "Window tinting"),
 		Allow(GuardKind.Window, "CarVersion", "row 26", "Car version (car salon)"),
 		Allow(GuardKind.Window, "WheelBalance", "row 5a", "The wheel balancer"),

@@ -2,6 +2,19 @@
 
 Newest first. One entry per work session.
 
+## 2026-10-09 (22:00–23:00) — row 25 part 1, tuning at the dyno (`feat/tuning-window`, lane 1)
+
+- `GearboxTab.ApplyAction` marks the car's tuning dirty; one tuner per car through the new lock kind `Tune` (keys
+  `tune`, the gearbox and every part with a `PartModule`), taken in a `TuneWindow.Show` prefix and released on `Hide`
+  or after 5 min without an apply ("<name> is tuning this car.", from the new `CarLockResultPacket.HolderKind`);
+  `ItemConverter` carries `TuningData`/`GearboxData`; a part change that mounts a mechanical part marks tuning dirty
+  (the game's `DoMount` copies an item's tuning without `PartModule.Tune`). Guard: `Window Tune` allowed.
+- Spike 1.2 (`20261009-220832_L1_tune-probe`, `20261009-221010_L1_tune-probe`): Bolt Atlanta racing parts
+  `t_v8_gearbox_stary`, `t_v8_gaznik_1` (carburettor, no ECU); the gate re-invokes `WindowManager.Show`; D6 holds.
+- Proof `car-tuning` fails on the old code (`20261009-222538_L1`, B's `t:gearbox` unchanged after 2.2 s) and passes
+  (`20261009-222319_L1`). Smoke plus touched scenarios pass (`20261009-222727_regression.json`; `guard` moved its
+  blocked window example from `Tune` to `RevertBackup`, `20261009-224552_L1`); `--check-locks`, `--check-merges` pass.
+
 ## 2026-10-09 (21:00–22:00) — row 28 shared garage look built (`feat/shared-garage-look`, lane 1)
 
 - The server keeps the garage look (`ModGarageLook` in the `garage` state, section v2 with migration) and broadcasts

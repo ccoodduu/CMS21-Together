@@ -57,6 +57,8 @@ time. In a session, **F9** shows the players with their ping, your Steam friends
   the version, rims, tyres and paint as in the game, and the money is taken once from the shared money.
 - The garage's look (walls, floors, machines, gates at the garage-look computer) is the same for everyone and kept by
   the server; one player customises at a time.
+- Tuning at the dyno's tuning computer (gearbox, ECU, carburettor): one player tunes a car at a time, and a tuned part
+  you take off keeps its tuning in the shared inventory and on the next car it goes on.
 - **F7** reloads the garage from the server if something looks wrong.
 
 ## Please try: the garage look
@@ -67,6 +69,14 @@ time. In a session, **F9** shows the players with their ping, your Steam friends
    opens. Report: a black screen or a window that opened anyway.
 3. **Reset a wall to its default** and close; then let a friend open and close the window without changing anything.
    The wall should stay default for everyone.
+
+## Please try: tuning
+
+1. **Tune a car on the dyno** with racing parts (gearbox, ECU or carburettor) and press apply in each tab. Your
+   friends should get the new values a moment later; run the dyno to compare. Report: values that differ.
+2. **Click the tuning computer while a friend tunes the same car.** You should see "<name> is tuning this car." and
+   nothing opens. Report: a window that opened anyway or a stuck screen.
+3. **Take off a tuned ECU or carburettor** and fit it to another car of the same engine. The tuning should come along.
 
 ## Please try: parts in use (locks)
 
@@ -89,7 +99,7 @@ Two or more players on one car. For each item, report what you saw, and if it we
 
 ## Not yet
 
-Driving around, the race tracks, tuning, bonus parts, building a new engine and the separate Parking scene are not
+Driving around, the race tracks, bonus parts, building a new engine and the separate Parking scene are not
 shared yet. The showroom (the car viewer in the main menu) is single-player only. While connected, the game refuses
 them with "... is not supported in multiplayer yet", so the garages cannot drift apart. The junkyard, barns and
 auction are each player's own (not shared).

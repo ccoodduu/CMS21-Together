@@ -13,12 +13,16 @@ unblocks `Window Tune`).
       `EngineStandSync.Put` does through `Step(...)`; check that `carLoader.GetEngineName()` is an id that
       `GetEnginesToCreate` lists (the stall may be a bad id). If the build can be driven, 4.4's build steps run in the
       harness; otherwise they are hand checks in docs/playtest.md. Either way 4.2's `ToolsCheck` is written.
-- [ ] 1.2 Tune window: open it at the dyno with a car with a tuned gearbox and ECU (`give-item` racing parts, mount,
+- [x] 1.2 Tune window: open it at the dyno with a car with a tuned gearbox and ECU (`give-item` racing parts, mount,
       `car-move` to the dyno, `tune-open`); trace `TuneWindow.Show/Hide`, `GearboxTab.ApplyAction`, `PartModule.Tune`;
       confirm the gate can re-invoke `Show` with the same args. Name the racing gearbox item id that makes
       `IsTuned()` true for the test car (`ApplyAction` silently does nothing otherwise). Unmount the tuned ECU and
       gearbox and check that the game fills `Item.TuningData`/`Item.GearboxData` (D6). Done when D2 and D6 are confirmed
-      or changed.
+      or changed. **Done** (`20261009-220832_L1_tune-probe`, `20261009-221010_L1_tune-probe`; spike doc section 1):
+      the gate re-invokes `WindowManager.Show(Tune, args)` and the window opens on the same car; Bolt Atlanta racing
+      parts `t_v8_gearbox_stary` and `t_v8_gaznik_1` (the car has a carburettor, no ECU); D6 holds (the taken-off
+      items carry `GearboxData` and `tuningData`). Addition: `DoMount` copies an item's tuning into the part without
+      `PartModule.Tune`, so a part change that mounts a mechanical part also marks `Tuning` dirty.
 - [ ] 1.3 Bonus parts: buy a bonus part (`give-item`), fit it through `SelectPartToMount` and remove it through `ClickIO`
       with the harness; log `TakeOffBonusPart`, inventory add/remove and sounds. Confirm the remove path has no side
       effect before `TakeOffBonusPart` (D4) and that slot `UID`s match on two clients for three cars with bonus slots.
@@ -27,12 +31,12 @@ unblocks `Window Tune`).
 
 ## 2. Tuning
 
-- [ ] 2.1 `GearboxTab.ApplyAction` postfix (D1); harness `cardetails-gearbox` and `cardetails-ui gearbox`.
-- [ ] 2.2 `CarLockKind.Tune` (appended), `LockKeys.Tune` (`IsWellFormed`, `CarLocks.Exists`), server rules, `TuneWindow`
+- [x] 2.1 `GearboxTab.ApplyAction` postfix (D1); harness `cardetails-gearbox` and `cardetails-ui gearbox`.
+- [x] 2.2 `CarLockKind.Tune` (appended), `LockKeys.Tune` (`IsWellFormed`, `CarLocks.Exists`), server rules, `TuneWindow`
       gate and release, `TuneIdleSeconds` cap, `CarLockResultPacket.HolderKind` and `LockMessages` (D2); harness
       `tune-open <loader>`, `tune-close`.
-- [ ] 2.3 `ItemConverter` tuning fields (D6), unless 1.2 drops them.
-- [ ] 2.4 Guard: `Window Tune` allowed (owner row 25).
+- [x] 2.3 `ItemConverter` tuning fields (D6), unless 1.2 drops them.
+- [x] 2.4 Guard: `Window Tune` allowed (owner row 25).
 - [ ] 2.5 Scenario `car-tuning` (two clients): A puts a car with the tuned gearbox from 1.2 and a tuned ECU on the dyno,
       `tune-open`; B `tune-open` on the same car → refused with "A is tuning this car." and B's dump unchanged; A applies
       gearbox ratios alone (`cardetails-ui gearbox`, the real `ApplyAction`) and waits 2 s → B's `t:gearbox` equal,
@@ -40,7 +44,11 @@ unblocks `Window Tune`).
       `tune-open` succeeds; A takes off the tuned ECU and B fits it to another car of the same engine → the tuning is
       kept (D6); B joins again → same entries after `syncAcked`; server restart → same entries. Old-code failure: with
       `guard-allow Window:Tune`, B's `t:gearbox` is unchanged after 2 s. `Run-All -Changed` (areas `cars`, `locks`,
-      smoke).
+      smoke). **Done** with the carburettor in place of the ECU, plus the idle cap (`tune-idle 5`): fails on the old
+      code `20261009-222538_L1_car-tuning` (B's `t:gearbox` unchanged after 2.2 s), passes `20261009-222319_L1`. Smoke plus `car-details`, `car-mount-race`, `locks-basic`, `locks-car`, `locks-race`,
+      `economy-trades`, `diagnostics` pass (`20261009-222727_regression.json`; `guard` failed there because its blocked
+      window example was `Window:Tune`, moved to `Window:RevertBackup`, passes `20261009-224552_L1`); `--check-locks`
+      (new Tune cases) and `--check-merges` pass.
 
 ## 3. Bonus parts
 

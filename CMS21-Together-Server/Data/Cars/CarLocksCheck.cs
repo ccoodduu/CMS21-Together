@@ -73,6 +73,17 @@ namespace CMS21_Together_Server.Data.Cars
 			Check("a commit that flips only part of X keeps the lock", group != null && CarLocks.All.Count() == 1);
 			CarLocks.ReleaseOwner(A, "check");
 
+			var tune = TryGrant(A, Request(X(LockKeys.Tune, "s:3.22"), kind: CarLockKind.Tune));
+			Check("a Tune lock on the synthetic tune key and a part is granted", tune.Refused == null);
+			var secondTuner = Ask(B, X(LockKeys.Tune), kind: CarLockKind.Tune);
+			Expect("a second tuner is refused on the tune key", secondTuner, CarLockRefusal.Held, LockKeys.Tune);
+			Check("the refusal names the holder's lock kind Tune", secondTuner?.HolderKind == CarLockKind.Tune);
+			var under = Ask(B, X("s:3.22.4"));
+			Expect("unmounting a part under the tuned part is refused", under, CarLockRefusal.Held, "s:3.22");
+			Check("that refusal names the kind Tune too", under?.HolderKind == CarLockKind.Tune);
+			Check("the tuner's lock holds the car shared, so park and delete are refused", CarLocks.HeldByOther(Loader, B));
+			CarLocks.ReleaseOwner(A, "check");
+
 			CarLocks.Scope = LockScope.Part;
 			Grant(A, X("s:3.22.4"));
 			Expect("with lock_scope = part, the parent is granted", Ask(B, X("s:3.22")), CarLockRefusal.None, null);
