@@ -42,6 +42,10 @@ Report problems with both players' `MelonLoader\Latest.log` and the server's `Lo
    the test" spot for both. **Hand check:** the real exit from the path and its report (the harness cannot finish it).
 3. Dyno: measure a car; the other player sees the measured values. **Hand check:** a tuned car on the dyno (values
    before, during, after measure and after cancel) and a job car on the dyno.
+   **Hand check: tuning at the dyno** with a visible game: open the tuning computer with racing parts, move the
+   gearbox sliders and the ECU bars with the mouse and apply each tab; the other player sees the values (scenario
+   `car-tuning` drives the tabs' apply actions headless). A second player clicking the computer is told "<name> is
+   tuning this car."; leaving the window open five minutes closes it.
 4. Sit in a car and start the engine: the other player sees you seated and hears the engine.
 
 ## Travel and sessions
@@ -51,6 +55,10 @@ Report problems with both players' `MelonLoader\Latest.log` and the server's `Lo
    money leaves (the game takes the money before it asks where the car goes). Note your money before and after.
 2. Leave and rejoin; stop the server with `/stop` and start it again: everything comes back.
 3. If something looks out of sync, press F7: the garage reloads from the server.
+4. Car salon (covered by the scenario `salon-buy`): both travel to the car salon and open the car list at the same
+   time. Each player configures a car; each sees only their own configurator car (the cars stand at the same spot),
+   which is expected. One buys a car in another version with other rims: the money drops once for both, and the car is
+   in the shared parking for both with that version and rims.
 
 ## Not shared yet
 

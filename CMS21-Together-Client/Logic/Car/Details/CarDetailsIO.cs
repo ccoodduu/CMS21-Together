@@ -110,7 +110,7 @@ public static class CarDetailsIO
 		return tuning;
 	}
 
-	private static Dictionary<string, PartModule> Modules(CarLoader carLoader)
+	public static Dictionary<string, PartModule> Modules(CarLoader carLoader)
 	{
 		var result = new Dictionary<string, PartModule>();
 		int loader = CarLoaderPlaces.Get()?.GetCarLoaderId(carLoader) ?? -1;

@@ -34,6 +34,7 @@ public static class ClientData
 		Logic.Car.Placement.CarPlacementSync.Reset();
 		Logic.Car.CarSpawnManager.Reset();
 		Logic.Jobs.JobsSync.Reset();
+		Logic.Jobs.JobStats.Reset();
 		Logic.ShopList.ShopListSync.Reset();
 		Logic.Car.Details.CarDetailsSync.Reset();
 		PartChangeTracker.Reset();
@@ -53,6 +54,7 @@ public static class ClientData
 		Logic.Economy.EconomyRequests.Reset();
 		Logic.Economy.CarPurchaseSync.Reset();
 		Logic.Tools.ToolSync.Reset();
+		Logic.Garage.GarageLookSync.Reset();
 		Logic.Outdoor.OutdoorSession.Reset();
 		Logic.Outdoor.CatalogReporter.Reset();
 		Logic.Visuals.VisualScope.Reset();

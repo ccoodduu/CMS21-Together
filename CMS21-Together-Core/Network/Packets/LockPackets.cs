@@ -15,7 +15,8 @@ namespace CMS21_Together_Core.Network.Packets
         OilDrain,
         Crane,
         Lift,
-        Move
+        Move,
+        Tune
     }
 
     public enum CarLockRefusal : byte
@@ -40,6 +41,7 @@ namespace CMS21_Together_Core.Network.Packets
     {
         public const string Car = "car";
         public const string Engine = "engine";
+        public const string Tune = "tune";
 
         public static string Fluid(string fluidType, int id) => $"f:{fluidType}.{id}";
 
@@ -57,7 +59,7 @@ namespace CMS21_Together_Core.Network.Packets
 
         public static bool IsWellFormed(string key)
         {
-            if (key == Car || key == Engine) return true;
+            if (key == Car || key == Engine || key == Tune) return true;
             if (IsBody(key)) return int.TryParse(key.Substring(2), out int index) && index >= 0;
             if (IsSub(key)) return Segments(key) != null;
             if (!IsFluid(key)) return false;
@@ -121,6 +123,7 @@ namespace CMS21_Together_Core.Network.Packets
         public CarLockRefusal Refusal;
         public int HolderPlayerId = -1;
         public string ConflictKey;
+        [System.Runtime.Serialization.OptionalField] public CarLockKind HolderKind;
     }
 
     [Serializable]

@@ -29,6 +29,7 @@ public class ActiveJobEntry
 	public int CarLoaderId = -1;
 	public float OriginalSeconds;
 	[OptionalField] public ModJob OrderJob;
+	[OptionalField] public List<string> Contributors = new List<string>();
 }
 
 [Serializable]

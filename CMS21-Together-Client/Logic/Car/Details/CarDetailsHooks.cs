@@ -25,10 +25,19 @@ public static class CarDetailsHooks
 	private static void AfterPaint(CMS.Managers.PaintshopManager __instance) =>
 		CarDetailsSync.MarkDirty(__instance.carLoader, CarDetailSection.Paint | CarDetailSection.BodyCosmetics);
 
+	[HarmonyPatch(typeof(CMS.UI.Logic.Tune.GearboxTab), nameof(CMS.UI.Logic.Tune.GearboxTab.ApplyAction))]
+	[HarmonyPostfix]
+	private static void AfterGearboxApply(CMS.UI.Logic.Tune.GearboxTab __instance)
+	{
+		Locks.LockTuneHooks.Touch();
+		CarDetailsSync.MarkDirty(__instance.carLoader, CarDetailSection.Tuning);
+	}
+
 	[HarmonyPatch(typeof(CMS.PartModules.PartModule), nameof(CMS.PartModules.PartModule.Tune))]
 	[HarmonyPostfix]
 	private static void AfterTune(CMS.PartModules.PartModule __instance)
 	{
+		Locks.LockTuneHooks.Touch();
 		var places = CarLoaderPlaces.Get();
 		for (int i = 0; places != null && i < places.carLoaders.Length; i++)
 		{

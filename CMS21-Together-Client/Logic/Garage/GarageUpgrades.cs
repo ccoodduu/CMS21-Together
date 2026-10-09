@@ -157,6 +157,7 @@ public static class GarageUpgrades
 
 		IsSyncing = false;
 		Log.Success("Garage and Skills synchronized successfully!");
+		GarageLookSync.Receive(packet.Look);
 		ClientData.IsGarageStateSynced = true;
 		SyncTracker.Applied(SyncOrder.GarageKey, snapshotId);
 	}

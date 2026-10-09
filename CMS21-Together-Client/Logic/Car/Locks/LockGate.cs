@@ -134,7 +134,8 @@ public static class LockGate
 			case LockOutcome.Denied:
 				string text = answer.Refusal == CarLockRefusal.Stale || answer.Refusal == CarLockRefusal.NotReady
 					? LockMessages.Loading
-					: LockMessages.ForKey(action.Set.Loader, LockMessages.Name(answer.Holder), answer.ConflictKey, action.TargetKey);
+					: LockMessages.ForKey(action.Set.Loader, LockMessages.Name(answer.Holder), answer.ConflictKey, action.TargetKey,
+						answer.Refusal == CarLockRefusal.Held ? answer.HolderKind : (CarLockKind?)null);
 				PartClaims.LastBlocked = action.TargetKey;
 				LockMessages.Refuse(text);
 				Report(action, new GateReport { Result = "denied", Holder = answer.Holder, ConflictKey = answer.ConflictKey, WaitedMs = answer.WaitedMs });

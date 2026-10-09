@@ -18,6 +18,18 @@ ROADMAP rows 25–30 (user wishes of 2026-10-08). Static decompile (setup in `na
   `gearRatio` array when the gearbox part `IsTuned()`; no hook today.
 - Runtime: a stock Bolt Atlanta has a `GearboxHandle` under `engine_v8_stary` with an empty `gearRatio` and
   `finalDriveRatio = 0`.
+- Row 25 spike 1.2 (`20261009-220832_L1_tune-probe`, `20261009-221010_L1_tune-probe`, headless): a racing part is the
+  stock part with a `tunedID` from the game's tuning table (`GameInventory.tuningArray` rows `t_<id>|<id>`); for the
+  Bolt Atlanta `t_v8_gearbox_stary` (gearbox `s:13.73`) and `t_v8_gaznik_1` (carburettor `s:13.28`; the car has no
+  ECU). `PartScript.TunePart(tunedId)` makes `IsTuned()` true. The `#dynoTune` click through `GameScript.ClickIO`
+  opens the window on the car at the dyno (mode `UI`, gearbox tab first, `GearboxTab.carLoader` set); the gearbox tab
+  is `hasGearbox` only with the racing gearbox. `GearboxTab.ApplyAction` after a final-drive slider change writes
+  final 3.7 and five ratios; B's copy stayed unchanged (no hook), and the carburettor tab's `ApplyAction` then carried
+  `t:gearbox` along with the carburettor entry. Taking off the tuned parts (`FastUnmount`, `PartScript.Hide`) gives
+  items `t_v8_gearbox_stary` with `GearboxData` (final 3.7, the ratios) and `t_v8_gaznik_1` with `tuningData`
+  (`IsTuned`, values `2,0,-1`): D6 holds. `PartScript.DoMount` copies an item's `tuningData` into the part's
+  `EcuModule`/`CarbModule` (`CopyDataFrom`) and its `GearboxData` into the `GearboxHandle`, without `PartModule.Tune`,
+  so the fit needs its own commit point (a mount in a part change marks `Tuning` dirty).
 
 ## 2. Bonus parts
 
@@ -83,7 +95,18 @@ ROADMAP rows 25–30 (user wishes of 2026-10-08). Static decompile (setup in `na
   materials each, all `SelectedMaterialIndex = -1` in a session profile; no texture packs installed.
 - Runtime: `SetMaterialIndexForSection(2, 3)` then `UpdateMaterials(2, false)` throws `IndexOutOfRangeException`
   (with and without the cached material list, which held 5 entries); the index is stored, the renderer is flagged
-  replaced, the material does not change. The window fills a per-section cache in `FillVariants` first.
+  replaced, the material does not change. Corrected by the row 28 review and spike: `UpdateMaterials(int, bool)`
+  ignores the section's index and passes the manager's `currentMaterialIndex`, which is 0 after `Init`, so the
+  renderer code read `ProjectMaterials[-1]`; `cachedMaterialsList` is only a scratch list for `GetSharedMaterials`.
+- Row 28 spike (`20261009-212145_L1_garage-look-probe`, headless): the per-section coroutine
+  `UpdateMaterials(RendererData, i, k + 1, restore)` sets a material and restores the default (`restore: true`), and
+  `SelectedMaterialIndex` follows (the per-renderer coroutine calls `SetMaterialIndexForSection`), so
+  `GarageLookManager.Save` writes the same indexes into the profile. Times: 2 sections 0.4 s, 1 restore 0.07 s,
+  all 41 sections to material 0 28.6 s (the 330-renderer decal section loads one material per renderer with
+  `Resources.LoadAsync`, at least one frame each), all 41 back to default 2.7 s. `SetActiveTexturePack` with an
+  unknown id and `SetDefaultTexturePack` throw nothing (no pack installed; the default pack's id is `Default`).
+  `ShowGarageCustomization` (`<ShowGarageCustomization>d__73`) disables input and fades out in its first step, so
+  the gate is a `GameScript.ClickIO` prefix for `#garageLook` (its only caller).
 
 ## 7. Steam stats
 

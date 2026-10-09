@@ -319,7 +319,7 @@ namespace CMS21_Together_Server.Data.Reconciliation
 				case DigestMappers.WarehouseKey:
 					return DigestMappers.Warehouse(state.InventoryState.WarehouseItems, state.InventoryState.WarehouseGroupItems);
 				case DigestMappers.GarageKey:
-					return DigestMappers.Garage(state.GarageState.GarageUpgradeLevels, state.GarageState.PlayerUpgradeLevels, state.WorldState.Barns);
+					return DigestMappers.Garage(state.GarageState.GarageUpgradeLevels, state.GarageState.PlayerUpgradeLevels, state.WorldState.Barns, state.GarageState.Look);
 				case DigestMappers.JobsKey:
 					return DigestMappers.Jobs(state.JobsState.Orders.Select(o => o.Job.id),
 						state.JobsState.ActiveJobs.Select(a => new KeyValuePair<int, int>(a.Job.id, a.CarLoaderId)));

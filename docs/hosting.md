@@ -109,6 +109,8 @@ with its default when the server starts. Changes take effect at the next start.
 | `password_steam` | `False` | Also ask Steam joins for the password |
 | `admin_key` | `""` | Players whose game sends this key are admins; empty = no admin |
 | `new_session_difficulty` | `Normal` | Difficulty of a new session when no save exists: `Easy`, `Normal` or `Expert` |
+| `new_session_money` | `4000` | Money of a new session when no save exists (a new profile in the game starts with 4000) |
+| `new_session_level` | `1` | Level of a new session when no save exists (a new profile in the game starts at level 1) |
 | `game_version` | `auto` | Game version every player must have. `auto` = the version of the first player who joins |
 | `mods_required` | empty | Gameplay mods every player must have, comma separated: `Name` or `Name@Version` |
 | `mods_ignored` | empty | Mods to allow even though the mod check thinks they change gameplay |
@@ -116,6 +118,7 @@ with its default when the server starts. Changes take effect at the next start.
 | `travel_fees` | `True` | Charge the travel fee for trips to the junkyard, barns and the auction, for every player |
 | `max_car_sale_price` | `5000000` | Highest price a player may sell a car for |
 | `max_car_purchase_price` | `5000000` | Highest price a player may pay for a car |
+| `job_stats_to` | `contributors` | Who gets the Steam stats and achievements of a finished job besides its finisher: `contributors` (players who worked on it), `garage` (everyone in the garage) or `finisher` (nobody else). The server command `jobs stats-to <rule>` changes it until the next start |
 | `log_level` | `1` | `1` = detailed log (helps with bug reports), `0` = less |
 
 Command-line arguments override the file for one run: `--password <pw>`, `--admin-key <key>`,

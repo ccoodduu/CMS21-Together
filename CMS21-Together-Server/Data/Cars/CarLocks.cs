@@ -36,6 +36,7 @@ namespace CMS21_Together_Server.Data.Cars
 			public CarLockRefusal Refusal;
 			public int Holder = -1;
 			public string Key;
+			public CarLockKind HolderKind;
 		}
 
 		private sealed class Holders
@@ -94,11 +95,13 @@ namespace CMS21_Together_Server.Data.Cars
 				Logger.Info($"[Locks] Request {request.RequestId} by client {clientId} on loader {request.CarLoaderID} ({request.Kind}) denied: {refused.Refusal} {refused.Key} held by {refused.Holder}.");
 				Server.SendToClient(new CarLockResultPacket
 				{
-					RequestId = request.RequestId, Granted = false, Refusal = refused.Refusal, HolderPlayerId = refused.Holder, ConflictKey = refused.Key
+					RequestId = request.RequestId, Granted = false, Refusal = refused.Refusal, HolderPlayerId = refused.Holder, ConflictKey = refused.Key,
+					HolderKind = refused.HolderKind
 				}, clientId);
 				return;
 			}
 			Count("granted");
+			foreach (int loader in granted.Select(g => g.Loader).Distinct()) Jobs.JobContributors.OnCarChange(loader, clientId, $"{request.Kind} lock");
 			Server.SendToClient(new CarLockResultPacket { RequestId = request.RequestId, LockId = granted[0].Id, Granted = true }, clientId);
 			foreach (var record in granted) Server.SendToClients(Update(record));
 			Audit();
@@ -219,22 +222,22 @@ namespace CMS21_Together_Server.Data.Cars
 				{
 					if (!keys.TryGetValue(key, out var holders)) continue;
 					int other = OtherOwner(holders.X, clientId, ownLockId);
-					if (other >= 0) return new Refused { Refusal = CarLockRefusal.Held, Holder = other, Key = key };
+					if (other >= 0) return new Refused { Refusal = CarLockRefusal.Held, Holder = other, Key = key, HolderKind = locks[holders.X].Kind };
 					int sharedBy = holders.S.FirstOrDefault(id => OtherOwner(id, clientId, ownLockId) >= 0);
-					if (sharedBy != 0) return new Refused { Refusal = CarLockRefusal.Held, Holder = locks[sharedBy].Owner, Key = locks[sharedBy].X.FirstOrDefault() ?? key };
+					if (sharedBy != 0) return new Refused { Refusal = CarLockRefusal.Held, Holder = locks[sharedBy].Owner, Key = locks[sharedBy].X.FirstOrDefault() ?? key, HolderKind = locks[sharedBy].Kind };
 				}
 				foreach (string key in s)
 				{
 					if (!keys.TryGetValue(key, out var holders)) continue;
 					int other = OtherOwner(holders.X, clientId, ownLockId);
-					if (other >= 0) return new Refused { Refusal = CarLockRefusal.Held, Holder = other, Key = key };
+					if (other >= 0) return new Refused { Refusal = CarLockRefusal.Held, Holder = other, Key = key, HolderKind = locks[holders.X].Kind };
 				}
 			}
 			foreach (long uid in wantedItems)
 			{
 				if (!items.TryGetValue(uid, out int lockId)) continue;
 				int other = OtherOwner(lockId, clientId, ownLockId);
-				if (other >= 0) return new Refused { Refusal = CarLockRefusal.Item, Holder = other, Key = $"i:{uid}" };
+				if (other >= 0) return new Refused { Refusal = CarLockRefusal.Item, Holder = other, Key = $"i:{uid}", HolderKind = locks[lockId].Kind };
 			}
 			return null;
 		}

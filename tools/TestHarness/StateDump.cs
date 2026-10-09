@@ -76,10 +76,15 @@ public static class StateDump
         dump["remoteCars"] = Features.DriveCommands.Dump();
         dump["ride"] = Features.RideCommands.Dump();
         dump["pings"] = Features.PingCommands.Dump();
+        dump["garageLook"] = Features.GarageLookCommands.Dump();
         dump["lifterButtonsEnabled"] = Features.ToolsCommands.LifterButtons();
         dump["players"] = PresenceManager.Roster.Where(p => p.Value.HasAvatar).ToDictionary(
             p => p.Key.ToString(),
-            p => (object)Vec(p.Value.Avatar.transform.position));
+            p =>
+            {
+                var position = p.Value.Avatar.transform.position;
+                return (object)new { x = Round(position.x), y = Round(position.y), z = Round(position.z), seatPose = Features.SeatPoseCommands.Describe(p.Value) };
+            });
         dump["outdoor"] = Features.OutdoorCommands.Dump();
         dump["local"] = Local();
         dump["session"] = Features.JoinCommands.Session();

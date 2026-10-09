@@ -2,6 +2,24 @@
 
 Newest first. One entry per work session.
 
+## 2026-10-09/10 (23:00–01:40) — playtest 3 (dev.1169/1170), findings
+
+- New session start values (`e159fff`): `new_session_money` 4000 and `new_session_level` 1 by default (the game's
+  `ProfileData.InitGlobalData`); test lanes keep 12500 / 8. Playtest builds `0.6.0-dev.1169`, then `dev.1170` from
+  `fix/mount-replay-target`. Save, logs and bug reports: `Desktop\CMS21-Together-playtest-20261009`.
+- **Mount into the wrong slot (fixed on `fix/mount-replay-target`, proof pending):** after the lock grant the item
+  gate replayed `GameScript.SelectPartToMount`, which mounts into the part under the mouse at that moment; when the
+  mouse moved during the round trip the item replaced a mounted part's identity (pads into the brake disc slot,
+  rollers into the engine block and head as `TunedID`). The save was repaired by hand (`13.2`, `13.6` of
+  `car_griffintyro` from backup `bak5`).
+- **Remote-mounted part shows the old part's wear until F7 (fixed, proof pending):** shader values are now updated
+  when `ShowMounted` shows the part.
+- **No buy popup or sound in the shop (fixed, proof pending):** the buy hook now shows `PopUp_NewItem` and plays `Popup`.
+- **Open:** tires missing and rims hollow on both players although cars, details and server agree (wheel shape is not
+  rebuilt after our wheel apply; mounting again and F7 do not help); a wheel ghost stuck in the air at the friend's
+  name tag (only on the receiving player); magenta wheels (only on the receiving player; car sold before a test);
+  no remote oil drain animation; the bonus parts (row 25 part 2) and `fix/place-same` branches are paused.
+
 ## 2026-10-09 (20:30–23:00) — fix/place-same: locks-select-2 checked; soak not run (paused for a playtest)
 
 - `fix/place-same` (lane 2) has `main` merged in (`5d79fe8`, main at `c4bd1c3`). Commits: `348159e` (move lock covers the
@@ -18,6 +36,45 @@ Newest first. One entry per work session.
   (keep the game's pie input from accepting while `lock-pie` holds it open) is not done.
 - Not done: the 15-min soak `Run-Soak.ps1 -Lane 2 -ContentionKinds place-same -Hours 0.25 -Deploy` (it waited for the
   user to be idle and was stopped for the playtest). Resume with that command; then merge.
+## 2026-10-09 (22:00–23:00) — row 25 part 1, tuning at the dyno (`feat/tuning-window`, lane 1)
+
+- `GearboxTab.ApplyAction` marks the car's tuning dirty; one tuner per car through the new lock kind `Tune` (keys
+  `tune`, the gearbox and every part with a `PartModule`), taken in a `TuneWindow.Show` prefix and released on `Hide`
+  or after 5 min without an apply ("<name> is tuning this car.", from the new `CarLockResultPacket.HolderKind`);
+  `ItemConverter` carries `TuningData`/`GearboxData`; a part change that mounts a mechanical part marks tuning dirty
+  (the game's `DoMount` copies an item's tuning without `PartModule.Tune`). Guard: `Window Tune` allowed.
+- Spike 1.2 (`20261009-220832_L1_tune-probe`, `20261009-221010_L1_tune-probe`): Bolt Atlanta racing parts
+  `t_v8_gearbox_stary`, `t_v8_gaznik_1` (carburettor, no ECU); the gate re-invokes `WindowManager.Show`; D6 holds.
+- Proof `car-tuning` fails on the old code (`20261009-222538_L1`, B's `t:gearbox` unchanged after 2.2 s) and passes
+  (`20261009-222319_L1`). Smoke plus touched scenarios pass (`20261009-222727_regression.json`; `guard` moved its
+  blocked window example from `Tune` to `RevertBackup`, `20261009-224552_L1`); `--check-locks`, `--check-merges` pass.
+
+## 2026-10-09 (21:00–22:00) — row 28 shared garage look built (`feat/shared-garage-look`, lane 1)
+
+- The server keeps the garage look (`ModGarageLook` in the `garage` state, section v2 with migration) and broadcasts
+  every change; one player customises at a time (claim at the `#garageLook` click, "<name> is customising the
+  garage."); every client applies the look per section with the game's own `UpdateMaterials` coroutine; texture
+  packs by id (not installed: default textures and one notice); the `garage` digest uses the last applied look.
+  Guard: `Window GarageCustomization` allowed. Server command `look`, self-check `--check-garage-look`.
+- Spike 1.1 (`20261009-212145_L1_garage-look-probe`): gate confirmed in `ClickIO` (the coroutine fades in its first
+  step), apply and restore confirmed; all 41 sections take 28.6 s (330-renderer decal section), so the `garage`
+  snapshot no longer waits for the apply (D4 changed; digest "not ready" while it runs).
+- Proof `garage-look` fails on the old code (`20261009-212616_L1`, worktree of `main` with only the harness and the
+  scenario) and passes (`20261009-213011_L1`). Smoke plus `garage-look`, `desync-autofix`, `resync-key` and
+  `server-saves` pass (`20261009-213313_regression.json`); `--check-garage-look`, `--check-merges`, `--check-digest`
+  pass.
+## 2026-10-09 (20:30–21:30) — rows 29, 26 and 30 merged; playtest build dev.1156
+
+- `main` = `f4be6e4`. Seated avatars (row 29) and the car salon (row 26) merged through `integrate/seated-salon`
+  (`20261009-203236_regression.json`: smoke, `seat-avatars`, `salon-buy`, `seat-engine`, `ride-along`, `purchases`;
+  `seat-avatars` FLAKY once in the batch: B's car was rebuilt late after the move and A left the seat 3 s after the
+  engine started; passed alone and in the next batch). Job achievements for every contributor (row 30) merged
+  (`f4be6e4`; proof `job-stats` fails `20261009-010925_L1`, passes `20261009-203134_L1`;
+  `20261009-205357_regression.json`: smoke, jobs area, `job-stats`, `seat-avatars`, `salon-buy`).
+- Playtest build `0.6.0-dev.1156` on the Desktop with checklist items for the menu fix, seated players, the salon,
+  achievements and the order clock.
+- In progress: `fix/place-same` (lane 2: the `locks-select-2` batch failure, then a 15-min contention soak); row 28
+  garage look (lane 1).
 
 ## 2026-10-09 (01:50) — paused for the night
 
@@ -44,6 +101,19 @@ Newest first. One entry per work session.
   `-ContentionKinds place-same`; remove the `place-same-base` worktree afterwards.
 - To resume: read the agents' last reports (branch commit messages), run smoke on each branch with main merged in,
   merge; then row 30, the next soak with contention (row 19 task 10.5 still open), and rows 28, 25, 27a in that order.
+## 2026-10-09 (00:45–02:00) — row 26 shared salon built (`feat/shared-salon`, lane 1)
+
+- Harness `salon-buy` drives the car salon as a player does (configurator, version window, rims, summary tab,
+  location window); `travel Salon` loads `Auto_salon`. The purchase path needed no change: `GameScript.BuyCar` gets
+  the configurator's car, and after an unpark both players have the chosen version and rim.
+- Guard: `Window CarVersion` allowed ("Car version (car salon)", it never passes `WindowManager.Show`, checked with the
+  guard's decisions); `Scene`/`Window Showroom` are "The showroom (main menu only)".
+- Proof `salon-buy`: fails on the old guard rules (`20261009-005105_L1_salon-buy`, guard step; the purchase steps of
+  that run failed on a harness bug fixed since) and passes (`20261009-011548_L1_salon-buy`): configured purchase paid
+  once and parked once for both, server `NoMoney` refusal answered, local refusal sends nothing.
+- Smoke plus `salon-buy` (with the guard-decision check, `20261009-015035_L1_salon-buy`), `purchases`, `locks-select`,
+  `locks-select-2` and `server-saves`: all passed (`20261009-011825_regression.json`).
+uns\*_regression.json` on the branch's worktree.
 
 ## 2026-10-08/09 (23:15–00:45) — order clock, menu click fix, rows 25–31 drafted and reviewed
 
@@ -62,6 +132,20 @@ Newest first. One entry per work session.
   first), 28 garage look, 29 seated avatars, 30 job achievements for every contributor, 31 faster remote cars (≈3 s
   without frame spikes). User decisions in QUESTIONS.md.
 - In progress: rows 29, 26, 30 (lane 1); `place-same` and examined-flag drift (lane 2).
+## 2026-10-09 (00:00–00:45) — row 29 seated avatars built (`feat/seated-avatars`, lane 1)
+
+- A seated player is shown crouched in the right seat of the car in the garage (`SeatPoses`, `SeatedAvatars` in
+  `OnLateUpdate`), follows the lift, stands up where the player stands (one more forced movement packet when the
+  seated mode ends), and is posed after a late join once the car is Ready; seated records no longer move the avatar;
+  name tags follow the posed head; ride-along uses the same helper.
+- Spike 1.1: the lift moves the seat handle before `OnLateUpdate` (1.678 m before, 0 m after over a full travel;
+  offset 0.000 m every frame); a player can sit in a car on a raised lift; `sit left` is the left handle on the Bolt
+  Atlanta. No RHD car can be spawned (all RHD models are DLC); left the RHD case to the hand check.
+- Proof `seat-avatars` fails on the old client (`20261009-000552_L1_seat-avatars`, 10 failures) and passes
+  (`20261009-002305_L1_seat-avatars`). Smoke plus `seat-engine` (now expects the seated avatar shown), `ride-along`,
+  `presence-latejoin`, `scenes`, `drive-latejoin`, `ping`: all pass (`guard` and `presence-latejoin` failed once in
+  the batch and passed alone, both known flakes); `server-saves` passed on a rerun (the parallel run timed out
+  starting its server).
 
 ## 2026-10-08 (22:00–23:15) — row 19 part 2 and seeded job cars merged; playtest build dev.1102
 

@@ -23,6 +23,7 @@ Everyone else joins it from the main menu or through Steam. Your own single-play
   is mounting, and locked move options in the pie of a car someone works on. Lifts, moving cars, the garage
   parking, the engine crane.
 - **Car details.** Fluids, wheels, tires and alignment, plates, paint, livery, window tint, mileage, dirt and lights.
+- **Tuning.** Gearbox, ECU and carburettor tuning at the dyno, one tuner per car.
 - **Jobs.** Orders and story missions come in for the whole group. Accept a job, work on the customer car together,
   hand it back: the payout and XP arrive once.
 - **The workshop.** Tire changer, wheel balancer, spring clamp, engine stand, brake lathe, battery charger, repair
@@ -50,18 +51,18 @@ While you are connected, the game blocks these with "... is not supported in mul
 cannot drift apart:
 
 - the race track, the other tracks and the photo location;
-- the tuning window, car versions, bonus (visual tuning) parts and building a new engine on the engine stand;
-- the showroom and the separate Parking scene (the garage parking works);
-- garage customization, the tutorial, and saving or loading from the game's menus (the server saves the session).
+- bonus (visual tuning) parts and building a new engine on the engine stand;
+- the separate Parking scene (the garage parking works); the showroom, the main menu's car viewer, is single-player
+  only;
+- the tutorial, and saving or loading from the game's menus (the server saves the session).
 
 Also not yet:
 
-- A player sitting in a car in the garage is hidden for the others (on the test track a passenger is shown seated).
-- Steam achievements and stats for a finished job go only to the player who hands it back.
 - Gameplay mods are refused by the server; visual mods are fine.
+- A texture pack for the garage is shared by its id only: a player who does not have it installed sees the default
+  garage textures.
 
-Planned: the race track, the tuning window, bonus parts, building new engines, the showroom, garage customization,
-seated players shown in the garage, and achievements for everyone who worked on a job. The DLC tracks, the photo
+Planned: the race track, bonus parts and building new engines. The DLC tracks, the photo
 location, the tutorial and saving or loading stay blocked.
 
 ## Get started
@@ -82,10 +83,24 @@ the game, click **Multiplayer** in the main menu.
 - **Who you see:** players are visible when you are in the same scene. In the garage everyone sees everyone; a player
   who travels away shows as away and appears again when you are both in the same place, also in the junkyard, a
   barn or the auction.
+- **Sitting in a car:** a player who sits in a car in the garage is shown in that seat (driver or passenger side) and
+  stays there while the lift moves. Their avatar is crouched, as the game has no sitting pose for it.
 - **Shared and not shared:** the garage, money, XP, level, skills, inventory and warehouse are shared and kept by the
   server. The junkyard, a barn and the auction are shared by everyone who is there at the same time; the next trip
   after everyone has left is a new one, as in the game. Coming back to the garage always loads the shared garage
   from the server.
+- **Garage look:** the walls, floors, machines and gates you pick at the garage-look computer, and the texture pack,
+  are the same for everyone and kept by the server. One player customises at a time ("<name> is customising the
+  garage."); the others see the new look when that player closes the window.
+- **Tuning:** the gear ratios, ECU maps and carburettor settings you apply at the dyno's tuning computer reach
+  everyone when you press apply. One player tunes a car at a time ("<name> is tuning this car."); while the window is
+  open the others cannot take off the tuned parts, run the dyno with that car, or lift, move, park or delete it. The
+  window closes by itself after five minutes without an applied change. A tuned part that is taken off keeps its
+  tuning in the shared inventory and on the car it is fitted to next.
+- **Job achievements:** when a job is finished, the Steam stats and achievements for it (finished orders, the XP and
+  money bonus, the last story mission) count for every connected player who worked on it: who took the order, who
+  changed, examined or locked a part of its car, and who finished it. The host can give them to everyone in the garage
+  instead, or only to the finisher (`job_stats_to` in `server_config.ini`).
 - **Shopping list:** the group shares one shopping list. What anyone adds, removes or clears shows up for everyone,
   and the server keeps it with the session.
 - **Test drive together:** players who are on the test track at the same time see each other's car drive (it

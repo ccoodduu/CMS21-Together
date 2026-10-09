@@ -72,7 +72,7 @@ public static class PresenceManager
 		}
 		player.Record = record;
 		if (added) PlayerAdded?.Invoke(record, false);
-		if (player.HasAvatar && record.LastMovement != null) ApplyMovement(player.Avatar, record.LastMovement);
+		if (player.HasAvatar && record.LastMovement != null && !SeatPoses.IsPosed(record)) ApplyMovement(player.Avatar, record.LastMovement);
 		Reconcile(record.PlayerId);
 	}
 
@@ -82,8 +82,8 @@ public static class PresenceManager
 		if (packet.Scene != player.Record.Scene) return;
 
 		player.Record.LastMovement = packet;
-		if (player.HasAvatar) ApplyMovement(player.Avatar, packet);
-		else Reconcile(packet.SenderId);
+		if (!player.HasAvatar) Reconcile(packet.SenderId);
+		else if (!SeatPoses.IsPosed(player.Record)) ApplyMovement(player.Avatar, packet);
 	}
 
 	public static void Remove(int playerId, DisconnectReason reason = DisconnectReason.None)
@@ -121,9 +121,10 @@ public static class PresenceManager
 		var record = player.Record;
 
 		bool riding = Driving.RideAlong.TryGetAvatarSeat(record.PlayerId, out var seat, out var seatRotation);
+		bool posed = !riding && SeatPoses.TryGetGarage(record, out seat, out seatRotation);
 		bool visible = record.Scene == ClientScene.LocalScene
 		               && SharesScene(record)
-		               && (riding || record.LastMovement != null && record.LastMovement.Scene == record.Scene);
+		               && (riding || posed || record.LastMovement != null && record.LastMovement.Scene == record.Scene);
 		if (!visible)
 		{
 			DestroyAvatar(player);
@@ -132,10 +133,11 @@ public static class PresenceManager
 
 		if (!player.HasAvatar)
 		{
-			player.Avatar = riding ? CreateAvatar(record, seat, seatRotation) : CreateAvatar(record);
+			player.Avatar = riding || posed ? CreateAvatar(record, seat, seatRotation) : CreateAvatar(record);
 			if (player.Avatar == null) return;
 		}
-		player.Avatar.gameObject.SetActive(record.SeatCarLoaderId == PlayerPresenceRecord.NoCar);
+		else if (posed) SeatPoses.Place(player.Avatar, seat, seatRotation);
+		player.Avatar.gameObject.SetActive(posed || record.SeatCarLoaderId == PlayerPresenceRecord.NoCar);
 	}
 
 	private static bool SharesScene(PlayerPresenceRecord record)
@@ -171,15 +173,6 @@ public static class PresenceManager
 		Log.Info($"[Presence] Car {carLoaderId} is removed or moved by another player, leaving the seat.");
 		game.StartCoroutine(game.ExitFromInterior(false));
 		while (SeatEngine.InSeatedMode && Time.realtimeSinceStartup < deadline) yield return null;
-	}
-
-	public static Transform SeatHandle(PlayerPresenceRecord record)
-	{
-		if (record.SeatCarLoaderId == PlayerPresenceRecord.NoCar || !ClientScene.IsGarageReady) return null;
-		var carLoader = CarLoaderPlaces.Get()?.GetCarLoaderByIndex(record.SeatCarLoaderId);
-		if (carLoader == null || string.IsNullOrEmpty(carLoader.carToLoad)) return null;
-		var handle = record.SeatLeft ? carLoader.GetLeftSeatHandle() : carLoader.GetRightSeatHandle();
-		return handle == null ? null : handle.transform;
 	}
 
 	public static void PublishLocal()

@@ -57,6 +57,7 @@ namespace CMS21_Together_Server.Network
 					Logger.Info("  locks             - Show the part, fluid and car locks and the lock counters");
 					Logger.Info("  tools             - Show the workshop machines, tool positions and claims");
 					Logger.Info("  shoplist          - Show the shared shopping list");
+					Logger.Info("  look              - Show the garage look (materials, texture pack, section count) and who is customising");
 					Logger.Info("  outdoor [catalog|junkyard|barn|auction] - Show the shared outdoor instances, the car catalog or one scene");
 					Logger.Info("  desync [check]    - Show recent desync repairs; check compares every player now");
 					Logger.Info("  desync interval <s> - Seconds between automatic comparisons until the next restart");
@@ -175,6 +176,22 @@ namespace CMS21_Together_Server.Network
 						Logger.Warn($"No open order {args[2]} to expire.");
 						break;
 					}
+					if (args.Length > 2 && args[1].ToLower() == "contributors")
+					{
+						foreach (string line in Data.Jobs.JobContributors.Describe(int.TryParse(args[2], out int contributorsId) ? contributorsId : -1))
+							Logger.Info($"  {line}");
+						break;
+					}
+					if (args.Length > 2 && args[1].ToLower() == "stats-to")
+					{
+						if (Data.Jobs.JobContributors.TryParseRule(args[2], out var rule))
+						{
+							Data.Jobs.JobContributors.Rule = rule;
+							Logger.Info($"Job stats now go to: {rule.ToString().ToLowerInvariant()}.");
+						}
+						else Logger.Warn($"Unknown rule '{args[2]}'; use contributors, garage or finisher.");
+						break;
+					}
 					if (args.Length > 2 && args[1].ToLower() == "reopen")
 					{
 						if (int.TryParse(args[2], out int reopenId) && Data.Jobs.JobsService.ReopenNow(reopenId)) break;
@@ -189,6 +206,12 @@ namespace CMS21_Together_Server.Network
 				case "tools":
 					Logger.Info("Tools:");
 					foreach (string line in Data.Tools.ToolsStore.Describe())
+						Logger.Info($"  {line}");
+					break;
+
+				case "look":
+					Logger.Info("Garage look:");
+					foreach (string line in Data.Garage.GarageLookService.Describe())
 						Logger.Info($"  {line}");
 					break;
 

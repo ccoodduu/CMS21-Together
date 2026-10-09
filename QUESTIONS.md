@@ -90,9 +90,11 @@ Not questions for the user; open bugs from the first playtest, fixed one by one.
 - A joining player's own local-save cars are dropped while connected; the server's cars are shown.
 - Order generation runs on one elected client (lowest player id) because the server has no game code.
 - Payout/XP reported by the finishing client is trusted (with bounds checks).
-- Steam achievements/stats for a finished job go to the player who finishes it.
+- Steam achievements/stats for a finished job go to every connected player who worked on it (row 30, user decision
+  2026-10-08; the host can choose `job_stats_to = garage` or `finisher`).
 - Barn: other players are hidden (its layout differs per visit).
-- A seated player's avatar is hidden instead of posed.
+- A seated player's avatar is shown in the seat (replaced the earlier "hidden instead of posed" by row 29,
+  `seated-avatars`, user wish 2026-10-08).
 - Player name comes from a mod setting (no in-game UI yet).
 - Engine stand 2 is synced like stand 1; disabled while connected if that fails.
 - While connected, taking a car out from the separate Parking scene is blocked (garage parking works).
@@ -115,6 +117,12 @@ draft works with:
 5. **Items taken but not paid for** go back to their pile when the player leaves or disconnects. Default: yes.
 6. **Fill every junkyard spawn point** (what your single-player mod does): off by default (vanilla car count), one
    server setting (`outdoor_fill_all_spawn_points`) turns it on.
+
+Row 30 `shared-job-achievements` (built 2026-10-09):
+
+7. **Garage upgrade achievements** (`stat_full_garage`, `stat_unlock_allupgrade`, from
+   `UpgradeSystem.CheckForAchievements`): upgrades are shared, but only the buyer's game runs that check. Default: out
+   of scope, only the buyer gets them.
 
 ## Answered
 Answered by the user on 2026-10-08 (evening):
@@ -186,7 +194,8 @@ Second round (2026-10-05):
   game's generation code is native). Same principle for order generation and job payout: the server owns and
   validates the result; computing it server-side would mean re-implementing hidden native game logic (revisit later).
 - Joining player's local-save cars are not shown while connected: ok.
-- Steam achievements/stats for a finished job: ALL connected players get them.
+- Steam achievements/stats for a finished job: ALL connected players get them (2026-10-05; replaced on 2026-10-08 by
+  "everyone who worked on the job", row 30).
 - Shared junkyard/barn ("scavenge together"): wanted → new ROADMAP row 15 `shared-outdoor-scenes` (after M4).
   Until then: barn hides other players (ok for now).
 - Seated player hidden instead of posed: ok. Name from config until the UI exists: ok.

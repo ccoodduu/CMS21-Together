@@ -37,6 +37,12 @@ The configurator's `CustomCar` is bought through row 6's path. Spike 1.1 names t
 receives (the configurator's car) and the `NewCarData` fields that carry the version and the configurator choices
 (config version, wheels, colour). If a field is missing, the fix goes into `CarPurchaseSync` and this design names it.
 
+**Confirmed (2026-10-09, `salon-buy`):** `GameScript.BuyCar` receives the configurator's `CustomCar.CarLoader`
+(`CarFrom = Salon`); row 6's capture sends its `NewCarData` (17 kB) and the server takes the summary tab's price once.
+After an unpark both players have the chosen config version (`ConfigVersion` 1 of the Bolthorn Grand Mojave, default
+0) and the chosen rim on all four wheels (`rim_20`, original `rim_10`). No change to `CarPurchaseSync`. Paint was not
+compared; whether a display car in the hall can be bought was not tried (open question 1 keeps its default).
+
 ### D2. Server refusal proof
 
 The scenario makes the server's money lower than A's local money after A's local check: A `net-hold on`, the server

@@ -273,6 +273,34 @@ public static class LockSets
 		return set;
 	}
 
+	public static LockSet ForTune(int loader, CarLoader carLoader)
+	{
+		var relations = Relations(loader);
+		var set = new LockSet { Loader = loader, Kind = CarLockKind.Tune };
+		set.X.Add(LockKeys.Tune);
+		if (relations == null)
+		{
+			Finish(set, new List<string>());
+			return set;
+		}
+		var parts = new List<PartScript>();
+		var gearbox = carLoader.GetRoot()?.GetComponentInChildren<GearboxHandle>();
+		if (gearbox != null) parts.Add(gearbox.gameObject.GetComponent<PartScript>());
+		parts.AddRange(Details.CarDetailsIO.Modules(carLoader).Values.Select(m => m.PartScript));
+		var shared = new List<string>();
+		foreach (var part in parts)
+		{
+			if (part == null || !relations.Registry.TryGetSubPath(part, out var path)) continue;
+			string key = PartKeys.Sub(path);
+			if (set.X.Contains(key)) continue;
+			set.X.Add(key);
+			shared.AddRange(relations.Ancestors.TryGetValue(key, out var ancestors) ? ancestors : new List<string>());
+			if (relations.EngineParts.Contains(key)) shared.Add(LockKeys.Engine);
+		}
+		Finish(set, shared);
+		return set;
+	}
+
 	public static LockSet ForCar(int loader, CarLockKind kind)
 	{
 		var set = new LockSet { Loader = loader, Kind = kind };

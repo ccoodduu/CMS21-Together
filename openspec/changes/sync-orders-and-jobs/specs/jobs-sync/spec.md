@@ -94,14 +94,14 @@ Every player SHALL see the same progress for an active job: which tasks and part
 - **THEN** player B's order details for that job show the same part as found
 
 ### Requirement: Job completion
-Ending a job SHALL be applied once by the server: the job's payout SHALL be added to the shared money, its experience to the shared experience and level (never also through the generic experience update), and the job and its customer car SHALL be removed for every player. Every player connected at that moment SHALL receive the game's Steam statistics and achievement progress for the finished job. A second attempt to end the same job SHALL be refused without paying again.
+Ending a job SHALL be applied once by the server: the job's payout SHALL be added to the shared money, its experience to the shared experience and level (never also through the generic experience update), and the job and its customer car SHALL be removed for every player. Every connected player who worked on the job SHALL receive the game's Steam statistics and achievement progress for the finished job once (row 30, `shared-job-achievements`; user decision 2026-10-08, replacing "every player connected at that moment"). A second attempt to end the same job SHALL be refused without paying again.
 
 #### Scenario: Job ends with shared payout
 - **WHEN** a player ends an active job and the game's completion checks pass
 - **THEN** every player's money increases by the same payout, every player's experience matches the server's, and the job and its car are gone for everyone
 
-#### Scenario: Steam progress for everyone
-- **WHEN** player A ends a job while player B is connected
+#### Scenario: Steam progress for everyone who worked on the job
+- **WHEN** player A ends a job that player B worked on while B is connected
 - **THEN** both A and B receive the game's Steam statistics and achievement progress for that job once
 
 #### Scenario: Two players end the same job

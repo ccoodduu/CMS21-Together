@@ -29,11 +29,11 @@ Start-Sleep -Seconds 3
 $dumpB = Save-HarnessDump -Instance $b -RunDir $Ctx.RunDir -Label "before"
 
 Try-Guard $a "Window:Shop" "allowed" | Out-Null
-$orders = Try-Guard $a "Window:Tune" "blocked"
-if ($orders.windowActive) { $failures += "Tune is active after a blocked Show" }
-if (-not $orders.message) { $failures += "no message for the blocked Tune window" }
+$orders = Try-Guard $a "Window:RevertBackup" "blocked"
+if ($orders.windowActive) { $failures += "RevertBackup is active after a blocked Show" }
+if (-not $orders.message) { $failures += "no message for the blocked RevertBackup window" }
 Start-Sleep -Milliseconds 300
-Save-HarnessScreenshot -Instance $a -RunDir $Ctx.RunDir -Label "tune_blocked"
+Save-HarnessScreenshot -Instance $a -RunDir $Ctx.RunDir -Label "revertbackup_blocked"
 Start-Sleep -Seconds 2
 
 $mode = Try-Guard $a "Mode:BonusDisassemble" "blocked"
@@ -66,7 +66,7 @@ if ($dumpA.local.scene -ne "Garage") { $failures += "A left the garage after blo
 
 $log = Send-HarnessCommand -Instance $a -Verb guard-log
 $log | ConvertTo-Json -Depth 5 | Set-Content -LiteralPath (Join-Path $Ctx.RunDir "guard_log_A.json") -Encoding utf8
-foreach ($key in @("Window:Tune", "Mode:BonusDisassemble", "Scene:Showroom", "Pie:engine_new")) {
+foreach ($key in @("Window:RevertBackup", "Mode:BonusDisassemble", "Scene:Showroom", "Pie:engine_new")) {
     if ($log.keys -notcontains $key) { $failures += "guard-log on A lacks $key" }
 }
 
@@ -85,9 +85,9 @@ $diff = Compare-HarnessDumps $dumpB $dumpBAfter -Sections @("inventory", "cars")
 if ($diff.Count -gt 0) { $failures += "B's dump changed in: $($diff -join ', ')" }
 
 Send-HarnessCommand -Instance $a -Verb guard-set -Arguments logonly | Out-Null
-Try-Guard $a "Window:Tune" "allowed" | Out-Null
+Try-Guard $a "Window:RevertBackup" "allowed" | Out-Null
 $log = Send-HarnessCommand -Instance $a -Verb guard-log
-if (-not ($log.blocks | Where-Object { $_ -like "*would block Window:Tune" })) { $failures += "no 'would block Window:Tune' entry in LogOnly" }
+if (-not ($log.blocks | Where-Object { $_ -like "*would block Window:RevertBackup" })) { $failures += "no 'would block Window:RevertBackup' entry in LogOnly" }
 Send-HarnessCommand -Instance $a -Verb guard-set -Arguments enforce | Out-Null
 
 foreach ($name in $Ctx.Instances) {
@@ -97,8 +97,8 @@ foreach ($name in $Ctx.Instances) {
 
 Send-HarnessCommand -Instance $a -Verb to-menu | Out-Null
 Wait-HarnessStatus -Instance $a -TimeoutSec 120 -What "menu" -Condition { param($s) $s.scene -eq "Menu" -and $s.playable } | Out-Null
-$offline = Send-HarnessCommand -Instance $a -Verb guard-try -Arguments "Window:Tune"
-if ($offline.result -ne "allowed") { $failures += "Window:Tune in the menu (not connected) was $($offline.result)" }
+$offline = Send-HarnessCommand -Instance $a -Verb guard-try -Arguments "Window:RevertBackup"
+if ($offline.result -ne "allowed") { $failures += "Window:RevertBackup in the menu (not connected) was $($offline.result)" }
 
 $Ctx.Result.notes += $failures
 $Ctx.Result.passed = ($failures.Count -eq 0)

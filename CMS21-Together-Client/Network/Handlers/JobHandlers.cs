@@ -33,4 +33,7 @@ public static class JobHandlers
 
 	[PacketHandler(PacketTypes.JobRemoved)]
 	public static void OnJobRemoved(long clientId, JobRemovedPacket packet) => JobsSync.OnJobRemoved(packet);
+
+	[PacketHandler(PacketTypes.JobStatsAward)]
+	public static void OnJobStatsAward(long clientId, JobStatsAwardPacket packet) => JobStats.OnAward(packet);
 }

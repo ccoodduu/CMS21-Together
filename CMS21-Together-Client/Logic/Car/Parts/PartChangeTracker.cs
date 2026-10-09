@@ -1,6 +1,7 @@
 using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
+using CMS21_Together_Core.Data.GameType;
 using CMS21_Together_Core.Logging;
 using CMS21_Together_Core.Network.Packets;
 using CMS21Together.Network;
@@ -177,6 +178,8 @@ public static class PartChangeTracker
 			Details.CarDetailsSync.FlushBeforeChange(sync.Loader);
 		Client.Instance.Send(change);
 		Locks.LockLifecycle.OnChangeSent(sync.Loader);
+		if (change.Preconditions.Any(p => p.WasUnmounted && LockKeys.IsSub(p.Key)))
+			Details.CarDetailsSync.MarkDirty(CarLoaderPlaces.Get()?.GetCarLoaderByIndex(sync.Loader), CarDetailSection.Tuning);
 		Log.Debug($"[Parts] Loader {sync.Loader}: change {change.TxId} sent ({body.Count} body, {sub.Count} mechanical, {change.Preconditions.Count} preconditions; Changed = {PartMasks.Describe(body, sub)}).");
 	}
 

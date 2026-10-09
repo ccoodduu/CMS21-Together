@@ -2,7 +2,10 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
+using CMS.Containers;
+using CMS.Salon;
 using CMS.UI;
+using CMS.UI.Logic;
 using CMS.UI.Windows;
 using CMS21Together.Logic.Economy;
 using CMS21Together.Logic.Outdoor;
@@ -18,6 +21,7 @@ public static class PurchaseCommands
     private const float PressDelaySeconds = 0.5f;
 
     private static readonly List<string> lastBuy = new List<string>();
+    private static readonly Dictionary<string, object> lastSalon = new Dictionary<string, object>();
 
     [HarnessCommand("outdoor-cars")]
     private static object OutdoorCars(string args) => Cars().Select((car, i) => (object)Describe(i, car)).ToList();
@@ -50,6 +54,144 @@ public static class PurchaseCommands
         return result;
     }
 
+    // shared-salon 2.1: the configurator path of the car salon. Configurator.Open shows the car list, SubmitCar opens the
+    // version window for a model with several versions, the rims are set as the wizard's submit sets them, and the
+    // configured car is bought like buy-car-here. Car "multi" is the first catalog model with several versions and no DLC;
+    // version "other" is the one after the default, rim "other" the first rim that is not the car's original one.
+    [HarnessCommand("salon-buy")]
+    private static object SalonBuy(string args)
+    {
+        const string usage = "usage: salon-buy <carId|multi> [version|other|-] [rimId|other|-] [nobuy]";
+        var parts = (args ?? "").Split(new[] { ' ' }, StringSplitOptions.RemoveEmptyEntries);
+        if (parts.Length < 1 || parts.Length > 4 || parts.Length == 4 && parts[3] != "nobuy") throw new ArgumentException(usage);
+        if (GameScript.Get().CurrentSceneType != SceneType.Salon) throw new InvalidOperationException("salon-buy needs the car salon");
+        var configurator = UnityEngine.Object.FindObjectOfType<Configurator>() ?? throw new InvalidOperationException("no configurator in this scene");
+        string version = parts.Length > 1 && parts[1] != "-" ? parts[1] : null;
+        string rim = parts.Length > 2 && parts[2] != "-" ? parts[2] : null;
+        bool buy = parts.Length < 4;
+        lastBuy.Clear();
+        lastSalon.Clear();
+        MelonCoroutines.Start(SalonBuyRoutine(configurator, parts[0], version, rim, buy));
+        return new Dictionary<string, object> { ["car"] = parts[0], ["version"] = version, ["rim"] = rim, ["buy"] = buy, ["moneyBefore"] = GlobalData.PlayerMoney };
+    }
+
+    [HarnessCommand("salon-car")]
+    private static object SalonCar(string args)
+    {
+        var configurator = UnityEngine.Object.FindObjectOfType<Configurator>();
+        var car = configurator?.CustomCar?.CarLoader;
+        if (car == null) return null;
+        var salon = car.SalonCarData;
+        return new Dictionary<string, object>
+        {
+            ["carToLoad"] = car.carToLoad, ["configVersion"] = car.ConfigVersion, ["loaded"] = configurator.CustomCar.IsCarLoaded,
+            ["carFrom"] = car.CarInfoData.CarFrom.ToString(), ["price"] = configurator.GetPrice(), ["basePrice"] = salon.BaseCarPrice,
+            ["originalFrontRim"] = salon.OriginalFrontRim, ["selectedFrontRim"] = salon.SelectedFrontRim, ["selectedRearRim"] = salon.SelectedRearRim,
+            ["frontRimsCost"] = salon.FrontRimsCost, ["rearRimsCost"] = salon.RearRimsCost,
+        };
+    }
+
+    [HarnessCommand("salon-last")]
+    private static object SalonLast(string args) => new Dictionary<string, object>(lastSalon);
+
+    private static IEnumerator SalonBuyRoutine(Configurator configurator, string carId, string version, string rim, bool buy)
+    {
+        var manager = WindowManager.Instance;
+        if (!manager.IsWindowActive(WindowID.SalonSelectCar)) configurator.Open();
+        yield return null;
+        var select = manager.GetWindowByID<SalonSelectCarWindow>(WindowID.SalonSelectCar);
+        if (select == null || !manager.IsWindowActive(WindowID.SalonSelectCar))
+        {
+            Step("failed: the salon car list did not open");
+            yield break;
+        }
+        float listGiveUp = Time.realtimeSinceStartup + WindowWaitSeconds;
+        while ((select.cars == null || select.cars.Count == 0) && Time.realtimeSinceStartup < listGiveUp) yield return null;
+        SalonCarConfigData data = null;
+        for (int i = 0; select.cars != null && i < select.cars.Count && data == null; i++)
+        {
+            var candidate = select.cars[i];
+            if (carId == "multi" ? candidate.AmountOfConfigs > 1 && CMS21Together.Logic.Car.CarDlc.For(candidate.CarID) == CMS21Together.Logic.Car.CarDlc.BaseGame : candidate.CarID == carId) data = candidate;
+        }
+        ShowroomCarItem item = null;
+        for (int i = 0; select.carItems != null && i < select.carItems.Length && item == null; i++)
+            if (select.carItems[i] != null) item = select.carItems[i];
+        if (data == null || item == null)
+        {
+            var catalog = new List<string>();
+            for (int i = 0; select.cars != null && i < select.cars.Count; i++)
+                catalog.Add($"{select.cars[i].CarID}:{select.cars[i].AmountOfConfigs}:dlc{CMS21Together.Logic.Car.CarDlc.For(select.cars[i].CarID)}");
+            Step($"failed: {carId} is not in the salon catalog or the list has no item ({item != null}); catalog: {string.Join(", ", catalog)}");
+            yield break;
+        }
+        carId = data.CarID;
+        lastSalon["car"] = carId;
+        lastSalon["versions"] = data.AmountOfConfigs;
+        lastSalon["defaultVersion"] = data.DefaultConfig;
+        item.SetupForSalonCarConfigData(data);
+        Step($"submit {carId}: {data.AmountOfConfigs} versions, default {data.DefaultConfig}, money {GlobalData.PlayerMoney}");
+        select.SubmitCar(item);
+        if (data.AmountOfConfigs > 1)
+        {
+            yield return null;
+            yield return null;
+            int chosen = version == null ? data.DefaultConfig : version == "other" ? (data.DefaultConfig + 1) % data.AmountOfConfigs : int.Parse(version);
+            var versions = select.carVersionWindow;
+            Step($"version window active {versions.gameObject.activeInHierarchy}, via WindowManager {manager.IsWindowActive(WindowID.CarVersion)}, extension {versions.carLoaderExtension != null}; choosing {chosen}");
+            versions.LoadCar(chosen);
+        }
+        float giveUp = Time.realtimeSinceStartup + 60f;
+        CustomCar custom = null;
+        while (Time.realtimeSinceStartup < giveUp)
+        {
+            custom = configurator.CustomCar;
+            if (custom != null && custom.IsCarLoaded && !custom.CarLoadingInProgress && custom.CarLoader != null && custom.CarLoader.carToLoad == carId) break;
+            yield return null;
+        }
+        var car = custom?.CarLoader;
+        if (car == null || car.carToLoad != carId || !custom.IsCarLoaded)
+        {
+            Step($"failed: the configurator did not load {carId}");
+            yield break;
+        }
+        Step($"loaded {car.carToLoad} version {car.ConfigVersion}, price {configurator.GetPrice()}, original rim {car.SalonCarData.OriginalFrontRim}");
+        lastSalon["version"] = car.ConfigVersion;
+        lastSalon["originalRim"] = car.SalonCarData.OriginalFrontRim;
+
+        if (rim != null)
+        {
+            var rims = configurator.GetItemsToWheelConfiguration(WheelConfiguration.Rim);
+            ChoosePartDownItem chosen = null;
+            var ids = new List<string>();
+            for (int i = 0; rims != null && i < rims.Count; i++)
+            {
+                string id = rims[i]?.BaseItem?.ID;
+                ids.Add($"{id}:{rims[i]?.Price}");
+                if (chosen != null || id == null) continue;
+                if (rim == "other" ? id != car.SalonCarData.OriginalFrontRim && id != car.SalonCarData.SelectedFrontRim : id == rim) chosen = rims[i];
+            }
+            Step($"rims: {string.Join(", ", ids)}");
+            if (chosen == null)
+            {
+                Step($"failed: no rim {rim}");
+                yield break;
+            }
+            string rimId = chosen.BaseItem.ID;
+            foreach (bool front in new[] { true, false })
+            {
+                configurator.SetRim(rimId, front);
+                configurator.UpdateSelectedRim(rimId, front);
+                configurator.UpdateCost(WheelConfiguration.Rim, front ? Side.Front : Side.Rear, chosen.Price);
+            }
+            yield return null;
+            lastSalon["rim"] = rimId;
+            Step($"rim {rimId} ({chosen.Price} each side): selected {car.SalonCarData.SelectedFrontRim}/{car.SalonCarData.SelectedRearRim}, price {configurator.GetPrice()}");
+        }
+        lastSalon["configuratorPrice"] = configurator.GetPrice();
+        if (!buy) yield break;
+        yield return Buy(car, null, 1, false);
+    }
+
     [HarnessCommand("buy-car-last")]
     private static object BuyCarLast(string args) => new List<string>(lastBuy);
 
@@ -80,6 +222,7 @@ public static class PurchaseCommands
             yield break;
         }
         if (price.HasValue) summary.price = price.Value;
+        lastSalon["price"] = summary.price;
         Step($"car info open for {summary.currentCarLoader.carToLoad}, price {summary.price}, money {GlobalData.PlayerMoney}");
 
         if (direct)
