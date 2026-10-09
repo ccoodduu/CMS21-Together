@@ -122,6 +122,7 @@ namespace CMS21_Together_Server
 			Data.Economy.EconomyRules.MaxCarPurchasePrice = Config.MaxCarPurchasePrice;
 			Data.Presence.PresenceEvents.Left += Data.Reconciliation.ReconciliationService.OnLeft;
 			Data.Jobs.JobsService.Initialize();
+			Data.Jobs.JobContributors.Rule = Config.JobStatsTo;
 			Data.Cars.CarAwayRegistry.Initialize();
 			Data.Presence.Rides.Initialize();
 			Data.Cars.CarLocks.Initialize(Config.LockScope, Config.LockExpirySeconds);

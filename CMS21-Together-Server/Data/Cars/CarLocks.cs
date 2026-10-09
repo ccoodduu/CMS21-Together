@@ -98,6 +98,7 @@ namespace CMS21_Together_Server.Data.Cars
 				return;
 			}
 			Count("granted");
+			foreach (int loader in granted.Select(g => g.Loader).Distinct()) Jobs.JobContributors.OnCarChange(loader, clientId, $"{request.Kind} lock");
 			Server.SendToClient(new CarLockResultPacket { RequestId = request.RequestId, LockId = granted[0].Id, Granted = true }, clientId);
 			foreach (var record in granted) Server.SendToClients(Update(record));
 			Audit();

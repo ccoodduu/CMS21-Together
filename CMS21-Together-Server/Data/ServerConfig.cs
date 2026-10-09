@@ -40,6 +40,7 @@ namespace CMS21_Together_Server.Data
 		public string CarSelector { get; private set; } = "basic";
 		public int OutdoorRejoinGraceSeconds { get; private set; } = 60;
 		public bool OutdoorFillAllSpawnPoints { get; private set; }
+		public Jobs.JobStatsRule JobStatsTo { get; private set; } = Jobs.JobStatsRule.Contributors;
 
 		public string Password { get; private set; } = string.Empty;
 		public bool PasswordSteam { get; private set; }
@@ -96,7 +97,12 @@ namespace CMS21_Together_Server.Data
 			new[] { "outdoor_fill_all_spawn_points", "# Fill every car spawn point of a shared junkyard (True/False)", "outdoor_fill_all_spawn_points = False" },
 		};
 
-		private static string[][] OptionalKeyLines => HostingKeyLines.Concat(CompatibilityKeyLines).Concat(EconomyKeyLines).Concat(DiagnosticsKeyLines).Concat(DesyncKeyLines).Concat(LockKeyLines).Concat(OutdoorKeyLines).ToArray();
+		private static readonly string[][] JobKeyLines =
+		{
+			new[] { "job_stats_to", "# Who gets the Steam stats and achievements of a finished job besides the player who finishes it: contributors (players who worked on it), garage (everyone in the garage) or finisher (nobody else)", "job_stats_to = contributors" },
+		};
+
+		private static string[][] OptionalKeyLines => HostingKeyLines.Concat(CompatibilityKeyLines).Concat(EconomyKeyLines).Concat(DiagnosticsKeyLines).Concat(DesyncKeyLines).Concat(LockKeyLines).Concat(OutdoorKeyLines).Concat(JobKeyLines).ToArray();
 
 		public void ApplyArguments(string[] args)
 		{
@@ -155,7 +161,7 @@ namespace CMS21_Together_Server.Data
 		public string Describe() =>
 			$"name '{ServerName}', port {Port}, max players {MaxPlayers}, steam {UseSteam}, public address '{PublicAddress}', autosave {AutosaveIntervalSeconds}s, backups {BackupCount}, " +
 			$"password {Masked(Password)}{(PasswordSteam ? " (also Steam)" : "")}, admin key {Masked(AdminKey)}, new sessions {NewSessionDifficulty}, " +
-			$"travel fees {TravelFees}, max car sale {MaxCarSalePrice}, max car purchase {MaxCarPurchasePrice}, perf log {(PerfLogIntervalSeconds > 0 ? $"{PerfLogIntervalSeconds}s" : "off")}, desync resend [{string.Join(", ", DesyncResendKeys)}], desync stall {DesyncStallSeconds}s, lock scope {LockScope}, lock expiry {LockExpirySeconds}s, shared outdoor scenes {OutdoorScenes.Format(SharedOutdoorScenes)}, car selector {CarSelector}, outdoor rejoin grace {OutdoorRejoinGraceSeconds}s, fill all spawn points {OutdoorFillAllSpawnPoints}, game version {GameVersion}, mods required [{string.Join(", ", ModsRequired)}], ignored [{string.Join(", ", ModsIgnored)}], gameplay [{string.Join(", ", ModsGameplay)}]";
+			$"travel fees {TravelFees}, max car sale {MaxCarSalePrice}, max car purchase {MaxCarPurchasePrice}, perf log {(PerfLogIntervalSeconds > 0 ? $"{PerfLogIntervalSeconds}s" : "off")}, desync resend [{string.Join(", ", DesyncResendKeys)}], desync stall {DesyncStallSeconds}s, lock scope {LockScope}, lock expiry {LockExpirySeconds}s, job stats to {JobStatsTo.ToString().ToLowerInvariant()}, shared outdoor scenes {OutdoorScenes.Format(SharedOutdoorScenes)}, car selector {CarSelector}, outdoor rejoin grace {OutdoorRejoinGraceSeconds}s, fill all spawn points {OutdoorFillAllSpawnPoints}, game version {GameVersion}, mods required [{string.Join(", ", ModsRequired)}], ignored [{string.Join(", ", ModsIgnored)}], gameplay [{string.Join(", ", ModsGameplay)}]";
 
 		public static ServerConfig LoadOrCreate()
 		{
@@ -332,6 +338,10 @@ namespace CMS21_Together_Server.Data
 							string scope = Unquote(value).ToLowerInvariant();
 							if (scope == CMS21_Together_Core.Network.Packets.LockScope.Part || scope == CMS21_Together_Core.Network.Packets.LockScope.Connected) config.LockScope = scope;
 							else Logger.Warn($"Unknown lock_scope '{value}'; use connected or part.");
+							break;
+						case "job_stats_to":
+							if (Jobs.JobContributors.TryParseRule(Unquote(value), out var jobStatsTo)) config.JobStatsTo = jobStatsTo;
+							else Logger.Warn($"Unknown job_stats_to '{value}'; use contributors, garage or finisher.");
 							break;
 						case "lock_expiry_seconds":
 							if (int.TryParse(value, out int lockExpiry) && lockExpiry >= 5) config.LockExpirySeconds = lockExpiry;

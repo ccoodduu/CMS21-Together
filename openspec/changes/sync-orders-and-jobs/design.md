@@ -265,11 +265,10 @@ level/exp with the level-up loop `StatsHandlers` uses (refactored into a shared 
 `WorldState` to the sender, which overwrites its predicted money and exp. Receivers of `JobRemoved { Ended }`
 remove the job and delete the car on that loader under `CarSpawnHooks.Suppress` if it is still there.
 
-Steam stats and achievements of a finished job go to every connected player (user decision 2026-10-05). The
-finisher's native `EndJob` already sets them locally; every other client that applies `JobRemoved { Ended }` calls
-the same game stat/achievement methods for that job (`JobStatsAwarder`), which task 1 identifies in the
-`EndJob`/`EndJobCoroutine` trace. Players who are not connected at that moment get nothing. If the trace finds no
-callable entry point, this is recorded as a known gap and only the finisher gets them.
+Steam stats and achievements of a finished job: replaced by row 30 (`shared-job-achievements`, user decision
+2026-10-08). The finisher's native `EndJob` sets them locally; the server derives the job's stats in `OnJobEnd` and
+sends `JobStatsAward` to every connected player who worked on the job (host setting `job_stats_to`). The
+`JobStatsAwarder` of this design (every connected player, on `JobRemoved`) was never built.
 
 Payout and XP are trusted from the client (no game code on the server), with sanity bounds
 (`0 <= Payout <= 1_000_000`, `0 <= Xp < 10_000`). The server's job is to apply them exactly once.

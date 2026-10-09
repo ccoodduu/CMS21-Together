@@ -9,7 +9,7 @@ namespace CMS21_Together_Server.Data.Jobs
 	public class JobsSection : ISaveSection, ISnapshotProvider
 	{
 		public string Key => SyncOrder.JobsKey;
-		public int Version => 1;
+		public int Version => 2;
 		int ISnapshotProvider.SyncOrder => SyncOrder.Jobs;
 
 		public JToken Save() => JObject.FromObject(GameDataManager.CurrentState.JobsState);
@@ -26,7 +26,8 @@ namespace CMS21_Together_Server.Data.Jobs
 			JobsService.Reset();
 		}
 
-		public JToken Migrate(JToken data, int fromVersion) => throw new NotSupportedException($"No migration from jobs v{fromVersion}.");
+		public JToken Migrate(JToken data, int fromVersion) =>
+			fromVersion == 1 ? data : throw new NotSupportedException($"No migration from jobs v{fromVersion}.");
 
 		public int SendSnapshot(int clientId) => JobsService.SendSnapshot(clientId);
 	}

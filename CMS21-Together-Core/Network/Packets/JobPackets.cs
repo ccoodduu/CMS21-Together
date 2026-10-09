@@ -132,4 +132,13 @@ namespace CMS21_Together_Core.Network.Packets
         public bool IsCompleted;
         public ModMissionState Missions;
     }
+
+    [Serializable]
+    [NetworkPacket(PacketTypes.JobStatsAward)]
+    public class JobStatsAwardPacket : INetworkData
+    {
+        public int JobId;
+        public List<string> Stats = new List<string>();
+        public bool MissionFinished;
+    }
 }

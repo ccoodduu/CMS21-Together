@@ -232,9 +232,11 @@ namespace CMS21_Together_Server.Data.Jobs
 			State.Orders.Remove(order);
 			packet.Job.id = packet.JobId;
 			packet.Job.PrepSeed = order.Job.PrepSeed;
-			State.ActiveJobs.Add(new ActiveJobEntry { Job = packet.Job, OrderJob = order.Job, CarLoaderId = packet.CarLoaderId, OriginalSeconds = order.RemainingSeconds });
+			var active = new ActiveJobEntry { Job = packet.Job, OrderJob = order.Job, CarLoaderId = packet.CarLoaderId, OriginalSeconds = order.RemainingSeconds };
+			State.ActiveJobs.Add(active);
 			if (packet.Missions != null) State.Missions = packet.Missions;
 			Logger.Info($"[Jobs] Job {packet.JobId} started by client {clientId} on loader {packet.CarLoaderId}.");
+			JobContributors.OnJobPlayer(active, clientId, "took it");
 			Server.SendToClients(packet, clientId);
 		}
 
@@ -259,6 +261,7 @@ namespace CMS21_Together_Server.Data.Jobs
 				SendSnapshot(clientId);
 				return;
 			}
+			JobContributors.OnJobPlayer(active, clientId, "finished it");
 			State.ActiveJobs.Remove(active);
 			OrderClockService.OnJobEnded();
 			world.Money += packet.Payout;
@@ -271,6 +274,7 @@ namespace CMS21_Together_Server.Data.Jobs
 			world.updateGamemode = false;
 			Server.SendToClients(new JobRemovedPacket { JobId = packet.JobId, Reason = JobRemovedReason.Ended, CarLoaderId = loader, IsCompleted = packet.IsCompleted, Missions = State.Missions });
 			Server.SendToClients(world);
+			JobContributors.Award(active, clientId, packet.IsCompleted);
 		}
 
 		private static bool HasMission() => State.Orders.Any(o => o.Job.IsMission) || State.ActiveJobs.Any(a => a.Job.IsMission);

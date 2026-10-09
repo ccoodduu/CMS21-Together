@@ -57,12 +57,10 @@ cannot drift apart:
 
 Also not yet:
 
-- Steam achievements and stats for a finished job go only to the player who hands it back.
 - Gameplay mods are refused by the server; visual mods are fine.
 
-Planned: the race track, the tuning window, bonus parts, building new engines, garage customization and achievements
-for everyone who worked on a job. The DLC tracks, the photo location, the tutorial and saving or loading stay
-blocked.
+Planned: the race track, the tuning window, bonus parts, building new engines and garage customization. The DLC
+tracks, the photo location, the tutorial and saving or loading stay blocked.
 
 ## Get started
 
@@ -88,6 +86,10 @@ the game, click **Multiplayer** in the main menu.
   server. The junkyard, a barn and the auction are shared by everyone who is there at the same time; the next trip
   after everyone has left is a new one, as in the game. Coming back to the garage always loads the shared garage
   from the server.
+- **Job achievements:** when a job is finished, the Steam stats and achievements for it (finished orders, the XP and
+  money bonus, the last story mission) count for every connected player who worked on it: who took the order, who
+  changed, examined or locked a part of its car, and who finished it. The host can give them to everyone in the garage
+  instead, or only to the finisher (`job_stats_to` in `server_config.ini`).
 - **Shopping list:** the group shares one shopping list. What anyone adds, removes or clears shows up for everyone,
   and the server keeps it with the session.
 - **Test drive together:** players who are on the test track at the same time see each other's car drive (it
