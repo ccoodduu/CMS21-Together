@@ -142,6 +142,7 @@ namespace CMS21Together
 			if (!isModInitialized) return;
 			Logic.Driving.RemoteCars.Update();
 			Logic.Driving.RideAlong.LateUpdate();
+			SeatedAvatars.LateUpdate();
 		}
 
 		public override void OnGUI()

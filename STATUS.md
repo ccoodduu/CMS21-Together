@@ -2,6 +2,45 @@
 
 Newest first. One entry per work session.
 
+## 2026-10-09 (01:50) — paused for the night
+
+- Paused at the user's request; agents finish their current run, push and stop.
+- Not merged yet: `feat/seated-avatars` (row 29, built; proof `seat-avatars` fails on the old client
+  `20261009-000552_L1` and passes `20261009-002305_L1`; smoke set still to confirm), `feat/shared-salon` (row 26, in
+  progress), `fix/place-same` (lane 2, in progress). Row 30 not started.
+- Lane 1 branches at the pause, all pushed, none merged:
+  - `feat/seated-avatars` (row 29) done: proof `seat-avatars` fails `20261009-000552_L1`, passes `20261009-002305_L1`;
+    smoke and touched areas pass. Hand check 3.2 (right-hand-drive car) open.
+  - `feat/shared-salon` (row 26) done: proof `salon-buy` fails `20261009-005105_L1`, passes `20261009-011548_L1`;
+    `20261009-011825_regression.json` passes. README "Planned" paragraph conflicts with seated-avatars.
+  - `feat/shared-job-achievements` (row 30) built: old code fails `20261009-010925_L1_job-stats`; the new run
+    `20261009-013204_L1` had 2 scenario-side failures fixed in `951a803`, not re-run. Resume with
+    `Run-Session.ps1 -Lane 1 -Deploy -Scenario job-stats` in `CMS21-Together-wt\jobstats`. New question in QUESTIONS.md
+    (upgrade achievements, default buyer only).
+- `fix/place-same` (`5a8fb16`, paused): place-same fixed (move lock covers the target place, refused moves answer
+  with every car's place then lift states; proof `car-place-same` fails on `84beea6` `20261008-231901_L2` and passes
+  `20261008-232642_L2`); examined flags after an unpark fixed (snapshot waits for `LoadCarFromFile`; proof
+  `park-return` fails `20261008-233419_L2`, passes `20261008-233709_L2`); smoke plus 20 touched scenarios pass
+  (`20261009-011337_regression.json`). Open before merge: `locks-select-2` fails in batch on the branch (passes alone;
+  base batch `20261009-014747` passes): check which 2 pie move options differ after B's release
+  (`LockPie.CarBlocked`/`CarLockMirror.Conflict` with the new place check), then a 15-min soak
+  `-ContentionKinds place-same`; remove the `place-same-base` worktree afterwards.
+- To resume: read the agents' last reports (branch commit messages), run smoke on each branch with main merged in,
+  merge; then row 30, the next soak with contention (row 19 task 10.5 still open), and rows 28, 25, 27a in that order.
+## 2026-10-09 (00:45–02:00) — row 26 shared salon built (`feat/shared-salon`, lane 1)
+
+- Harness `salon-buy` drives the car salon as a player does (configurator, version window, rims, summary tab,
+  location window); `travel Salon` loads `Auto_salon`. The purchase path needed no change: `GameScript.BuyCar` gets
+  the configurator's car, and after an unpark both players have the chosen version and rim.
+- Guard: `Window CarVersion` allowed ("Car version (car salon)", it never passes `WindowManager.Show`, checked with the
+  guard's decisions); `Scene`/`Window Showroom` are "The showroom (main menu only)".
+- Proof `salon-buy`: fails on the old guard rules (`20261009-005105_L1_salon-buy`, guard step; the purchase steps of
+  that run failed on a harness bug fixed since) and passes (`20261009-011548_L1_salon-buy`): configured purchase paid
+  once and parked once for both, server `NoMoney` refusal answered, local refusal sends nothing.
+- Smoke plus `salon-buy` (with the guard-decision check, `20261009-015035_L1_salon-buy`), `purchases`, `locks-select`,
+  `locks-select-2` and `server-saves`: all passed (`20261009-011825_regression.json`).
+uns\*_regression.json` on the branch's worktree.
+
 ## 2026-10-08/09 (23:15–00:45) — order clock, menu click fix, rows 25–31 drafted and reviewed
 
 - `main` = `310f9c3`. Server-owned order clock merged (`6b5dccd`): the server runs the order timer only while a
@@ -19,6 +58,20 @@ Newest first. One entry per work session.
   first), 28 garage look, 29 seated avatars, 30 job achievements for every contributor, 31 faster remote cars (≈3 s
   without frame spikes). User decisions in QUESTIONS.md.
 - In progress: rows 29, 26, 30 (lane 1); `place-same` and examined-flag drift (lane 2).
+## 2026-10-09 (00:00–00:45) — row 29 seated avatars built (`feat/seated-avatars`, lane 1)
+
+- A seated player is shown crouched in the right seat of the car in the garage (`SeatPoses`, `SeatedAvatars` in
+  `OnLateUpdate`), follows the lift, stands up where the player stands (one more forced movement packet when the
+  seated mode ends), and is posed after a late join once the car is Ready; seated records no longer move the avatar;
+  name tags follow the posed head; ride-along uses the same helper.
+- Spike 1.1: the lift moves the seat handle before `OnLateUpdate` (1.678 m before, 0 m after over a full travel;
+  offset 0.000 m every frame); a player can sit in a car on a raised lift; `sit left` is the left handle on the Bolt
+  Atlanta. No RHD car can be spawned (all RHD models are DLC); left the RHD case to the hand check.
+- Proof `seat-avatars` fails on the old client (`20261009-000552_L1_seat-avatars`, 10 failures) and passes
+  (`20261009-002305_L1_seat-avatars`). Smoke plus `seat-engine` (now expects the seated avatar shown), `ride-along`,
+  `presence-latejoin`, `scenes`, `drive-latejoin`, `ping`: all pass (`guard` and `presence-latejoin` failed once in
+  the batch and passed alone, both known flakes); `server-saves` passed on a rerun (the parallel run timed out
+  starting its server).
 
 ## 2026-10-08 (22:00–23:15) — row 19 part 2 and seeded job cars merged; playtest build dev.1102
 

@@ -4,7 +4,7 @@ Prerequisites (all merged): rows 2, 6, 19 part 3 (D17), 21.
 
 ## 1. Spike
 
-- [ ] 1.1 With A seated in a car on lifter 1 (harness `sit`), read on B: the seat handles of B's copy, the `CarFrame`
+- [x] 1.1 With A seated in a car on lifter 1 (harness `sit`), read on B: the seat handles of B's copy, the `CarFrame`
       rotation and A's record; raise and lower the lift (`lift`) and log the handle path per frame. Answers: does the
       handle move with the lift in `Update` or `LateUpdate`, and can a player sit in a car on a raised lift at all. Also
       sit on the left in one right-hand-drive car and log which handle `SeatLeft = true` names (left handle or driver
@@ -12,19 +12,19 @@ Prerequisites (all merged): rows 2, 6, 19 part 3 (D17), 21.
 
 ## 2. Client
 
-- [ ] 2.1 `Logic/Player/SeatPoses.cs` with D1, replacing `PresenceManager.SeatHandle`; `RideAlong.SeatPose`/
+- [x] 2.1 `Logic/Player/SeatPoses.cs` with D1, replacing `PresenceManager.SeatHandle`; `RideAlong.SeatPose`/
       `TryGetAvatarSeat` and `NameTags` use it. Verify: `ride-along` still passes (avatars in the seats, `toSeat`
       unchanged).
-- [ ] 2.2 `PresenceManager.ReconcileAvatar`: D2 (no hiding while seated in the garage; pose when the car is Ready;
+- [x] 2.2 `PresenceManager.ReconcileAvatar`: D2 (no hiding while seated in the garage; pose when the car is Ready;
       hidden while it is not; pose ends on a scene change). `ApplyRecord` and `ApplyMovement(MovementPacket)` skip the
       avatar update while posed (D3). Verify: B's dump shows A's avatar active and within 5 cm of the seat after `sit`,
       with A's engine running for 10 s (no jitter: `toSeat` max ≤ 0.05 m in the ring buffer).
-- [ ] 2.3 `SeatedAvatars.LateUpdate` (D3) and the retry; standing up with the extra forced movement packet (D4).
+- [x] 2.3 `SeatedAvatars.LateUpdate` (D3) and the retry; standing up with the extra forced movement packet (D4).
       Verify with 3.1.
 
 ## 3. Harness and proof
 
-- [ ] 3.1 Dump `players[]`: `seatPose { seated, side, toSeat, maxToSeat }` (`toSeat` = distance from the avatar to the
+- [x] 3.1 Dump `players[]`: `seatPose { seated, side, toSeat, maxToSeat }` (`toSeat` = distance from the avatar to the
       seat handle pose sampled in `LateUpdate` after the lift tween, -1 when not seated; `maxToSeat` = the largest
       per-frame offset in a ring buffer of the last 120 frames, reset by `seat-pose-reset`). Scenario `seat-avatars`
       (lane 1 or 2, two clients), each step on B's dump unless noted:
@@ -48,5 +48,5 @@ Prerequisites (all merged): rows 2, 6, 19 part 3 (D17), 21.
 
 ## 4. Docs
 
-- [ ] 4.1 QUESTIONS.md: replace the accepted default "A seated player's avatar is hidden instead of posed" with this
+- [x] 4.1 QUESTIONS.md: replace the accepted default "A seated player's avatar is hidden instead of posed" with this
       change; ROADMAP row 29 status; STATUS entry with the run ids.

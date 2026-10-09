@@ -50,17 +50,17 @@ While you are connected, the game blocks these with "... is not supported in mul
 cannot drift apart:
 
 - the race track, the other tracks and the photo location;
-- the tuning window, car versions, bonus (visual tuning) parts and building a new engine on the engine stand;
-- the showroom and the separate Parking scene (the garage parking works);
+- the tuning window, bonus (visual tuning) parts and building a new engine on the engine stand;
+- the separate Parking scene (the garage parking works); the showroom, the main menu's car viewer, is single-player
+  only;
 - garage customization, the tutorial, and saving or loading from the game's menus (the server saves the session).
 
 Also not yet:
 
-- A player sitting in a car in the garage is hidden for the others (on the test track a passenger is shown seated).
 - Gameplay mods are refused by the server; visual mods are fine.
 
-Planned: the race track, the tuning window, bonus parts, building new engines, the showroom, garage customization
-and seated players shown in the garage. The DLC tracks, the photo location, the tutorial and saving or loading stay
+Planned: the race track, the tuning window, bonus parts, building new engines and garage customization. The DLC
+tracks, the photo location, the tutorial and saving or loading stay
 blocked.
 
 ## Get started
@@ -81,6 +81,8 @@ the game, click **Multiplayer** in the main menu.
 - **Who you see:** players are visible when you are in the same scene. In the garage everyone sees everyone; a player
   who travels away shows as away and appears again when you are both in the same place, also in the junkyard, a
   barn or the auction.
+- **Sitting in a car:** a player who sits in a car in the garage is shown in that seat (driver or passenger side) and
+  stays there while the lift moves. Their avatar is crouched, as the game has no sitting pose for it.
 - **Shared and not shared:** the garage, money, XP, level, skills, inventory and warehouse are shared and kept by the
   server. The junkyard, a barn and the auction are shared by everyone who is there at the same time; the next trip
   after everyone has left is a new one, as in the game. Coming back to the garage always loads the shared garage

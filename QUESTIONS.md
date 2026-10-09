@@ -93,7 +93,8 @@ Not questions for the user; open bugs from the first playtest, fixed one by one.
 - Steam achievements/stats for a finished job go to every connected player who worked on it (row 30, user decision
   2026-10-08; the host can choose `job_stats_to = garage` or `finisher`).
 - Barn: other players are hidden (its layout differs per visit).
-- A seated player's avatar is hidden instead of posed.
+- A seated player's avatar is shown in the seat (replaced the earlier "hidden instead of posed" by row 29,
+  `seated-avatars`, user wish 2026-10-08).
 - Player name comes from a mod setting (no in-game UI yet).
 - Engine stand 2 is synced like stand 1; disabled while connected if that fails.
 - While connected, taking a car out from the separate Parking scene is blocked (garage parking works).

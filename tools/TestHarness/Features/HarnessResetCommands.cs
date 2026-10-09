@@ -20,6 +20,7 @@ public static class HarnessResetCommands
         JobsStatsTrace.Reset(changed);
         JobCarCommands.Reset(changed);
         SeatEngineCommands.Reset(changed);
+        SeatPoseCommands.Reset(changed);
         TestDriveCommands.Reset(changed);
         CarCommands.Reset(changed);
         CarDetailsCommands.Reset(changed);

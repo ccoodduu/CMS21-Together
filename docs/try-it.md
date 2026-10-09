@@ -53,7 +53,8 @@ time. In a session, **F9** shows the players with their ping, your Steam friends
 - Seeing each other walk around, with name tags; sitting in cars and starting engines.
 - Working on cars together: parts, fluids, wheels, paint, tint, lifts, moving cars, parking, engine crane.
 - Orders and jobs, test drive, test path and dyno, and the workshop machines and car tools.
-- Trips to the junkyard, barns, auction and car salon; bought cars go to the shared parking.
+- Trips to the junkyard, barns, auction and car salon; bought cars go to the shared parking. In the car salon you pick
+  the version, rims, tyres and paint as in the game, and the money is taken once from the shared money.
 - **F7** reloads the garage from the server if something looks wrong.
 
 ## Please try: parts in use (locks)
@@ -77,9 +78,10 @@ Two or more players on one car. For each item, report what you saw, and if it we
 
 ## Not yet
 
-Driving around, the race tracks, tuning, bonus parts, building a new engine, the showroom and the separate Parking
-scene are not shared yet. While connected, the game refuses them with "... is not supported in multiplayer yet", so
-the garages cannot drift apart. The junkyard, barns and auction are each player's own (not shared).
+Driving around, the race tracks, tuning, bonus parts, building a new engine and the separate Parking scene are not
+shared yet. The showroom (the car viewer in the main menu) is single-player only. While connected, the game refuses
+them with "... is not supported in multiplayer yet", so the garages cannot drift apart. The junkyard, barns and
+auction are each player's own (not shared).
 
 ## Logs for a bug report
 
