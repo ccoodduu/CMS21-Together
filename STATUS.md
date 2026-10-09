@@ -2,6 +2,23 @@
 
 Newest first. One entry per work session.
 
+## 2026-10-09 (20:30–23:00) — fix/place-same: locks-select-2 checked; soak not run (paused for a playtest)
+
+- `fix/place-same` (lane 2) has `main` merged in (`5d79fe8`, main at `c4bd1c3`). Commits: `348159e` (move lock covers the
+  target place; a refused move answers with every car's place, then lift states), `a76e45f` (a car snapshot waits for
+  `LoadCarFromFile` to end), `5a8fb16` (local moves tracked per coroutine; lift states kept with the places),
+  `5153af3` (`locks-select-2` prints the pie after B's release).
+- `locks-select-2` "after B's release the move options are as before (8 of 10)" is pre-existing, not the branch: the
+  game's own pie input (`PieMenuController.HandleInput` -> `NotificationCenter.ButtonAccept`) accepts `move_carLift1`
+  while the harness has the pie open, without any mouse button or Return the game sees, and A's car moves to
+  CarLifter1. Alone runs on `c4bd1c3`: fails `20261009-220034_L2`, `20261009-220954_L2` (passed on rerun), spurious
+  accepts also in the passing `20261009-220207_L2`, `20261009-221126_L2`. On the branch: fails `20261009-220342_L2`,
+  passes `20261009-220513_L2`, `220819_L2`, `221300_L2`. The base runs are copied to
+  `CMS21-Together-wt\place-same\tools\runs\base-c4bd1c3`; the `place-same-base` worktree is removed. A harness fix
+  (keep the game's pie input from accepting while `lock-pie` holds it open) is not done.
+- Not done: the 15-min soak `Run-Soak.ps1 -Lane 2 -ContentionKinds place-same -Hours 0.25 -Deploy` (it waited for the
+  user to be idle and was stopped for the playtest). Resume with that command; then merge.
+
 ## 2026-10-09 (01:50) — paused for the night
 
 - Paused at the user's request; agents finish their current run, push and stop.
