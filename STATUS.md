@@ -8,6 +8,15 @@ Newest first. One entry per work session.
 - Not merged yet: `feat/seated-avatars` (row 29, built; proof `seat-avatars` fails on the old client
   `20261009-000552_L1` and passes `20261009-002305_L1`; smoke set still to confirm), `feat/shared-salon` (row 26, in
   progress), `fix/place-same` (lane 2, in progress). Row 30 not started.
+- Lane 1 branches at the pause, all pushed, none merged:
+  - `feat/seated-avatars` (row 29) done: proof `seat-avatars` fails `20261009-000552_L1`, passes `20261009-002305_L1`;
+    smoke and touched areas pass. Hand check 3.2 (right-hand-drive car) open.
+  - `feat/shared-salon` (row 26) done: proof `salon-buy` fails `20261009-005105_L1`, passes `20261009-011548_L1`;
+    `20261009-011825_regression.json` passes. README "Planned" paragraph conflicts with seated-avatars.
+  - `feat/shared-job-achievements` (row 30) built: old code fails `20261009-010925_L1_job-stats`; the new run
+    `20261009-013204_L1` had 2 scenario-side failures fixed in `951a803`, not re-run. Resume with
+    `Run-Session.ps1 -Lane 1 -Deploy -Scenario job-stats` in `CMS21-Together-wt\jobstats`. New question in QUESTIONS.md
+    (upgrade achievements, default buyer only).
 - `fix/place-same` (`5a8fb16`, paused): place-same fixed (move lock covers the target place, refused moves answer
   with every car's place then lift states; proof `car-place-same` fails on `84beea6` `20261008-231901_L2` and passes
   `20261008-232642_L2`); examined flags after an unpark fixed (snapshot waits for `LoadCarFromFile`; proof
