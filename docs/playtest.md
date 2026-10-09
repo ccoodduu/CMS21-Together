@@ -42,6 +42,10 @@ Report problems with both players' `MelonLoader\Latest.log` and the server's `Lo
    the test" spot for both. **Hand check:** the real exit from the path and its report (the harness cannot finish it).
 3. Dyno: measure a car; the other player sees the measured values. **Hand check:** a tuned car on the dyno (values
    before, during, after measure and after cancel) and a job car on the dyno.
+   **Hand check: tuning at the dyno** with a visible game: open the tuning computer with racing parts, move the
+   gearbox sliders and the ECU bars with the mouse and apply each tab; the other player sees the values (scenario
+   `car-tuning` drives the tabs' apply actions headless). A second player clicking the computer is told "<name> is
+   tuning this car."; leaving the window open five minutes closes it.
 4. Sit in a car and start the engine: the other player sees you seated and hears the engine.
 
 ## Travel and sessions
