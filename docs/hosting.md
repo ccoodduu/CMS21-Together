@@ -109,6 +109,8 @@ with its default when the server starts. Changes take effect at the next start.
 | `password_steam` | `False` | Also ask Steam joins for the password |
 | `admin_key` | `""` | Players whose game sends this key are admins; empty = no admin |
 | `new_session_difficulty` | `Normal` | Difficulty of a new session when no save exists: `Easy`, `Normal` or `Expert` |
+| `new_session_money` | `4000` | Money of a new session when no save exists (a new profile in the game starts with 4000) |
+| `new_session_level` | `1` | Level of a new session when no save exists (a new profile in the game starts at level 1) |
 | `game_version` | `auto` | Game version every player must have. `auto` = the version of the first player who joins |
 | `mods_required` | empty | Gameplay mods every player must have, comma separated: `Name` or `Name@Version` |
 | `mods_ignored` | empty | Mods to allow even though the mod check thinks they change gameplay |

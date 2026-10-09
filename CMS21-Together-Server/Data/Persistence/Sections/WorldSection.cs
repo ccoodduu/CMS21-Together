@@ -15,9 +15,6 @@ namespace CMS21_Together_Server.Data.Persistence.Sections
 		public int Version => 1;
 		int ISnapshotProvider.SyncOrder => SyncOrder.World;
 
-		private const int StartMoney = 12500;
-		private const int StartLevel = 8;
-
 		public JToken Save()
 		{
 			var data = JObject.FromObject(GameDataManager.CurrentState.WorldState);
@@ -35,7 +32,8 @@ namespace CMS21_Together_Server.Data.Persistence.Sections
 
 		public void Reset()
 		{
-			int internalLevel = StartLevel - 1;
+			int startLevel = Program.Config?.NewSessionLevel ?? 1;
+			int internalLevel = startLevel - 1;
 			double capCurrent = Math.Floor(Math.Pow(internalLevel, 1.62221) * 2) * 75;
 			double capNext = Math.Floor(Math.Pow(internalLevel + 1, 1.62221) * 2) * 75;
 			int maxExpInThisLevel = (int)(capNext - capCurrent);
@@ -43,9 +41,9 @@ namespace CMS21_Together_Server.Data.Persistence.Sections
 			GameDataManager.CurrentState.WorldState = new WorldState
 			{
 				Gamemode = Program.Config?.NewSessionDifficulty ?? Gamemode.Normal,
-				Money = StartMoney,
-				Level = StartLevel,
-				Exp = Math.Min(480, maxExpInThisLevel - 1)
+				Money = Program.Config?.NewSessionMoney ?? 4000,
+				Level = startLevel,
+				Exp = startLevel > 1 ? Math.Min(480, maxExpInThisLevel - 1) : 0
 			};
 		}
 
