@@ -36,8 +36,8 @@ Start-Sleep -Milliseconds 300
 Save-HarnessScreenshot -Instance $a -RunDir $Ctx.RunDir -Label "revertbackup_blocked"
 Start-Sleep -Seconds 2
 
-$mode = Try-Guard $a "Mode:BonusDisassemble" "blocked"
-if ($mode.gameMode -ne "Garage") { $failures += "game mode after a blocked BonusDisassemble is $($mode.gameMode)" }
+$mode = Try-Guard $a "Mode:Benchmark" "blocked"
+if ($mode.gameMode -ne "Garage") { $failures += "game mode after a blocked Benchmark is $($mode.gameMode)" }
 $inventory = Try-Guard $a "Window:Inventory" "allowed"
 if (-not $inventory.shown) { $failures += "Inventory did not open after the blocked mode change" }
 Start-Sleep -Seconds 2
@@ -66,7 +66,7 @@ if ($dumpA.local.scene -ne "Garage") { $failures += "A left the garage after blo
 
 $log = Send-HarnessCommand -Instance $a -Verb guard-log
 $log | ConvertTo-Json -Depth 5 | Set-Content -LiteralPath (Join-Path $Ctx.RunDir "guard_log_A.json") -Encoding utf8
-foreach ($key in @("Window:RevertBackup", "Mode:BonusDisassemble", "Scene:Showroom", "Pie:engine_new")) {
+foreach ($key in @("Window:RevertBackup", "Mode:Benchmark", "Scene:Showroom", "Pie:engine_new")) {
     if ($log.keys -notcontains $key) { $failures += "guard-log on A lacks $key" }
 }
 

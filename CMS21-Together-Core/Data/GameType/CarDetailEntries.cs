@@ -24,6 +24,8 @@ public static class CarDetailEntries
 
 	public static string Module(string partKey) => $"t:{partKey}";
 
+	public static string Bonus(int slot) => $"x:{slot}";
+
 	public static CarDetailSection SectionOf(string entry)
 	{
 		if (entry.StartsWith("f:")) return CarDetailSection.Fluids;
@@ -31,6 +33,7 @@ public static class CarDetailEntries
 		if (entry.StartsWith("a:")) return CarDetailSection.Alignment;
 		if (entry.StartsWith("c:")) return CarDetailSection.BodyCosmetics;
 		if (entry.StartsWith("t:")) return CarDetailSection.Tuning;
+		if (entry.StartsWith("x:")) return CarDetailSection.BonusParts;
 		return entry switch
 		{
 			Paint => CarDetailSection.Paint,
@@ -85,6 +88,9 @@ public static class CarDetailEntries
 				foreach (var module in details.Tuning.Modules)
 					entries[Module(module.PartKey)] = module;
 		}
+		if (details.BonusSlots != null)
+			foreach (var slot in details.BonusSlots)
+				entries[Bonus(slot.Slot)] = slot;
 		if (details.Paint != null) entries[Paint] = details.Paint;
 		if (details.Plates != null) entries[Plates] = details.Plates;
 		if (details.Info != null) entries[Info] = details.Info;

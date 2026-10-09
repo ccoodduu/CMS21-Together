@@ -23,7 +23,7 @@ public static class CarDetailsHooks
 	[HarmonyPatch(typeof(CMS.Managers.PaintshopManager), nameof(CMS.Managers.PaintshopManager.SubmitColor))]
 	[HarmonyPostfix]
 	private static void AfterPaint(CMS.Managers.PaintshopManager __instance) =>
-		CarDetailsSync.MarkDirty(__instance.carLoader, CarDetailSection.Paint | CarDetailSection.BodyCosmetics);
+		CarDetailsSync.MarkDirty(__instance.carLoader, CarDetailSection.Paint | CarDetailSection.BodyCosmetics | CarDetailSection.BonusParts);
 
 	[HarmonyPatch(typeof(CMS.UI.Logic.Tune.GearboxTab), nameof(CMS.UI.Logic.Tune.GearboxTab.ApplyAction))]
 	[HarmonyPostfix]

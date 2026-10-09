@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using System.Linq;
 using System.Net.Sockets;
 using CMS21_Together_Core;
 using CMS21_Together_Core.Network;
@@ -16,6 +17,7 @@ namespace TogetherTestHarness.Features;
 public static class NetHoldCommands
 {
     private static bool holding;
+    private static HashSet<PacketTypes> holdOnly;
     private static bool stalling;
     private static readonly List<byte[]> heldOutgoing = new List<byte[]>();
     private static bool replaying;
@@ -62,9 +64,18 @@ public static class NetHoldCommands
         {
             holding = true;
             stalling = mode == "out";
+            holdOnly = null;
             return stalling ? "stalling both directions" : "holding";
         }
+        if (mode.StartsWith("only "))
+        {
+            holding = true;
+            stalling = false;
+            holdOnly = new HashSet<PacketTypes>(mode.Substring(5).Split(',').Select(t => (PacketTypes)System.Enum.Parse(typeof(PacketTypes), t.Trim(), true)));
+            return $"holding only {string.Join(",", holdOnly)}";
+        }
         holding = false;
+        holdOnly = null;
         stalling = false;
         var replay = new List<(PacketTypes Id, object Data, long Sender)>(held);
         var outgoing = new List<byte[]>(heldOutgoing);
@@ -100,6 +111,7 @@ public static class NetHoldCommands
         if (delaySeconds > 0f || delayed.Count > 0) changed.Add($"net-delay {delaySeconds * 1000f:0} ms (dropped {delayed.Count} delayed packets)");
         holding = false;
         stalling = false;
+        holdOnly = null;
         held.Clear();
         heldOutgoing.Clear();
         delaySeconds = 0f;
@@ -117,6 +129,7 @@ public static class NetHoldCommands
         }
         if (!holding || replaying) return true;
         if (!stalling && (id == PacketTypes.Heartbeat || id == PacketTypes.Movement)) return true;
+        if (holdOnly != null && !holdOnly.Contains(id)) return true;
         held.Add((id, deserializedData, senderId));
         return false;
     }

@@ -54,7 +54,7 @@ public class ModCarDetails
 	public List<ModBodyCosmetics> BodyCosmetics;
 	public ModLPData Plates;
 	public ModCarInfo Info;
-	public ModBonusParts BonusParts;
+	public List<ModBonusSlot> BonusSlots;
 	public ModDynoResult Dyno;
 }
 
@@ -135,9 +135,11 @@ public class ModCarInfo
 }
 
 [Serializable]
-public class ModBonusParts
+public class ModBonusSlot
 {
-	public string[] IDs;
+	public int Slot;
+	public string Id;
+	public bool Unmounted;
 	public bool IsPainted;
 	public ModColor Color;
 	public ModPaintType PaintType;

@@ -84,6 +84,22 @@ namespace CMS21_Together_Server.Data.Cars
 			Check("the tuner's lock holds the car shared, so park and delete are refused", CarLocks.HeldByOther(Loader, B));
 			CarLocks.ReleaseOwner(A, "check");
 
+			var empty = new ModBonusSlot { Slot = 0, Unmounted = true };
+			var fitted = new ModBonusSlot { Slot = 1, Id = "bonus_trunk_spoiler_1" };
+			state.CarState.Details[Loader] = new ModCarDetails { SpawnSeq = 1, HasSnapshot = true, BonusSlots = new List<ModBonusSlot> { empty, fitted } };
+			string emptySignature = CarDetailEntries.Signature(new ModBonusSlot { Slot = 1, Unmounted = true });
+			var bonus = Request(X(LockKeys.Bonus(1)), kind: CarLockKind.BonusPart);
+			bonus.Expect = emptySignature;
+			var stale = TryGrant(B, bonus).Refused;
+			Expect("a bonus fit that expects an empty slot the server has filled is refused as stale", stale, CarLockRefusal.Stale, LockKeys.Bonus(1));
+			bonus = Request(X(LockKeys.Bonus(1)), kind: CarLockKind.BonusPart);
+			bonus.Expect = CarDetailEntries.Signature(fitted);
+			Expect("a bonus request that expects the stored slot is granted", TryGrant(B, bonus).Refused, CarLockRefusal.None, null);
+			Expect("a second player on the same slot is refused", Ask(A, X(LockKeys.Bonus(1)), kind: CarLockKind.BonusPart), CarLockRefusal.Held, LockKeys.Bonus(1));
+			Expect("a slot beyond the car's stored slots is invalid", Ask(A, X(LockKeys.Bonus(2)), kind: CarLockKind.BonusPart), CarLockRefusal.Invalid, LockKeys.Bonus(2));
+			CarLocks.ReleaseOwner(B, "check");
+			state.CarState.Details.Remove(Loader);
+
 			CarLocks.Scope = LockScope.Part;
 			Grant(A, X("s:3.22.4"));
 			Expect("with lock_scope = part, the parent is granted", Ask(B, X("s:3.22")), CarLockRefusal.None, null);
