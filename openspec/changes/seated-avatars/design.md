@@ -58,6 +58,10 @@ row 21 takes over; nothing stays at the garage seat.
   `SeatPoses.IsPosed(record)`, so the stale walking position in each seated record never resets the avatar's network
   target and velocity (no jitter, no walk animation). The record's `LastMovement` is still stored.
 - Task 1.1 answers whether the lift's tween moves the handle in `Update` (then `LateUpdate` is late enough) or later.
+  **Answer (2026-10-09):** the lift (LeanTween) moves the seat handle before `OnLateUpdate`: over a full Up travel
+  the handle moved 1.678 m between the harness's `OnUpdate` and `OnLateUpdate` and 0 m after it, and the posed avatar
+  stayed within 0.000 m of the seat in every frame (`20261009-002305_L1_seat-avatars`). A player can sit down in a car
+  on a raised lift (step 3).
 
 ### D4. Standing up
 
@@ -76,6 +80,11 @@ Nothing changes: no new state, no new packet. Late join is the `players` snapsho
 - [The crouched model clips with seats, the steering wheel or doors] → hand check on a sedan, a pickup and a
   right-hand-drive car; tune the drop per `InteriorParams.SeatScale` only if it looks wrong.
 - [`SeatLeft` means "driver side" rather than the left handle on a right-hand-drive car] → task 1.1 logs one RHD car.
+  **Answer (2026-10-09):** on the Bolt Atlanta `sit left` puts the camera 0.88 m from the left handle (1.26 m from the
+  right), `sit right` the other way round. No RHD car could be spawned: the RHD models (Sakura Tiara, CAB Roamer,
+  Nissan 240Z, Jaguars, Land Rover) all need a DLC the test installs do not own. The game's own driver seat call,
+  `PathTestManager.Prepare` → `SitInside(car, !RightHandDrive, …)`, shows that `left` is the physical left seat; the
+  RHD hand check (3.2) confirms it in a real game.
 - [Lift motion makes the avatar lag a frame] → the pose is written in `OnLateUpdate` after the lift's tween; the
   scenario reads a per-frame offset ring buffer, not single dumps.
 - [A seated player who disconnects] → the roster removes the avatar (unchanged).

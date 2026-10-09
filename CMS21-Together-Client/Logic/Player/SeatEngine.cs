@@ -26,6 +26,7 @@ public static class SeatEngine
 	private static float pendingSince;
 	private static float nextPoll;
 	private static bool subscribed;
+	private static bool wasSeatedMode;
 
 	public static int SeatCarLoaderId { get; private set; } = PlayerPresenceRecord.NoCar;
 	public static bool SeatLeft { get; private set; }
@@ -58,6 +59,7 @@ public static class SeatEngine
 	public static void Reset()
 	{
 		pendingLoader = PlayerPresenceRecord.NoCar;
+		wasSeatedMode = false;
 		SeatCarLoaderId = PlayerPresenceRecord.NoCar;
 		SeatLeft = false;
 		EngineCarLoaderId = PlayerPresenceRecord.NoCar;
@@ -107,6 +109,8 @@ public static class SeatEngine
 	private static void PollSeat()
 	{
 		bool seatedMode = InSeatedMode;
+		bool seatedModeEnded = wasSeatedMode && !seatedMode;
+		wasSeatedMode = seatedMode;
 		if (pendingLoader != PlayerPresenceRecord.NoCar)
 		{
 			if (seatedMode)
@@ -122,6 +126,7 @@ public static class SeatEngine
 			return;
 		}
 		if (IsSeated && !seatedMode) SetSeat(PlayerPresenceRecord.NoCar, false);
+		else if (seatedModeEnded) Movement.ForceSend();
 	}
 
 	private static void PollEngine()

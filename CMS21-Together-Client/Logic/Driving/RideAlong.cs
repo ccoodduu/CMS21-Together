@@ -20,7 +20,6 @@ public static class RideAlong
 	public const float CarWaitSeconds = 90f;
 	public const float CarLostSeconds = 10f;
 	public const float ReturnSettleSeconds = 20f;
-	private const float SeatedAvatarDrop = 0.45f;
 	private const float LookDegreesPerUnit = 2f;
 	private const float MaxLookYaw = 150f;
 	private const float MaxLookPitch = 70f;
@@ -367,13 +366,10 @@ public static class RideAlong
 	{
 		seat = Vector3.zero;
 		frame = Quaternion.identity;
-		if (carLoader == null || !carLoader || !CarFrame(carLoader, out frame, out _)) return false;
-		bool left = passenger == carLoader.OtherData.RightHandDrive;
-		var handle = left ? carLoader.GetLeftSeatHandle() : carLoader.GetRightSeatHandle();
-		if (handle == null || !handle) return false;
-		seat = handle.transform.position;
-		return true;
+		return carLoader != null && carLoader && SeatPoses.TryGetHandle(carLoader, LeftHandle(carLoader, passenger), out seat, out frame);
 	}
+
+	private static bool LeftHandle(CarLoader carLoader, bool passenger) => passenger == carLoader.OtherData.RightHandDrive;
 
 	public static CarLoader OwnTrackCar()
 	{
@@ -416,9 +412,7 @@ public static class RideAlong
 		{
 			carLoader = CopyOf(playerId);
 		}
-		if (!SeatPose(carLoader, passenger, out var seat, out rotation)) return false;
-		position = seat - rotation * Vector3.up * SeatedAvatarDrop;
-		return true;
+		return carLoader != null && carLoader && SeatPoses.TryGet(carLoader, LeftHandle(carLoader, passenger), out position, out rotation);
 	}
 
 	public static void LateUpdate()
@@ -493,10 +487,7 @@ public static class RideAlong
 				if (retry) PresenceManager.Reconcile(playerId);
 				continue;
 			}
-			var avatar = player.Avatar;
-			if (!avatar.gameObject.activeSelf) avatar.gameObject.SetActive(true);
-			avatar.UpdateNetworkState(position, rotation, Vector3.zero, 0f, true, true, false);
-			avatar.transform.SetPositionAndRotation(position, rotation);
+			SeatPoses.Place(player.Avatar, position, rotation);
 		}
 	}
 }

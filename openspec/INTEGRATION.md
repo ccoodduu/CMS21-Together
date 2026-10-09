@@ -54,7 +54,7 @@ part 2. "Owner" defines it; "Users" only call or subscribe.
 | `JobStatsAward { JobId, Stats, MissionFinished }` (S → contributors, stats derived by the server in `OnJobEnd`; no client report); active job `Contributors` (`[OptionalField]`, `PlayerRecords.ShortKey`) | both | 30 (drafted) | 3 (`JobsService.OnJobEnd`, mission counters in `JobRemoved`), 18, 19 part 1 (sources of contributions) |
 | `OrderRequest { RequestId }`; `OrderGeneratedPacket.RequestId`, `.Reason` (`OrderRequestReason`: `None`, `NoCar`, `NotReady`, `Busy`, `Disabled`, `HarnessOff`; `[OptionalField]`); `JobsState.Clock` (`OrderClock { OrderTimer, NextOrderTime = 10 }`, `[OptionalField]`) | S→generator / generator→S | 16 (order clock) | the server asks the elected garage client for an order when its clock is due; the client answers with the order or with no job and a reason. `docs/design/server-order-clock.md` |
 
-Rows 12 and 14a add no packets; rows 26 (`shared-salon`, drafted: guard entries and a proof only) and 29 (`seated-avatars`, drafted) add none either.
+Rows 12 and 14a add no packets; rows 26 (`shared-salon`, drafted: guard entries and a proof only) and 29 (`seated-avatars`) add none either.
 
 ## `DisconnectReason` (Core `StartPackets.cs`, append-only like `PacketTypes`)
 
@@ -272,6 +272,7 @@ Verbs are globally unique (`Commands.Discover` throws on a duplicate). Existing:
 | 16 | `jobcar-digest <jobId> [rows]` (an active job's car: body and sub part records, car details sections, the job's tasks with their part ids; `hash` and one hash per section; `rows` adds the rows), `jobcar-trace on|off|report` (the Unity random state around each step of `TakeJob`, `TakeMission`, `LoadCar` and `SetRandomColorPanels`, and around `PlaceAtPosition` and `PrepareJob`) |
 | 16 (order clock) | `orders-timer [<timer> <next>]` (set or read the native `OrderGenerator.orderTimer`/`nextOrderTime`), `orders-ttl <seconds>|off` (a sticky `timeToEnd` for every order the client generates); `orders-autogen off` also answers server order requests with `HarnessOff`; `orders-generate` goes through `JobsSync.GenerateOrder(0)` while connected |
 | 21 | `ride-state [driverId]` (phase, rides, camera `placed`/`toHead`/`maxDrift`/`customPos`, own track car `kinematic`/`inputsEnabled`/seats, drive capture, the copy's seats, avatars `toSeat`), `ride-probe` (spike: track camera, own car seats and head, copy seats and wheels); dump section `ride` |
+| 29 | `seat-pose` (per remote player `active`, `position`, `seatPose`; `local` position, seat and seated mode), `seat-pose-reset`, `seat-handles <loader>` (left/right handle, camera distances, `rightHandDrive`); dump `players[]` gains `seatPose { seated, side, toSeat, maxToSeat, maxSinceReset, frames, handleMovedBeforeLate, handleMovedAfterLate }`, sampled every frame in the harness's `OnLateUpdate` |
 
 | PowerShell helper / server command | Owner (first to land) |
 |---|---|
@@ -301,7 +302,7 @@ Scenarios (unique): playtest fixes `car-wheel-swap`, `car-mount-race`; 7 `server
 12 `release-smoke` (marked `# run-all: skip`, run after `Install-ReleaseToTestEnv.ps1`); 14a `guard`; 14
 `desync-autofix`, `resync-key`, `bug-report`; 17 `visual-parts`, `visual-activity`, `visual-latejoin`, `visual-screens` (`# needs: graphics`, `# run-all: skip`), `visual-probe` (spike, `# run-all: skip`), `drive-track`, `drive-latejoin`, `drive-probe` (spike, `# run-all: skip`); 11 `scale-connect`, `soak`, `latejoin-full`, `storm` (all
 `# run-all: lane 3`), `full-garage-fixture` and `perf-probe` (`# run-all: skip`); 22 `ping`; 23 `shopping-list`; 16 `jobs-seeded` (seeded job cars); 16 `jobs-clock` (order clock); 19
-`server-answers` (part 3; `seat-engine` gains the seat race), `merges-probe` (part 1 spikes 1.2, 1.3 and the 1.4 setters, `# run-all: skip`), `car-stale-record`, `details-concurrent`, `tools-item-race`, `park-stale`, `car-snapshot-after-delete` (part 1; `car-gone-inflight` gains park and job end, `server-answers` the dropped transaction, `tools-race` two stand-part steps, `locks-fluid` two fills at once); 21 `ride-along`, `ride-probe` (spike, `# run-all: skip`); 24 `locks-select-2`; 20 `race-hardening`.
+`server-answers` (part 3; `seat-engine` gains the seat race), `merges-probe` (part 1 spikes 1.2, 1.3 and the 1.4 setters, `# run-all: skip`), `car-stale-record`, `details-concurrent`, `tools-item-race`, `park-stale`, `car-snapshot-after-delete` (part 1; `car-gone-inflight` gains park and job end, `server-answers` the dropped transaction, `tools-race` two stand-part steps, `locks-fluid` two fills at once); 21 `ride-along`, `ride-probe` (spike, `# run-all: skip`); 29 `seat-avatars`, `seat-pose-probe` (spike, `# run-all: skip`; `seat-engine` now expects the seated avatar shown); 24 `locks-select-2`; 20 `race-hardening`.
 
 Scale lane and long runs (owner 11, design `multiplayer-soak-and-scale` D1-D9):
 
