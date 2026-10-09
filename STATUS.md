@@ -12,8 +12,9 @@ Newest first. One entry per work session.
 - Proof `salon-buy`: fails on the old guard rules (`20261009-005105_L1_salon-buy`, guard step; the purchase steps of
   that run failed on a harness bug fixed since) and passes (`20261009-011548_L1_salon-buy`): configured purchase paid
   once and parked once for both, server `NoMoney` refusal answered, local refusal sends nothing.
-- Smoke plus `salon-buy`, `purchases`, `locks-select`, `locks-select-2` were running when the session paused; see the
-  next entry or `toolsuns\*_regression.json` on the branch's worktree.
+- Smoke plus `salon-buy` (with the guard-decision check, `20261009-015035_L1_salon-buy`), `purchases`, `locks-select`,
+  `locks-select-2` and `server-saves`: all passed (`20261009-011825_regression.json`).
+uns\*_regression.json` on the branch's worktree.
 
 ## 2026-10-08/09 (23:15–00:45) — order clock, menu click fix, rows 25–31 drafted and reviewed
 
