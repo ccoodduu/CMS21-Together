@@ -8,6 +8,14 @@ Newest first. One entry per work session.
 - Not merged yet: `feat/seated-avatars` (row 29, built; proof `seat-avatars` fails on the old client
   `20261009-000552_L1` and passes `20261009-002305_L1`; smoke set still to confirm), `feat/shared-salon` (row 26, in
   progress), `fix/place-same` (lane 2, in progress). Row 30 not started.
+- `fix/place-same` (`5a8fb16`, paused): place-same fixed (move lock covers the target place, refused moves answer
+  with every car's place then lift states; proof `car-place-same` fails on `84beea6` `20261008-231901_L2` and passes
+  `20261008-232642_L2`); examined flags after an unpark fixed (snapshot waits for `LoadCarFromFile`; proof
+  `park-return` fails `20261008-233419_L2`, passes `20261008-233709_L2`); smoke plus 20 touched scenarios pass
+  (`20261009-011337_regression.json`). Open before merge: `locks-select-2` fails in batch on the branch (passes alone;
+  base batch `20261009-014747` passes): check which 2 pie move options differ after B's release
+  (`LockPie.CarBlocked`/`CarLockMirror.Conflict` with the new place check), then a 15-min soak
+  `-ContentionKinds place-same`; remove the `place-same-base` worktree afterwards.
 - To resume: read the agents' last reports (branch commit messages), run smoke on each branch with main merged in,
   merge; then row 30, the next soak with contention (row 19 task 10.5 still open), and rows 28, 25, 27a in that order.
 
