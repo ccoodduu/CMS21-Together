@@ -60,8 +60,7 @@ Also not yet:
 - Gameplay mods are refused by the server; visual mods are fine.
 
 Planned: the race track, the tuning window, bonus parts, building new engines and garage customization. The DLC
-tracks, the photo location, the tutorial and saving or loading stay
-blocked.
+tracks, the photo location, the tutorial and saving or loading stay blocked.
 
 ## Get started
 
