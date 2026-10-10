@@ -8,7 +8,7 @@ namespace TogetherTestHarness.Features;
 public static class PerfCommands
 {
     private const float WindowSeconds = 10f;
-    private const int Capacity = 8192;
+    private const int Capacity = 32768;
 
     private static readonly float[] frameTimes = new float[Capacity];
     private static readonly float[] frameDeltas = new float[Capacity];
@@ -76,6 +76,31 @@ public static class PerfCommands
         {
             return -1;
         }
+    }
+
+    [HarnessCommand("frame-log")]
+    private static object FrameLog(string args)
+    {
+        var parts = (args ?? "0").Trim().Split(new[] { ' ' }, StringSplitOptions.RemoveEmptyEntries);
+        float from = float.Parse(parts[0], System.Globalization.CultureInfo.InvariantCulture);
+        float minMs = parts.Length > 1 ? float.Parse(parts[1], System.Globalization.CultureInfo.InvariantCulture) : 0f;
+        var frames = new List<object>();
+        int total = 0;
+        float oldest = -1f;
+        for (int i = count - 1; i >= 0; i--)
+        {
+            int index = (next - 1 - i + Capacity) % Capacity;
+            if (oldest < 0f) oldest = frameTimes[index];
+            if (frameTimes[index] < from) continue;
+            total++;
+            if (frameDeltas[index] * 1000f < minMs) continue;
+            frames.Add(new[] { Math.Round(frameTimes[index], 4), Math.Round(frameDeltas[index] * 1000, 2) });
+        }
+        return new Dictionary<string, object>
+        {
+            ["clock"] = RemoteBuildSpike.Clock(), ["from"] = from, ["oldestKept"] = Math.Round(oldest, 4), ["framesInWindow"] = total,
+            ["minMs"] = minMs, ["frames"] = frames,
+        };
     }
 
     [HarnessCommand("fps-cap")]
