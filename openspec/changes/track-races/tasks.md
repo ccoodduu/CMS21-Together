@@ -56,3 +56,28 @@ rows 7, 8, 17 part 2, 19 part 3 (merged).
 
 - [x] 5.1 docs/playtest.md: a two-lap race against a friend with a visible game (start fairness by eye, result toast);
       docs/try-it.md: how to start a race; ROADMAP row 27b status; STATUS entry with run ids.
+
+## 6. Start grid (revision 2026-10-10, D7)
+
+- [x] 6.1 Spike `docs/spikes/race-grid.md`: the race track has 20 painted boxes (10 rows of 2, 6.15 m and 10 m apart).
+      The game's `CarSpawnPosition` is on pole, and moving it puts the restart's car on any box.
+- [x] 6.2 Server: arrival order on the race track; the racers are ordered starter first, then by arrival;
+      `RaceCountdown.Grid` (`[OptionalField]`); `--check-races` checks the order (two starts with different starters).
+- [x] 6.3 Client `RaceGrid`: move the spawn onto box n (ground raycast) before `RunRestart`. Move it back when the
+      restart's `LoadCar` ends, at the green, and on quit, scene change, race end and reset. Racers 21+ share boxes
+      from the back. Harness `race-state` shows `Grid`, `Box`, `spawnMoved` and `lastBox`.
+- [x] 6.4 27c: `race-start` ends at the green for racers with a box of their own (track-collisions D3 rule 4).
+- [x] 6.5 Proof, `race-start` race 1:
+      - both clients have the grid Ann, Bob;
+      - Ann is on box 1 (0.00, 0.04) and Bob on box 2 (6.15, 0.05), within 0.2 m;
+      - the spawn is back on the game's spot;
+      - each sees the other's copy 6.15 m away;
+      - both colliders are on after the green.
+
+      Fails on the old code: `20261010-125823_L1_race-start` (main `6fd837c` with the spike harness). There is no grid,
+      Bob is at (0.00, 0.04), the copies are 0.002 m apart, and the colliders stay `race-start`.
+
+      Passes: `20261010-130530_L1`. A first build moved the spawn back at the throttle wait, where the arrival's
+      `Prepare` still sat, so Bob started on pole (`20261010-130144_L1`). After merging main (row 31, `e08348e`), the
+      batch `20261010-130855_regression.json` passed 13/13: the smoke set, `race-start`, `race-track`,
+      `race-hardening`, `track-collide`, `drive-track`, `drive-latejoin`, `ride-along` and server-saves.

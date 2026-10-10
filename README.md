@@ -118,13 +118,14 @@ the game, click **Multiplayer** in the main menu.
   the same time see each other's car drive (it appears a few seconds after you arrive). Cars collide: your car stops
   or bounces off another player's car, which is never pushed on its driver's screen (at high speed a hit can come a
   few metres behind the other car, because it is shown a moment late). There is no collision while two cars overlap,
-  for a second after one jumps (a restart), during a race start, or with a passenger riding along. The host can turn
+  for a second after one jumps (a restart), during a race countdown, or with a passenger riding along. The host can turn
   collisions off for everyone (`track_collisions = off`). Cars pass through players.
 - **Lap records:** the server keeps each player's best race-track lap and speed-track top speed across sessions and
   restarts; the race track shows your own best as in single player. When someone sets a new best for the group,
   everyone is told ("New group record on the race track: Ann, 1:23.456"). Only the driver's laps count.
 - **Races:** on the race track, open the session panel (F9), pick the number of laps and press "Start race". Everyone
-  driving on the race track at that moment takes part: each car jumps back to the start and the game's own start
+  driving on the race track at that moment takes part: each car jumps to its own box on the start grid (the starter
+  on pole, the others in the order they arrived on the track) and the game's own start
   lights turn green at the same moment for everyone (timed with each player's ping). The server collects the lap
   times and shows everyone the result, fastest total first. Leaving the track, disconnecting, the pause menu's
   restart or ten minutes without finishing count as "did not finish". The last ten results are kept with the session.

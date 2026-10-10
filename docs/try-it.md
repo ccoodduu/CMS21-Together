@@ -71,9 +71,10 @@ time. In a session, **F9** shows the players with their ping, your Steam friends
 3. **Drive a full lap.** When it beats the group's best, everyone sees "New group record on the race track: <name>,
    m:ss.fff". Rejoin later: the race track should still show your best time. Report: a record that was lost.
 4. **Race a friend:** both drive to the race track, open the session panel (F9), choose the laps and press "Start
-   race". Both cars jump to the start and the lights turn green for both at the same moment; after the laps everyone
-   sees "Race result: 1. <name> m:ss.fff, 2. ...". Report: lights that were clearly apart, a lap that did not count,
-   or a wrong result.
+   race". Each car jumps to its own box on the start grid (the starter on pole, the other beside it) and the lights
+   turn green for both at the same moment; from the green you can bump each other. After the laps everyone
+   sees "Race result: 1. <name> m:ss.fff, 2. ...". Report: lights that were clearly apart, a car not standing in a
+   grid box, a lap that did not count, or a wrong result.
 5. **Ride along** to the speed track: sit in the passenger seat before your friend drives there. Report: where you
    ended up, and whether the pause menu's return brought you both back.
 6. **Bump into each other:** on the tracks your car now hits your friends' cars (their car is never pushed on their

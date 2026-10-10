@@ -63,3 +63,10 @@ Prerequisites: 27a `shared-race-tracks` merged; rows 17 part 2 and 21 (merged). 
 - [x] 4.1 docs/playtest.md: bumping a friend's car at low and high speed (phantom contacts expected at speed);
       docs/try-it.md: the host switch; ROADMAP row 27c status; STATUS entry with run ids. Also README and
       docs/hosting.md (`track_collisions`).
+
+## 5. Race grid revision (2026-10-10)
+
+- [x] 5.1 With track-races D7 every racer has a grid box of their own, so the `race-start` rule ends at the green
+      (`TrackRaceSync.RaceView.SharesBox`). The 10 m rule stays for racers who share a box: more than 20 racers, or a
+      countdown from an older server without a grid. `race-start` now checks that both colliders are on after the
+      green, where before it checked that they stay off. Runs: see track-races task 6.5.

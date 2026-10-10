@@ -3,6 +3,9 @@
 Roadmap row 27b (`track-races`): every racer now starts on the one spot the game uses. The user remembered a start grid
 painted on the race track and asked us to look around. Date: 2026-10-10. Branch `spike/race-grid`.
 
+**Built** on `feat/race-grid` (track-races D7, track-collisions D3 rule 4, 2026-10-10). The grid order is the starter
+first, then the order of arrival (user decision).
+
 **Result:** the race track (`Race_track_1`) has a painted grid of **20 boxes: 10 rows of 2**, behind the chequered
 start/finish line. The game's own start spot is the left box of the front row (pole). No game code knows the other 19
 boxes; they are only paint. If we move the scene's spawn transform onto box N before the game's restart, the restart
