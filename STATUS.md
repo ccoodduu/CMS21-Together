@@ -2,6 +2,34 @@
 
 Newest first. One entry per work session.
 
+## 2026-10-10 (02:20–05:15) — fix/blocked-drift: blocked counters and the locks-select-2 pie (lane 2)
+
+- `fix/blocked-drift` (lane 2, not merged). The soak's `blocked` drift (`20261010-020148_L2`: radiator `s:29.3`
+  blocked on D only) is real, not only the harness: a radiator fan's blades come off as separate items
+  (`unmountWithSeparate`), the fan goes back from a plain item, and the game's `ShowMounted` wants a group item for a
+  part with `unmountWith` members and stops in its first step: the fan counts as mounted, the item stays in the
+  inventory (a duplicate) and the actor never blocks the radiator again, while every receiver (`ShowBySaveGame`) does.
+  The player's own path (DoMount + the last bolt's ShowMounted) and FastMount both do it.
+  - `f90e2ab`: for that first step the part's `unmountWith` is empty, so the game takes the item's path (deletes the
+    item, blocks the parts). Proof `part-blocks-group`: fails on `5754234` (`20261010-025603_L2`), passes
+    (`20261010-030504_L2`, `20261010-033316_L2`).
+  - `12bdcbd`: each client watches the blocked counters of a settled car (parts whose counter equals the mounted
+    parts that block them) and logs an error when one differs at two checks 10 s apart; `part-blocks` reports the
+    count. Without the fix both clients report the radiator (`20261010-030947_L2`); with it none, and none in the parts
+    area regression or the soak below.
+  - `a6e44a7`: the soak keeps parts with `unmountWith` members (and the members) out of its item-less mounts, which
+    no player can do and which still leave the actor's counters behind.
+- `a20a526`: `lock-pie` keeps the game's own pie input (`HandleInput` -> `ButtonAccept`) idle while the harness holds
+  the pie open. `locks-select-2` passes in 2 batches (`20261010-034112_L2`, `20261010-040018_L2`) and 4 runs alone
+  (`20261010-040137_L2`, `040312_L2`, `040446_L2`, `040621_L2`), with no move of A's car.
+- Smoke plus the parts area: `20261010-040830_regression.json`, 34 passed (`desync-autofix` FLAKY). Soak 15 min
+  `20261010-045235_L2_soak`: rule 1 passes (8 of 8 checkpoints), no blocked-counter report; rule 2 one `world.exp`
+  resend, rule 9 one `lift-same` group whose lift did not start ("Lift on loader 1 did not start") while B worked on
+  that car; neither touched here, not followed up.
+- Lane note: another agent's runs on lane 2 went between my batch and its single reruns, and the reruns tested their
+  deploy (`20261010-024727_L2`, `20261010-030034_L2`, `20261010-031502_L2` ran `fluids*` builds; check `deployed` in
+  a rerun's result before trusting it).
+
 ## 2026-10-10 (03:50–04:45) — row 27a, race and speed track (`feat/shared-race-tracks`, lane 1)
 
 - Spikes: 1.1 classifies the 49 `TestTrack` references (33 to the track set, 11 test-track features, 5 definitions;
