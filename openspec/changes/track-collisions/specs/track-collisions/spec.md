@@ -15,6 +15,10 @@ the host has turned collisions off for everyone. The other player's car SHALL NO
 - **WHEN** player B's car stands on the track and player A drives into it slowly with collisions on
 - **THEN** A's car is stopped or deflected by B's car
 
+#### Scenario: Racers on their own grid boxes
+- **WHEN** A and B start a race on two boxes of the race track's start grid and the lights turn green
+- **THEN** both cars collide with each other from the green on
+
 #### Scenario: Collisions turned off
 - **WHEN** the host has turned collisions off and player A drives into B's car
 - **THEN** A's car passes through B's car, and B's car is not pushed on B's screen

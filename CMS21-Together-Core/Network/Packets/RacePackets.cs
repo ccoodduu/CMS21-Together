@@ -33,6 +33,8 @@ public class RaceCountdownPacket : INetworkData
 	public int StarterId;
 	public List<int> Participants = new List<int>();
 	public int StartInMs;
+	// track-races D7: every racer of the race in grid order (index = box; 21+ share boxes from the back).
+	[System.Runtime.Serialization.OptionalField] public List<int> Grid;
 }
 
 [Serializable]

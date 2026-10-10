@@ -53,8 +53,10 @@ game's lights, with this timing: the racer calls `RunRestart` as soon as the cou
 then sets it to 1 for that step, so the game's own lights turn green at `localStart` plus at most a frame. The
 overlay fallback is not needed. `StartInMs` is 10 s instead of 5 s (4.3 s restart + 3 s lights + margin); a restart
 that reaches the throttle wait late releases at once and the log names the delay. `WaitForEndOfFrame` resumes in the
-headless games (the arrival `Prepare` reached the throttle wait). Start area: `PrepareCarPhysics` has one
-`StartPosition`, so every racer starts on the same spot (27c).
+headless games (the arrival `Prepare` reached the throttle wait). Start area: the restart puts the car on
+`PrepareCarPhysics.carSpawnPosition` (`!!Logic/CarSpawnPosition`; `StartPosition` is null on this track), so every
+racer starts on the same spot (27c). That spot is the pole box of a painted 20-box grid; spike
+`docs/spikes/race-grid.md` measures the boxes and proposes racer N on box N.
 
 ### D3. Laps, quit and DNF
 
@@ -82,13 +84,31 @@ a negative `StartInMs` (shown as "race in progress") and is not a participant. A
 
 `RaceCheck` (style of `CarLocksCheck`, run at server start in debug and by the harness): a race with two participants
 finishes in lap-time order; a quit, a scene change and a disconnect each give DNF; a second start on a running track is
-refused; the timeout ends a race.
+refused; the timeout ends a race; the grid order (D7) is the starter, then the order of arrival.
+
+### D7. Start grid (revision 2026-10-10)
+
+The race track has a painted grid of 20 boxes, 10 rows of 2 (spike `docs/spikes/race-grid.md`). The game's
+`CarSpawnPosition` is on the front left box (pole); the right column is 6.15 m to its right, and rows are 10 m apart.
+
+- Server: `TrackRaces` keeps each player's order of arrival on the race track. When a race starts, the racers are
+  ordered with the starter first, then by arrival (user decision 2026-10-10). `RaceCountdown.Grid` (`[OptionalField]`)
+  lists every racer in that order: index n is box n. Racers 21 and later share boxes from the back (index 20 → box 19,
+  21 → box 18, …).
+- Client (`RaceGrid`): before D2's `RunRestart`, a racer moves `carSpawnPosition` onto its box (spawn + right·6.15·(n
+  mod 2) − forward·10·⌊n/2⌋). The ground height comes from a downward raycast that ignores rigidbodies. The game's own
+  restart then places the car there. The spawn goes back to the game's spot once the restart's `LoadCar` has placed the
+  car (not at the throttle wait: the arrival's `Prepare` can still sit there when the restart starts), at the green,
+  and also on a quit, a scene change, race end and session reset. A countdown without `Grid` (an older server) keeps
+  everyone on pole.
+- 27c: during the countdown no collider is on. After the green, the `race-start` rule ends for a copy whose racer has a
+  box of their own. The 10 m rule stays only for racers who share the local racer's box.
 
 ## Risks / Trade-offs
 
 - [Half the ping is an estimate] → ±50 ms expected; lap times are measured locally, so only the start fairness suffers.
 - [`Restart` re-runs a fade or reloads physics, so its timing varies] → spike 1.1 measures it; D2's overlay fallback.
-- [Everyone starts on the same spot] → harmless with ghost cars; 27c keeps collisions off until the racers are apart.
+- [More than 20 racers share boxes] → only then does 27c keep collisions off until those racers are 10 m apart.
 - [`LastTime`/`Restart` folded or inlined] → 27a's task 1.2 checks with `work\at.py`; the fallback poll of
   `lastBestTime` gives lap times, and the quit marker falls back to the presence scene change only.
 

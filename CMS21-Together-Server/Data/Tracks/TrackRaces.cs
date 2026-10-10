@@ -14,7 +14,8 @@ namespace CMS21_Together_Server.Data.Tracks
 	/// <summary>
 	/// Shared races on the race track: one countdown for every player driving there, lap times from the racers' clients,
 	/// finishing order and DNFs decided here, the last results kept in <see cref="WorldState.RaceResults"/>. Running
-	/// races are never saved. Callers hold <see cref="GameDataManager.StateLock"/>.
+	/// races are never saved. The grid order (track-races D7) is the starter first, then the order of arrival on the track.
+	/// Callers hold <see cref="GameDataManager.StateLock"/>.
 	/// </summary>
 	public static class TrackRaces
 	{
@@ -48,6 +49,8 @@ namespace CMS21_Together_Server.Data.Tracks
 		}
 
 		private static readonly Dictionary<GameScene, Race> running = new Dictionary<GameScene, Race>();
+		private static readonly Dictionary<int, long> arrivals = new Dictionary<int, long>();
+		private static long arrivalCount;
 		private static int nextRaceId = 1;
 
 		private static WorldState World => GameDataManager.CurrentState.WorldState;
@@ -58,13 +61,21 @@ namespace CMS21_Together_Server.Data.Tracks
 			PresenceEvents.Left += OnLeft;
 		}
 
-		public static void Clear() => running.Clear();
+		public static void Clear()
+		{
+			running.Clear();
+			arrivals.Clear();
+		}
 
 		public static bool IsRaceScene(GameScene scene) => scene == GameScene.RaceTrack;
 
 		public static bool IsRunning(GameScene scene) => running.ContainsKey(scene);
 
 		public static int RunningRaceId(GameScene scene) => running.TryGetValue(scene, out var race) ? race.RaceId : 0;
+
+		public static List<int> GridOf(GameScene scene) => running.TryGetValue(scene, out var race) ? race.Racers.Select(r => r.PlayerId).ToList() : new List<int>();
+
+		private static long ArrivalOf(int playerId) => arrivals.TryGetValue(playerId, out long order) ? order : long.MaxValue;
 
 		private static string NameOf(int playerId) =>
 			PresenceRegistry.Get(playerId)?.Username ?? $"Player {playerId}";
@@ -102,7 +113,8 @@ namespace CMS21_Together_Server.Data.Tracks
 				StarterId = clientId,
 				StartAt = now + StartInMs / 1000f,
 				StartedUtcMs = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds() + StartInMs,
-				Racers = PresenceRegistry.All.Where(r => IsDrivingOn(r.PlayerId, scene)).OrderBy(r => r.PlayerId)
+				Racers = PresenceRegistry.All.Where(r => IsDrivingOn(r.PlayerId, scene))
+					.OrderBy(r => r.PlayerId == clientId ? 0 : 1).ThenBy(r => ArrivalOf(r.PlayerId)).ThenBy(r => r.PlayerId)
 					.Select(r => new Racer { PlayerId = r.PlayerId, Name = r.Username }).ToList(),
 			};
 			running[scene] = race;
@@ -113,13 +125,14 @@ namespace CMS21_Together_Server.Data.Tracks
 				Server.SendToClient(countdown, id);
 				sent++;
 			}
-			Logger.Info($"[Race] Race {race.RaceId} on the {TrackScenes.NameOf(scene)} started by client {clientId}: {race.Laps} laps, racers {string.Join(", ", race.Racers.Select(r => $"{r.Name} (client {r.PlayerId})"))}; countdown {StartInMs} ms sent to {sent}.");
+			Logger.Info($"[Race] Race {race.RaceId} on the {TrackScenes.NameOf(scene)} started by client {clientId}: {race.Laps} laps, racers in grid order {string.Join(", ", race.Racers.Select(r => $"{r.Name} (client {r.PlayerId})"))}; countdown {StartInMs} ms sent to {sent}.");
 		}
 
 		private static RaceCountdownPacket Countdown(Race race, int startInMs) => new RaceCountdownPacket
 		{
 			RaceId = race.RaceId, Scene = race.Scene, Laps = race.Laps, StarterId = race.StarterId,
 			Participants = race.Racers.Where(r => !r.Done).Select(r => r.PlayerId).ToList(), StartInMs = startInMs,
+			Grid = race.Racers.Select(r => r.PlayerId).ToList(),
 		};
 
 		private static Racer RacerOf(int clientId, int raceId, out Race race)
@@ -167,6 +180,9 @@ namespace CMS21_Together_Server.Data.Tracks
 
 		private static void OnSceneChanged(int clientId, GameScene from, GameScene to)
 		{
+			if (IsRaceScene(to)) arrivals[clientId] = ++arrivalCount;
+			else arrivals.Remove(clientId);
+
 			foreach (var race in running.Values.ToList())
 			{
 				var racer = race.Racers.FirstOrDefault(r => r.PlayerId == clientId);
@@ -181,6 +197,7 @@ namespace CMS21_Together_Server.Data.Tracks
 
 		private static void OnLeft(int clientId)
 		{
+			arrivals.Remove(clientId);
 			foreach (var race in running.Values.ToList())
 			{
 				var racer = race.Racers.FirstOrDefault(r => r.PlayerId == clientId);

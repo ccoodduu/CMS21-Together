@@ -32,8 +32,10 @@ race, laps or lights; a speed-track rule (first to a distance, best top speed in
   personal best and group record. The server keeps the last 10 results in `world` (`[OptionalField] RaceResults`).
 - **Late join and restart.** A player arriving on the race track during a race watches and is not a participant. A
   server restart ends running races (DNF for all, logged); stored results survive.
-- **Start grid.** The track has one car spot, so every racer starts on the same spot; with ghost cars (27a) this is
-  harmless. 27c (`track-collisions`) keeps collisions off during the countdown and until the racers are apart.
+- **Start grid** (revision 2026-10-10, D7). Each racer starts on a box of the race track's painted grid (20 boxes):
+  the starter on pole, the others in their order of arrival on the track. 27c (`track-collisions`) keeps collisions
+  off during the countdown; after the green, only racers who share a box (more than 20) wait until they are 10 m
+  apart.
 
 Hooks: `RaceTrackManager.LastTime` (27a's postfix, extended), `RaceTrackManager._Restart_d__20.MoveNext` (first step:
 quit marker), `RaceTrackManager.Restart` (called by the countdown). Packets (new, appended): `RaceStartRequest`,

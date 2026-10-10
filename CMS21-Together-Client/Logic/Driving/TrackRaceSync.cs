@@ -18,7 +18,8 @@ namespace CMS21Together.Logic.Driving;
 // track-races D2: a racer's client restarts the race track at once (the game's own Restart: start spot, timer, laps),
 // holds the light sequence at its throttle wait and releases it LightsMs before the shared start, so the game's own
 // lights turn green together (spike 1.1: release to green is 3 s plus a frame). D3: laps after the green go to the
-// server; a pause-menu restart during the race quits it.
+// server; a pause-menu restart during the race quits it. D7: each racer starts on its own box of the painted grid
+// (RaceGrid), in the server's grid order.
 [HarmonyPatch]
 public static class TrackRaceSync
 {
@@ -44,6 +45,8 @@ public static class TrackRaceSync
 		public int Laps;
 		public int StarterId;
 		public List<int> Participants;
+		public List<int> Grid;
+		public int Box;
 		public Phase Phase;
 		public int PingMs;
 		public long StartAtMs;
@@ -53,6 +56,9 @@ public static class TrackRaceSync
 		public int LapsSent;
 		public long TotalMs;
 		public bool Restarted;
+
+		// Without a grid (an older server) everyone starts on the one spot.
+		public bool SharesBox(int playerId) => Grid == null || (Grid.Contains(playerId) && RaceGrid.BoxOf(Grid, playerId) == Box);
 	}
 
 	private static bool subscribed;
@@ -78,6 +84,7 @@ public static class TrackRaceSync
 		subscribed = true;
 		ClientScene.LeavingScene += (from, to) =>
 		{
+			RaceGrid.Restore("left the race track");
 			if (Current == null || from != GameScene.RaceTrack) return;
 			if (Racing) Log.Info($"[Race] Race {Current.RaceId}: left the race track during the race.");
 			Current = null;
@@ -86,6 +93,7 @@ public static class TrackRaceSync
 
 	public static void Reset()
 	{
+		RaceGrid.Restore("session reset");
 		Current = null;
 		Results = new List<ModRaceResult>();
 		Message = "";
@@ -144,6 +152,7 @@ public static class TrackRaceSync
 		Current = new RaceView
 		{
 			RaceId = packet.RaceId, Laps = packet.Laps, StarterId = packet.StarterId, Participants = packet.Participants?.ToList() ?? new List<int>(),
+			Grid = packet.Grid?.ToList(), Box = RaceGrid.BoxOf(packet.Grid, Client.Instance.ID),
 			Phase = participant ? Phase.Countdown : Phase.Watching, PingMs = ping, StartAtMs = NowMs - waited + startIn, StartWallMs = WallMs - waited + startIn,
 		};
 		string laps = packet.Laps == 1 ? "1-lap" : $"{packet.Laps}-lap";
@@ -165,6 +174,7 @@ public static class TrackRaceSync
 			Log.Warn($"[Race] Race {packet.RaceId}: no track manager to restart.");
 			return;
 		}
+		RaceGrid.MoveSpawn(packet.RaceId, Math.Max(Current.Box, 0));
 		ownRestart = true;
 		try
 		{
@@ -184,6 +194,7 @@ public static class TrackRaceSync
 		if (race == null || !race.readySetGo) return;
 		Current.GreenWallMs = WallMs;
 		Current.Phase = Phase.Racing;
+		RaceGrid.Restore("green");
 		Log.Info($"[Race] Race {Current.RaceId}: green at {Current.GreenWallMs} ({Current.GreenWallMs - Current.StartWallMs:+0;-0;0} ms from the plan).");
 	}
 
@@ -206,7 +217,11 @@ public static class TrackRaceSync
 		Results.RemoveAll(r => r.RaceId == result.RaceId);
 		Results.Add(result);
 		while (Results.Count > KeptResults) Results.RemoveAt(0);
-		if (Current != null && Current.RaceId == result.RaceId) Current = null;
+		if (Current != null && Current.RaceId == result.RaceId)
+		{
+			RaceGrid.Restore("race over");
+			Current = null;
+		}
 		ModNotify.ShowToast($"Race result: {Summary(result)}");
 		Log.Info($"[Race] Race {result.RaceId} result: {Summary(result)}.");
 	}
@@ -261,11 +276,21 @@ public static class TrackRaceSync
 		Log.Info($"[Race] Race {Current.RaceId}: lights released{(late > 100 ? $" {late} ms late (the restart took longer)" : "")}.");
 	}
 
+	// The arrival's Prepare can still sit in its throttle wait when the restart starts, so the spawn goes back once the
+	// restart's own LoadCar has placed the car.
+	[HarmonyPatch(typeof(PrepareCarPhysics._LoadCar_d__35), nameof(PrepareCarPhysics._LoadCar_d__35.MoveNext))]
+	[HarmonyPostfix]
+	private static void AfterLoadCar(bool __result)
+	{
+		if (!__result) RaceGrid.Restore("car placed");
+	}
+
 	[HarmonyPatch(typeof(RaceTrackManager._Restart_d__20), nameof(RaceTrackManager._Restart_d__20.MoveNext))]
 	[HarmonyPrefix]
 	private static void BeforeRestart(RaceTrackManager._Restart_d__20 __instance)
 	{
 		if (ownRestart || __instance.__1__state != 0 || !Racing || !Connected) return;
+		RaceGrid.Restore("quit");
 		Current.Phase = Phase.Out;
 		QuitsSent++;
 		Client.Instance.Send(new RaceQuitPacket { RaceId = Current.RaceId });

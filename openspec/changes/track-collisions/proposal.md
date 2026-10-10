@@ -28,8 +28,9 @@ each other. The review of row 27 (`shared-race-tracks/review.md`, "U2") split th
   `ServerInfo` (`[OptionalField]`). A per-player setting would still let the player who turned it off push the others.
 - **Ride-along.** No collider on the copy that carries the local ride-along passenger, nor on the passenger's own frozen
   track car (row 21).
-- **Races (27b).** No collisions during a race countdown and until the racers are 10 m apart (everyone starts on the
-  one car spot), unless spike 1.1 of 27b shows room for a grid offset per participant.
+- **Races (27b).** No collisions during a race countdown. After the green, racers on their own grid boxes collide at
+  once; racers who share a box (more than 20 racers, or an older server without a grid) only once they are 10 m apart
+  (revision 2026-10-10, track-races D7).
 
 Hooks: none in game code beyond row 17's `RemoteCars` build path. Packets: `ServerInfo.TrackCollisionsOff`
 (`[OptionalField]`).

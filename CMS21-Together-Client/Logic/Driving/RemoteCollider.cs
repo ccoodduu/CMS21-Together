@@ -29,7 +29,8 @@ public class RemoteColliderState
 
 // track-collisions D2/D3: one kinematic box per observer copy on a layer of its own, moved to the copy's pose every
 // physics step. It is on only while it does not overlap the local car, not within 1 s of a jump of either car, not
-// in the copy that carries the local passenger and not from a race countdown until the cars are 10 m apart.
+// in the copy that carries the local passenger and not during a race countdown; after the green it stays off until the
+// cars are 10 m apart only for racers who share a grid box (track-races D7).
 public static class RemoteCollider
 {
 	public const float SnapPauseSeconds = 1f;
@@ -182,7 +183,8 @@ public static class RemoteCollider
 
 		var race = TrackRaceSync.Current;
 		if (race != null && race.Phase == TrackRaceSync.Phase.Countdown) state.RaceHold = race.RaceId;
-		else if (state.RaceHold != 0 && (race == null || race.RaceId != state.RaceHold || (center - localBody.position).magnitude > RaceClearDistance)) state.RaceHold = 0;
+		else if (state.RaceHold != 0 && (race == null || race.RaceId != state.RaceHold || !race.SharesBox(car.PlayerId)
+			|| (center - localBody.position).magnitude > RaceClearDistance)) state.RaceHold = 0;
 		if (state.RaceHold != 0) return "race-start";
 
 		if (Time.time < state.PausedUntil || Time.time < localPausedUntil) return "snap";

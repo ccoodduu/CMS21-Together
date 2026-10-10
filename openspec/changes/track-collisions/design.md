@@ -9,7 +9,8 @@
   extrapolates up to 250 ms and snaps a state more than 5 m off the prediction (`SnapDistance`, counted in `Snaps`).
 - Row 21: a ride-along passenger rides in the driver's copy on the passenger's client; the passenger's own track car is
   frozen and hidden at the spawn.
-- 27a extends copies to the race and speed tracks; 27b starts every racer on the race track's one car spot.
+- 27a extends copies to the race and speed tracks; 27b starts every racer on a box of its own on the race track's
+  painted grid (track-races D7; at first everyone started on the one car spot).
 
 ## Goals / Non-Goals
 
@@ -52,7 +53,9 @@ The collider is on unless one of these holds, checked in this order. The first o
 1. `host`: the host turned collisions off for everyone.
 2. `passenger`: the local player rides along (row 21). This covers the copy that carries them.
 3. `no-local-car`: no local track car in `CarDrive`.
-4. `race-start`: a 27b countdown is running, or after one, the copy has not yet been more than 10 m from the local car.
+4. `race-start`: a 27b countdown is running, or, after one, the copy's racer shares the local racer's grid box (more than
+   20 racers, or a countdown without a grid from an older server) and the copy has not yet been more than 10 m from the
+   local car. Racers on boxes of their own collide from the green (revision 2026-10-10, track-races D7).
 5. `snap`: the copy snapped (`DriveInterpolator.Snaps`) or teleported, or the local car jumped 5 m or more, in the last
    1 s. The race restart and the pause-menu restart are such jumps.
 6. `overlap`: the box would overlap the local car (`Physics.OverlapBox` of the box plus 0.1 m against the local
