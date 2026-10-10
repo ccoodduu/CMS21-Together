@@ -1,4 +1,5 @@
 using CMS21_Together_Core.Logging;
+using CMS21_Together_Core.Network.Packets;
 using UnityEngine;
 
 namespace CMS21Together.Logic.Visuals;
@@ -114,5 +115,133 @@ public sealed class DrainEffect : FluidEffect
 			return true;
 		}
 		return particles.IsAlive(true) && Elapsed - tailStart < TailSeconds;
+	}
+}
+
+// The game's refill pour (FluidRefillLogic.Update) replayed on a copy of the receiver's own pour object at the
+// reservoir: the can tilts with the actor's pour power, the stream and its sound run above the game's 0.4.
+public sealed class PourEffect : FluidEffect
+{
+	public const string PivotName = "_OilRefillPivot";
+	public const float PourThreshold = 0.4f;
+	public const float FullLevel = 0.65f;
+	public const float TiltLow = -40f;
+	public const float TiltHigh = -20f;
+	public const float OilLift = 0.05f;
+	public const float FollowSeconds = 0.15f;
+	public const float TailSeconds = 2f;
+
+	private readonly CarLoader carLoader;
+	private readonly PartScript cap;
+	private readonly ToolType toolType;
+	private readonly string partKey;
+	private CarFluidType fluidType;
+	private Transform can;
+	private Quaternion canStart;
+	private ParticleSystem stream;
+	private AudioSource audio;
+	private float power;
+	private bool streaming;
+	private float tailStart;
+
+	public override ParticleSystem Particles => stream;
+	public float Power => power;
+	public bool Pouring => power > PourThreshold && Phase == "pour";
+
+	public PourEffect(int loader, int playerId, PlayerActivityState activity, CarLoader carLoader, PartScript cap)
+	{
+		toolType = (ToolType)activity.ToolType;
+		partKey = activity.PartKey;
+		Bind(VisualKind.Pour, loader, toolType.ToString(), playerId);
+		this.carLoader = carLoader;
+		this.cap = cap;
+		Phase = "pour";
+	}
+
+	public bool Build(FluidRefill refill)
+	{
+		var logic = refill.fluidRefillLogic;
+		fluidType = refill.carFluidType;
+		var root = logic.transform;
+		string canPath = FluidReplay.PathFrom(root, logic.puszka);
+		string streamPath = FluidReplay.PathFrom(root, logic.emit != null ? logic.emit.transform : null);
+		string fullPath = FluidReplay.PathFrom(root, logic.emitFull != null ? logic.emitFull.transform : null);
+		var pose = Pose(refill, logic);
+
+		copy = FluidReplay.Copy(logic.gameObject, $"pour {toolType} {PlayerId}");
+		copy.transform.SetPositionAndRotation(pose.position, pose.rotation);
+		can = FluidReplay.Find(copy, canPath);
+		if (can != null) canStart = can.localRotation;
+		stream = FluidReplay.Find(copy, streamPath)?.GetComponent<ParticleSystem>();
+		var full = FluidReplay.Find(copy, fullPath)?.GetComponent<ParticleSystem>();
+		if (full != null)
+		{
+			var fullEmission = full.emission;
+			fullEmission.enabled = false;
+		}
+		audio = copy.GetComponent<AudioSource>();
+		if (stream == null) return false;
+		var emission = stream.emission;
+		emission.enabled = false;
+		stream.Play();
+		return true;
+	}
+
+	public override bool Step(float dt)
+	{
+		if (!VisualScope.Enabled || !CopyAlive || stream == null) return false;
+		if (Phase == "pour")
+		{
+			var activity = RemoteActivity.Of(PlayerId);
+			if (FluidReplay.WantsPour(activity, Loader, (int)toolType, partKey))
+			{
+				power += (activity.ProgressFraction - power) * (1f - Mathf.Exp(-dt / FollowSeconds));
+				Tilt(dt);
+				SetStream(power > PourThreshold);
+				return true;
+			}
+			power = 0f;
+			SetStream(false);
+			tailStart = Elapsed;
+			Phase = "tail";
+			return true;
+		}
+		Tilt(dt);
+		return stream.IsAlive(true) && Elapsed - tailStart < TailSeconds;
+	}
+
+	private void Tilt(float dt)
+	{
+		if (can == null) return;
+		float level = carLoader.FluidsData.GetLevel(fluidType, 0, false);
+		var tilted = canStart * Quaternion.Euler(0f, 0f, level < FullLevel ? TiltLow : TiltHigh);
+		can.localRotation = Quaternion.Lerp(can.localRotation, Quaternion.Lerp(canStart, tilted, power), dt * 10f);
+	}
+
+	private void SetStream(bool on)
+	{
+		var emission = stream.emission;
+		if (streaming != on) emission.enabled = on;
+		streaming = on;
+		if (audio == null) return;
+		if (on && !audio.isPlaying) audio.Play();
+		else if (!on && audio.isPlaying) audio.Pause();
+	}
+
+	// FluidRefill.Use: the pivot beside the cap when the car has one; else oil sits 5 cm over the cap with the cap's
+	// yaw, and the other cans keep their offset from the tool, which goes to the cap with the car's rotation.
+	private (Vector3 position, Quaternion rotation) Pose(FluidRefill refill, FluidRefillLogic logic)
+	{
+		var capTransform = cap.transform;
+		var pivot = capTransform.parent != null ? capTransform.parent.Find(PivotName) : null;
+		if (pivot != null) return (pivot.position, pivot.rotation);
+		if (fluidType == CarFluidType.EngineOil)
+			return (capTransform.position + Vector3.up * OilLift, Quaternion.Euler(0f, capTransform.localEulerAngles.y, 0f));
+		var carRoot = carLoader.root != null ? carLoader.root.transform : carLoader.transform;
+		if (!logic.transform.IsChildOf(refill.transform)) return (capTransform.position, carRoot.rotation);
+		var toolRotation = carRoot.rotation;
+		var offset = refill.transform.InverseTransformPoint(logic.transform.position);
+		var relative = Quaternion.Inverse(refill.transform.rotation) * logic.transform.rotation;
+		return (capTransform.position + toolRotation * Vector3.Scale(offset, refill.transform.lossyScale), toolRotation * relative);
 	}
 }
