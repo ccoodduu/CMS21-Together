@@ -9,10 +9,15 @@ unblocks `Window Tune`).
 - [x] 1.1 Engine build (spike run `20261008-231615_L2_sp-features-probe2`): `SetEngineOnEngineStand(new
       Item("engine_v8_stary"))` costs no money, but the build does not finish in a harness game within 25 s (no engine on
       A's or B's stand, no error logged), as noted for the engine stand in STATUS 2026-10-06.
-- [ ] 1.1b Timebox ≤ 0.5 session. Try driving `_SetGroupOnEngineStand_d__8` step by step with `withFade = false`, as
+- [x] 1.1b Timebox ≤ 0.5 session. Try driving `_SetGroupOnEngineStand_d__8` step by step with `withFade = false`, as
       `EngineStandSync.Put` does through `Step(...)`; check that `carLoader.GetEngineName()` is an id that
       `GetEnginesToCreate` lists (the stall may be a bad id). If the build can be driven, 4.4's build steps run in the
       harness; otherwise they are hand checks in docs/playtest.md. Either way 4.2's `ToolsCheck` is written.
+      **Done** (`20261010-031447_L1_engine-build-probe`, `20261010-031658_L1_engine-build-probe`): the id is listed; the
+      build waits for `WaitForEndOfFrame`, which never comes headless; stepped every frame without the fade (harness
+      `stand-nofade on`) `CreateEngineAction` builds and B gets the engine, so 4.4's build steps run in the harness. The
+      coroutine copies the group (new group UID), so the built put is matched by the engine item's UID (D5's "group's
+      UID" is that item).
 - [x] 1.2 Tune window: open it at the dyno with a car with a tuned gearbox and ECU (`give-item` racing parts, mount,
       `car-move` to the dyno, `tune-open`); trace `TuneWindow.Show/Hide`, `GearboxTab.ApplyAction`, `PartModule.Tune`;
       confirm the gate can re-invoke `Show` with the same args. Name the racing gearbox item id that makes
@@ -79,23 +84,30 @@ unblocks `Window Tune`).
 
 ## 4. New engine on the stand
 
-- [ ] 4.1 `tool-stand-create` runs `CreateEngineWindow.CreateEngineAction` on a prepared window (`currentEngine` set,
+- [x] 4.1 `tool-stand-create` runs `CreateEngineWindow.CreateEngineAction` on a prepared window (`currentEngine` set,
       engine id from the car or an explicit id; no `GetEnginesToCreate` out parameter). For the occupied case the harness
       sets the stand's `GroupOnEngineStand` without a build, or the case is skipped.
-- [ ] 4.2 `ToolSlotUpdatePacket.Created`, `CreateEngineAction` prefix on stand 1, `SetEngineOnEngineStand` postfix and
+- [x] 4.2 `ToolSlotUpdatePacket.Created`, `CreateEngineAction` prefix on stand 1, `SetEngineOnEngineStand` postfix and
       the group-keyed `PendingCreated` with its clears, `Compensate` discard, deferred remote apply (D5); server count,
       log and the `ToolsCheck` self-check.
-- [ ] 4.3 Guard: `Window CreateEngine`, pie `engine_new` allowed (owner row 25).
-- [ ] 4.4 Scenario `engine-build` (two clients): A's `tool-stand-create` on an occupied stand → refused with the
+- [x] 4.3 Guard: `Window CreateEngine`, pie `engine_new` allowed (owner row 25).
+- [x] 4.4 Scenario `engine-build` (two clients): A's `tool-stand-create` on an occupied stand → refused with the
       message, `CreateEngineAction` did not run, the engine still on the stand on both; `ToolsCheck` passes on the
       server. Old-code failure: with `guard-allow`, no refusal toast and `CreateEngineAction` ran. If 1.1b can drive the
       build: A builds on the empty stand → B's stand shows the same engine id with every part unmounted; A and B build at
       once → one engine on the stand, the other answered, and the shared inventory has no new engine (D5 discard); money
-      unchanged. Otherwise these build steps are hand checks in docs/playtest.md.
+      unchanged. Otherwise these build steps are hand checks in docs/playtest.md. **Done** with the build steps in the
+      harness (stand stepped, `stand-nofade`): fails on the old code `20261010-032613_L1_engine-build` (the occupied
+      build replaced the engine without a message, A and B ended with different engines under one UID, built engines in
+      the inventory), passes `20261010-032430_L1` and in `20261010-032836_regression.json` (smoke, `tools-race`,
+      `tools-slots`, `tools-item-race`, `tools-car-effects`); `--check-tools`, `--check-locks`, `--check-merges` pass.
+      The `guard` scenario's blocked pie example moved from `engine_new` to `settings_load`, and the stand menu check
+      now expects `engine_new` unlocked. The occupied-stand check also counts a stand that is applying or awaiting a
+      remote put.
 
 ## 5. Docs
 
-- [ ] 5.1 ROADMAP row 25 status; STATUS entry with run ids; docs/try-it.md (tuning, tuning kept on a moved part or the
+- [x] 5.1 ROADMAP row 25 status; STATUS entry with run ids; docs/try-it.md (tuning, tuning kept on a moved part or the
       non-goal line from 1.2, bonus parts, new engines); docs/playtest.md hand checks (tuning at the dyno with a visible
       game, the engine build). INTEGRATION: add `cardetails-gearbox` as new (the row 4 entry listed it and
       `cardetails-bonus` though neither exists) when the verbs land.

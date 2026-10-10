@@ -71,6 +71,13 @@ time. In a session, **F9** shows the players with their ping, your Steam friends
 3. **Reset a wall to its default** and close; then let a friend open and close the window without changing anything.
    The wall should stay default for everyone.
 
+## Please try: building an engine
+
+1. **Build a new engine** on the empty engine stand ("New engine" in the stand's menu). Your friends should see it on
+   their stand. Report: a stand that stays empty for someone.
+2. **Build on a stand that holds an engine.** You should see "Take the engine off the stand first." and the engine
+   stays. Report: an engine that disappeared.
+
 ## Please try: bonus parts
 
 1. **Fit a spoiler or a roof sign** in the bonus assembly mode and paint the car in the paint shop. Your friends
@@ -107,7 +114,7 @@ Two or more players on one car. For each item, report what you saw, and if it we
 
 ## Not yet
 
-Driving around, the race tracks, building a new engine and the separate Parking scene are not
+Driving around, the race tracks and the separate Parking scene are not
 shared yet. The showroom (the car viewer in the main menu) is single-player only. While connected, the game refuses
 them with "... is not supported in multiplayer yet", so the garages cannot drift apart. The junkyard, barns and
 auction are each player's own (not shared).

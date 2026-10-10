@@ -61,6 +61,13 @@ ROADMAP rows 25–30 (user wishes of 2026-10-08). Static decompile (setup in `na
   in a harness game (same as the engine stand note in STATUS 2026-10-06). The engine build stays a hand check unless
   the coroutine can be driven.
 - Only one engine stand exists in the garage (`EngineStand2` not present, `tool-list`).
+- Row 25 spike 1.1b (`20261010-031447_L1_engine-build-probe`, `20261010-031658_L1_engine-build-probe`, headless): the
+  window lists 36 engines, the Bolt Atlanta's `engine_v8_stary` among them (not a bad id). The build stalls because
+  `<SetGroupOnEngineStand>d__8` yields `WaitForEndOfFrame`, which never comes in a `-nographics` game, also without
+  the fade. Stepped every frame (as the mod's remote put does), `CreateEngineAction` builds the engine; B gets it
+  through the existing stand sync, money unchanged. A second build on the occupied stand replaces the engine with no
+  message and no inventory return (the old engine is lost for everyone), as the review expected. The coroutine copies
+  the group (new group UID) and keeps the engine item, so the built put is matched by the engine item's UID.
 
 ## 4. Salon, Showroom, car version
 

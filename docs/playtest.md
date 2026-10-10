@@ -25,8 +25,10 @@ Report problems with both players' `MelonLoader\Latest.log` and the server's `Lo
 6. Tire changer, wheel balancer (only one player can balance at a time), spring clamp, brake
    lathe, battery charger.
    **Hand check: the engine stand** (hang an engine on it, rotate it, take a part off, take the engine off). The harness
-   cannot build an engine on the stand (the game's own build throws when driven from outside the UI, also offline).
-   "New engine" (building one from parts on the stand) is refused for now.
+   builds new engines only with the fade stepped away (`stand-nofade`, scenario `engine-build`), because the build waits
+   for frame ends that never come headless. **Hand check: building an engine** with a visible game: "New engine" in
+   the stand's pie menu on an empty stand (fade, engine on the stand for both), then on an occupied stand (refused,
+   "Take the engine off the stand first.").
 7. Fluids, wheels and alignment, plates, paint shop and window tint; also car wash, interior
    detailing and welder: the other player sees the result. Fees are charged once, by the server.
    **Hand check:** tint some windows: the money drops once by 50 per window for both players.
