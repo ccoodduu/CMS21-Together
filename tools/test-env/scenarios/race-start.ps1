@@ -4,8 +4,10 @@
 # LastTime give the result Ann 1:30 first, Bob 1:35 second on both and on the server. In a two-lap race Bob leaves the
 # track, comes back and watches, and his own start is refused while the race runs; Ann finishes, Bob is DNF. In a third
 # race Bob restarts from the pause menu and is DNF. Bob joins again and the server restarts: the results stay.
-# track-collisions D3: from the countdown until the racers are 10 m apart neither collider is on (one start spot).
-param($Ctx, [int]$GreenToleranceMs = 150)
+# track-races D7: Ann (the starter) starts on grid box 1, Bob on box 2 beside her (6.15 m to the right), each within
+# -GridToleranceM, and each sees the other's copy there. track-collisions D3: during the countdown neither collider is
+# on; with their own boxes both are on after the green.
+param($Ctx, [int]$GreenToleranceMs = 150, [double]$GridToleranceM = 0.2)
 
 $a, $b = $Ctx.Instances
 $failures = @()
@@ -63,6 +65,19 @@ function To-Track([string]$Name, [int]$Loader) {
     $drive = Wait-Log "\[Drive\] Player $id drives .* in RaceTrack" $mark 60
     return ($on -and [bool]$drive)
 }
+function Grid-Place([string]$Name) {
+    $s = Cmd $Name grid-start
+    [pscustomobject]@{ right = [double]$s.car.relative.right; forward = [double]$s.car.relative.forward; text = "right $($s.car.relative.right), forward $($s.car.relative.forward)" }
+}
+function Wait-Collider([string]$Name, [int]$Other, [int]$TimeoutSec = 6) {
+    $deadline = (Get-Date).AddSeconds($TimeoutSec)
+    do {
+        $c = @((Cmd $Name remote-collider "$Other").cars) | Select-Object -First 1
+        if ($c.enabled) { return $c }
+        Start-Sleep -Milliseconds 300
+    } while ((Get-Date) -lt $deadline)
+    return $c
+}
 function Names($Result) { (@($Result.order) | ForEach-Object { if ($_.Dnf) { "$($_.name) DNF $($_.reason)" } else { "$($_.name) $($_.TotalMs)" } }) -join ", " }
 function Races([string]$Label) {
     $mark = Get-ServerLogMark
@@ -117,6 +132,7 @@ Check (-not $colliderA.enabled -and $colliderA.reason -eq "race-start") "during 
 Check ($race1 -gt 0 -and $stateB.race.RaceId -eq $race1) "both have race $race1 (Ann $($stateA.race.RaceId), Bob $($stateB.race.RaceId))"
 foreach ($s in $stateA, $stateB) {
     Check ((@($s.race.Participants) -contains $idA) -and (@($s.race.Participants) -contains $idB)) "the participants are Ann and Bob ($(@($s.race.Participants) -join ', '))"
+    Check ((@($s.race.Grid) -join ',') -eq "$idA,$idB") "the grid is Ann (the starter), then Bob ($(@($s.race.Grid) -join ', '))"
 }
 $greenA = Wait-Race $a { param($s) $s.race -and $s.race.GreenWallMs -gt 0 } 25
 $greenB = Wait-Race $b { param($s) $s.race -and $s.race.GreenWallMs -gt 0 } 25
@@ -127,9 +143,17 @@ Note "green: Ann $gA (plan $($greenA.race.StartWallMs), released $($greenA.race.
 Check ($gA -gt 0 -and $gB -gt 0) "the game's lights turn green on both (Ann $gA, Bob $gB)"
 Check ($spread -le $GreenToleranceMs) "the green lights are $spread ms apart (at most $GreenToleranceMs ms)"
 Check ($greenA.race.phase -eq "Racing" -and $greenB.race.phase -eq "Racing") "both are racing"
-$colliderA = @((Cmd $a remote-collider "$idB").cars) | Select-Object -First 1
-$colliderB = @((Cmd $b remote-collider "$idA").cars) | Select-Object -First 1
-Check (-not $colliderA.enabled -and $colliderA.reason -eq "race-start" -and -not $colliderB.enabled -and $colliderB.reason -eq "race-start") "after the green the colliders stay off while the racers stand on the one start spot (Ann: $($colliderA.reason), Bob: $($colliderB.reason))"
+$placeA = Grid-Place $a
+$placeB = Grid-Place $b
+Save "grid_A" $placeA; Save "grid_B" $placeB
+Check ([math]::Abs($placeA.right) -le $GridToleranceM -and [math]::Abs($placeA.forward) -le $GridToleranceM) "Ann stands on grid box 1, the game's own spot ($($placeA.text))"
+Check ([math]::Abs($placeB.right - 6.15) -le $GridToleranceM -and [math]::Abs($placeB.forward) -le $GridToleranceM) "Bob stands on grid box 2, 6.15 m to Ann's right ($($placeB.text))"
+Check (-not (Cmd $a race-state).spawnMoved -and -not (Cmd $b race-state).spawnMoved) "the car spawn is back on the game's own spot on both after the restart"
+$colliderA = Wait-Collider $a $idB
+$colliderB = Wait-Collider $b $idA
+Save "collider_after_green_A" $colliderA; Save "collider_after_green_B" $colliderB
+Check ([math]::Abs($colliderA.toLocal - 6.15) -le 0.5 -and [math]::Abs($colliderB.toLocal - 6.15) -le 0.5) "each sees the other's copy on the next box (Ann to Bob's copy $($colliderA.toLocal) m, Bob to Ann's copy $($colliderB.toLocal) m)"
+Check ($colliderA.enabled -and $colliderB.enabled) "after the green both colliders are on: each racer has a box of their own (Ann: $($colliderA.reason), Bob: $($colliderB.reason))"
 
 $lapA = Cmd $a track-lap "90000"
 $lapB = Cmd $b track-lap "95000"

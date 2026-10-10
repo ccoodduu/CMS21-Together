@@ -111,6 +111,19 @@ namespace CMS21_Together_Server.Data.Tracks
 			TrackRaces.Stop();
 			Check("a server stop ends the running race without storing it", !TrackRaces.IsRunning(GameScene.RaceTrack) && stored.Count == TrackRaces.KeptResults);
 
+			Drive(C);
+			Start(C, 1);
+			var grid = TrackRaces.GridOf(GameScene.RaceTrack);
+			Check($"the grid puts the starter Cid first, then Ann and Bob in their order of arrival ({string.Join(", ", grid)})", grid.SequenceEqual(new[] { C, A, B }));
+			TrackRaces.Stop();
+			Move(A, GameScene.RaceTrack, GameScene.Garage);
+			Move(A, GameScene.Garage, GameScene.RaceTrack);
+			Drive(A);
+			Start(B, 1);
+			grid = TrackRaces.GridOf(GameScene.RaceTrack);
+			Check($"Ann, back on the track last, starts behind Cid when Bob starts ({string.Join(", ", grid)})", grid.SequenceEqual(new[] { B, C, A }));
+			TrackRaces.Stop();
+
 			foreach (int id in new[] { A, B, C })
 			{
 				Server.Clients.Remove(id);

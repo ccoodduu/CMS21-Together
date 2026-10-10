@@ -37,7 +37,7 @@ public static class RaceCommands
         {
             ["race"] = race == null ? null : new
             {
-                race.RaceId, race.Laps, race.StarterId, race.Participants, phase = race.Phase.ToString(), race.PingMs,
+                race.RaceId, race.Laps, race.StarterId, race.Participants, race.Grid, race.Box, phase = race.Phase.ToString(), race.PingMs,
                 race.StartWallMs, race.ReleasedWallMs, race.GreenWallMs, race.LapsSent, race.TotalMs, race.Restarted,
             },
             ["status"] = TrackRaceSync.Status(),
@@ -50,6 +50,8 @@ public static class RaceCommands
                 summary = TrackRaceSync.Summary(r),
             }).ToList(),
             ["panelShown"] = TrackRaceSync.PanelShown,
+            ["spawnMoved"] = RaceGrid.Moved,
+            ["lastBox"] = RaceGrid.LastBox,
             ["wall"] = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds(),
         };
     }
