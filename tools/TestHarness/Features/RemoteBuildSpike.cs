@@ -58,7 +58,7 @@ public static class RemoteBuildSpike
                 return new
                 {
                     exists = true, playerId = car.PlayerId, mode = car.Mode, visible = car.Ready && car.Root.gameObject.activeInHierarchy,
-                    shownAfter = car.ShownAfter, buildSeconds = car.BuildSeconds, longestFrame = car.LongestFrame,
+                    shownAfter = car.ShownAfter, shownAt = car.ShownAt, waitSeconds = car.WaitSeconds, readyAt = RemoteCars.SceneReadyAt, buildSeconds = car.BuildSeconds, longestFrame = car.LongestFrame,
                 };
             case "remove":
                 RemoteCars.Remove(int.Parse(parts[1]), "harness");

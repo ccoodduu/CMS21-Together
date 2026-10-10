@@ -2,6 +2,8 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
+using CMS21_Together_Core.Data;
+using CMS21_Together_Core.Data.Enum;
 using CMS21_Together_Core.Logging;
 using CMS21_Together_Core.Network.Packets;
 using CMS21Together.Data;
@@ -40,6 +42,8 @@ public class RemoteCar
 	public bool Stopped;
 	public float StartedAt = Time.realtimeSinceStartup;
 	public float ShownAfter = -1f;
+	public float ShownAt = -1f;
+	public float WaitSeconds = -1f;
 
 	public int DriveId => Start.DriveId;
 	public bool Ready => Root != null && Root;
@@ -51,9 +55,10 @@ public static class RemoteCars
 {
 	public const float LoadTimeoutSeconds = 30f;
 	public const float LocalCarWaitSeconds = 60f;
-	public const float LocalCarSettleSeconds = 3f;
+	public const float LocalCarSettleSeconds = 0.5f;
 	private static bool building;
 	private static float localReadySince = -1f;
+	private static GameScene trackedScene = GameScene.Unknown;
 	private static readonly Vector3 ParkingSpot = new Vector3(0f, -500f, 0f);
 
 	private static readonly Dictionary<int, RemoteCar> cars = new Dictionary<int, RemoteCar>();
@@ -62,6 +67,7 @@ public static class RemoteCars
 	public static IEnumerable<RemoteCar> All => cars.Values;
 	public static int StatesReceived { get; private set; }
 	public static int StatesIgnored { get; private set; }
+	public static float SceneReadyAt { get; private set; } = -1f;
 
 	public static void Initialize()
 	{
@@ -145,6 +151,7 @@ public static class RemoteCars
 		float waitDeadline = Time.realtimeSinceStartup + LocalCarWaitSeconds;
 		while (!car.Stopped && (building || !LocalCarReady()) && Time.realtimeSinceStartup < waitDeadline) yield return null;
 		if (car.Stopped) yield break;
+		car.WaitSeconds = Time.realtimeSinceStartup - car.StartedAt;
 		building = true;
 		try
 		{
@@ -164,7 +171,18 @@ public static class RemoteCars
 		}
 	}
 
-	// Loading a second car while the game still prepares the player's own track car froze the game for over 10 s.
+	private static void TrackLocalCar()
+	{
+		var scene = ClientScene.LocalScene;
+		if (scene != trackedScene)
+		{
+			trackedScene = scene;
+			SceneReadyAt = TrackScenes.IsTrack(scene) ? Time.realtimeSinceStartup : -1f;
+		}
+		if (TrackScenes.IsTrack(scene)) LocalCarReady();
+	}
+
+	// LocalCarSettleSeconds keeps the build out of the scene's own 63-79 ms ready frame right after the track car is ready.
 	private static bool LocalCarReady()
 	{
 		var physics = PrepareCarPhysics.Get();
@@ -255,7 +273,7 @@ public static class RemoteCars
 		car.BuildSeconds = Time.realtimeSinceStartup - started;
 		car.BuildBytes = GC.GetTotalMemory(false) + ProcessBytes() - memoryBefore;
 		car.Root.gameObject.SetActive(car.Interpolator.HasState);
-		Log.Info($"[Drive] Observer car of player {car.PlayerId} ready: {car.Mode} by {car.Route} in {car.BuildSeconds:F1} s (longest frame {car.LongestFrame:F2} s), {car.BuildBytes / 1048576f:F0} MB, {car.Wheels.Count} wheels, engine {(car.Engine != null ? "on" : "silent")}.");
+		Log.Info($"[Drive] Observer car of player {car.PlayerId} ready: {car.Mode} by {car.Route} in {car.BuildSeconds:F1} s after waiting {car.WaitSeconds:F1} s (longest frame {car.LongestFrame:F2} s), {car.BuildBytes / 1048576f:F0} MB, {car.Wheels.Count} wheels, engine {(car.Engine != null ? "on" : "silent")}.");
 	}
 
 	private static long ProcessBytes()
@@ -390,6 +408,7 @@ public static class RemoteCars
 
 	public static void Update()
 	{
+		TrackLocalCar();
 		if (cars.Count == 0) return;
 		float now = Time.time;
 		foreach (var car in cars.Values)
@@ -397,7 +416,11 @@ public static class RemoteCars
 			if (!car.Ready || car.Stopped) continue;
 			if (!car.Interpolator.Sample(now, Time.deltaTime)) continue;
 			if (!car.Root.gameObject.activeSelf) car.Root.gameObject.SetActive(true);
-			if (car.ShownAfter < 0f) car.ShownAfter = Time.realtimeSinceStartup - car.StartedAt;
+			if (car.ShownAfter < 0f)
+			{
+				car.ShownAt = Time.realtimeSinceStartup;
+				car.ShownAfter = car.ShownAt - car.StartedAt;
+			}
 			var rootRotation = car.Interpolator.Rotation * Quaternion.Inverse(car.BodyLocalRotation);
 			car.Root.SetPositionAndRotation(car.Interpolator.Position - rootRotation * car.BodyLocalPosition, rootRotation);
 

@@ -5,8 +5,8 @@
 # -Ghosts extra copies alone (full car data and base model, alternating). Each observer's build trace (remote-build),
 # frame log (real clock), the remoteCars dump, the copies' counts and the optional method-time (-MethodTargets, named
 # methods only: all of CarLoader hangs the game) go to spike_<round>_<instance>.json. -Wait game|none|settle:<s>
-# replaces the 3 s settle on both clients; -Stage $true turns on the remote-stage prototype; -FpsCap 60 by default.
-param($Ctx, [string]$Wait = "game", [int]$Ghosts = 6, [int]$FpsCap = 60, [bool]$Stage = $false, [string]$MethodTargets = "", [int]$MethodMinMs = 8)
+# replaces the 3 s settle on both clients; -FpsCap 60 by default.
+param($Ctx, [string]$Wait = "game", [int]$Ghosts = 6, [int]$FpsCap = 60, [string]$MethodTargets = "", [int]$MethodMinMs = 8)
 
 $a, $b = $Ctx.Instances
 function Cmd([string]$Name, [string]$Verb, [string]$Arguments = "") { Send-HarnessCommand -Instance $Name -Verb $Verb -Arguments $Arguments -TimeoutSec 60 }
@@ -57,7 +57,6 @@ function Collect([string]$Round, $Marks) {
             frames = (Cmd $n frame-log "$since 2")
             methods = (Cmd $n method-time "report")
             remoteCars = (Cmd $n dump).remoteCars
-            stage = (Cmd $n remote-stage "report")
             counts = @(@((Cmd $n dump).remoteCars.cars) | Where-Object { $_.ready } | ForEach-Object { try { [ordered]@{ playerId = $_.playerId; counts = (Cmd $n remote-build "count $($_.playerId)"); park = (Cmd $n remote-build "park $($_.playerId)") } } catch { $null } })
         }
         Save "${Round}_$n" $data
@@ -112,7 +111,6 @@ foreach ($name in $a, $b) { Cmd $name guard-allow "Mode:CarDrive" | Out-Null }
 $waitArgs = if ($Wait -match "^settle:(.+)$") { "wait settle $($Matches[1])" } else { "wait $Wait" }
 foreach ($name in $a, $b) {
     $Ctx.Result.notes += "$name $((Cmd $name remote-build $waitArgs) | ConvertTo-Json -Compress)"
-    if ($Stage) { $Ctx.Result.notes += "$name remote-stage $((Cmd $name remote-stage "on").enabled)" }
     if ($FpsCap -ne 0) { $Ctx.Result.notes += "$name fps-cap $((Cmd $name fps-cap "$FpsCap") | ConvertTo-Json -Compress)" }
 }
 

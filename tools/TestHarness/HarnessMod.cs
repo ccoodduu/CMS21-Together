@@ -67,7 +67,6 @@ public class HarnessMod : MelonMod
         Features.SeatPoseCommands.Update();
 
         Features.PerfCommands.RecordFrame();
-        Features.RemoteBuildStaging.Update();
         SceneState.Update();
         CommandChannel.Poll();
 

@@ -1,7 +1,7 @@
 #Requires -Version 5.1
 <#
 Summarises a remote-car-spike run: per observer build the wait, build time, steps (ms / StopPhysics ms), the frames
-during and after the build (real clock, from frame-log), the remote-stage groups and the copy counts.
+during and after the build (real clock, from frame-log), the remote-stage groups (runs of the removed D2 prototype) and the copy counts.
 #>
 param([string]$RunDir, [double]$Limit = 130)
 
