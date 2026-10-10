@@ -19,6 +19,8 @@ public static class JobStarCommands
         bool mark = !(parts.Length > 1 && parts[1] == "off");
         var (job, carLoader, loader) = ActiveJob(int.Parse(parts[0]));
         var rows = new List<object>();
+        // CarInfoWindow.Show rebuilds the cache; JobHelper keeps one from the loader's previous car otherwise.
+        carLoader.CachePartScripts();
         for (int i = 0; job.jobTasks != null && i < job.jobTasks.Length; i++)
         {
             var task = job.jobTasks[i];
