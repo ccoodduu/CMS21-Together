@@ -123,20 +123,20 @@ same commit. Every scenario carries `# areas:` (new areas `visuals`, `driving`, 
       `vfx-unscrew 0 <key> pause 0.5`; B disconnects and reconnects → B shows pose `Wrench` from the roster,
       `boltsActive` empty (claim came in the snapshot), no ghost; A `resume` → B plays the Off ghost once (live);
       `cars` equal. Done when it passes.
-- [ ] 7.2 **In code (2026-10-07):** needs a night run with graphics (it takes the mouse). Written (`# run-all: skip` too, it is for the user's look); adds a hood-swing shot and notes the ghost `fade`. `scenarios/visual-screens.ps1` (`# needs: graphics`, `# areas: visuals`): with `vfx-hold on`, screenshots
+- [x] 7.2 **Done (2026-10-10):** passes on lane 2 in the background mode (`CMS21_TEST_BACKGROUND=1`: windows minimized, no focus or mouse taken), run `20261010-140730_L2_visual-screens`; five shots in that folder (STATUS lists them). The shots come from B's own camera aimed at the target (harness `vfx-shot`), not from the window. Fixed on the way: A's name was read from an empty dump field (`stand-before ""`), the car was spawned without a place (the spawner kept it under the floor while B showed it at Entrance1), and `vfx-stand` stood beside the `CarLoader` object instead of the car (the object stays at the origin). It also checks the `ArmsUp` pose under the raised lift. `# run-all: skip` (it is for the user's look). `scenarios/visual-screens.ps1` (`# needs: graphics`, `# areas: visuals`): with `vfx-hold on`, screenshots
       of an Off ghost mid-way, bolts half out, A's avatar holding the OBD scanner and reaching under a lifted car. Done
       when the run folder holds the four screenshots and STATUS lists them for the user's look.
-- [ ] 7.3 **Open:** not written yet (needs lane 3 and the measured bytes). `scenarios/visual-budget.ps1` (`# run-all: lane 3`, `# areas: visuals`, 2–4 instances): for 3 minutes every
+- [ ] 7.3 **In code (2026-10-10):** `scenarios/visual-budget.ps1` written, not run (lane 3 is the user's; run line in STATUS). Mount uses `part-fast-mount` (as in `visual-parts`); measured bytes per type go to the run's `budget.json`. Soak row `visuals` (`soak.ps1 -Visuals`, weight 8) and the row in multiplayer-soak-and-scale D5. Left: the lane-3 run and design.md "Measurements". `scenarios/visual-budget.ps1` (`# run-all: lane 3`, `# areas: visuals`, 2–4 instances): for 3 minutes every
       client loops `vfx-unscrew`/mount on its own loader and `vfx-tool` on and off; server `perf top` before and after;
       checks: `PlayerActivity` upload ≤ 2.4 kB/s average per client, every client's total download ≤ 50 kB/s average,
       no `activityDropped` above the cap, `visuals.leaks` 0, dumps equal at the end; frame time p95 with visuals vs.
       `vfx-enable off` reported (`WARN` above 1.2×, graphics runs only). Add `vfx-unscrew` and `vfx-tool` rows to row
       11's soak action table. Done when it passes on lane 3 and the measured bytes per type are in design.md
       "Measurements" (a value over twice D8's estimate goes to QUESTIONS.md).
-- [ ] 7.4 **Partly (2026-10-07):** the three visual scenarios and the smoke set pass on lane 1; the `parts`, `presence` and `tools` areas are not run yet; `server-saves` fails on "window close saves" also without this change (test servers start hidden, so `CloseMainWindow` finds no window). Two-instance verification: `visual-parts`, `visual-activity`, `visual-latejoin` pass with A and B, plus the
+- [x] 7.4 **Done (2026-10-07):** at the merge the three visual scenarios and the `parts`, `presence`, `tools` and `visuals` areas passed (23 scenarios, STATUS 2026-10-07 18:00); the `server-saves` window-close check was fixed separately (its server starts minimized). Two-instance verification: `visual-parts`, `visual-activity`, `visual-latejoin` pass with A and B, plus the
       scenarios of the `visuals`, `parts`, `presence` and `tools` areas and the smoke set (`Run-All -Changed`); record
       run ids in STATUS. Done when all are green.
-- [ ] 7.5 **In code (2026-10-07):** INTEGRATION.md rows added (packet, record field, row 1 events, read-only views, preference, verbs, dump section, scenarios, areas); README "Playing together" waits for the screenshots. Docs: INTEGRATION.md (packet, record field, row 1 events, verbs, dump sections, scenarios, areas), README
+- [x] 7.5 **Done (2026-10-10):** INTEGRATION.md rows (2026-10-07, plus `vfx-shot`); README "Playing together" has the full section (parts, bolts, doors, the avatar's pose, tools in hand, fluids, late join, `RemoteVisuals = false`) and docs/try-it.md a "Please try" list; `openspec validate remote-visual-feedback --strict` passes; part 1 merged 2026-10-07. Docs: INTEGRATION.md (packet, record field, row 1 events, verbs, dump sections, scenarios, areas), README
       "Playing together" (what other players see, the `RemoteVisuals` switch). Done when `openspec validate
       remote-visual-feedback --strict` passes and part 1 is merged.
 
