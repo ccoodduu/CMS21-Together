@@ -327,6 +327,30 @@ public static class TestDriveCommands
         return new { blocked = blocked != null, what = blocked };
     }
 
+    // away-label <loader>: where the "<name> has this car on …" label is anchored and where the car's root is.
+    [HarnessCommand("away-label")]
+    private static object AwayLabel(string args)
+    {
+        int loader = int.Parse((args ?? "").Trim());
+        var carLoader = CarLoaderPlaces.Get().GetCarLoaderByIndex(loader) ?? throw new ArgumentException($"no car loader {loader}");
+        var anchor = CMS21Together.Logic.Car.Away.AwayLabels.Anchor(carLoader);
+        var root = CMS21Together.Logic.Visuals.VisualScope.CarRoot(carLoader).position;
+        var flat = anchor - root;
+        flat.y = 0f;
+        bool locked = CMS21Together.Logic.Car.Away.CarAwaySync.LockedForMe(loader, out int owner, out var kind);
+        return new
+        {
+            anchor = new[] { R(anchor.x), R(anchor.y), R(anchor.z) },
+            root = new[] { R(root.x), R(root.y), R(root.z) },
+            offCar = R(flat.magnitude),
+            lockedForMe = locked,
+            owner,
+            kind = kind.ToString(),
+        };
+    }
+
+    private static float R(float v) => (float)Math.Round(v, 3);
+
     [HarnessCommand("testdrive-partnames")]
     private static object PartNames(string args)
     {
