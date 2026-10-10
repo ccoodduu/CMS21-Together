@@ -3,6 +3,17 @@
 Open questions that block a decision. Each has the default we work with until answered.
 Answered ones move to the bottom with the answer.
 
+## Open — car angle on entrance places (2026-10-10)
+
+Found by the `ping` batch flake: the game turns a car parked on an entrance place by a random extra angle
+(`CarLoader.SetAdditionalCarRot`, `Random.Range` from the place's `CarPlaceRotation`), rolled by each client on its
+own. The players' copies of the same car point up to ~15° apart, so parts sit up to ~0.5 m apart (pings, remote work
+poses, ghosts).
+
+1. **Fix.** (a) send the angle with placement and spawn and store it on the server (protocol and save change);
+   (b) seed the roll from data every client shares (loader, spawn number, place), no protocol change;
+   (c) leave it and run `ping` on a lift. **Default:** (b), built tonight unless you say otherwise.
+
 ## Open — row 19 state-merges-and-contention (2026-10-08)
 
 Details in `openspec/changes/state-merges-and-contention/proposal.md` (reviewed, see `review.md`).
