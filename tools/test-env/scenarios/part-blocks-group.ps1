@@ -1,11 +1,12 @@
 # areas: parts
-# Soak 20261010-020148_L2 (rule 1 from checkpoint 4): after C took the radiator fan s:29.1 of a car_mayenm3 off and
-# put it back with part-fast-mount (no item), the radiator s:29.3 behind it was blocked on D only. The fan comes off
-# with its blades (unmountWith), so this checks the player's way through the game's own paths: A takes the fan off
-# (FastUnmount, the group goes to the inventory) and mounts the group again (DoMount + ShowMounted with the group
-# selected), then B does the same. After each step both clients' blocked counters (PartScript.blockedNo) are equal and,
-# once the fan is on again, back at the spawn's. Last, the soak's item-less mount is repeated and its counters printed
-# (no player can mount a group part without its group item).
+# Soak 20261010-020148_L2 (rule 1 from checkpoint 4): after C took the radiator fan of a car_mayenm3 off and put it
+# back, the radiator behind it was blocked on D only. The fan's blades come off with it as separate items
+# (unmountWithSeparate), so each part goes back from its own item; the game's ShowMounted stopped early for the fan
+# (it wants a group item), so the actor kept the radiator free and the fan item. A and then B take the fan off and
+# mount the fan and its blades from their items (DoMount + ShowMounted, then A once more with FastMount). After each
+# step both clients' blocked counters (PartScript.blockedNo) are equal and, with the fan on again, back at the spawn's;
+# the mounted items are gone from both inventories, and the clients' own blocked-counter check reports no drift.
+# Last, the soak's item-less mount is repeated and its counters printed (no player action).
 param($Ctx)
 
 $a, $b = $Ctx.Instances
@@ -120,6 +121,12 @@ Check-Counters "after the spawn"
 Round-Trip $a "A (part-domount)" $baseline part-domount
 Round-Trip $b "B (part-domount)" $baseline part-domount
 Round-Trip $a "A (part-fast-mount)" $baseline part-fast-mount
+
+Start-Sleep -Seconds 22
+foreach ($name in $Ctx.Instances) {
+    $drifts = (Cmd $name part-blocks "$loader").drifts
+    Check ($drifts -eq 0) "$name's blocked-counter check reports no drift ($drifts)"
+}
 
 Write-Host "--- the soak's item-less mount (no player action)"
 Cmd $a part-fast-unmount "$loader $fan" | Out-Null
