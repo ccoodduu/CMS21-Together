@@ -2,6 +2,19 @@
 
 Newest first. One entry per work session.
 
+## 2026-10-10 (11:45–12:40) — row 31 faster-remote-cars built, scope B (lane 2)
+
+- `change/faster-remote-cars` (lane 2, not merged; main merged in). User chose scope B: only the wait.
+  - `43082bc`: the wait after the own track car is ready is 0.5 s instead of 3 s, and "ready since" is tracked every
+    frame on a track, so a player already driving does not wait again. Dump `waitSeconds`, `shownAt`,
+    `remoteCars.readyAt`; harness `remote-build state`. The D2 prototype `remote-stage` is removed.
+  - `09ddce1`: proof `remote-car-timing` (both arrival orders, 60 fps cap): fails on the old 3 s wait
+    (`20261010-120734_L2`: 3.2–3.4 s), passes (`20261010-121219_L2`: arrival → shown 0.65–0.69 s, already driving
+    0.22–0.27 s). Frames are unchanged (first copy 85–130 ms with lane 1 busy), so the hard bound is 0.2 s with a WARN
+    note above 0.13 s; one run had a 130.4 ms frame (`20261010-121423_L2`). `drive-latejoin` checks ≤ 1.5 s.
+- Regression `20261010-121718_regression.json`: smoke, `remote-car-timing`, `drive-*`, `race-*`, `ride-along` all
+  passed (`guard` FLAKY in the batch: "no PieMenuController in this scene", passed alone).
+
 ## 2026-10-10 (10:30–11:30) — row 31 faster-remote-cars: spike and design (lane 2)
 
 - `change/faster-remote-cars` (lane 2, not merged; design only, no client change). Probe `remote-car-spike` with the

@@ -3,15 +3,6 @@
 Open questions that block a decision. Each has the default we work with until answered.
 Answered ones move to the bottom with the answer.
 
-## Open — row 31 faster-remote-cars (2026-10-10)
-
-Measured on `change/faster-remote-cars` (headless): another player's car already shows 3.3–3.6 s after arrival
-(fixed 3 s wait + 0.2–0.5 s build); the first copy per visit has one 92–120 ms frame.
-
-1. **Scope.** A: nothing (requirement "about 3 s, no frame over 0.13 s" is met); B: shorten the fixed wait to 0.5 s
-   after your own car is ready (≈1 s, frame unchanged); C: B plus spreading the game's `LoadCar` steps over frames
-   (≈0.85 s, longest frame 39–56 ms; invasive). **Default:** B.
-
 ## Open — row 19 state-merges-and-contention (2026-10-08)
 
 Details in `openspec/changes/state-merges-and-contention/proposal.md` (reviewed, see `review.md`).
@@ -89,7 +80,8 @@ Not questions for the user; open bugs from the first playtest, fixed one by one.
 8. **Another player's car on the test track appears after about 10 s** (7 s when you are already there), not the
    2 s the spec asks: loading another car takes about 6.5 s, and it waits 3 s after your own car is ready (starting
    earlier froze the game). **Default:** accept it for 1.1; a faster way (keeping the copy between drives, loading it
-   before you arrive) would be a follow-up.
+   before you arrive) would be a follow-up. *Row 31 (2026-10-10): the 6.5 s predated the freeze fix; with the wait
+   cut to 0.5 s the car shows ~0.7 s after arrival.*
 
 ## Accepted defaults (user, 2026-10-06)
 
@@ -134,6 +126,10 @@ Row 30 `shared-job-achievements` (built 2026-10-09):
    of scope, only the buyer gets them.
 
 ## Answered
+- **Answered by the user on 2026-10-10 (row 31 scope):** B. The fixed wait after the own track car is ready goes from
+  3 s to 0.5 s (another player's car shows ~0.7 s after arrival); no spreading of the game's `LoadCar` over frames, so
+  the first copy's one-frame load (85–130 ms headless with lane 1 busy) stays as it was.
+
 Answered by the user on 2026-10-08 (evening):
 
 - **Row 16 scope:** no full port and no decompiled game logic on the server. Kept: seeded job cars (extra tasks,

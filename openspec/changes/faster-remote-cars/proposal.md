@@ -2,8 +2,9 @@
 
 Proposal 2026-10-08; spike, design and tasks 2026-10-10 (design.md). The spike found the numbers below out of date:
 since the freeze fix of 2026-10-08 the load takes 0.2–0.5 s, and arrival → shown is 3.3–3.6 s, almost all of it the
-3 s settle. The first copy in a scene visit still has one 92–120 ms frame. Chosen: a 0.5 s settle (option 1) and the
-game's own load stages spread over frames (option 5 below); expected ~0.85 s and build work under ~40 ms per frame.
+3 s settle. The first copy in a scene visit still has one 92–120 ms frame. The user chose scope B (2026-10-10): only
+option 1, a 0.5 s settle (measured ~0.7 s after arrival, frames as today); option 5 is designed and measured but not
+built.
 
 ## Why
 
@@ -53,15 +54,15 @@ existing packet; the spike found the server already does this); 4 possibly a red
 
 ## Capabilities
 
-New capability `remote-car-loading` (spec delta): the car appears within 2 s of arrival (1 s when already there) and
-its load makes no frame longer than 0.13 s.
+New capability `remote-car-loading` (spec delta): the car appears within 1.5 s of arrival (1 s when already there) and
+its load does not freeze the game (no frame over 0.2 s, frames as before; target 0.13 s).
 
 ## Impact
 
-- Client: `Logic/Driving/RemoteCars.cs` (settle, staged load, timing fields).
+- Client: `Logic/Driving/RemoteCars.cs` (settle 0.5 s, readiness tracked every frame, timing fields).
 - Server: none (option 3 is already in place).
-- Harness: a timing field in the `remoteCars` dump (arrival → shown, drive start → shown); `drive-track` and
-  `drive-latejoin` gain a time bound.
+- Harness: `waitSeconds`, `shownAt` and `readyAt` in the `remoteCars` dump, `remote-build state`; new proof
+  `remote-car-timing`; `drive-latejoin` gains a time bound.
 - Depends on: row 17 part 2, row 21 (the ride-along copy), 27a (copies on every track). 27c's collider must stay off
   until a preloaded or kept copy is shown and placed.
 
@@ -76,10 +77,10 @@ its load makes no frame longer than 0.13 s.
 ## Size
 
 Spike S ≈ 0.5–1 (measure the steps, test option 1). Options 1 and 3: S ≈ 1 together. Option 2: S ≈ 1. Option 4:
-M ≈ 2–3. Expected total with 1–3: S–M ≈ 2–3. After the spike (done): options 1 and 5, S ≈ 1–1.5.
+M ≈ 2–3. Expected total with 1–3: S–M ≈ 2–3. Built: option 1 only (scope B), S.
 
 ## Open questions
 
-1. **Target.** Answered 2026-10-08: about 3 s is fine with no frame over 0.13 s. The delta states 2 s (design open
-   question 2).
-2. **Which options.** Decided by the spike: 1 and 5 (design D1, D2); 2, 3 and 4 not now (design D4).
+1. **Target.** Answered 2026-10-08: about 3 s is fine with no frame over 0.13 s. Scope B (2026-10-10): the delta states
+   1.5 s.
+2. **Which options.** Scope B: 1 only (design D1); 5 designed, not built (D2); 2, 3 and 4 not now (D4).

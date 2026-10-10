@@ -53,64 +53,51 @@ Other findings:
 
 ## Goals / Non-Goals
 
-**Goals:** another player's track car shows within 2 s of arriving (expected ~0.85 s) and within 1 s of the other
-player's drive start when already there; no frame over 0.13 s from building it (build work at most ~40 ms in any
-frame on the test PC); the copy looks exactly as today.
+The user chose scope B (2026-10-10, QUESTIONS.md): D1 only. D2 below is kept as a measured option, not built.
 
-**Non-Goals:** keeping copies between drives (option 2), loading before arrival (option 3), a lighter copy
-(option 4) (see D4); the removal frame (45–75 ms, not loading); the own car's load (behind the loading screen).
+**Goals:** another player's track car shows within 1.5 s of arriving (measured ~0.7 s) and within 1 s of the other
+player's drive start when already there (measured ~0.25 s); the frames of the build stay as they are today; the copy
+is the same as today.
+
+**Non-Goals:** splitting the first copy's one-frame load (D2); keeping copies between drives (option 2), loading
+before arrival (option 3), a lighter copy (option 4) (see D4); the removal frame (45–75 ms, not loading); the own
+car's load (behind the loading screen).
 
 ## Decisions
 
-### D1. Readiness signal: own car ready plus 0.5 s
+### D1. Readiness signal: own car ready plus 0.5 s (built)
 
 `LocalCarReady` keeps its conditions; `LocalCarSettleSeconds` becomes 0.5 s. The "ready since" time is tracked
 every frame in `RemoteCars.Update` while the scene is a track scene (not only while a build waits), so a player who
 is already driving when another player arrives does not wait again; leaving the scene resets it, as today.
 
 Why 0.5 s: the arriving client's own scene-ready frame (63–79 ms) comes 0.06–0.08 s after arrival; a build started
-with no wait lands its first frames on it (69–84 ms with D2, 100–120 ms without). 0.5 s clears it with margin and
-costs 0.5 s of the 3 s budget. The freeze the 3 s guarded against is fixed by `StopPhysics`; eight builds with no
-wait at all (`105122`, `110810`) showed none.
+with no wait lands its first frames on it (100–120 ms). 0.5 s clears it. The freeze the 3 s guarded against is fixed
+by `StopPhysics`; eight builds with no wait at all (`105122`, `110810`) showed none.
 
-### D2. Staged load: the game's own stages, one per frame
+### D2. Staged load: the game's own stages, one per frame (not built)
 
-For loaders `RemoteCars` creates (registered by `IntPtr` in a set when `CreateLoader` makes them, removed in
-`Destroy`/`Fail`), the client splits the one frame in which `LoadCar` builds the car:
+Measured option for the first copy's 92–120 ms frame, if it ever matters in play: for loaders `RemoteCars` creates,
+record and skip `CreateEngine`, `SetEngine`, `CreateDriveshaft`, `SetDriveshaft`, `CreateExterior`, `SetExterior`,
+`CreateParts`, `CreateBonusParts`, `SetLicensePlateNumber`, `SetParts`, `SetBlockedBy` and `SetUnmountWithCarParts`
+inside `CarLoader._LoadCar_d__215.MoveNext`, hold `LoadCar` (its `MoveNext` prefix returns `true`) and replay one
+group per frame, cut where the game's disabled `asyncLoading` path yields: [engine] ~23 ms, [driveshaft, exterior]
+~5 ms, [parts] ~25 ms, [bonus parts … unmount-with] < 1 ms. The harness prototype (`remote-stage`, removed again in
+`43082bc`) brought the worst frame to 39–56 ms with identical copies (`110209`, `110523`, `110957`). Cost: twelve
+prefixes on `CarLoader` methods every car load uses and a held IL2CPP coroutine.
 
-1. A prefix on `CarLoader._LoadCar_d__215.MoveNext` sets "inside LoadCar of a registered loader" (a postfix clears
-   it).
-2. Prefixes on `CarLoader.CreateEngine(string)`, `SetEngine`, `CreateDriveshaft`, `SetDriveshaft`, `CreateExterior`,
-   `SetExterior(bool)`, `CreateParts`, `CreateBonusParts(bool, bool)`, `SetLicensePlateNumber()`, `SetParts`,
-   `SetBlockedBy`, `SetUnmountWithCarParts` record the call (method and arguments) in the loader's queue and skip it,
-   only while inside `LoadCar` of a registered loader and not replaying. `CreateChassis`, `CreateWheels` and
-   `CreateInterior` run in `LoadCar`'s frame as today (~35 ms the first time).
-3. While a loader's queue is not empty, the `MoveNext` prefix returns `true` without running, so `LoadCar` stays at
-   its next state (7: `PreparePartScriptCuller`, rust map, `done`).
-4. `RemoteCars.Update` replays one group per frame through the original methods, in the recorded order, cut where
-   the game's disabled `asyncLoading` path yields: [`CreateEngine`, `SetEngine`] (~23 ms), [`CreateDriveshaft` …
-   `SetExterior`] (~5 ms), [`CreateParts`] (~25 ms), [`CreateBonusParts` … `SetUnmountWithCarParts`] (< 1 ms). Then
-   `LoadCar` resumes and sets `done`; `LoadCarFromFile` (still stepped by `BuildSteps`) applies the car data as today.
-5. An exception in a replayed call ends the build like a load exception today (`Fail`: warning, no copy). A copy
-   removed while its queue is pending drops the queue.
+### D3. Measurement in the client (built)
 
-Measured with the harness prototype (`remote-stage`): the first copy's worst frame drops from 92–96 ms to 41–56 ms,
-the build takes three frames longer (0.26–0.28 s at 60 fps), and the copy is identical. The other remaining costs are
-`LoadCarFromFile`'s data step (27–51 ms with its `StopPhysics`), the first `StopPhysics` after the parts appear
-(15–20 ms) and `MakeInert` (4–24 ms), each in its own frame.
-
-### D3. Measurement in the client
-
-`RemoteCar` gets `WaitSeconds` (start packet → build start) besides `BuildSeconds`, `LongestFrame` (real clock, the
-build's frames only) and `ShownAfter`; the ready log line names all four and the number of staged groups. The
-`remoteCars` dump shows them, each car's `shownAt` and the scene's `readyAt` (real clock, from `ClientScene`). These
-are what the proof checks and what a visible playtest reads from the log.
+`RemoteCar` gets `WaitSeconds` (start packet → build start) and `ShownAt` besides `BuildSeconds`, `LongestFrame`
+(real clock, the build's frames only) and `ShownAfter`; the ready log line names the wait. The `remoteCars` dump shows
+`waitSeconds`, `shownAt` and the scene's `readyAt` (real clock, set when `RemoteCars` first sees the track scene);
+the harness `remote-build state <playerId>` returns them without a full dump.
 
 ### D4. Options not taken
 
 | Option | Measured | Why not now |
 |---|---|---|
-| 2. Keep the copy between drives | Re-show 1.4–2.6 ms, hide 0.3–0.5 ms; saves the 0.26 s build, the 0.5 s settle after a restart and the 45–75 ms removal frame | Not needed for the target; worth it if race restarts (27b) feel slow. Memory per copy not measured reliably (the process delta is noise) |
+| 2. Keep the copy between drives | Re-show 1.4–2.6 ms, hide 0.3–0.5 ms; saves the ~0.25 s build, the 0.5 s settle after a restart and the 45–75 ms removal frame | Not needed for the target; worth it if race restarts (27b) feel slow. Memory per copy not measured reliably (the process delta is noise) |
 | 3. Load before you arrive | Start packet arrives 0.06–0.07 s after the scene is ready | Already the case; nothing to gain |
 | 4. Lighter copy | Base model (no car data) 0.14 vs 0.20 s, worst frame 23–28 vs 37–40 ms on repeat builds; `CreateInterior` 0.4 ms | The first-copy cost is chassis, engine and parts asset loads, not hidden parts; a lighter copy looks different |
 | Asset pre-warm (`Resources.LoadAsync`) | `CreateParts` loads with `Resources.Load` | The paths come from game logic per car config |
@@ -119,53 +106,46 @@ are what the proof checks and what a visible playtest reads from the log.
 
 Nothing new on the server: it stores the running drives and relays starts, states and stops as today, and already
 sends the running drives to a player who arrives (`OnSceneChanged`). A player who joins or reconnects mid-drive
-arrives through the same path, so D1 and D2 apply unchanged. No packet changes.
+arrives through the same path, so D1 applies unchanged. No packet changes.
 
 ### D6. Interaction with other rows
 
-- Ride-along (21) and race/speed track copies (27a/b) use the same build, so they get D1 and D2.
-- Collisions (27c): the copy's colliders stay off through every stage (`StopPhysics` after every step, unchanged);
-  any collision proxy is added after `MakeInert`, as before.
+- Ride-along (21) and race/speed track copies (27a/b) use the same build, so they get D1. A race restart (27b) that
+  reloads the racer's own car resets "ready since", so the copy waits 0.5 s instead of 3 s.
+- Collisions (27c): unchanged; the copy's colliders stay off (`StopPhysics` after every step).
 
-## Proof plan
+## Proof
 
-New scenario `remote-car-timing` (both clients `fps-cap 60`, two garage cars, `guard-allow Mode:CarDrive`, observers
-polled with a cheap verb, not `dump`):
+Scenario `remote-car-timing` (both clients `fps-cap 60`, two garage cars, `guard-allow Mode:CarDrive`, observers
+polled with `remote-build state`, not `dump`), both arrival orders:
 
-1. A drives on the test track; B travels there. B shows A's car with `ShownAfter` ≤ 1.5 s and B's scene-ready →
-   shown ≤ 2.0 s; A shows B's car (A already there) with `ShownAfter` ≤ 1.0 s.
-2. Both copies: `LongestFrame` ≤ 75 ms, and the harness `frame-log` shows no frame over 75 ms from build start to
-   shown + 1 s; mode `ghost`, 4 wheels, engine on, kinematic, colliders off.
-3. A staged copy and a reference copy built with staging off (harness toggle) have equal transform, renderer,
-   collider, part script and car part counts.
-4. Both return, B goes first and A arrives: steps 1–2 with the roles swapped.
+1. The arriving client shows the driver's car within 1.5 s of its track scene being ready (`readyAt` → `shownAt`).
+2. The client already driving shows the arriving player's car within 1 s of the drive start (`shownAfter`).
+3. No frame over 0.2 s while the copy loads (`longestFrame` and the harness `frame-log` up to 1 s after shown); a
+   frame over the 0.13 s target is a WARN note in the result.
+4. The arriving player's own car drives with the copy shown.
 
-The old code fails steps 1 and 2: `ShownAfter` 3.2–3.6 s (> 1.5) and `LongestFrame` 92–120 ms at 60 fps (> 75)
-(`104439`, `105528`, `105122`). The 75 ms bound is the headless form of the 0.13 s limit: build work ≤ ~58 ms on a
-16.7 ms frame leaves room for rendering in a visible game; the new code measured 39–56 ms.
+Old behaviour (settle 3 s, no per-frame tracking; `20261010-120734_L2`): fails 1 and 2 in both orders (3.2–3.4 s,
+3.2–3.3 s). New code: `20261010-121219_L2` passed (arrival 0.67–0.69 s after the start, already driving 0.22–0.24 s,
+frames 85–102 ms). `drive-latejoin` checks `shownAfter` ≤ 1.5 s.
+
+The frame bound is 0.2 s, not 0.13 s: the first copy's one-frame `LoadCar` measured 85–130 ms with lane 1 busy, the
+same as before the change (old run: 93–116 ms), and one run in three had a 130.4 ms frame (`20261010-121423_L2`), so a
+0.13 s check would be flaky without D2. 0.2 s still catches a return of the old multi-second freeze.
 
 ## Risks / Trade-offs
 
-- [The staged replay depends on `LoadCar`'s order] → the deferred calls are the ones the game itself separates with
-  yields in its `asyncLoading` path; step 3 of the proof compares the copy with an unstaged one; a game update that
-  changes `LoadCar` shows there.
-- [Prefixes on `CarLoader` methods every car load uses] → the prefix checks one static flag first; only registered
-  loaders inside their `LoadCar` frame are touched.
-- [Holding an IL2CPP coroutine by skipping `MoveNext`] → `LoadCar` yields `WaitForEndOfFrame`, which Unity resumes
-  every frame; the prototype held it 3–6 frames per copy without effect on the game.
-- [Headless numbers] → no rendering or GPU upload is measured; the visible playtest reads `LongestFrame` from the log
-  (docs/playtest.md task) and the 75 ms bound leaves ~55 ms for it.
-- [A different car model per player] → the spike used one model for both; the first-copy costs are per model and per
-  scene visit, so a second model costs the same as the first (measured: the first copy of each visit).
+- [The 0.13 s target is not guaranteed] → frames are unchanged from today (85–130 ms headless under load); D2 is the
+  measured fix if a visible playtest shows a hitch.
+- [The freeze returns] → the build still waits for the own car to be ready; `remote-car-timing` fails above 0.2 s.
+- [Headless numbers] → no rendering or GPU upload is measured; the visible playtest reads `longest frame` from the
+  `Observer car … ready` log line.
 
 ## Migration Plan
 
-Client only. Rollback: revert; the 3 s settle and the one-frame load come back.
+Client only. Rollback: revert; the 3 s settle comes back.
 
 ## Open Questions
 
-1. Should option 2 (keep the copy between drives) follow for race restarts (27b), where each restart rebuilds the
-   copy (0.5 s settle plus 0.26 s, and a 45–75 ms removal frame)? **Default:** not now; revisit after the races
-   playtest.
-2. The spec bound: the delta states 2 s (row 17's original bound) instead of the "about 3 s" the user accepted,
-   since the expected time is ~0.85 s. **Default:** 2 s.
+1. Should option 2 (keep the copy between drives) follow for race restarts (27b)? **Default:** not now; revisit
+   after the races playtest.
