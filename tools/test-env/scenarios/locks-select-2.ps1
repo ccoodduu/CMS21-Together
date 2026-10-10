@@ -5,8 +5,8 @@
 # A's release. Chooser: B's open chooser marks the item in A's lock with the lock overlay and A's name, B's pick of it
 # is refused on B's game and the chooser opens again under a new slot lock, and A's release clears the mark. Pie: while
 # B holds the car lock, every move option of A's car pie is unavailable (option disabled, element not available) with
-# the lock as the reason; after B's release the options are as before. The guard's pie blocks still apply through the
-# shared owner of option state. The guard runs on Enforce.
+# the lock as the reason; after B's release the options are as before. The engine stand pie still goes through the shared
+# owner of option state. The guard runs on Enforce.
 param($Ctx)
 
 Import-Module (Join-Path $PSScriptRoot "..\LockSession.psm1")
@@ -211,16 +211,16 @@ Write-Host "  pie after B's release: $(($after | ForEach-Object { "$($_.id)=$($_
 $same = @($base | Where-Object { $o = $_; $n = @($after | Where-Object { $_.id -eq $o.id })[0]; $n -and $n.enabled -eq $o.enabled -and $n.available -eq $o.available -and -not $n.source }).Count
 Check ($same -eq $base.Count -and $after.Count -eq $base.Count) "after B's release the move options are as before ($same of $($base.Count))"
 
-# The guard's pie blocks still go through the shared owner.
+# The engine stand pie goes through the shared owner of option state too; since row 25 part 3 the guard allows every
+# option of it (guard.ps1 checks a blocked pie option).
 Start-Sleep -Seconds 1
 $null = Cmd $a guard-try "PieMenu:EngineStand"
 $deadline = (Get-Date).AddSeconds(6)
 do {
     Start-Sleep -Milliseconds 500
     $menu = Cmd $a guard-try "PieState:EngineStand"
-} while (-not ($menu.options | Where-Object { $_ -like "engine_new enabled=False" }) -and (Get-Date) -lt $deadline)
-Check (@($menu.options | Where-Object { $_ -like "engine_new enabled=False" }).Count -eq 1) "the guard still locks engine_new ($($menu.options -join ', '))"
-Check (@($menu.options | Where-Object { $_ -like "engine_add enabled=False" }).Count -eq 0) "and leaves engine_add open"
+} while (-not ($menu.options | Where-Object { $_ -like "engine_new enabled=*" }) -and (Get-Date) -lt $deadline)
+Check (@($menu.options | Where-Object { $_ -like "engine_new enabled=True" -or $_ -like "engine_add enabled=True" }).Count -eq 2) "the engine stand pie leaves engine_new and engine_add open ($($menu.options -join ', '))"
 Cmd $a guard-try "Window:PieMenu" | Out-Null
 
 $locks = Get-ServerLocks

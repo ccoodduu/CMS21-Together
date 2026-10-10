@@ -109,6 +109,7 @@ namespace CMS21Together
 			Diagnostics.BugReport.Update();
 			if (PlayerSettings.DevHotkeys && Client.Instance.IsConnectionValid && Input.GetKeyDown(KeyCode.F6)) Logic.Car.Placement.DevCarSpawner.SpawnRandom();
 			if (Client.Instance.IsConnectionValid) Logic.Car.Details.CarDetailsSync.Update();
+			if (Client.Instance.IsConnectionValid) Logic.Car.Parts.PartBlockCheck.Update();
 			if (Client.Instance.IsConnectionValid) Logic.Car.Away.CarAwaySync.Update();
 			if (Client.Instance.IsConnectionValid) Logic.Car.Locks.CarLockMirror.Update();
 			if (Client.Instance.IsConnectionValid) Logic.Car.Locks.LockGate.Update();
