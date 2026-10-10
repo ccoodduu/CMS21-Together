@@ -140,6 +140,12 @@ namespace CMS21Together
 			ThreadManager.UpdateThread();
 		}
 
+		public override void OnFixedUpdate()
+		{
+			if (!isModInitialized) return;
+			Logic.Driving.RemoteCollider.FixedUpdate();
+		}
+
 		public override void OnLateUpdate()
 		{
 			if (!isModInitialized) return;

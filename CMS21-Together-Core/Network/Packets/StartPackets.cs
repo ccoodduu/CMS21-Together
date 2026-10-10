@@ -74,4 +74,5 @@ public class ServerInfoPacket : INetworkData
 	[OptionalField] public string LockScope;
 	[OptionalField] public int LockExpirySeconds;
 	[OptionalField] public List<Data.Enum.GameScene> SharedOutdoorScenes;
+	[OptionalField] public bool TrackCollisionsOff;
 }

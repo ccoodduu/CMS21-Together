@@ -40,6 +40,7 @@ public class RemoteCar
 	public bool Stopped;
 	public float StartedAt = Time.realtimeSinceStartup;
 	public float ShownAfter = -1f;
+	public RemoteColliderState Collider;
 
 	public int DriveId => Start.DriveId;
 	public bool Ready => Root != null && Root;
@@ -132,6 +133,7 @@ public static class RemoteCars
 	private static void Destroy(RemoteCar car)
 	{
 		car.Stopped = true;
+		RemoteCollider.Destroy(car);
 		if (car.Engine?.Sound != null && car.Engine.Sound) Object.Destroy(car.Engine.Sound);
 		car.Engine = null;
 		if (car.Root != null && car.Root && (car.Holder == null || !car.Holder || !car.Root.IsChildOf(car.Holder.transform))) Object.Destroy(car.Root.gameObject);

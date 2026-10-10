@@ -4,6 +4,7 @@
 # LastTime give the result Ann 1:30 first, Bob 1:35 second on both and on the server. In a two-lap race Bob leaves the
 # track, comes back and watches, and his own start is refused while the race runs; Ann finishes, Bob is DNF. In a third
 # race Bob restarts from the pause menu and is DNF. Bob joins again and the server restarts: the results stay.
+# track-collisions D3: from the countdown until the racers are 10 m apart neither collider is on (one start spot).
 param($Ctx, [int]$GreenToleranceMs = 150)
 
 $a, $b = $Ctx.Instances
@@ -97,6 +98,9 @@ Start-Sleep -Seconds 2
 Check (To-Track $a 0) "Ann drives on the race track"
 Check (To-Track $b 1) "Bob drives on the race track"
 Check ((Cmd $a race-state).panelShown) "the session panel offers the race on the race track"
+$deadline = (Get-Date).AddSeconds(60)
+do { Start-Sleep -Milliseconds 700; $built = @((Cmd $a remote-collider "$idB").cars)[0].built -and @((Cmd $b remote-collider "$idA").cars)[0].built } while (-not $built -and (Get-Date) -lt $deadline)
+Check $built "both have a collider on the other's car before the race"
 
 # 1. A one-lap race: same race on both, green within the tolerance.
 $mark = Get-ServerLogMark
@@ -108,6 +112,8 @@ $stateA = Wait-Race $a { param($s) $s.race -and $s.race.phase -eq "Countdown" }
 $stateB = Wait-Race $b { param($s) $s.race -and $s.race.phase -eq "Countdown" }
 $race1 = [int]$stateA.race.RaceId
 Save "countdown_A" $stateA; Save "countdown_B" $stateB
+$colliderA = @((Cmd $a remote-collider "$idB").cars) | Select-Object -First 1
+Check (-not $colliderA.enabled -and $colliderA.reason -eq "race-start") "during the countdown Ann's collider of Bob's car is off (reason $($colliderA.reason))"
 Check ($race1 -gt 0 -and $stateB.race.RaceId -eq $race1) "both have race $race1 (Ann $($stateA.race.RaceId), Bob $($stateB.race.RaceId))"
 foreach ($s in $stateA, $stateB) {
     Check ((@($s.race.Participants) -contains $idA) -and (@($s.race.Participants) -contains $idB)) "the participants are Ann and Bob ($(@($s.race.Participants) -join ', '))"
@@ -121,6 +127,9 @@ Note "green: Ann $gA (plan $($greenA.race.StartWallMs), released $($greenA.race.
 Check ($gA -gt 0 -and $gB -gt 0) "the game's lights turn green on both (Ann $gA, Bob $gB)"
 Check ($spread -le $GreenToleranceMs) "the green lights are $spread ms apart (at most $GreenToleranceMs ms)"
 Check ($greenA.race.phase -eq "Racing" -and $greenB.race.phase -eq "Racing") "both are racing"
+$colliderA = @((Cmd $a remote-collider "$idB").cars) | Select-Object -First 1
+$colliderB = @((Cmd $b remote-collider "$idA").cars) | Select-Object -First 1
+Check (-not $colliderA.enabled -and $colliderA.reason -eq "race-start" -and -not $colliderB.enabled -and $colliderB.reason -eq "race-start") "after the green the colliders stay off while the racers stand on the one start spot (Ann: $($colliderA.reason), Bob: $($colliderB.reason))"
 
 $lapA = Cmd $a track-lap "90000"
 $lapB = Cmd $b track-lap "95000"

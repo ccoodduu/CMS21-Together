@@ -142,6 +142,7 @@ public static class DriveCommands
             ["longestFrame"] = Round(car.LongestFrame),
             ["shownAfter"] = Round(car.ShownAfter),
             ["buildMb"] = Round(car.BuildBytes / 1048576f),
+            ["collider"] = CollideCommands.Car(car),
         };
     }
 

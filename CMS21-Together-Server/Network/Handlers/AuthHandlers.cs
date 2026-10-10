@@ -92,7 +92,8 @@ namespace CMS21_Together_Server.Network.Handlers
 			IsAdmin = Server.Clients.TryGetValue(clientId, out var client) && client.IsAdmin,
 			LockScope = Program.Config.LockScope,
 			LockExpirySeconds = Program.Config.LockExpirySeconds,
-			SharedOutdoorScenes = Data.Outdoor.OutdoorInstances.SharedScenes.OrderBy(s => (int)s).ToList()
+			SharedOutdoorScenes = Data.Outdoor.OutdoorInstances.SharedScenes.OrderBy(s => (int)s).ToList(),
+			TrackCollisionsOff = !Program.Config.TrackCollisions
 		};
 
 		public static void BroadcastServerInfo()
