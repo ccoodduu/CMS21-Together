@@ -22,6 +22,9 @@ Newest first. One entry per work session.
 - `a20a526`: `lock-pie` keeps the game's own pie input (`HandleInput` -> `ButtonAccept`) idle while the harness holds
   the pie open. `locks-select-2` passes in 2 batches (`20261010-034112_L2`, `20261010-040018_L2`) and 4 runs alone
   (`20261010-040137_L2`, `040312_L2`, `040446_L2`, `040621_L2`), with no move of A's car.
+- After merging main (`561e821`) `locks-select-2` failed on its engine stand step: row 25 part 3 allows `engine_new`
+  and only `guard.ps1` was updated; `531dac3` checks that `engine_new` and `engine_add` are open
+  (`20261010-052424_L2`). Smoke plus `part-blocks-group` after the merge pass (`20261010-051019_regression.json`).
 - Smoke plus the parts area: `20261010-040830_regression.json`, 34 passed (`desync-autofix` FLAKY). Soak 15 min
   `20261010-045235_L2_soak`: rule 1 passes (8 of 8 checkpoints), no blocked-counter report; rule 2 one `world.exp`
   resend, rule 9 one `lift-same` group whose lift did not start ("Lift on loader 1 did not start") while B worked on
