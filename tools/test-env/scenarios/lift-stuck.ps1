@@ -5,8 +5,9 @@
 #    on the missing car and never cleared isMoving, so that lift ignored every later step. B does the same two places
 #    in one frame; its lift must stop moving, and a lift step A makes afterwards must reach B.
 # 2. A remote lift step was still running when B left for the junkyard. The step's coroutine kept calling Action on
-#    the destroyed lift and LifterSync.IsApplying stayed true. A raises lift 2 and B leaves while B's lift moves; after
-#    B's return there is no lift exception in B's log, no lift step still applying, and A and B have the same lifts.
+#    the destroyed lift and LifterSync.IsApplying stayed true. A raises lift 1 to Up and B leaves while B's lift moves
+#    (CarLifter2 is not built in the test profiles); after B's return there is no lift exception in B's log, no lift
+#    step still applying, and A and B have the same lifts.
 param($Ctx)
 
 Import-Module (Join-Path $PSScriptRoot "..\ScaleSession.psm1")
@@ -64,16 +65,11 @@ Connect-HarnessInstance $b; Wait-InGarage $b
 
 Cmd $a car-spawn "0 $car 0 Entrance1" | Out-Null
 Wait-Ready $a 0 | Out-Null
-Cmd $a car-spawn "1 $car 0 Entrance2" | Out-Null
-Wait-Ready $a 1 | Out-Null
 Wait-Ready $b 0 | Out-Null
-Wait-Ready $b 1 | Out-Null
 Start-Sleep -Seconds 2
 
-$lifters = @(Cmd $a lifters)
-$lift1 = @($lifters | Where-Object { $_.nearestPlace -eq "CarLifter1" })[0].index
-$lift2 = @($lifters | Where-Object { $_.nearestPlace -eq "CarLifter2" })[0].index
-Write-Host "CarLifter1 is lift $lift1, CarLifter2 is lift $lift2"
+$lift1 = @(Cmd $a lifters | Where-Object { $_.nearestPlace -eq "CarLifter1" })[0].index
+Write-Host "CarLifter1 is lift $lift1"
 
 # Part 1: a car put on lift 1 and taken off within one frame.
 $placed = Cmd $b car-place "0 CarLifter1 Entrance1"
@@ -97,16 +93,14 @@ Check ($lb.state -eq "Middle") "B's lift $lift1 follows A's step to Middle ($($l
 Check (-not $lb.applying) "B applies no step on lift $lift1 any more"
 
 # Part 2: B leaves for the junkyard while A's lift step runs on B.
-Cmd $a car-move "1 CarLifter2" | Out-Null
-Start-Sleep -Seconds 6
 $marks = Get-ClientLogMarks @($b)
-Cmd $a lift "$lift2 up" | Out-Null
+Cmd $a lift "$lift1 up" | Out-Null
 $deadline = (Get-Date).AddSeconds(5)
 do {
     Start-Sleep -Milliseconds 100
-    $l = Lifter $b $lift2
+    $l = Lifter $b $lift1
 } while (-not $l.isMoving -and (Get-Date) -lt $deadline)
-Check ($l.isMoving -and $l.applying) "B is applying A's step on lift $lift2 when it leaves ($($l | ConvertTo-Json -Compress))"
+Check ($l.isMoving -and $l.applying) "B is applying A's step on lift $lift1 when it leaves ($($l | ConvertTo-Json -Compress))"
 Cmd $b travel "Junkyard" | Out-Null
 $s = Wait-HarnessStatus -Instance $b -TimeoutSec 120 -What "B in the junkyard" -Condition { param($s) $s.scene -ne "garage" -and $s.playable -and $s.connectionValid }
 Write-Host "B in $($s.scene); waiting 35 s"
@@ -120,13 +114,13 @@ $path = Get-ClientLogPath $b
 $lines = @(Read-FileFrom $path $marks[$b].Length)
 $exceptions = @($lines | Where-Object { $_ -match "Exception in Harmony patch of method void CarLifter::Action" })
 Check ($exceptions.Count -eq 0) "no lift exception in B's log while B was away ($($exceptions.Count))"
-$dropped = @($lines | Where-Object { $_ -match "\[Placement\] Lift $lift2`: step to \d+ dropped" })
+$dropped = @($lines | Where-Object { $_ -match "\[Placement\] Lift $lift1`: step to \d+ dropped" })
 Check ($dropped.Count -ge 1) "B dropped the running step when it left ($($dropped -join ' | '))"
 $applying = @(Cmd $b lifters | Where-Object { $_.applying } | ForEach-Object { $_.index })
 Check ($applying.Count -eq 0) "B applies no lift step after its return ($($applying -join ', '))"
 Check-LiftsAgree "after B's return"
-$lb = Lifter $b $lift2
-Check ($lb.state -eq "Middle") "B's lift $lift2 is Middle after its return ($($lb.state))"
+$lb = Lifter $b $lift1
+Check ($lb.state -eq "Up") "B's lift $lift1 is Up after its return ($($lb.state))"
 
 $stuck = @(Read-FileFrom $path 0 | Where-Object { $_ -match "\[Placement\] Lift \d+: still moving after" })
 Write-Host "B stuck-lift lines: $($stuck -join ' | ')"
