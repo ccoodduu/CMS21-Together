@@ -34,6 +34,12 @@ public static class LockSelect2Commands
         if (pinned != null) GameScript.Get().IOMouseOverCarLoader = pinned;
     }
 
+    // Without the pie key held, the game's own pie input sometimes accepts the option under its idle cursor
+    // (HandleInput -> NotificationCenter.ButtonAccept) and moves the car while the harness reads the options.
+    [HarmonyPatch(typeof(PieMenuController), nameof(PieMenuController.HandleInput))]
+    [HarmonyPrefix]
+    private static bool HoldPieInput() => pinned == null;
+
     private const int PartsDisabledLayer = 28;
     private const int HiddenPreviewLayer = 26;
     private const string CarPieEntry = "!ChangeCarPosition";
