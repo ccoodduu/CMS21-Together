@@ -25,43 +25,125 @@ collisions between two remote copies.
 
 Task 1.1 builds D2 behind a harness switch and answers the four questions of the proposal on two lanes. "Go" needs: no
 wheel stall in 10 spawns with the copy on the car spot, checkpoint triggers unaffected, contact at 30 km/h against a
-stationary copy in 10 of 10 runs. "No-go" ends the change with a note to the user (ghost cars stay).
+stationary copy in 10 of 10 runs. "No-go" ends the change with a note to the user (ghost cars stay). Result: **go**
+(see "Spike results").
 
 ### D2. Remote collider
 
-`RemoteCollider` adds a child GameObject to the copy on a dedicated layer (an unused layer index chosen by the spike) with
-a `BoxCollider` sized from the body renderers' bounds and a kinematic `Rigidbody` (`interpolation = None`,
-`collisionDetectionMode = ContinuousSpeculative`). Each `FixedUpdate`, it moves with `MovePosition`/`MoveRotation` to the
-copy's current interpolated pose. `Physics.IgnoreLayerCollision` lets the layer collide only with the local car's body
-layer (the spike names it), never with wheel colliders, ground probes or triggers. The copy's own colliders stay off
-(`MakeInert` unchanged).
+`RemoteCollider` gives each copy a root GameObject `RemoteCollider[<player>]` (not a child of the copy) on layer 3, an
+unnamed layer that no scene uses (spike: layer 30 is the game's "StaticObjects", so it is not used). The object has a
+`BoxCollider` and a kinematic `Rigidbody` (`interpolation = None`, `collisionDetectionMode = ContinuousSpeculative`).
+The box is sized once, on the first physics step after the copy's first pose sample, from the copy's enabled mesh and
+skinned renderers in the frame of the streamed body, lifted 0.15 m off the ground (2.02 × 1.45 × 5.19 m for the Bolt
+Atlanta). Each `FixedUpdate` it moves with `MovePosition`/`MoveRotation` to the copy's interpolated pose. A move of 5 m
+or more is a teleport and counts as a jump (D3). `Physics.IgnoreLayerCollision` lets layer 3 collide only with the
+layers of the local car's non-trigger, non-wheel colliders on its rigidbody (spike: layer 0 Default). The wheel colliders
+are on layer 8 and ignore the box. The copy's own colliders stay off (`MakeInert` unchanged). There is no collider
+extrapolation (open question 2): the box sits on the copy as it is shown.
 
 ### D3. Enable rules
 
-The collider is enabled when all hold: the setting is on (client and server); the copy is not carrying the local
-ride-along passenger; it does not overlap the local car (`Physics.ComputePenetration` against the local body collider);
-no snap in the last 1 s (`DriveInterpolator` raises an event on a snap); no 27b race countdown is running and, after a
-race start, the copy is more than 10 m from the local car once. The passenger's own frozen track car gets no change
-(its colliders stay as row 21 leaves them, or are turned off if the spike shows contact).
+The collider is on unless one of these holds, checked in this order. The first one that holds is the reason that
+`remote-collider` shows:
+
+1. `setting`: the client setting is off.
+2. `host`: the server forces it off.
+3. `passenger`: the local player rides along (row 21). This covers the copy that carries them.
+4. `no-local-car`: no local track car in `CarDrive`.
+5. `race-start`: a 27b countdown is running, or after one, the copy has not yet been more than 10 m from the local car.
+6. `snap`: the copy snapped (`DriveInterpolator.Snaps`) or teleported, or the local car jumped 5 m or more, in the last
+   1 s. The race restart and the pause-menu restart are such jumps.
+7. `overlap`: the box would overlap the local car (`Physics.OverlapBox` of the box plus 0.1 m against the local
+   rigidbody's colliders). This is checked only while the box is off, so a running contact never turns it off.
+
+The snap is a counter on `DriveInterpolator`, not an event: the collider reads it every physics step. A contact is
+counted when the box plus 0.05 m starts to touch the local car's colliders. The passenger's own frozen track car gets
+no change.
 
 ### D4. Settings
 
-Client: `track_collisions` in `PlayerSettings` (default on). Server: `track_collisions` in the server config (default
-on), sent as `ServerInfoPacket.TrackCollisions` (`[OptionalField]`, missing = on); off forces every client's collider
-off. Nothing is stored beyond the config; nothing is relayed.
+Client: `TrackCollisions` in `PlayerSettings` (MelonPreferences category `CMS21Together`, default on). Server:
+`track_collisions = on|off` in the server config (default on, `true`/`false` also accepted), sent as
+`ServerInfoPacket.TrackCollisionsOff` (`[OptionalField]`, so a missing field reads as false, which means on). Off forces
+every client's collider off. Nothing is stored beyond the config, and nothing is relayed.
 
 ### D5. Late join
 
-A client that joins or arrives on a track builds copies as row 17 does; the collider follows D3 from its first frame
-(overlap check first), so a copy appearing on the spawn never stalls the local car.
+A client that joins or arrives on a track builds copies as row 17 does. The collider follows D3 from its first frame:
+the first move is a teleport (`snap`, 1 s), then the overlap check runs. So a copy that appears on the spawn never
+stalls the local car.
+
+## Spike results (task 1.1, 2026-10-10): GO
+
+Scenario `collide-spike` (lane 1, headless; output `spike_*.json` in the run folders). Runs: `20261010-094840` (all
+phases, layer 30), `20261010-100150` (spawns, hits and lag from the car spot, layer 3) and `20261010-101506` (rebound
+comparison, with the deep-overlap guard removed).
+
+**Layers.** The local car's rigidbody is `VPP BluePrint` (layer 8 "Table", tag `Player`, 1699 kg, `Discrete`). Its only
+enabled solid collider is `CarPhysicCollider(Clone)`, a convex `MeshCollider` on layer 0 (material `VP_Vehicle Body`,
+bounciness 0.1, combine Maximum). The four `WheelCollider`s are on layer 8. Layers 3, 6 and 7 are unnamed and have no
+colliders. 27 is "EMPTY3" and 30 is "StaticObjects", so both belong to the game.
+
+**(1) Wheel raycasts ignore the layer.** A 0.8 × 0.1 × 0.8 m box on the collider layer, with its top 6 cm above the
+ground, was put under the front-left wheel. The wheel still reported the track mesh `tor_arizona` and the same
+suspension compression (0.5). The layer matrix (layer 3 collides with layer 0 only) keeps it away from the wheels'
+layer 8.
+
+**(2) Checkpoints ignore the copy.** The race track's 11 checkpoints (`CheckPoints`, triggers on layer 0, untagged)
+count a collider only when it is tagged `Player`. This is the native `CheckPoints.OnTriggerEnter` (`CompareTag("Player")`).
+A forced-on box moved into the active checkpoint left `numberOfCheckpoints` at 0, the active index at 0 and the laps at 1.
+The box's layer does meet the checkpoint triggers (both use layer 0), so the tag check is what protects lap times.
+
+**(3) Overlap, snaps and restarts.**
+- Ten test copies spawned on the car spot (the car reset there each time with the pause-menu restart, 0.00 m from the
+  first spot): the collider stayed off with reason `overlap` 10 of 10 times. No frame was over 118 ms (the headless
+  frame is 80–110 ms anyway). The car drove away 15–21 m every time, and the collider came on once the cars were apart.
+- A copy jumped onto the car: `snap` for 1 s, then `overlap`, and on once the car drove off.
+- A race-track restart put the car on a copy at the start: `snap`, then `overlap`. The car was not lifted (y 0.31 m
+  before and after), and it drove away 18 m.
+- With the guard forced off, a copy put on the car lifted it 1.2 m onto the box's roof. There was no stall (frame
+  110 ms), but this shows why the guard is needed.
+- Found and fixed: a copy's box could come on at the world origin before the copy's first pose sample, then teleport
+  into the car and lift it (run 1, spawn 2). The box now waits for the first sample, and any box teleport counts as a
+  snap.
+
+**(4) Contact and position error.**
+- Driving at a parked test copy from 12 m (the harness holds the speed until the first contact): contact at 28 km/h
+  10 of 10 times, and at 78 and 148 km/h. With the collider off, the car drove through (46 m, no contact).
+- Run 2 turned the collider off inside a contact when the car was more than 0.3 m deep (a "deep overlap" guard), so
+  at 150 km/h the car drove through. That guard is gone (run 3: contact and stop at 148 km/h, twice). Teleports are
+  covered by the jump rules.
+- Every hit throws the car back at 36–38 km/h, whatever the speed. A plain static `BoxCollider` (the kind of obstacle
+  the game itself has) and a kinematic test box give the same rebound (36.5–38.2 km/h). So this is how the car reacts to
+  any solid obstacle when the harness drives it, not something the remote box adds. A larger `contactOffset` (0.3 m)
+  changed nothing and is not used.
+- Lag of the shown copy on one PC (loopback, headless): 0.19–0.22 s (the 100 ms delay, up to 67 ms of 15 Hz stream,
+  and 80–110 ms headless frames). Position error at steady speed: 1.6–1.9 m at 27 km/h and 4.5 m at 77 km/h. That makes
+  about 5.5 m at 100 km/h and 8.5 m at 150 km/h, plus speed × ½ ping online. At 60 fps the frame share drops by about
+  0.07 s.
+- Extrapolation (open question 2) was decided by arithmetic rather than measured. Moving the box ahead by the measured
+  lag would cancel the error at steady speed. Under braking or in a turn, it would put the box up to v × lag (5–8 m at
+  100–150 km/h) where the car never goes. Phantom contacts at speed are accepted (proposal), so the box stays on the
+  shown car.
+
+**Real copy.** Run 1 placed Ann behind Bob's real copy by moving her rigidbody, which put her below the ground. Run 2
+used the deep-overlap guard. Neither gives a clean real-copy contact, so the proof scenario `track-collide` covers that.
+Run 2 showed the one-sided rule in action: Ann went through Bob's copy (guard), and on Bob's client her kinematic copy
+pushed his parked car 94 m. Each client's copy of the other is a moving wall to its own car.
+
+**Verdict: GO.** The D1 criteria hold: no stall in 10 spawns on the car spot, checkpoints unaffected, and contact at
+30 km/h in 10 of 10 runs.
 
 ## Risks / Trade-offs
 
-- [VPP's wheel raycasts hit the layer] → layer matrix; the spike's go criteria.
-- [Phantom contacts at speed (4–7 m lag at 100 km/h)] → accepted for co-op; optional collider extrapolation (open
-  question 2).
-- [Checkpoint triggers react to the copy and corrupt local lap times] → triggers ignore the layer; the spike checks.
-- [One-sided contacts feel unfair in a race] → the setting; 27b's start rule.
+- [VPP's wheel raycasts hit the layer] → wheels are on layer 8, which layer 3 ignores (spike 1).
+- [Phantom contacts at speed (≈ 5.5 m at 100 km/h on one PC, more online)] → accepted for co-op, no extrapolation.
+- [Checkpoint triggers react to the copy] → they count only `Player`-tagged colliders (spike 2).
+- [A copy driving into a parked car pushes it like a wall (kinematic, infinite mass)] → the cheap form the user
+  accepted. Where the other driver is stopped by your copy on their client, their copy stops at your car too.
+- [One-sided contacts feel unfair in a race] → the setting, the host switch, and 27b's start rule.
+- [The rebound after a hit (about 37 km/h back) feels hard] → the same as the game's own walls when the harness
+  drives; to be judged in a real playtest (docs/playtest.md).
 
 ## Migration Plan
 
