@@ -3,14 +3,11 @@
 Open questions that block a decision. Each has the default we work with until answered.
 Answered ones move to the bottom with the answer.
 
-## Open — row 31 faster-remote-cars (2026-10-10)
+## Open — row 27c track-collisions (2026-10-10)
 
-Measured on `change/faster-remote-cars` (headless): another player's car already shows 3.3–3.6 s after arrival
-(fixed 3 s wait + 0.2–0.5 s build); the first copy per visit has one 92–120 ms frame.
-
-1. **Scope.** A: nothing (requirement "about 3 s, no frame over 0.13 s" is met); B: shorten the fixed wait to 0.5 s
-   after your own car is ready (≈1 s, frame unchanged); C: B plus spreading the game's `LoadCar` steps over frames
-   (≈0.85 s, longest frame 39–56 ms; invasive). **Default:** B.
+1. **Push-out speed while touching another player's car copy** (`maxDepenetrationVelocity` lowered from the game's
+   8 m/s to 1.5 m/s while touching, then restored; without it a late copy lifted a parked car 0.64 m). The user wants
+   to decide later. **Default:** keep it.
 
 ## Open — row 19 state-merges-and-contention (2026-10-08)
 
@@ -152,6 +149,10 @@ Answered by the user on 2026-10-08 (evening):
 - **Row 27b:** a race is started with a "Start race" button in the F9 session panel, shown only on the race track
   (not the game's own restart, which stays a personal restart). **Row 31:** about 3 s until another player's car
   appears is fine, as long as loading it gives no big frame spike (no frame over 0.13 s, as in the freeze fix).
+- **Row 31 (2026-10-10):** option B — shorten the fixed wait to 0.5 s after your own car is ready (≈1 s); no
+  spreading of the game's load steps. **Row 27c:** no per-player collision setting; only the host's
+  `track_collisions` switch turns collisions off, for everyone. **Row 27b:** look for marked start spots on the race
+  track so racers can start on different spots.
 
 
 - **Answered by the user on 2026-10-08 (row 19 part 1):** the defaults of "Open — row 19" stand; the part record base check also compares the part's quality (a part replaced by one of another quality never takes a stale edit), as recommended.
