@@ -2,6 +2,18 @@
 
 Newest first. One entry per work session.
 
+## 2026-10-10 (01:40–03:30) — playtest 3 fixes, wheels, place-same and bonus parts merged; build dev.1191
+
+- `main` = `657609c`. Merged: `fix/place-same` (`5754234`; move lock covers the target place, unpark examined flags),
+  the playtest-3 fixes (`7ec8dff`; proofs `lock-mount-target`, `car-mount-wear`, `shop-buy-popup` fail on the old code
+  and pass; `20261010-015457_regression.json` 24/24), the wheel visuals fix (`a41279e`; `CarLoader.UpdateWheels` on a
+  loaded car destroyed shared rim/tire materials: magenta, hollow rims, missing tires, a taken-off wheel left visible;
+  proof `car-wheel-looks`; batch `20261010-022844_L1_batch` 16/16), bonus parts (`657609c`, row 25 part 2; proof
+  `car-bonus` fails `20261010-024945_L1`, passes `20261010-025058_regression.json`).
+- Playtest build `0.6.0-dev.1191` on the Desktop.
+- In progress: row 25 part 3 new engines (lane 1); the `blocked` flag drift seen in the soak and the `locks-select-2`
+  pie harness flake (lane 2); remote fluid visuals (oil drain etc.; lane 2 after).
+
 ## 2026-10-10 (02:30–03:15) — row 25 part 2, bonus parts (`feat/bonus-parts`, lane 1)
 
 - Bonus slots in the car details as `x:<slot>` entries (`ModBonusSlot`, cars section v4); receivers apply them with
