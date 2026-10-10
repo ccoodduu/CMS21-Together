@@ -145,6 +145,7 @@ public static class DriveCommands
             ["shownAt"] = Round(car.ShownAt),
             ["waitSeconds"] = Round(car.WaitSeconds),
             ["buildMb"] = Round(car.BuildBytes / 1048576f),
+            ["collider"] = CollideCommands.Car(car),
         };
     }
 

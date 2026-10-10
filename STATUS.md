@@ -31,6 +31,32 @@ Newest first. One entry per work session.
     (shown 3.2–3.6 s > 1.5 s, frame 92–120 ms > 75 ms). `openspec validate --strict` passes.
   - `method-time` on all of `CarLoader` hung the arriving game (`103549_L2`); patch named methods only.
 
+## 2026-10-10 (09:30–12:05) — row 27c, collisions on the tracks (`feat/track-collisions`, lane 1)
+
+- Spike 1.1 (`collide-spike`; runs `20261010-094840`, `-100150`, `-101506`, `-111733`): **GO**. The local car's only
+  solid collider is on layer 0 and its wheels are on layer 8. Each copy's box is on unnamed layer 3 (30 is the game's
+  "StaticObjects") and meets layer 0 only. A box under a wheel leaves the wheel's ground hit unchanged. The race
+  track's checkpoints count only `Player`-tagged colliders. The overlap guard held 10 of 10 spawns on the car spot
+  (no frame over 118 ms); snaps and restarts go `snap` → `overlap`. Contact 10 of 10 at 30 km/h, and at 80 and
+  150 km/h. Lag 0.19–0.22 s (4.5 m at 77 km/h), no extrapolation.
+- Fixed during the spike: a box could come on at the world origin before the copy's first pose and teleport into the
+  car. A "deep overlap" guard let cars through at 150 km/h and was removed. The "rebound" of 37 km/h after every hit
+  was the harness: `drive-stop` leaves the brake pressed and the game reverses at a standstill. A late or extrapolated
+  copy sinking into a parked car pushed it out at 8 m/s (4.8 m/s, 0.64 m lift); the local car's depenetration is now
+  1.5 m/s while it touches a copy (1.6 m/s, 0.01 m).
+- Built: `RemoteCollider` (box per copy, `FixedUpdate`, rules host → passenger → no local car → race start
+  → snap/jump → overlap), server `track_collisions = on|off` sent as
+  `ServerInfo.TrackCollisionsOff`. Harness `remote-collider` (and dump `remoteCars[].collider`), `collide-*` verbs.
+- Proof `track-collide` fails on the old code (`20261010-113338_L1`, main `216d857`: Bob drives through Ann's car)
+  and passes (`20261010-112757_L1`); `20261010-113802_regression.json` 14/14 (smoke, `drive-track`,
+  `drive-latejoin`, `race-track`, `race-start` with new collider checks, `ride-along`, `test-drive`, `connect`,
+  `track-collide`, server-saves).
+- User decision (12:00): no per-player setting. Collisions are on for everyone, and only the host's
+  `track_collisions = off` turns them off. The client setting `TrackCollisions` is removed; with it, a player who
+  turned it off still pushed the others. `track-collide` step 2 is now the host switch: after a server restart with
+  `track_collisions = off`, both colliders are off (reason `host`), Bob drives through Ann's car and does not push it
+  (`20261010-121204_L1`, after merging main `bcef5a8`). The 1.5 m/s push-out limit stays for now (QUESTIONS.md).
+- Open: hand check with visible games (playtest 5).
 ## 2026-10-10 (09:00–10:30) — fix/deploy-guard: runs only test their own build; job end and soak lift fixes (lane 2)
 
 - `fix/deploy-guard` (lane 2, not merged).

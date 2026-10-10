@@ -64,6 +64,11 @@ Report problems with both players' `MelonLoader\Latest.log` and the server's `Lo
    at the same moment by eye, pressing the throttle before that does not start the lights; drive two real laps
    through every checkpoint; both see the result toast and the "Last race" line in F9. A friend who arrives on the
    track during the race only watches.
+   **Hand check: bumping a friend's car** (scenario `track-collide` covers the parked-car contact, the host switch
+   and the ride headless): both on the test or race track. Drive slowly into your friend's parked car: you stop or bounce off,
+   and their car does not move on their screen. Drive past them at 100 km/h or more: a contact can happen up to about
+   5 m behind where their car really is, because their car is shown a little late (expected). Both arrive on the same
+   car spot: nobody gets stuck or thrown up. Note how hard the bounce after a hit feels.
 
 ## Travel and sessions
 

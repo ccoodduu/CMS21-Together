@@ -37,8 +37,8 @@ Everyone else joins it from the main menu or through Steam. Your own single-play
   you buy go to the shared parking. Travel fees follow one server setting.
 - **See each other work and drive.** Bolts turn and parts slide off and on when another player works, and their
   avatar holds the tool. On the test track, the race track and the speed track you see each other's cars drive, a
-  passenger can ride along, and the server keeps everyone's best lap and top speed. On the race track you can race
-  each other with one start for everyone.
+  passenger can ride along, cars bump into each other, and the server keeps everyone's best lap and top speed. On
+  the race track you can race each other with one start for everyone.
 - **Ping and shopping list.** Point out a part to the others, and share one shopping list.
 - **Sit in a car and start the engine**: the others see and hear it.
 - **Hosting.** Host from the game with one click, or run the dedicated server on another PC. Password for IP joins,
@@ -64,8 +64,7 @@ Also not yet:
 - A texture pack for the garage is shared by its id only: a player who does not have it installed sees the default
   garage textures.
 
-Planned: cars that collide on the tracks. The DLC tracks, Workshop
-tracks, the photo location, the tutorial and saving or loading stay blocked.
+The DLC tracks, Workshop tracks, the photo location, the tutorial and saving or loading stay blocked.
 
 ## Get started
 
@@ -116,8 +115,11 @@ the game, click **Multiplayer** in the main menu.
 - **Driving together:** take a garage car to the test track, the race track or the speed track from the map. While
   you are there the car is yours: the others see "<name> has this car on the race track." and cannot change, move,
   sell or delete it, and the driven kilometres and the dirt come back with you. Players who are on the same track at
-  the same time see each other's car drive (it appears a few seconds after you arrive). Cars pass through each other
-  and through players.
+  the same time see each other's car drive (it appears a few seconds after you arrive). Cars collide: your car stops
+  or bounces off another player's car, which is never pushed on its driver's screen (at high speed a hit can come a
+  few metres behind the other car, because it is shown a moment late). There is no collision while two cars overlap,
+  for a second after one jumps (a restart), during a race start, or with a passenger riding along. The host can turn
+  collisions off for everyone (`track_collisions = off`). Cars pass through players.
 - **Lap records:** the server keeps each player's best race-track lap and speed-track top speed across sessions and
   restarts; the race track shows your own best as in single player. When someone sets a new best for the group,
   everyone is told ("New group record on the race track: Ann, 1:23.456"). Only the driver's laps count.
