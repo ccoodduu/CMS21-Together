@@ -272,7 +272,7 @@ public static class LoaderAddition
 		SceneLoader.BlockProgress = false; // needed to end loading
 		NotificationCenter.IsGameReady = true; // needed to end loading
 		CameraManager.Get().ChangeCamera(CameraState.FPS);
-		yield return Car.Away.TestDriveSync.AfterReturnSync();
+		yield return Car.Away.TrackDriveSync.AfterReturnSync();
 		yield return new WaitForSeconds(2f);
 		screenFader.FadeTo(2f, 1f, 0f, false, true);
 		bool canOpenPieMenu = true;
@@ -285,7 +285,7 @@ public static class LoaderAddition
 		}
 		else
 		{
-			Car.Away.TestDriveSync.ReleaseAfterReturn();
+			Car.Away.TrackDriveSync.ReleaseAfterReturn();
 		}
 		if (dlcErrorWindow.ShouldShow())
 		{

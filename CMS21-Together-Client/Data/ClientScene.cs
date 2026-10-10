@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using CMS21_Together_Core.Data;
 using CMS21_Together_Core.Data.Enum;
 using CMS21_Together_Core.Logging;
 
@@ -10,6 +11,8 @@ public static class ClientScene
 	private static readonly Queue<Action> pendingGarageActions = new Queue<Action>();
 
 	public static GameScene LocalScene { get; set; } = GameScene.Menu;
+
+	public static GameScene Destination { get; set; } = GameScene.Unknown;
 
 	public static bool IsGarageReady => LocalScene == GameScene.Garage;
 
@@ -50,6 +53,9 @@ public static class ClientScene
 
 	public static void ClearPending() => pendingGarageActions.Clear();
 
+	public static SceneType ToSceneType(GameScene scene) =>
+		Enum.TryParse(scene.ToString(), out SceneType sceneType) ? sceneType : SceneType.None;
+
 	public static GameScene FromSceneType(SceneType sceneType)
 	{
 		if (sceneType == SceneType.None) return GameScene.Unknown;
@@ -62,7 +68,7 @@ public static class ClientScene
 		{
 			case "garage": return GameScene.Garage;
 			case "menu": return GameScene.Menu;
-			default: return GameScene.Unknown;
+			default: return TrackScenes.ByUnityName(sceneName);
 		}
 	}
 

@@ -1,4 +1,5 @@
 using System;
+using CMS21_Together_Core.Data;
 using CMS21_Together_Core.Data.Enum;
 using CMS21_Together_Core.Logging;
 using CMS21_Together_Core.Network.Packets;
@@ -67,11 +68,11 @@ public static class DriveCapture
 		if (!active)
 		{
 			if (RideAlong.IsPassenger) return;
-			if (ClientScene.LocalScene == GameScene.TestTrack && GameMode.Get()?.GetCurrentMode() == gameMode.CarDrive && TryFindCar(out var found))
+			if (TrackScenes.IsTrack(ClientScene.LocalScene) && GameMode.Get()?.GetCurrentMode() == gameMode.CarDrive && TryFindCar(out var found))
 				Start(found);
 			return;
 		}
-		if (physics == null || !physics || ClientScene.LocalScene != GameScene.TestTrack)
+		if (physics == null || !physics || !TrackScenes.IsTrack(ClientScene.LocalScene))
 		{
 			Stop("track car gone");
 			return;
@@ -109,7 +110,7 @@ public static class DriveCapture
 
 		int loader = -1;
 		foreach (var pair in CarAwaySync.All)
-			if (pair.Value.Owner == Client.Instance.ID && pair.Value.Kind == CarAwayKind.TestTrack) loader = pair.Key;
+			if (pair.Value.Owner == Client.Instance.ID && TrackScenes.IsTrackKind(pair.Value.Kind)) loader = pair.Key;
 
 		var carLoader = found.CarLoader;
 		byte[] blob = null;

@@ -35,6 +35,7 @@ public static class PlayerHandlers
 	[PacketHandler(PacketTypes.PlayerRestore)]
 	public static void OnPlayerRestore(long senderId, PlayerRestorePacket packet)
 	{
+		Logic.Driving.TrackRecords.ApplyRestore(packet);
 		SpawnPlacement.QueueRestore(packet, SyncTracker.ReceivingSnapshotId);
 	}
 }

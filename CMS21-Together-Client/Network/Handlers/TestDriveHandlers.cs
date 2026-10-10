@@ -11,5 +11,5 @@ public static class TestDriveHandlers
 	public static void OnAwayUpdate(long clientId, CarAwayUpdatePacket packet) => CarAwaySync.OnUpdate(packet);
 
 	[PacketHandler(PacketTypes.TestDriveResultAck)]
-	public static void OnResultAck(long clientId, TestDriveResultAckPacket packet) => TestDriveSync.OnResultAck(packet);
+	public static void OnResultAck(long clientId, TestDriveResultAckPacket packet) => TrackDriveSync.OnResultAck(packet);
 }
