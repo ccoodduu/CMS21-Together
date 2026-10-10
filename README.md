@@ -35,8 +35,8 @@ Everyone else joins it from the main menu or through Steam. Your own single-play
   junkyard, a barn or the auction at the same time are in the same place: the same cars and junk piles, and an item
   one player takes from a pile is gone for the others. Parts you buy at the junkyard go to the shared inventory; cars
   you buy go to the shared parking. Travel fees follow one server setting.
-- **See each other work and drive.** Bolts turn and parts slide off and on when another player works, and their
-  avatar holds the tool. On the test track, the race track and the speed track you see each other's cars drive, a
+- **See each other work and drive.** Bolts turn and parts slide off and on when another player works, oil drains and
+  refill cans pour, and their avatar holds the tool. On the test track, the race track and the speed track you see each other's cars drive, a
   passenger can ride along, cars bump into each other, and the server keeps everyone's best lap and top speed. On
   the race track you can race each other with one start for everyone.
 - **Ping and shopping list.** Point out a part to the others, and share one shopping list.
@@ -138,9 +138,21 @@ the game, click **Multiplayer** in the main menu.
 - **Drive:** the Drive option in a car's pie menu opens the map, as in the game.
 - **Test path:** the test path is for one player; it does not start while another player sits in the car ("<name> is
   sitting in the car.").
-- **See each other work:** when another player takes a part off or puts it on, you see the bolts turn and the part
-  slide off or on, and their avatar holds the tool. This is only a picture of what they do: the change itself
-  arrives as before. Turn it off with `RemoteVisuals = false` in `UserData\MelonPreferences.cfg`.
+- **See each other work:** in the garage you see what the other players do to a car while they do it.
+  - **Parts:** the bolts turn at their pace and the part slides off along its way out or flies on; a door, hood or
+    trunk swings open and shut, and a body panel pulls away. Stopping half-way turns the bolts back.
+  - **The avatar:** it turns to the part it works on and reaches for it, moves its arm like a wrench while bolts turn,
+    and works with its arms up under a raised car.
+  - **Tools in hand:** the diagnostic tools (OBD scanner, compression tester, multimeter, tread gauge and the
+    others), the dipstick, the fluid extractor, the oil drain bin, the refill cans and the spray show in the avatar's
+    hand. There is no wrench model in the game, so part work shows the pose without one.
+  - **Fluids:** an oil drain shows the oil stream from the drain plug (dark when the oil is old) with its sound; a
+    refill can tilts and pours at the reservoir with its sound while the player pours.
+  - A player who joins later sees what the others are doing at that moment.
+
+  This is only a picture of what they do: the change itself arrives as before, also with the pictures off. Turn them
+  off with `RemoteVisuals = false` in `UserData\MelonPreferences.cfg` (section `[CMS21Together]`) before you start
+  the game.
 - **Parts in use:** before a part comes off or goes on, your game asks the server for it. A part another player works
   on has no highlight, its label says "<name> is working on this part.", and a click on it plays the error sound with
   that message. The same goes for what is fixed to it (a crankshaft while its bearing caps are worked on), for a fluid
