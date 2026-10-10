@@ -56,7 +56,7 @@ function Wait-InputDone([string]$Name, [int]$TimeoutSec = 20) {
     do { Start-Sleep -Milliseconds 400; $s = Cmd $Name drive-input-state } while ($s.running -and (Get-Date) -lt $deadline)
     return $s
 }
-function Stop-Car([string]$Name) { Cmd $Name drive-stop | Out-Null; Wait-InputDone $Name | Out-Null }
+function Stop-Car([string]$Name) { Cmd $Name drive-stop | Out-Null; Wait-InputDone $Name | Out-Null; Cmd $Name drive-input "0 0 0.1" | Out-Null; Wait-InputDone $Name | Out-Null }
 function Ghost([string]$Name, [string]$At) {
     $g = Cmd $Name collide-ghost $At
     $c = Wait-Collider $Name $g.playerId { param($c) $c.built } 40
@@ -223,6 +223,40 @@ Phase "lag" {
         Stop-Car $b
     }
     Save "lag" $rows
+}
+
+function Lift($Frames, [double]$BaseY) {
+    $ys = @($Frames | ForEach-Object { $_.p.y })
+    $vs = @($Frames | ForEach-Object { [math]::Sqrt($_.v.x * $_.v.x + $_.v.y * $_.v.y + $_.v.z * $_.v.z) })
+    [pscustomobject]@{ maxLift = [math]::Round((($ys | Measure-Object -Maximum).Maximum - $BaseY), 2); maxSpeed = [math]::Round(($vs | Measure-Object -Maximum).Maximum, 2); minUp = [math]::Round((@($Frames | ForEach-Object { $_.up }) | Measure-Object -Minimum).Minimum, 2); frames = $Frames.Count }
+}
+
+Phase "mutual" {
+    $rows = @()
+    foreach ($variant in @(@{ cap = 0; hold = "on" }, @{ cap = 0; hold = "off" }, @{ cap = 1.5; hold = "on" }, @{ cap = 1.5; hold = "off" })) {
+        foreach ($name in $a, $b) { Cmd $name collide-set ([string]::Format([cultureinfo]::InvariantCulture, "cap {0}", $variant.cap)) | Out-Null; Cmd $name collide-hold "off" | Out-Null }
+        Spot $a | Out-Null
+        Cmd $a drive-input "0.6 0 3" | Out-Null
+        Wait-InputDone $a | Out-Null
+        Stop-Car $a
+        Cmd $a collide-hold $variant.hold | Out-Null
+        Spot $b | Out-Null
+        Wait-Collider $b $idA { param($c) $c.reason -eq "on" } 10 | Out-Null
+        Wait-Collider $a $idB { param($c) $c.reason -eq "on" } 10 | Out-Null
+        $baseA = (Cmd $a collide-clock).position; $baseB = (Cmd $b collide-clock).position
+        foreach ($name in $a, $b) { Cmd $name collide-trace "on" | Out-Null }
+        Cmd $b collide-cruise "8 10" | Out-Null
+        $cruise = Wait-Cruise $b 20
+        Start-Sleep -Seconds 2
+        $traceA = (Cmd $a collide-trace "report").frames; $traceB = (Cmd $b collide-trace "report").frames
+        foreach ($name in $a, $b) { Cmd $name collide-trace "off" | Out-Null }
+        $label = "cap$($variant.cap)_hold$($variant.hold)"
+        Save "mutual_trace_A_$label" $traceA; Save "mutual_trace_B_$label" $traceB
+        $rows += [pscustomobject]@{ variant = $label; cruise = $cruise; ann = (Lift $traceA $baseA.y); bob = (Lift $traceB $baseB.y); annMoved = [math]::Round((Distance $baseA (Cmd $a collide-clock).position), 2); bobAt = (Cmd $b collide-clock).position; contactsB = (Collider $b $idA).contacts; contactsA = (Collider $a $idB).contacts }
+        Cmd $a collide-hold "off" | Out-Null
+    }
+    foreach ($name in $a, $b) { Cmd $name collide-set "cap 0" | Out-Null }
+    Save "mutual" $rows
 }
 
 Phase "realhit" {

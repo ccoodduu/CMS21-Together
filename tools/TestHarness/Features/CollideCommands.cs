@@ -21,6 +21,10 @@ public static class CollideCommands
     private static int testCars;
     private static GameObject testBox;
     private static Cruise cruise;
+    private static bool holding;
+    private static bool tracing;
+    private static bool watching;
+    private static readonly List<object> trace = new List<object>();
 
     private class Cruise
     {
@@ -51,9 +55,13 @@ public static class CollideCommands
 
     internal static void Reset(List<string> changed)
     {
-        if (RemoteCollider.Forced != null || !PlayerSettings.TrackCollisions) changed.Add("collide-set");
+        if (RemoteCollider.Forced != null || !PlayerSettings.TrackCollisions || RemoteCollider.DepenetrationCap != RemoteCollider.DefaultDepenetrationCap || holding || tracing) changed.Add("collide-set");
         RemoteCollider.Forced = null;
         PlayerSettings.TrackCollisions = true;
+        RemoteCollider.DepenetrationCap = RemoteCollider.DefaultDepenetrationCap;
+        holding = false;
+        tracing = false;
+        trace.Clear();
         for (int id = FirstTestId; id < FirstTestId + testCars; id++) RemoteCars.Remove(id, "harness reset");
         testCars = 0;
         if (testBox != null && testBox) UnityEngine.Object.Destroy(testBox);
@@ -108,6 +116,7 @@ public static class CollideCommands
         {
             ["setting"] = PlayerSettings.TrackCollisions,
             ["hostOff"] = ClientData.ServerInfo?.TrackCollisionsOff == true,
+            ["cap"] = RemoteCollider.DepenetrationCap,
             ["forced"] = RemoteCollider.Forced?.ToString(),
             ["layer"] = RemoteCollider.Layer,
             ["localMask"] = RemoteCollider.LocalMask,
@@ -123,6 +132,7 @@ public static class CollideCommands
         switch (a[0])
         {
             case "setting": PlayerSettings.TrackCollisions = a[1] == "on"; break;
+            case "cap": RemoteCollider.DepenetrationCap = F(a[1]); break;
             case "forced": RemoteCollider.Forced = a[1] == "auto" ? (bool?)null : a[1] == "on"; break;
             default: throw new ArgumentException($"unknown switch {a[0]}");
         }
@@ -357,6 +367,78 @@ public static class CollideCommands
         return new { at = Vec(testBox.transform.position), ground = Vec(wheel.hit.point), wheel = wheel.wheelCol.name };
     }
 
+    [HarnessCommand("collide-hold")]
+    private static object Hold(string args)
+    {
+        holding = (args ?? "").Trim() == "on";
+        EnsureWatch();
+        return new { holding };
+    }
+
+    [HarnessCommand("collide-trace")]
+    private static object Trace(string args)
+    {
+        switch ((args ?? "").Trim())
+        {
+            case "on": trace.Clear(); tracing = true; EnsureWatch(); return new { tracing };
+            case "off": tracing = false; return new { tracing };
+            case "report": return new { tracing, frames = trace.ToList() };
+            default: throw new ArgumentException("usage: collide-trace on|off|report");
+        }
+    }
+
+    private static void EnsureWatch()
+    {
+        if (watching) return;
+        watching = true;
+        MelonCoroutines.Start(Watch());
+    }
+
+    private static IEnumerator Watch()
+    {
+        while (true)
+        {
+            var physics = PrepareCarPhysics.Get();
+            var body = physics != null && physics ? physics.rigidBody : null;
+            if (body != null && body)
+            {
+                if (holding && (cruise == null || !cruise.Running))
+                {
+                    body.velocity = Vector3.zero;
+                    body.angularVelocity = Vector3.zero;
+                }
+                if (tracing && trace.Count < 3000)
+                    trace.Add(new
+                    {
+                        t = Round(Time.time), p = Vec(body.position), v = Vec(body.velocity), w = Round(body.angularVelocity.magnitude),
+                        up = Round(body.transform.up.y), dep = Round(body.maxDepenetrationVelocity),
+                        cars = RemoteCars.All.Where(c => c.Collider != null).Select(c => (object)new
+                        {
+                            id = c.PlayerId, box = Vec(c.Collider.Body.position), on = c.Collider.Enabled, touch = c.Collider.Touching, r = c.Collider.Reason,
+                        }).ToList(),
+                    });
+            }
+            yield return null;
+        }
+    }
+
+    // drive-stop leaves the brake pressed, and VPP shifts into reverse when the brake is held at a standstill.
+    private static int Release(PrepareCarPhysics physics)
+    {
+        int inputs = 0;
+        var vehicle = physics.VehicleController;
+        if (vehicle == null) return 0;
+        foreach (var standard in vehicle.GetComponentsInChildren<VPStandardInput>(true))
+        {
+            standard.externalThrottle = 0f;
+            standard.externalBrake = 0f;
+            standard.externalSteer = 0f;
+            standard.reverse = false;
+            inputs++;
+        }
+        return inputs;
+    }
+
     [HarnessCommand("collide-cruise")]
     private static object CruiseStart(string args)
     {
@@ -366,6 +448,7 @@ public static class CollideCommands
         if (cruise != null) cruise.Running = false;
         var body = physics.rigidBody;
         cruise = new Cruise { Kmh = F(a[0]), Seconds = F(a[1]), Started = Time.time, Start = body.position, Forward = body.transform.forward };
+        Release(physics);
         MelonCoroutines.Start(RunCruise(cruise));
         return new { cruise.Kmh, cruise.Seconds };
     }
