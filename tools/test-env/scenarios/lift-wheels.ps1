@@ -80,5 +80,12 @@ Connect-HarnessInstance $b; Wait-InGarage $b
 Wait-Ready $b | Out-Null
 Check-Agree "after B reconnected (server snapshot)" "Middle"
 
+# Soak 2026-10-10 (lift:1.state 0 vs 1 on every client, persistent): CarLifter2 is not built in the test profiles, so
+# no game raises it, but the mover reported Middle and the server raised it.
+$lift2 = @(Cmd $a lifters | Where-Object { $_.nearestPlace -eq "CarLifter2" })[0]
+Write-Host "CarLifter2: $($lift2 | ConvertTo-Json -Compress)"
+Move-Car $a CarLifter2
+Check-Agree "A moved the car without a tire onto lift 2 (active $($lift2.active))" "OnFloor"
+
 $Ctx.Result.notes += $failures
 $Ctx.Result.passed = ($failures.Count -eq 0)
