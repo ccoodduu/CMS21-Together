@@ -2,6 +2,35 @@
 
 Newest first. One entry per work session.
 
+## 2026-10-10 (16:15–17:00) — the four batch flakes of the a829c78 regression (`fix/batch-flakes-1010`, lane 1)
+
+- `fix/batch-flakes-1010` (lane 1, not merged). Regression `20261010-133046` (main a829c78): `compat-refusal`,
+  `desync-autofix`, `ping`, `visual-lift` failed in the batch and passed alone.
+- `desync-autofix` ("B got the persistent notice"): harness bug. MelonLoader 0.5.7 writes at most 100 warnings and
+  100 errors per game process to Latest.log; in the batch, B's warnings (summed over all batch logs) reached exactly
+  100 during `compat-refusal`, A's during `drive-latejoin`, and nothing after that was logged. `e99cdf4`: TestLanes
+  starts the games with `--melonloader.maxwarnings 0 --melonloader.maxerrors 0`; new scenario `log-cap` (harness verb
+  `log-burst`) fails before (96 of 150 warnings, `20261010-162243_L1_log-cap`) and passes after.
+- `compat-refusal` ("A stays in the session while B is refused"): harness bug. A was InSession throughout; the
+  harness rewrites status.json every second by delete + move, and a one-shot `Get-HarnessStatus` in between returned
+  `$null`. `31fdc23`: `Get-HarnessStatus` retries up to 1.5 s; new scenario `harness-status-read` (3000 reads per
+  client) missed 2 of 3000 before (`20261010-162247_L1_harness-status-read`) and none after.
+- `visual-lift` ("unmount on a moved lift: the part is off"): the `guard` bug fixed on main in `a621a5c` after the
+  regression's commit. After `track-collide` B's garage loads took 27 s (A's 20 s) instead of ~7 s: CustomLoad waited
+  20 s in `AfterReturnSync` for the stale track selection and then set the game mode to Garage, which cancelled B's
+  paused unscrew (`Lock 3 ... released: mode changed to Garage`). The "not ready after 20 s" warning itself was lost
+  to the warning cap. With main: CustomLoad 7–9 s on both clients in every scenario of the neighbourhood.
+- `ping` (B's marker 0.55 m from A's): real mod bug, NOT fixed (needs a design choice). A car on an entrance place
+  gets a random extra yaw on each client (`CarLoader.SetAdditionalCarRot` → `Random.Range` from the place's
+  `CarPlaceRotation`; saved as `AdditionalCarRot` in `NewCarData`); the mod syncs only the place number, so A's and
+  B's car differ by up to ~15°, and parts ~2 m from the car's pivot sit up to ~0.5 m apart. Reproduced alone: fan
+  `s:13.17` of car_boltatlanta at Entrance1 0.44 m apart, car yaw differs between A and B. Options: sync the yaw with
+  the placement, seed the roll from shared data, or test on a place without `CarPlaceRotation`.
+- Runs (lane 1, all pass): batches `log-cap,compat-refusal,desync-autofix,harness-status-read` (twice) and
+  `track-collide,visual-activity,visual-fluids,visual-latejoin,visual-lift` (twice) on edbe190 + fixes; after merging
+  main (StatsGuard fix, harness line "com.rlabrecque.steamworks.net ... complete True")
+  `log-cap,compat-refusal,desync-autofix,harness-status-read,track-collide,visual-lift` (`20261010-165132_L1`).
+
 ## 2026-10-10 (14:40–15:10) — the away label sits over the car (`fix/away-label-car-root`, lane 2)
 
 - `fix/away-label-car-root` (lane 2, not merged). `AwayLabels` anchored "<name> has this car on …" at the
