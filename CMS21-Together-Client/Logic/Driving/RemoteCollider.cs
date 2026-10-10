@@ -176,7 +176,6 @@ public static class RemoteCollider
 	{
 		if (Forced == true) return "forced";
 		if (Forced == false) return "forced-off";
-		if (!PlayerSettings.TrackCollisions) return "setting";
 		if (ClientData.ServerInfo?.TrackCollisionsOff == true) return "host";
 		if (RideAlong.IsPassenger) return "passenger";
 		if (localBody == null) return "no-local-car";

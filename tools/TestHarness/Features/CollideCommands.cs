@@ -55,9 +55,8 @@ public static class CollideCommands
 
     internal static void Reset(List<string> changed)
     {
-        if (RemoteCollider.Forced != null || !PlayerSettings.TrackCollisions || RemoteCollider.DepenetrationCap != RemoteCollider.DefaultDepenetrationCap || holding || tracing) changed.Add("collide-set");
+        if (RemoteCollider.Forced != null || RemoteCollider.DepenetrationCap != RemoteCollider.DefaultDepenetrationCap || holding || tracing) changed.Add("collide-set");
         RemoteCollider.Forced = null;
-        PlayerSettings.TrackCollisions = true;
         RemoteCollider.DepenetrationCap = RemoteCollider.DefaultDepenetrationCap;
         holding = false;
         tracing = false;
@@ -114,7 +113,6 @@ public static class CollideCommands
         var cars = RemoteCars.All.Where(c => arg == "" || c.PlayerId.ToString() == arg).Select(Car).ToList();
         return new Dictionary<string, object>
         {
-            ["setting"] = PlayerSettings.TrackCollisions,
             ["hostOff"] = ClientData.ServerInfo?.TrackCollisionsOff == true,
             ["cap"] = RemoteCollider.DepenetrationCap,
             ["forced"] = RemoteCollider.Forced?.ToString(),
@@ -128,10 +126,9 @@ public static class CollideCommands
     private static object Set(string args)
     {
         var a = Args(args);
-        if (a.Length != 2) throw new ArgumentException("usage: collide-set setting on|off | forced on|off|auto");
+        if (a.Length != 2) throw new ArgumentException("usage: collide-set forced on|off|auto | cap <m/s>");
         switch (a[0])
         {
-            case "setting": PlayerSettings.TrackCollisions = a[1] == "on"; break;
             case "cap": RemoteCollider.DepenetrationCap = F(a[1]); break;
             case "forced": RemoteCollider.Forced = a[1] == "auto" ? (bool?)null : a[1] == "on"; break;
             default: throw new ArgumentException($"unknown switch {a[0]}");

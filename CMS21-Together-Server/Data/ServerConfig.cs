@@ -109,7 +109,7 @@ namespace CMS21_Together_Server.Data
 
 		private static readonly string[][] TrackKeyLines =
 		{
-			new[] { "track_collisions", "# Players' cars collide on the test, race and speed tracks (on/off). Off turns it off for everyone; on leaves it to each player's own setting", "track_collisions = on" },
+			new[] { "track_collisions", "# Players' cars collide on the test, race and speed tracks (on/off). Off turns it off for everyone", "track_collisions = on" },
 		};
 
 		private static string[][] OptionalKeyLines => HostingKeyLines.Concat(CompatibilityKeyLines).Concat(EconomyKeyLines).Concat(DiagnosticsKeyLines).Concat(DesyncKeyLines).Concat(LockKeyLines).Concat(OutdoorKeyLines).Concat(JobKeyLines).Concat(TrackKeyLines).ToArray();

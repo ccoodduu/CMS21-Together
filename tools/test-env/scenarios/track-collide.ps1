@@ -2,10 +2,12 @@
 # track-collisions 3.1 (ROADMAP row 27c): Ann waits on the test track's car spot and Bob arrives on the same spot, so
 # each sees the other's car appear on her or his own: the collider stays off (overlap), no frame takes over 1 s and Ann
 # drives away normally (the row 17 freeze). Ann parks ahead (held still); Bob drives at her car at a fixed low speed,
-# coasts the last metres and stops behind it, his collider counts the contact (old code: he drives through). With his
-# setting off Bob restarts and drives through her car. Bob rides along in Ann's car: the copy carrying him has no
-# collider (reason passenger).
+# coasts the last metres and stops behind it, his collider counts the contact (old code: he drives through). Bob rides
+# along in Ann's car: the copy carrying him has no collider (reason passenger). The host sets track_collisions = off and
+# restarts the server: both colliders stay off (reason host), Bob drives through Ann's car and does not push it.
 param($Ctx)
+
+Import-Module (Join-Path $PSScriptRoot "..\ScaleSession.psm1")
 
 $a, $b = $Ctx.Instances
 $failures = @()
@@ -82,6 +84,18 @@ function Wait-Ride([string]$Name, [scriptblock]$Condition, [int]$TimeoutSec = 30
     return $state
 }
 
+function Wait-Menu([string]$Name) {
+    Wait-HarnessStatus -Instance $Name -TimeoutSec 60 -What "menu" -Condition { param($s) $s.scene -eq "Menu" -and $s.playable -and -not $s.connected } | Out-Null
+}
+function Return-Both {
+    foreach ($name in $a, $b) { TryCmd $name track-return | Out-Null }
+    Wait-InGarage $a 180; Wait-InGarage $b 180
+    foreach ($name in $a, $b) {
+        $deadline = (Get-Date).AddSeconds(20)
+        do { Start-Sleep -Milliseconds 500; $away = @((Cmd $name dump).away) } while ($away.Count -ne 0 -and (Get-Date) -lt $deadline)
+    }
+    Start-Sleep -Seconds 2
+}
 foreach ($name in $Ctx.Instances) {
     Wait-HarnessStatus -Instance $name -TimeoutSec 300 -What "main menu" -Condition { param($s) $s.scene -eq "Menu" -and $s.playable } | Out-Null
 }
@@ -152,42 +166,11 @@ Check ($progress -lt $gap - 2) "Bob stops behind Ann's car ($(Rnd $progress) m o
 Check ($hit.contacts -ge 1) "Bob's collider counts the contact ($($hit.contacts))"
 $annMoved = Distance $annBefore (Position $a)
 Note "Ann's car moved $(Rnd $annMoved) m on her own client while Bob drove into it"
-$contacts = [int]$hit.contacts
 Stop-Car $b
-
-# 3. Bob turns collisions off, restarts and drives through Ann's car.
-$set = TryCmd $b collide-set "setting off"
-$off = Wait-Collider $b $idA { param($c) $c.reason -eq "setting" } 5
-Check ($set -and -not $off.enabled -and $off.reason -eq "setting") "Bob's setting turns his collider off (reason $($off.reason))"
-Cmd $b race-restart | Out-Null
-Start-Sleep -Seconds 4
-$startB = Position $b
-$toAnn = Sub (Position $a) $startB
-$gap = [math]::Sqrt((Dot $toAnn $toAnn))
-$annBefore = Position $a
-$dir = [pscustomobject]@{ x = $toAnn.x / $gap; y = $toAnn.y / $gap; z = $toAnn.z / $gap }
-Cmd $b drive-input ([string]::Format([cultureinfo]::InvariantCulture, "0.4 0 {0:F1}", 1.5 + [math]::Max(0, $gap - 5.5) / 6 + 0.2)) | Out-Null
-Wait-InputDone $b | Out-Null
-Start-Sleep -Seconds 3
-Note "Ann's car moved $(Rnd (Distance $annBefore (Position $a))) m on her own client while Bob drove through it with his setting off"
-$progress = Dot (Sub (Position $b) $startB) $dir
-$through = Collider $b $idA
-Check ($progress -gt $gap + 3) "with the setting off Bob drives through Ann's car ($(Rnd $progress) m past the start, her car at $(Rnd $gap) m)"
-Check ([int]$through.contacts -eq $contacts) "no new contact with the setting off ($($through.contacts))"
-Stop-Car $b
-TryCmd $b collide-set "setting on" | Out-Null
 TryCmd $a collide-hold "off" | Out-Null
+Return-Both
 
-Cmd $a track-return | Out-Null
-Cmd $b track-return | Out-Null
-Wait-InGarage $a 180; Wait-InGarage $b 180
-foreach ($name in $a, $b) {
-    $deadline = (Get-Date).AddSeconds(20)
-    do { Start-Sleep -Milliseconds 500; $away = @((Cmd $name dump).away) } while ($away.Count -ne 0 -and (Get-Date) -lt $deadline)
-}
-Start-Sleep -Seconds 2
-
-# 4. Bob rides along in Ann's car: the copy that carries him has no collider.
+# 3. Bob rides along in Ann's car: the copy that carries him has no collider.
 Cmd $a sit "0 left" | Out-Null
 Cmd $b sit "0 right" | Out-Null
 Wait-HarnessDump -Instance $b -TimeoutSec 15 -What "Bob in the right seat" -Condition { param($d) $d.local.seat -eq 0 -and -not $d.local.seatLeft } | Out-Null
@@ -207,6 +190,54 @@ Cmd $a track-return | Out-Null
 Wait-InGarage $a 180
 try { Wait-InGarage $b 180; $back = $true } catch { $back = $false }
 Check $back "Bob returned to the garage with Ann"
+foreach ($name in $a, $b) {
+    $deadline = (Get-Date).AddSeconds(20)
+    do { Start-Sleep -Milliseconds 500; $away = @((Cmd $name dump).away) } while ($away.Count -ne 0 -and (Get-Date) -lt $deadline)
+}
+
+# 4. The host turns collisions off (track_collisions = off, server restart): nobody's collider is on, and Bob drives
+# through Ann's car without pushing it on her client.
+$mark = Get-ServerLogMark
+Send-ServerCommand "save"
+Wait-ServerLog -Pattern "Session successfully saved" -After $mark -TimeoutSec 20 | Out-Null
+Stop-TestServer
+foreach ($name in $a, $b) { Wait-Menu $name; Cmd $name mp-ui "ok" | Out-Null }
+Set-ServerConfigValues $Ctx.ServerDir @{ track_collisions = "off" }
+$mark = Get-ServerLogMark
+Start-TestServer | Out-Null
+Check ([bool]$(try { Wait-ServerLog -Pattern "track collisions off" -After $mark -TimeoutSec 30 } catch { $null })) "the server starts with track collisions off"
+Connect-HarnessInstance $a; Wait-InGarage $a
+Connect-HarnessInstance $b; Wait-InGarage $b
+foreach ($name in $a, $b) { Cmd $name guard-allow "Mode:CarDrive" | Out-Null }
+Wait-Ready $a 0; Wait-Ready $a 1
+Cmd $a track-go "0 TestTrack" | Out-Null
+Check (Wait-Driving $a) "Ann drives on the test track again"
+Start-Sleep -Seconds 4
+Cmd $a drive-input "0.6 0 3" | Out-Null
+Wait-InputDone $a | Out-Null
+Stop-Car $a
+TryCmd $a collide-hold "on" | Out-Null
+Cmd $b track-go "1 TestTrack" | Out-Null
+Check (Wait-Driving $b) "Bob drives on the test track again"
+$hostA = Wait-Collider $a $idB { param($c) $c.built -and $c.reason -ne "snap" } 30
+$hostB = Wait-Collider $b $idA { param($c) $c.built -and $c.reason -ne "snap" } 30
+Save "host_A" $hostA; Save "host_B" $hostB
+Check (-not $hostA.enabled -and $hostA.reason -eq "host" -and -not $hostB.enabled -and $hostB.reason -eq "host") "the host's switch keeps both colliders off (Ann: $($hostA.reason), Bob: $($hostB.reason))"
+$startB = Position $b
+$toAnn = Sub (Position $a) $startB
+$gap = [math]::Sqrt((Dot $toAnn $toAnn))
+$dir = [pscustomobject]@{ x = $toAnn.x / $gap; y = $toAnn.y / $gap; z = $toAnn.z / $gap }
+$annBefore = Position $a
+Cmd $b drive-input ([string]::Format([cultureinfo]::InvariantCulture, "0.4 0 {0:F1}", 1.5 + [math]::Max(0, $gap - 5.5) / 6 + 0.2)) | Out-Null
+Wait-InputDone $b | Out-Null
+Start-Sleep -Seconds 3
+$progress = Dot (Sub (Position $b) $startB) $dir
+$annMoved = Distance $annBefore (Position $a)
+Check ($progress -gt $gap + 3) "with collisions off Bob drives through Ann's car ($(Rnd $progress) m past the start, her car at $(Rnd $gap) m)"
+Check ($annMoved -lt 0.5) "Bob's car does not push Ann's on her client ($(Rnd $annMoved) m)"
+Check ([int](Collider $b $idA).contacts -eq 0) "no contact with collisions off ($((Collider $b $idA).contacts))"
+TryCmd $a collide-hold "off" | Out-Null
+Return-Both
 
 $Ctx.Result.notes += $failures
 $Ctx.Result.passed = ($failures.Count -eq 0)

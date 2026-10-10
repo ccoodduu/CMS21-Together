@@ -94,7 +94,6 @@ Start-Sleep -Seconds 2
 
 Cmd $a track-go "0 TestTrack" | Out-Null
 Wait-Scene $a "TestTrack"
-Cmd $a collide-set "setting on" | Out-Null
 
 Phase "probe" {
     Save "probe_testtrack" (Cmd $a collide-probe)
@@ -145,9 +144,9 @@ Phase "hits" {
     for ($i = 1; $i -le $SlowHits; $i++) { $rows += Hit $a 30 12 }
     $rows += Hit $a 80 15
     $rows += Hit $a 150 20
-    Cmd $a collide-set "setting off" | Out-Null
+    Cmd $a collide-set "forced off" | Out-Null
     $rows += Hit $a 30 12
-    Cmd $a collide-set "setting on" | Out-Null
+    Cmd $a collide-set "forced auto" | Out-Null
     Save "hits" $rows
 }
 
@@ -260,7 +259,6 @@ Phase "mutual" {
 }
 
 Phase "realhit" {
-    Cmd $b collide-set "setting on" | Out-Null
     Spot $b | Out-Null
     Cmd $b drive-input "0.6 0 2" | Out-Null
     Wait-InputDone $b | Out-Null
