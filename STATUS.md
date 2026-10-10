@@ -2,6 +2,18 @@
 
 Newest first. One entry per work session.
 
+## 2026-10-10 (03:30–10:05) — row 25 done, fluids, race tracks, races, blocked counter merged
+
+- `main` = `216d857`. Merged: new engines (`4ec5c78`, row 25 part 3; row 25 complete), remote fluid visuals
+  (`7e78c00`; tested with main `20261010-033807_regression.json`), race and speed track (`faa28fe`, row 27a; tested
+  with main `20261010-043751_regression.json`), the blocked-counter drift fix with drift detection and the
+  `locks-select-2` pie fix (`5debf9d`; tested with main `20261010-052655_regression.json`), races with a shared start
+  (`216d857`, row 27b; proof `race-start` fails `20261010-091535_L1`, passes `20261010-092317_L1`).
+- Agents were stopped 05:30–09:10 by the API usage limit and resumed.
+- In progress: row 27c collisions (spike first, lane 1); the job star highlight that stays after a part is replaced
+  (user report: the game clears it only when the new part counts as repaired); the harness check that a run never
+  tests another worktree's deploy, plus the soak's `world.exp` resend and `lift-same` (lane 2).
+
 ## 2026-10-10 (04:50–09:40) — row 27b, races on the race track (`feat/track-races`, lane 1)
 
 - Spike 1.1 (`20261010-050051_L1_race-spike`, 10 restarts): `RunRestart` reaches the throttle wait in 4.34 s; the
