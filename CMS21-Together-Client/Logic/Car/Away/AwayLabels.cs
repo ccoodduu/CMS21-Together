@@ -1,4 +1,5 @@
 using CMS21Together.Logic.Player;
+using CMS21Together.Logic.Visuals;
 using UnityEngine;
 
 namespace CMS21Together.Logic.Car.Away;
@@ -13,7 +14,7 @@ public static class AwayLabels
 	private static GUIStyle style;
 	private static GUIStyle shadowStyle;
 
-	public static Vector3 Anchor(CarLoader carLoader) => carLoader.transform.position + Vector3.up * RoofHeight;
+	public static Vector3 Anchor(CarLoader carLoader) => VisualScope.CarRoot(carLoader).position + Vector3.up * RoofHeight;
 
 	public static void Draw()
 	{
