@@ -61,6 +61,9 @@ public static class VisualScope
 
 	public static PartRegistry RegistryOf(int loader) => CarPartsSync.All.FirstOrDefault(s => s.Loader == loader)?.Registry;
 
+	// The CarLoader object stays at its spawn point; the car's root moves with the car's place.
+	public static Transform CarRoot(CarLoader carLoader) => carLoader.root != null ? carLoader.root.transform : carLoader.transform;
+
 	public static void CheckLeak(string what)
 	{
 		if (depth == 0) return;

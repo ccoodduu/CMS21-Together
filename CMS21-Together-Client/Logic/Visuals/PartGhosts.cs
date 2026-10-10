@@ -297,6 +297,10 @@ public class MoveEffect : VisualEffect
 		Apply(0f);
 	}
 
+	public Vector3 Origin => start;
+
+	public Vector3 Offset => offset;
+
 	public override float HoldPoint => duration * 0.5f;
 
 	public override bool Step(float dt)
