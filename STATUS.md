@@ -2,6 +2,44 @@
 
 Newest first. One entry per work session.
 
+## 2026-10-10/11 (18:35–00:20) — the night soak's lift desyncs and harness failures (`worktree-agent-abc33d5c63f52c9b6`, all lanes)
+
+- Night soak `20261010-173029_L3_soak` (6 h, VERDICT FAIL). Analysed from its logs while it ran; tests after it ended.
+- Stuck lift (`901b375`): a job car arrived on lift 0 on C and the server's move took it off within a frame
+  (17:48:46). The game's `MoveMiddleToFloor` coroutine reads `connectedGameObject` after its yield, `DisconnectCar` had
+  cleared it, so it threw and `isMoving` stayed true: C's `car-placement` digest stayed "not ready" (stall warning
+  17:50:47), the next remote step (17:51:09) never moved the lift (checkpoint 3 "C/placement", park-stale 17),
+  `LifterSync.Apply` looped forever, and after C left for the junkyard it called `Action` on the destroyed lifter every
+  15 s (167 NREs on C, 731 on D from 19:39). `remoteSteps` never dropped, so `CarMotion` refused that car ("This car is
+  moving.": lift-same 20, 38, 255). Fix: `LifterSync.Update` resets a lift still moving after 20 s of game time; `Apply`
+  stops when the garage is left or reloaded, takes at most three steps and still does its bookkeeping; the `Action`
+  prefix skips a destroyed lifter; `LockCarHooks` checks it too.
+- Stale place on load (`e4ce524`): the desyncs "loader:4.place -1 vs 0" (17:42:26) and "loader:2.place 3 vs 0"
+  (17:48:52): a place change that arrived while `CarLoading.Load` was finishing was applied, then overwritten by the
+  spawn response's older place. It is now kept as the pending place.
+- Unbuilt lift (`bb25d84`): from 18:51:52 to the end "lift:1.state 0 vs 1" on all four players, persistent (also
+  storm 15 K7's precondition). A car without a full set of wheels moved onto CarLifter2, which the test profiles do not
+  build (inactive, `InstantSet` does nothing); the mover reported Middle and the server raised lift 1. The mover now
+  reports the floor for an inactive lift.
+- Harness: storm K5 used the removed `part-claim` (`7971c5c`, now `lock-take ... bare`). Contention (`8a33444`):
+  lift-same 20/21/23 had the oil bin under the lifted car (the game refuses every lift; the builder skips `blocked`
+  lifts), 38 and 255 held lock requests past the client's 3 s timeout (gated verbs now release within it; a timeout
+  makes the group invalid); lift-same and place-same require a lock answer for every member, place-same one accepted
+  move. mount-same-item 49 picked parts with an empty id (`part-twins` skips them). Allow-list (`0729a7c`): the vanilla
+  `_EndJobCoroutine` NRE of a job-finish on an unrepaired car (C job 21, B job 67; as in `job-end-refused`).
+- Proofs (lane 1): `lift-stuck` (new) and `lift-wheels` (CarLifter2 step added) fail on the old client code
+  (`20261010-233341_L1_lift-stuck`, `20261010-233631_L1_lift-wheels`) and pass with the fixes
+  (`20261010-233910_L1_lift-stuck`, `20261010-234110_L1_lift-wheels`). Placement area plus smoke, lanes 1 and 2:
+  28/28 passed (`20261010-234256_regression.json`). Storm K5: passed (`20261011-000113_L1_storm`). Soak 15 min with
+  lift-same, place-same, mount-same-item, details-same (`20261011-000320_L3_soak`): 9/9 groups passed, rules 1, 2, 8, 9
+  pass; rule 4's one error is the server's UDP receive error when a game closed at the end.
+- Open: contention 251 details-same, D never flushed its fluid change (no "update sent", nothing held); cause unknown
+  (`CarDetailsSync.Flush` refuses silently when busy, not ready or unchanged). Jobs desync "order:38.open - vs 1"
+  (18:06:37, players 2-4): the server's jobs digest counts a claimed order as open, the other clients drop it on the
+  claim; A's take stalled 45 s, so the mismatch was confirmed. Options: per-client projection or "not ready" while an
+  order is claimed. Budgets: handler max 113.7 ms is `save-build` (known since 2026-10-08); game private-bytes slope
+  123–442 MB/h per process, highest for processes that never restarted (D 6 h, 3.5 GB), not analysed further.
+
 ## 2026-10-10 (17:00–17:35) — the same car angle on entrance places (`fix/entrance-car-angle`, lane 1 and 2)
 
 - `fix/entrance-car-angle` (not merged). QUESTIONS.md "car angle on entrance places", default (b). Callers of
