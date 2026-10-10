@@ -3,12 +3,6 @@
 Open questions that block a decision. Each has the default we work with until answered.
 Answered ones move to the bottom with the answer.
 
-## Open — row 27c track-collisions (2026-10-10)
-
-1. **Push-out speed while touching another player's car copy** (`maxDepenetrationVelocity` lowered from the game's
-   8 m/s to 1.5 m/s while touching, then restored; without it a late copy lifted a parked car 0.64 m). The user wants
-   to decide later. **Default:** keep it.
-
 ## Open — row 19 state-merges-and-contention (2026-10-08)
 
 Details in `openspec/changes/state-merges-and-contention/proposal.md` (reviewed, see `review.md`).
@@ -129,7 +123,7 @@ Row 30 `shared-job-achievements` (built 2026-10-09):
 
 7. **Garage upgrade achievements** (`stat_full_garage`, `stat_unlock_allupgrade`, from
    `UpgradeSystem.CheckForAchievements`): upgrades are shared, but only the buyer's game runs that check. Default: out
-   of scope, only the buyer gets them.
+   of scope, only the buyer gets them. **Answered 2026-10-10:** everyone gets every achievement that follows from shared save state.
 
 ## Answered
 - **Answered by the user on 2026-10-10 (row 31 scope):** B. The fixed wait after the own track car is ready goes from
@@ -158,6 +152,9 @@ Answered by the user on 2026-10-08 (evening):
   spreading of the game's load steps. **Row 27c:** no per-player collision setting; only the host's
   `track_collisions` switch turns collisions off, for everyone. **Row 27b:** look for marked start spots on the race
   track so racers can start on different spots.
+- **Row 27c (2026-10-10, later):** the lower push-out speed while touching another car's copy is fine (kept).
+  **Achievements:** every achievement and Steam stat that follows from shared save state (upgrades, skills, level,
+  money, cars, garage, and so on) is earned by every player, not only the one who triggered it.
 
 
 - **Answered by the user on 2026-10-08 (row 19 part 1):** the defaults of "Open — row 19" stand; the part record base check also compares the part's quality (a part replaced by one of another quality never takes a stale edit), as recommended.
