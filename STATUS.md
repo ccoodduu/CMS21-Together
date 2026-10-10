@@ -2,6 +2,22 @@
 
 Newest first. One entry per work session.
 
+## 2026-10-10 (14:15–14:50) — remote pose and panel ghosts aim at the car (`fix/remote-pose-car-centre`, lane 2)
+
+- `fix/remote-pose-car-centre` (lane 2, not merged). `WorkPose.CarCentre` and `PartGhosts` (a body panel's pull-away
+  direction, the unmount-direction fallback) took the `CarLoader` object as the car's centre; it stays at the
+  loader's spawn point (loader 0: the origin, CarLifter1) whatever place the car is on. Now the car's root
+  (`VisualScope.CarRoot`, as `PartRegistry`). Found in the `visual-screens` OBD shot.
+- Proof `visual-car-centre` (car at Entrance1, 13.7 m from the loader object): fails on the old code
+  (`20261010-142440_L2`: B's avatar of A with the OBD scanner 70° away from the car, the hood's ghost pulling 173° off,
+  into the car), passes with the fix (`20261010-142604_L2`: 0° and 0°). Harness: `vfx-car`, dump
+  `visuals.players.<id>.facingCar` and `ghostsActive[].outward`.
+- Regression (lane 2, headless): smoke, `visual-parts`, `visual-activity`, `visual-latejoin`, `visual-lift`,
+  `visual-fluids`, `visual-car-centre` and `server-saves`, 12/12 passed (`20261010-142721_regression.json`).
+- Not fixed (same pattern, other feature): `AwayLabels.Draw` puts the "<name> has this car on …" label over
+  `carLoader.transform.position`, so for a car that is not on its loader object's place the label should float over
+  that spot instead of the car (read in the code, not checked in a run).
+
 ## 2026-10-10 (13:50–14:30) — row 17 part 1 leftovers (`fix/row17-leftovers`, lane 2)
 
 - `fix/row17-leftovers` (lane 2, not merged). `visual-screens` passes in the background graphics mode
@@ -31,7 +47,8 @@ Newest first. One entry per work session.
   `CarLoader` object at the origin, not at the car. A player using the OBD scanner (or another activity without a
   part) on a car that is not on CarLifter1 is shown turned towards CarLifter1: `shot_obd-in-hand_D.png` shows A
   facing away from the car at Entrance1. `PartGhosts` uses the same point for a body panel's pull-away direction and
-  the unmount-direction fallback. The fix is the car root (`carLoader.root`, as `PartRegistry` uses).
+  the unmount-direction fallback. The fix is the car root (`carLoader.root`, as `PartRegistry` uses). Fixed on
+  `fix/remote-pose-car-centre` (entry above).
 
 ## 2026-10-10 (13:00–13:50) — fix/guard-flake: the `guard` batch flake (lane 2)
 

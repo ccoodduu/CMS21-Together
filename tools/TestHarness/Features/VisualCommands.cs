@@ -56,6 +56,7 @@ public static class VisualCommands
                 playerId = e.PlayerId,
                 phase = e.Phase,
                 fade = e.Fade,
+                outward = e is MoveEffect move ? Outward(e.Loader, move.Origin, move.Offset) : null,
             }).ToList(),
             ["ghostsStarted"] = Counts(VisualScope.Started),
             ["ghostsFinished"] = Counts(VisualScope.Finished),
@@ -287,7 +288,7 @@ public static class VisualCommands
         if (!PresenceManager.HasLocalMotor) throw new InvalidOperationException("no local player in this scene");
         float metres = float.Parse(parts[1], CultureInfo.InvariantCulture);
         var motor = PresenceManager.LocalMotor;
-        var root = CarRoot(carLoader);
+        var root = VisualScope.CarRoot(carLoader);
         var target = root.position + root.right * (1f + metres);
         target.y = motor.transform.position.y;
         var controller = motor.GetComponent<CharacterController>();
@@ -315,7 +316,7 @@ public static class VisualCommands
         if (parts.Length < 6) throw new ArgumentException("usage: vfx-shot <file> <loader> <car|part:<key>|player:<name>> <right> <up> <forward> [aim=<m>] [fov=<deg>] [size=<w>x<h>]");
         float F(string s) => float.Parse(s, CultureInfo.InvariantCulture);
         var carLoader = CarLoaderPlaces.Get().GetCarLoaderByIndex(int.Parse(parts[1])) ?? throw new ArgumentException($"no car loader {parts[1]}");
-        var axes = CarRoot(carLoader);
+        var axes = VisualScope.CarRoot(carLoader);
         Vector3 target;
         bool outside = false;
         if (parts[2] == "car") target = axes.position;
@@ -364,8 +365,30 @@ public static class VisualCommands
         return new { file = parts[0], target = Offset(target), position = Offset(position), loader = Offset(carLoader.transform.position), root = Offset(axes.position) };
     }
 
-    // The CarLoader object stays where it is; the car itself (its root) moves with the car's place.
-    private static Transform CarRoot(CarLoader carLoader) => carLoader.root != null ? carLoader.root.transform : carLoader.transform;
+    // vfx-car <loader>: where the CarLoader object and the car's root are (they differ unless the car is on the
+    // place the loader object stands on).
+    [HarnessCommand("vfx-car")]
+    private static object Car(string args)
+    {
+        var parts = Args(args);
+        if (parts.Length != 1) throw new ArgumentException("usage: vfx-car <loader>");
+        var carLoader = CarLoaderPlaces.Get().GetCarLoaderByIndex(int.Parse(parts[0])) ?? throw new ArgumentException($"no car loader {parts[0]}");
+        var root = VisualScope.CarRoot(carLoader);
+        return new { loader = Offset(carLoader.transform.position), root = Offset(root.position), apart = Round(Vector3.Distance(carLoader.transform.position, root.position)) };
+    }
+
+    // Angle between a flat direction and the flat direction from the car's root to a point: 0 = straight away from the
+    // car, 180 = into it.
+    private static float? Outward(int loader, Vector3 from, Vector3 direction)
+    {
+        var carLoader = CarLoaderPlaces.Get()?.GetCarLoaderByIndex(loader);
+        if (carLoader == null) return null;
+        var out1 = from - VisualScope.CarRoot(carLoader).position;
+        out1.y = 0f;
+        direction.y = 0f;
+        if (out1.sqrMagnitude < 0.0001f || direction.sqrMagnitude < 0.0001f) return null;
+        return Round(Vector3.Angle(out1, direction));
+    }
 
     internal static void Reset(List<string> changed)
     {
@@ -520,10 +543,27 @@ public static class VisualCommands
             activity = Activity(player.Record?.Activity),
             pose = work?.Pose ?? WorkPose.Idle,
             facing = Round(work?.Facing ?? 0f),
+            facingCar = FacingCar(player),
             propActive = work?.Props.Active ?? false,
             propTool = work?.Props.ToolName,
             arms = work?.HasArms ?? false,
         };
+    }
+
+    // The avatar's turn away from its activity's car root (0 = facing the car), independent of WorkPose's own target.
+    private static float? FacingCar(RemotePlayer player)
+    {
+        var activity = player.Record?.Activity;
+        if (!player.HasAvatar || activity == null || activity.IsIdle || activity.CarLoaderID < 0) return null;
+        var carLoader = CarLoaderPlaces.Get()?.GetCarLoaderByIndex(activity.CarLoaderID);
+        if (carLoader == null || string.IsNullOrEmpty(carLoader.carToLoad)) return null;
+        var avatar = player.Avatar.transform;
+        var to = VisualScope.CarRoot(carLoader).position - avatar.position;
+        var forward = avatar.forward;
+        to.y = 0f;
+        forward.y = 0f;
+        if (to.sqrMagnitude < 0.01f || forward.sqrMagnitude < 0.01f) return null;
+        return Round(Vector3.Angle(forward, to));
     }
 
     private static object Activity(PlayerActivityState state)

@@ -196,9 +196,10 @@ public static class PartGhosts
 			VisualScope.Skip(kind, skip);
 			return;
 		}
-		var away = handle.position - carLoader.transform.position;
+		var carRoot = VisualScope.CarRoot(carLoader);
+		var away = handle.position - carRoot.position;
 		away.y = 0f;
-		if (away.sqrMagnitude < 0.0001f) away = carLoader.transform.forward;
+		if (away.sqrMagnitude < 0.0001f) away = carRoot.forward;
 		var effect = new MoveEffect(kind, loader, key, actor, ghost, away.normalized * PanelDistance, off ? OffSeconds : OnSeconds, Vector3.zero, outward: off);
 		VisualScope.Start(effect);
 		if (!off) foreach (var renderer in renderers) VisualScope.HideRenderer(effect, renderer);
@@ -232,7 +233,7 @@ public static class PartGhosts
 	{
 		var direction = script.GetUnmountDir();
 		if (direction.sqrMagnitude > 0.0001f) return direction.normalized;
-		var away = script.transform.position - carLoader.transform.position;
+		var away = script.transform.position - VisualScope.CarRoot(carLoader).position;
 		away.y = 0f;
 		return away.sqrMagnitude > 0.0001f ? away.normalized : Vector3.up;
 	}
@@ -296,6 +297,10 @@ public class MoveEffect : VisualEffect
 		Phase = outward ? "out" : "in";
 		Apply(0f);
 	}
+
+	public Vector3 Origin => start;
+
+	public Vector3 Offset => offset;
 
 	public override float HoldPoint => duration * 0.5f;
 
