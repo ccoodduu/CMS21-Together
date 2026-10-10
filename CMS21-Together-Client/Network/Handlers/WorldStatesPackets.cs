@@ -60,6 +60,7 @@ public static class WorldStatesPackets
 			ui.RefreshStatsUICoroutine(StatType.Scraps, false);
 		}
 		Logic.Driving.TrackRecords.ApplyWorld(packet);
+		Logic.Driving.TrackRaceSync.ApplyWorld(packet);
 		ClientData.IsWorldStateSynced = true;
 		SyncTracker.Applied(SyncOrder.WorldKey, SyncTracker.ReceivingSnapshotId);
 	}

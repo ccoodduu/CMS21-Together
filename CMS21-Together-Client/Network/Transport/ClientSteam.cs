@@ -99,6 +99,7 @@ public class ClientSteam : ConnectionManager
 		{
 			byte[] packetBytes = receivedData.ReadBytes(packetLength);
             
+			long receivedMs = PacketClock.NowMs;
 			ThreadManager.ExecuteOnMainThread<object>((_) =>
 			{
 				using (Packet packet = new Packet(packetBytes))
@@ -107,6 +108,7 @@ public class ClientSteam : ConnectionManager
 					try 
 					{
 						object dataObject = packet.Read<object>();
+						PacketClock.Dispatching(receivedMs);
 						PacketRouter.Dispatch((PacketTypes)packetId, dataObject, 0);
 					}
 					catch (Exception ex)

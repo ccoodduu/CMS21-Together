@@ -123,6 +123,7 @@ namespace CMS21Together
 			Logic.Visuals.VisualScope.Update();
 			Logic.Driving.RideAlong.Update();
 			Logic.Driving.DriveCapture.Update();
+			Logic.Driving.TrackRaceSync.Update();
 			ConnectionStatus.Update();
 			ServerWatchdog.Update();
 			LocalServerHost.Update();
@@ -180,6 +181,7 @@ namespace CMS21Together
 			Logic.Visuals.RemoteActivity.Initialize();
 			Logic.Pings.CoopPings.Initialize();
 			Logic.Driving.DriveCapture.Initialize();
+			Logic.Driving.TrackRaceSync.Initialize();
 			Logic.Driving.RemoteCars.Initialize();
 			Logic.Driving.RideAlong.Initialize();
 		}
