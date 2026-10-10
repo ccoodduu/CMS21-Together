@@ -36,6 +36,7 @@ public static class HarnessResetCommands
         LockTryCommands.Reset(changed);
         LockSelect2Commands.Reset(changed);
         TuneCommands.Reset(changed);
+        EngineBuildCommands.Reset(changed);
         ShopBuyCommands.Reset(changed);
         return new Dictionary<string, object> { ["reset"] = changed };
     }

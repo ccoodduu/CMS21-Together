@@ -365,21 +365,6 @@ public static class ToolsCommands
         return new { from = stand.Logic.EngineStandAngle - delta, to = stand.Logic.EngineStandAngle };
     }
 
-    [HarnessCommand("tool-stand-create")]
-    private static object StandCreate(string args)
-    {
-        var parts = Args(args);
-        if (parts.Length != 2) throw new ArgumentException("usage: tool-stand-create <EngineStand1|EngineStand2> <engineId>");
-        var stand = (EngineStandSync)Present(ToolArg(parts[0]));
-        GameInventory.Instance.GetEnginesToCreate(out var creatable);
-        var engines = new List<string>();
-        for (int i = 0; creatable != null && i < creatable.Count; i++) engines.Add(creatable[i]);
-        string id = parts[1] == "auto" ? engines.FirstOrDefault() : parts[1];
-        if (id == null) throw new InvalidOperationException("the game lists no engines to create");
-        stand.Logic.SetEngineOnEngineStand(new Item(id));
-        return new { building = id, creatable = engines.Count, listed = engines.Contains(id) };
-    }
-
     [HarnessCommand("tool-stand-part")]
     private static object StandPart(string args)
     {
