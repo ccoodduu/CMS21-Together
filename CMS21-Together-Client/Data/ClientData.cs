@@ -31,6 +31,7 @@ public static class ClientData
 		ClientScene.ClearPending();
 		CarPartsSync.Reset();
 		Logic.Car.Placement.ParkingSync.Reset();
+		Logic.Car.Placement.CarPlacementSync.Reset();
 		Logic.Car.CarSpawnManager.Reset();
 		Logic.Jobs.JobsSync.Reset();
 		Logic.Jobs.JobStats.Reset();

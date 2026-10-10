@@ -226,7 +226,7 @@ public static class CarPartsSync
 		else
 		{
 			float deadline = Time.realtimeSinceStartup + LoadTimeoutSeconds;
-			while (!carLoader.IsCarLoaded() && Time.realtimeSinceStartup < deadline) yield return new WaitForEndOfFrame();
+			while ((!carLoader.IsCarLoaded() || Placement.CarLoading.IsLoading(loader)) && Time.realtimeSinceStartup < deadline) yield return new WaitForEndOfFrame();
 		}
 		if (TestSnapshotDelaySeconds > 0f) yield return new WaitForSeconds(TestSnapshotDelaySeconds);
 		if (sync.SpawnSeq != first.SpawnSeq) yield break;

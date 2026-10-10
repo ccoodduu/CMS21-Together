@@ -31,13 +31,14 @@ public sealed class LockRecord
 	public List<string> X = new List<string>();
 	public List<string> S = new List<string>();
 	public List<long> Items = new List<long>();
+	public int Place = -1;
 	public bool Ending;
 
 	public static LockRecord From(CarLockUpdatePacket packet) => new LockRecord
 	{
 		LockId = packet.LockId, LinkedLockId = packet.LinkedLockId, Loader = packet.CarLoaderID, SpawnSeq = packet.SpawnSeq,
 		Owner = packet.OwnerPlayerId, Kind = packet.Kind, Phase = packet.Phase,
-		X = packet.X ?? new List<string>(), S = packet.S ?? new List<string>(), Items = packet.Items ?? new List<long>()
+		X = packet.X ?? new List<string>(), S = packet.S ?? new List<string>(), Items = packet.Items ?? new List<long>(), Place = packet.Place
 	};
 }
 
@@ -247,6 +248,11 @@ public static class CarLockMirror
 			int other = OtherOwner(lockId);
 			if (other >= 0) return new LockConflict { Holder = other, Key = $"i:{uid}", Refusal = CarLockRefusal.Item };
 		}
+		if (set.Kind == CarLockKind.Move && set.Place >= 0)
+		{
+			var mover = records.Values.FirstOrDefault(r => r.Place == set.Place && r.Owner != Me);
+			if (mover != null) return new LockConflict { Holder = mover.Owner, Key = LockKeys.Place(set.Place) };
+		}
 		return null;
 	}
 
@@ -280,7 +286,7 @@ public static class CarLockMirror
 		{
 			RequestId = requestId, CarLoaderID = set.Loader, SpawnSeq = CarPartsSync.SpawnSeq(set.Loader), Kind = set.Kind,
 			X = set.X.ToList(), S = set.S.ToList(), Items = set.Items.ToList(), ExtendLockId = extendLockId,
-			OtherLoaderID = otherLoader, OtherSpawnSeq = otherLoader >= 0 ? CarPartsSync.SpawnSeq(otherLoader) : 0
+			OtherLoaderID = otherLoader, OtherSpawnSeq = otherLoader >= 0 ? CarPartsSync.SpawnSeq(otherLoader) : 0, Place = set.Place
 		};
 		Log.Debug($"[Locks] Request {requestId}: {set}{(extendLockId != 0 ? $" extends {extendLockId}" : "")}.");
 		Client.Instance.Send(packet);

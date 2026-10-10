@@ -60,6 +60,7 @@ public static class LifterSync
 
 	public static void OnLifterState(LifterStatePacket packet, int snapshotId)
 	{
+		if (CarPlacementSync.KeepLifterUntilLocalMoveEnds(packet, snapshotId)) return;
 		MelonCoroutines.Start(Apply(packet, snapshotId));
 	}
 

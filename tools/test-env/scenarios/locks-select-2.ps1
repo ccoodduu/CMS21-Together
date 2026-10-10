@@ -207,6 +207,7 @@ Cmd $b lock-release "$loader" | Out-Null
 Wait-Mirror $a 0
 
 $after = Pie $a
+Write-Host "  pie after B's release: $(($after | ForEach-Object { "$($_.id)=$($_.enabled)/$($_.available)/$($_.source)" }) -join ' '); A's car: $(@((Cmd $a dump).placement.cars | Where-Object { $_.loader -eq $loader })[0].inPlace)"
 $same = @($base | Where-Object { $o = $_; $n = @($after | Where-Object { $_.id -eq $o.id })[0]; $n -and $n.enabled -eq $o.enabled -and $n.available -eq $o.available -and -not $n.source }).Count
 Check ($same -eq $base.Count -and $after.Count -eq $base.Count) "after B's release the move options are as before ($same of $($base.Count))"
 

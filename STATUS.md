@@ -2,6 +2,30 @@
 
 Newest first. One entry per work session.
 
+## 2026-10-10 (01:30–02:30) — fix/place-same ready for merge (lane 2)
+
+- `fix/place-same` with `main` merged in (`5d744a8`). Fixes: `348159e` (the move lock covers the target place, so a
+  second move to the same free place is refused before the game moves anything, "<name> is moving a car there."; a move
+  the server still refuses answers with every car's place, then the lift states), `a76e45f` (a car snapshot waits for
+  `LoadCarFromFile` to end: the examined flags after an unpark), `5a8fb16` (local moves tracked per coroutine; lift
+  states kept with the places until the local move ends). `place-same` is out of `soak-contention-known.txt`.
+- Proofs: `car-place-same` fails on `84beea6` (`20261008-231901_L2`, `20261008-232111_L2`) and passes
+  (`20261008-232642_L2`); `park-return` fails on `348159e` (`20261008-233419_L2`, `20261008-233527_L2`, the soak's 7
+  parts) and passes (`20261008-233709_L2`). After the merge, smoke plus `car-place-same`, `park-return`, `locks-car`,
+  `car-placement`, `car-placement-race`: `20261010-013846_regression.json`, all passed. Earlier, smoke plus 17 touched
+  scenarios: `20261009-011337_regression.json` (`locks-select-2`, `desync-autofix` FLAKY).
+- Soak `Run-Soak.ps1 -Lane 2 -ContentionKinds place-same -Hours 0.25`: `20261010-020148_L2_soak`, 12 of 12
+  `place-same` groups passed (rules 8 and 9 pass, no confirmed desync). Rule 1 fails from checkpoint 4 on: one part's
+  `blocked` flag (`s:29.3` on loader 4, a sibling of `s:29.1` that C unmounted and mounted with `part-fast-*`) is set on
+  D only. That flag is not synced and not in the digests; the same drift is in the soak `20261008-210843_L2` from row
+  19 part 2 (not this branch). Not fixed here.
+- `locks-select-2` "after B's release the move options are as before" is pre-existing: the game's own pie input
+  (`PieMenuController.HandleInput` -> `NotificationCenter.ButtonAccept`) accepts `move_carLift1` while the harness holds
+  the pie open, with no mouse button or Return the game sees, and A's car moves. On `c4bd1c3` alone: fails
+  `20261009-220034_L2`, `20261009-220954_L2` (spurious accepts also in the passing `20261009-220207_L2`,
+  `20261009-221126_L2`); on the branch 1 of 4 (`20261009-220342_L2`). Base runs copied to
+  `CMS21-Together-wt\place-same\tools\runs\base-c4bd1c3`; the `place-same-base` worktree is removed. Harness fix not done.
+
 ## 2026-10-09/10 (23:00–01:40) — playtest 3 (dev.1169/1170), findings
 
 - New session start values (`e159fff`): `new_session_money` 4000 and `new_session_level` 1 by default (the game's

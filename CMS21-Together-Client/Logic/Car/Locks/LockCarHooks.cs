@@ -33,13 +33,14 @@ public static class LockCarHooks
 		int from = carLoader.GetPlaceNo();
 		int other = LoaderAtPlace((int)pos, carLoader);
 		var set = LockSets.ForCar(loader, CarLockKind.Move);
+		set.Place = (int)pos;
 		var mode = GameMode.Get();
 		var previous = mode != null ? mode.previousMode : gameMode.Garage;
 		int seq = CarPartsSync.SpawnSeq(loader);
 		return new GatedAction
 		{
 			Set = set, Target = carLoader, TargetKey = LockKeys.Car, OtherLoader = other,
-			Context = () => carLoader != null && carLoader.GetPlaceNo() == from && CarPartsSync.SpawnSeq(loader) == seq,
+			Context = () => carLoader != null && carLoader.GetPlaceNo() == from && CarPartsSync.SpawnSeq(loader) == seq && LoaderAtPlace((int)pos, carLoader) == other,
 			Run = () =>
 			{
 				if (mode != null) mode.previousMode = previous;
