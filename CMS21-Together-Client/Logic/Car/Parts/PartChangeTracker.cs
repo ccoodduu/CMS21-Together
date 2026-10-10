@@ -181,6 +181,8 @@ public static class PartChangeTracker
 		if (change.Preconditions.Any(p => p.WasUnmounted && LockKeys.IsSub(p.Key)))
 			Details.CarDetailsSync.MarkDirty(CarLoaderPlaces.Get()?.GetCarLoaderByIndex(sync.Loader), CarDetailSection.Tuning);
 		Log.Debug($"[Parts] Loader {sync.Loader}: change {change.TxId} sent ({body.Count} body, {sub.Count} mechanical, {change.Preconditions.Count} preconditions; Changed = {PartMasks.Describe(body, sub)}).");
+		var carLoader = CarLoaderPlaces.Get()?.GetCarLoaderByIndex(sync.Loader);
+		foreach (var record in sub) Jobs.JobStars.Refresh(carLoader, sync.Registry.Sub(record.Key));
 	}
 
 	private static bool InProgress(CarLoader carLoader)
