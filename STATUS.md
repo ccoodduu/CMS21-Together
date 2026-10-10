@@ -2,6 +2,25 @@
 
 Newest first. One entry per work session.
 
+## 2026-10-10 (13:00–13:50) — fix/guard-flake: the `guard` batch flake (lane 2)
+
+- `fix/guard-flake` (lane 2, not merged). Cause of the "Inventory did not open after the blocked mode change" flakes
+  after `drive-latejoin`/`drive-track` (`fastcars` `20261010-124124_L2_guard`, `seated` `20261009-001524_L1_guard`):
+  a mod bug. A player who leaves a session while on a track keeps `GlobalData.SelectedCarLoader`/`TestToShow`; the
+  next session's garage load treats itself as a return from the track, `AfterReturnSync` waits 20 s for the car on
+  that loader ("[TrackDrive] Loader N was not ready after 20 s") and windows, game mode and pie menu stay off until
+  then, while the harness already reports the garage playable. Reproduced with the batch
+  `car-live,drive-latejoin,guard` (`20261010-132523_L2_guard`).
+- `a621a5c`: `ModGameManager.StartGame` clears `SelectedCarLoader`, `TestToShow` and `NewMileage`. `drive-latejoin`
+  checks B's new session has no track car selected: fails on the old client (`'#CarLoader2'`,
+  `20261010-132705_L2_drive-latejoin`).
+- The "no PieMenuController in this scene" flake (`fastcars` `20261010-122122_L2_guard`) is not this bug: client C
+  stopped for ~10 s at 12:21:43, the server timed it out and C went back to the menu mid-scenario. Lane 1's client A
+  (`collisions` `20261010-122131_L1_latejoin`) stalled and timed out in the same seconds, so it was the PC, not the mod.
+- Runs (lane 2, all pass, no "not ready" warning): batches `car-live,drive-latejoin,guard` (twice),
+  `car-live,drive-latejoin,drive-track,guard`, `drive-latejoin,guard`, `drive-track,guard`; alone `guard` (twice,
+  `20261010-134603_L2`, `134713_L2`) and `drive-latejoin` (`20261010-134822_L2`).
+
 ## 2026-10-10 (11:45–12:40) — row 31 faster-remote-cars built, scope B (lane 2)
 
 - `change/faster-remote-cars` (lane 2, not merged; main merged in). User chose scope B: only the wait.
