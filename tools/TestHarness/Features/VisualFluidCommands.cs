@@ -70,7 +70,7 @@ public static class VisualFluidCommands
             {
                 var (registry, caps) = Caps(carLoader, refill.carFluidType);
                 var cap = caps.Count == 0 ? null : registry.Sub(caps[0]);
-                return new { capKey = caps.FirstOrDefault(), cap = cap?.id, unmounted = cap != null && cap.IsUnmounted, candidates = caps.Select(k => registry.Sub(k).id).ToList() };
+                return new { capKey = caps.FirstOrDefault(), cap = cap?.id, unmounted = cap != null && cap.IsUnmounted, capPosition = cap == null ? null : Vec(cap.transform.position), candidates = caps.Select(k => registry.Sub(k).id).ToList() };
             }
             case "start":
             {

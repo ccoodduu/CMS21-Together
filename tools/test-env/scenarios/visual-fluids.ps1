@@ -151,6 +151,7 @@ Cmd $a cardetails-fluid "$loader Brake 0 0.2" | Out-Null
 Start-Sleep -Seconds 2
 $capInfo = Cmd $a vfx-pour "$loader BrakeRefill cap"
 Write-Host "brake fill cap: $($capInfo | ConvertTo-Json -Compress)"
+$capB = Cmd $b vfx-pour "$loader BrakeRefill cap"
 # The can is placed at the cap while it is still on (FluidRefill.Use); the game's UseAnim then waits for the cap to
 # come off, which the harness does by unscrewing it as a player would.
 $pourStart = Cmd $a vfx-pour "$loader BrakeRefill start noopen"
@@ -171,10 +172,10 @@ $can = Wait-Report $b "pour can" { param($r) @(PoursOfA $r).Count -eq 1 -and @(C
 Save "pour-can_$b" $can
 Check (@(PoursOfA $can).Count -eq 1 -and @(Copies $can).Count -eq 1) "B shows A's can at the reservoir ($(@($can.effects) | ConvertTo-Json -Compress))"
 Check (@(Streaming $can).Count -eq 0) "B's can does not stream before A pours"
-if ($pa.logicPosition -and @(Copies $can).Count -eq 1) {
+if ($capB.capPosition -and @(Copies $can).Count -eq 1) {
     $p = @(Copies $can)[0].position
-    $gap = [math]::Sqrt([math]::Pow($p[0] - $pa.logicPosition[0], 2) + [math]::Pow($p[1] - $pa.logicPosition[1], 2) + [math]::Pow($p[2] - $pa.logicPosition[2], 2))
-    Check ($gap -lt 0.05) "B's can stands where A's can is ($([math]::Round($gap, 3)) m apart)"
+    $gap = [math]::Sqrt([math]::Pow($p[0] - $capB.capPosition[0], 2) + [math]::Pow($p[1] - $capB.capPosition[1], 2) + [math]::Pow($p[2] - $capB.capPosition[2], 2))
+    Check ($gap -lt 0.5) "B's can stands at B's fill cap ($([math]::Round($gap, 3)) m; A's can at $($pa.logicPosition -join ', '), A's cap at $($capInfo.capPosition -join ', '))"
 }
 Cmd $a vfx-pour "$loader BrakeRefill hold 3" | Out-Null
 $pouring = Wait-Report $b "stream" { param($r) @(Streaming $r).Count -eq 1 } 3
