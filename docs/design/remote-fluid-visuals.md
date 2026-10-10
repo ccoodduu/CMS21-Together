@@ -78,10 +78,27 @@ the reservoir, as on the actor's screen).
 
 ## Proof
 
-Scenario `visual-fluids` (areas `visuals`, `tools`): A fills the oil (`cardetails-fluid`), drains with
-`tool-use OilBin` (the game's `UseOilbin` through the lock gate). While A drains, B has a `Drain` effect for A's
-player on the loader, a `TogetherFluid` copy whose particle system is playing, the plug's renderers hidden and a
-traced `PlayLoopSFX(<copy>, "OilDrain")`; after A's end the copy is gone, `StopLoopSFX` is traced, no renderer is
-left hidden, no leak, oil equal on both. Then `RemoteVisuals` off on B (no effect, `skipped.disabled`), and A leaving
-mid-drain (cancelled, sound stopped). The pour steps follow the same pattern with A holding a refill can's pour.
-Fails on the old code at the first "B has an effect while A drains" check.
+Scenario `visual-fluids` (areas `visuals`, `tools`), harness verbs `vfx-fluids on|off|report [loader]|probe` (reads
+the scene: `TogetherFluid` copies, their particles and audio, the plug's hidden renderers, traced `PlayLoopSFX`/
+`StopLoopSFX`; it compiles against code without the replay) and `vfx-pour <loader> <tool> cap|start [noopen]|hold
+<s>|end|status` (the actor takes the can through `ToolsManager.Use` while the cap is on, the cap is unscrewed with
+`vfx-unscrew`, the pour is held by keeping `FluidRefillLogic.power` at 1).
+
+1. A fills the oil and drains with `tool-use OilBin` (the game's `UseOilbin` through the lock gate). While A drains, B
+   has a `Drain` effect for A, one copy with its `Emit` playing, the plug's renderers hidden (the plug stays active)
+   and `PlayLoopSFX(<copy>, "OilDrain")`; afterwards no effect, no copy, no hidden renderer, `StopLoopSFX(playEnd)`,
+   no leak, oil 0 on both.
+2. `RemoteVisuals` off on B: nothing shown, `skipped.disabled`.
+3. A refills brake fluid: B shows the can at B's fill cap (0 m), streams only while A holds the pour, keeps the can
+   after A lets go, removes it when A puts the can away; the level A poured is on both.
+4. A leaves mid-drain: B's replay is cancelled at once and the loop stopped.
+
+Runs: old code (branch harness and scenario, client of `main`) fails `20261010-031321_L2` (every replay check);
+without the pour commit only the pour checks fail (`20261010-030818_L2`); the branch passes (`20261010-030649_L2`).
+Smoke plus `visual-*` and `tools-car-effects`: `20261010-031455_regression.json`, all pass but `visual-screens`
+(`run-all: skip`, needs graphics; its `stand-before` got an empty name).
+
+Runtime notes: Unhollower's `MinMaxGradient(Color)` constructor throws (the first branch run left a copy streaming
+without its effect, `20261010-024554_L2`); the stream colour is set through the fields of an allocated gradient. On the
+spawning game the brake servo and its cap read about 100 m below the car (y −99), on the other game they are at the
+car; B places its can from its own cap, so this does not affect the replay (not investigated further).
