@@ -2,6 +2,22 @@
 
 Newest first. One entry per work session.
 
+## 2026-10-10 (10:30–11:30) — row 31 faster-remote-cars: spike and design (lane 2)
+
+- `change/faster-remote-cars` (lane 2, not merged; design only, no client change). Probe `remote-car-spike` with the
+  harness `remote-build` (build trace, settle override, extra copies, counts), `frame-log` (real-clock frame times)
+  and the D2 prototype `remote-stage`; headless, lane 1 busy, 60 fps cap.
+  - Today another player's car shows 3.3–3.6 s after arrival, not ~10 s: the 6.5 s load predates the 2026-10-08
+    freeze fix; the build takes 0.22–0.5 s and the rest is the 3 s settle (`20261010-104439_L2`, `103952_L2`). The
+    first copy in a scene visit has one 92–120 ms frame: the game's `LoadCar` does `CreateChassis` (31–33 ms),
+    `CreateEngine` (22–24) and `CreateParts` (24–27) in one frame (`105528_L2`). No wait at all: shown 0.22–0.29 s
+    after the start, no freeze (`105122_L2`).
+  - Design: 0.5 s settle after the own car is ready (D1) and the game's own load stages one per frame for the copy
+    (D2, record-and-replay prefixes, `LoadCar` held meanwhile). Prototype: frames 39–56 ms, identical copies, start →
+    shown 0.77–0.79 s (`110209_L2`, `110523_L2`, `110957_L2`). Proof plan `remote-car-timing` fails on the old code
+    (shown 3.2–3.6 s > 1.5 s, frame 92–120 ms > 75 ms). `openspec validate --strict` passes.
+  - `method-time` on all of `CarLoader` hung the arriving game (`103549_L2`); patch named methods only.
+
 ## 2026-10-10 (09:00–10:30) — fix/deploy-guard: runs only test their own build; job end and soak lift fixes (lane 2)
 
 - `fix/deploy-guard` (lane 2, not merged).

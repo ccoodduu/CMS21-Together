@@ -1,7 +1,9 @@
 # Proposal
 
-Proposal only (2026-10-08); design and tasks follow once the user picks an option. The spec delta states only the
-behaviour (no bound yet), so the change validates.
+Proposal 2026-10-08; spike, design and tasks 2026-10-10 (design.md). The spike found the numbers below out of date:
+since the freeze fix of 2026-10-08 the load takes 0.2–0.5 s, and arrival → shown is 3.3–3.6 s, almost all of it the
+3 s settle. The first copy in a scene visit still has one 92–120 ms frame. Chosen: a 0.5 s settle (option 1) and the
+game's own load stages spread over frames (option 5 below); expected ~0.85 s and build work under ~40 ms per frame.
 
 ## Why
 
@@ -41,19 +43,23 @@ one or more of these options:
    that show through glass) or show the base model at once and swap in the full blob when it is loaded. Saves most of
    the 6.5 s if the load is dominated by hidden parts; risks a copy that looks different (missing or wrong parts) for a
    few seconds.
+5. **Spread the load over frames** (added by the spike). The game's `LoadCar` builds chassis, engine, exterior and
+   parts in one frame (its own staged `asyncLoading` path is switched off); for the copy, run those stages one per
+   frame (design D2).
 
 Hooks and packets depend on the option: 1 none new; 2 none; 3 `CarDriveStart` sent to an arriving player (server only,
-existing packet); 4 possibly a reduced car blob (`CarBlobVersion` bump).
+existing packet; the spike found the server already does this); 4 possibly a reduced car blob (`CarBlobVersion` bump);
+5 prefixes on `CarLoader._LoadCar_d__215.MoveNext` and twelve `CarLoader` stage methods, no packet.
 
 ## Capabilities
 
-To be named with the design; likely a modified `remote-visual-feedback` requirement ("another player's car appears
-within N s").
+New capability `remote-car-loading` (spec delta): the car appears within 2 s of arrival (1 s when already there) and
+its load makes no frame longer than 0.13 s.
 
 ## Impact
 
-- Client: `Logic/Driving/RemoteCars.cs` (settle, keep, preload), maybe `DriveCapture` (lighter blob).
-- Server: `DriveHandlers` (option 3: start packets for an arriving player).
+- Client: `Logic/Driving/RemoteCars.cs` (settle, staged load, timing fields).
+- Server: none (option 3 is already in place).
 - Harness: a timing field in the `remoteCars` dump (arrival → shown, drive start → shown); `drive-track` and
   `drive-latejoin` gain a time bound.
 - Depends on: row 17 part 2, row 21 (the ride-along copy), 27a (copies on every track). 27c's collider must stay off
@@ -70,10 +76,10 @@ within N s").
 ## Size
 
 Spike S ≈ 0.5–1 (measure the steps, test option 1). Options 1 and 3: S ≈ 1 together. Option 2: S ≈ 1. Option 4:
-M ≈ 2–3. Expected total with 1–3: S–M ≈ 2–3.
+M ≈ 2–3. Expected total with 1–3: S–M ≈ 2–3. After the spike (done): options 1 and 5, S ≈ 1–1.5.
 
 ## Open questions
 
-1. **Target.** Is "appears within about 3 s of arrival" good enough, or must it meet the spec's 2 s?
-2. **Which options.** **Default:** spike, then 1 and 3; 2 if repeated drives are common in play; 4 only if the spike
-   shows the hidden parts dominate the load.
+1. **Target.** Answered 2026-10-08: about 3 s is fine with no frame over 0.13 s. The delta states 2 s (design open
+   question 2).
+2. **Which options.** Decided by the spike: 1 and 5 (design D1, D2); 2, 3 and 4 not now (design D4).
