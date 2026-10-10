@@ -87,6 +87,7 @@ public static class PartApplier
 				MelonCoroutines.Start(ShowMounted(script));
 			}
 		}
+		Jobs.JobStars.Refresh(carLoader, script);
 		return true;
 	}
 

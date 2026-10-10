@@ -3,6 +3,15 @@
 Open questions that block a decision. Each has the default we work with until answered.
 Answered ones move to the bottom with the answer.
 
+## Open — row 31 faster-remote-cars (2026-10-10)
+
+Measured on `change/faster-remote-cars` (headless): another player's car already shows 3.3–3.6 s after arrival
+(fixed 3 s wait + 0.2–0.5 s build); the first copy per visit has one 92–120 ms frame.
+
+1. **Scope.** A: nothing (requirement "about 3 s, no frame over 0.13 s" is met); B: shorten the fixed wait to 0.5 s
+   after your own car is ready (≈1 s, frame unchanged); C: B plus spreading the game's `LoadCar` steps over frames
+   (≈0.85 s, longest frame 39–56 ms; invasive). **Default:** B.
+
 ## Open — row 19 state-merges-and-contention (2026-10-08)
 
 Details in `openspec/changes/state-merges-and-contention/proposal.md` (reviewed, see `review.md`).
