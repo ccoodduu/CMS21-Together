@@ -21,6 +21,7 @@ param(
     [switch]$NoContention,
     [string[]]$ContentionKinds = @(),
     [switch]$Deploy,
+    [switch]$AllowForeignDeploy,
     [switch]$Now,
     [double]$MaxWaitHours = 12
 )
@@ -49,7 +50,7 @@ if ($InventoryCap -ge 0) { $scenarioArgs.InventoryCap = $InventoryCap }
 Write-Host "SOAK lane $Lane, $Hours h, seed $Seed, storms every $StormEveryMinutes min$(if ($Headless) { ", headless $($Headless -join ',')" })"
 
 $output = New-Object System.Collections.Generic.List[string]
-& (Join-Path $PSScriptRoot "Run-Session.ps1") -Lane $Lane -Scenario soak -ScenarioArgs $scenarioArgs -Headless $Headless -Deploy:$Deploy *>&1 |
+& (Join-Path $PSScriptRoot "Run-Session.ps1") -Lane $Lane -Scenario soak -ScenarioArgs $scenarioArgs -Headless $Headless -Deploy:$Deploy -AllowForeignDeploy:$AllowForeignDeploy *>&1 |
     ForEach-Object { $line = "$_"; $output.Add($line); Write-Host $line }
 
 $runDir = @($output | ForEach-Object { if ($_ -match "^Run folder: (.+)$") { $Matches[1].Trim() } }) | Select-Object -Last 1

@@ -362,7 +362,33 @@ function Get-LaneDeployedBuilds($LaneInfo) {
     [pscustomobject]@{ Builds = $builds; Mixed = $keys.Count -gt 1 }
 }
 
-Export-ModuleMember -Function Get-TestLane, Get-TestLanes, Get-InstanceCompany, Get-InstanceSaveDir, Get-InstanceRegistryKey,
+# The files Deploy-Mod.ps1 copies from a worktree's build into each install of a lane and its server.
+function Get-LaneBuildFiles([string]$Repo, $LaneInfo, [string]$Configuration = "Release") {
+    $clientBin = Join-Path $Repo "CMS21-Together-Client\bin\$Configuration"
+    $harnessBin = Join-Path $Repo "tools\TestHarness\bin\$Configuration"
+    $serverBin = Join-Path $Repo "CMS21-Together-Server\bin\$Configuration"
+    foreach ($name in $LaneInfo.Instances) {
+        $dir = Join-Path $script:TestRoot $name
+        [pscustomobject]@{ Installed = Join-Path $dir "Mods\CMS21-Together.dll"; Built = Join-Path $clientBin "CMS21-Together.dll" }
+        [pscustomobject]@{ Installed = Join-Path $dir "Mods\TogetherTestHarness.dll"; Built = Join-Path $harnessBin "TogetherTestHarness.dll" }
+        [pscustomobject]@{ Installed = Join-Path $dir "UserLibs\CMS21_Together_Core.dll"; Built = Join-Path $clientBin "CMS21_Together_Core.dll" }
+    }
+    foreach ($file in @("CMS21_Together_Server.exe", "CMS21_Together_Core.dll")) {
+        [pscustomobject]@{ Installed = Join-Path $LaneInfo.ServerDir $file; Built = Join-Path $serverBin $file }
+    }
+}
+
+# The deployed files of a lane that are not this worktree's build output (missing or different); none when the lane
+# runs the worktree's build.
+function Get-LaneBuildMismatch([string]$Repo, $LaneInfo) {
+    foreach ($file in Get-LaneBuildFiles $Repo $LaneInfo) {
+        if (-not (Test-Path -LiteralPath $file.Built)) { "$($file.Built) is not built"; continue }
+        if (-not (Test-Path -LiteralPath $file.Installed)) { "$($file.Installed) is missing"; continue }
+        if ((Get-FileHash -LiteralPath $file.Installed).Hash -ne (Get-FileHash -LiteralPath $file.Built).Hash) { "$($file.Installed) differs from $($file.Built)" }
+    }
+}
+
+Export-ModuleMember -Function Get-LaneBuildFiles, Get-LaneBuildMismatch, Get-TestLane,Get-TestLanes, Get-InstanceCompany, Get-InstanceSaveDir, Get-InstanceRegistryKey,
     Set-InstanceCompany, Assert-InstanceIsolated, New-ProfileSeed, Reset-InstanceProfile, Get-RealProfileFingerprint,
     Get-LaneGameProcesses, Set-LaneServerConfig, Remove-ReleaseOnlyFiles, Test-ScenarioNeedsFreshGame, Test-ScenarioNeedsGraphics,
     Get-InstanceGameProcess, Enter-LaneLocks, Exit-LaneLocks, Get-MemoryHeadroom, Wait-MemoryHeadroom, Get-SteamLogMark,
