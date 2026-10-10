@@ -110,7 +110,8 @@ ROADMAP rows 25–30 (user wishes of 2026-10-08). Static decompile (setup in `na
   out) reaches the throttle wait in 4.34 s every run. The lights start only on the player's throttle
   (`_Prepare_d__19` states 3/4 check `carInput.throttle > 0`), then three `WaitForSecond` (1 s) to the green
   (`readySetGo`, `canMove`); throttle to green 3067–3076 ms at 15 fps. `WaitForEndOfFrame` resumes in these headless
-  games. One start spot (`PrepareCarPhysics.StartPosition`). Details: `openspec/changes/track-races/design.md` D2.
+  games. One start spot (`PrepareCarPhysics.carSpawnPosition`; the scene also has a painted 20-box grid, see
+  `docs/spikes/race-grid.md`). Details: `openspec/changes/track-races/design.md` D2.
 
 ## 6. Garage customization
 

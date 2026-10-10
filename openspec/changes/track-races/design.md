@@ -53,8 +53,10 @@ game's lights, with this timing: the racer calls `RunRestart` as soon as the cou
 then sets it to 1 for that step, so the game's own lights turn green at `localStart` plus at most a frame. The
 overlay fallback is not needed. `StartInMs` is 10 s instead of 5 s (4.3 s restart + 3 s lights + margin); a restart
 that reaches the throttle wait late releases at once and the log names the delay. `WaitForEndOfFrame` resumes in the
-headless games (the arrival `Prepare` reached the throttle wait). Start area: `PrepareCarPhysics` has one
-`StartPosition`, so every racer starts on the same spot (27c).
+headless games (the arrival `Prepare` reached the throttle wait). Start area: the restart puts the car on
+`PrepareCarPhysics.carSpawnPosition` (`!!Logic/CarSpawnPosition`; `StartPosition` is null on this track), so every
+racer starts on the same spot (27c). That spot is the pole box of a painted 20-box grid; spike
+`docs/spikes/race-grid.md` measures the boxes and proposes racer N on box N.
 
 ### D3. Laps, quit and DNF
 
