@@ -150,5 +150,12 @@ public enum PacketTypes
 	GarageLookClaimResult,
 
 	TrackRecord,
-	TrackRecordUpdate
+	TrackRecordUpdate,
+
+	RaceStartRequest,
+	RaceRefused,
+	RaceCountdown,
+	RaceLap,
+	RaceQuit,
+	RaceResult
 }

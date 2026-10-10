@@ -36,6 +36,8 @@ namespace CMS21_Together_Server.Data.Presence
 
 		public static void Clear() => byPassenger.Clear();
 
+		public static bool IsPassenger(int playerId) => byPassenger.ContainsKey(playerId);
+
 		public static IEnumerable<string> Describe(float now) =>
 			byPassenger.Values.OrderBy(r => r.PassengerId).Select(r =>
 				$"  passenger {r.PassengerId} with driver {r.DriverId} in car {r.Loader} to the {TrackScenes.NameOf(r.Scene)}, {now - r.Since:0} s{(r.Arrived ? ", on the track" : ", travelling")}");
