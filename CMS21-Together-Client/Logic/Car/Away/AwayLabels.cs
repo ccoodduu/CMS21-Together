@@ -13,6 +13,8 @@ public static class AwayLabels
 	private static GUIStyle style;
 	private static GUIStyle shadowStyle;
 
+	public static Vector3 Anchor(CarLoader carLoader) => carLoader.transform.position + Vector3.up * RoofHeight;
+
 	public static void Draw()
 	{
 		if (CarAwaySync.All.Count == 0) return;
@@ -26,7 +28,7 @@ public static class AwayLabels
 			if (!CarAwaySync.LockedForMe(pair.Key, out int owner, out var kind)) continue;
 			var carLoader = places.GetCarLoaderByIndex(pair.Key);
 			if (carLoader == null || !carLoader.IsCarLoaded()) continue;
-			Vector3 roof = carLoader.transform.position + Vector3.up * RoofHeight;
+			Vector3 roof = Anchor(carLoader);
 			if (Vector3.Distance(camera.transform.position, roof) > MaxDistance) continue;
 			Vector3 screen = camera.WorldToScreenPoint(roof);
 			if (screen.z <= 0f) continue;
