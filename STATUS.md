@@ -2,6 +2,25 @@
 
 Newest first. One entry per work session.
 
+## 2026-10-10 (17:00–17:35) — the same car angle on entrance places (`fix/entrance-car-angle`, lane 1 and 2)
+
+- `fix/entrance-car-angle` (not merged). QUESTIONS.md "car angle on entrance places", default (b). Callers of
+  `CarLoader.SetAdditionalCarRot` (GameAssembly xref): `PlaceAtPosition` (rolls `Random.Range` over the place's
+  `CarPlaceRotation.yawRange`: Entrance1 and 2 ±10°, Entrance3 ±6°) and `LoadCarFromFile` (applies the saved
+  `AdditionalCarRot`). `PlaceAtPosition` has 30 callers; the garage ones are `Init`, `LoadCarFromFile`, `Update`,
+  `CarLoaderExtended.Update`, `ChangeGroundPosition`, `SetCustomCarPosition`, `PartScript.ResizeWheel`, `TakeJob` and
+  `TakeMission`. The mod's `CarLoading.Load` re-rolled after loading the server's car data, so a late join and a
+  restart rolled anew on every client.
+- Fix `CarAngleSeed`: in a session, on a garage loader at a place with `CarPlaceRotation`, the roll runs in
+  `SeededStreams.WithSeed` from car name, loader and place, and a saved angle is replaced by the same roll. No
+  protocol or save change. A car's angle on a given place is fixed (a respawn or a move back gives the same angle).
+- Proof `car-angle` (harness verb `car-pose`): A spawns cars at Entrance1 and Entrance2, B joins late, A moves one to
+  Entrance3, parks and unparks the other, then a server restart. Fails without the fix (`20261010-171309_L1`: 1–13°,
+  4–50 cm apart at every step), passes with it (`20261010-171653_L1`: 0° and 0 m at every step).
+- Regression (lanes 1 and 2): smoke, `car-angle`, `ping`, `car-placement*`, `park-return`, `park-stale`,
+  `car-place-same`, `visual-car-centre`, `away-label`, `jobs-seeded` and `server-saves`, 18/18 passed
+  (`20261010-171859_regression.json`).
+
 ## 2026-10-10 (16:15–17:00) — the four batch flakes of the a829c78 regression (`fix/batch-flakes-1010`, lane 1)
 
 - `fix/batch-flakes-1010` (lane 1, not merged). Regression `20261010-133046` (main a829c78): `compat-refusal`,
