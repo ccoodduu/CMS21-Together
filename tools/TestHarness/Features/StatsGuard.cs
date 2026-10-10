@@ -10,6 +10,9 @@ namespace TogetherTestHarness.Features;
 public static class StatsGuard
 {
     private static readonly string[] Blocked = { "SetAchievement", "SetStat", "StoreStats", "IndicateAchievementProgress", "UpdateAvgRateStat" };
+    private static readonly System.Collections.Generic.HashSet<string> blockedNames = new System.Collections.Generic.HashSet<string>();
+
+    public static bool Active => blockedNames.Contains("SetStat") && blockedNames.Contains("StoreStats") && blockedNames.Contains("SetAchievement");
 
     public static void Install(HarmonyLib.Harmony harmony)
     {
@@ -27,6 +30,7 @@ public static class StatsGuard
             {
                 harmony.Patch(method, prefix: new HarmonyMethod(typeof(StatsGuard), nameof(Skip)));
                 patched++;
+                blockedNames.Add(method.Name);
             }
             catch (Exception e)
             {
