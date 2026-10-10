@@ -52,7 +52,7 @@ function Get-MemberPattern([string]$Verb, [int]$PlayerId) {
 function Get-FreeKeys([string]$Actor, [int]$Loader) {
     $dumpCar = @((Send-HarnessCommand -Instance $Actor -Verb dump).cars | Where-Object { $_.index -eq $Loader })[0]
     $openKeys = @($open | Where-Object { $_.Loader -eq $Loader } | ForEach-Object { $_.Key })
-    $wheelKeys = @(Get-WheelKeys $Actor $Loader)
+    $wheelKeys = @(Get-WheelKeys $Actor $Loader) + @(Get-GroupKeys $Actor $Loader)
     @($dumpCar.subParts | Where-Object { -not $_.unmounted -and -not $_.blocked -and $openKeys -notcontains $_.key -and $wheelKeys -notcontains $_.key } | ForEach-Object { $_.key })
 }
 
