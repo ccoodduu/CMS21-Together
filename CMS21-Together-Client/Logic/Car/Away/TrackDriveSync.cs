@@ -1,4 +1,5 @@
 using System.Collections;
+using CMS21_Together_Core.Data;
 using CMS21_Together_Core.Data.Enum;
 using CMS21_Together_Core.Data.GameType;
 using CMS21_Together_Core.Logging;
@@ -14,11 +15,11 @@ using UnityEngine;
 
 namespace CMS21Together.Logic.Car.Away;
 
-// sync-test-drive-and-diagnostics D2/D4/D5/D6: the departure to the test track waits for the server's away claim
-// (the departure coroutine is held before its first step), the drive's mileage and dirt are sent when leaving the
-// track, and the claim is released once the return's examine report has run.
+// sync-test-drive-and-diagnostics D2/D4/D5/D6 (shared-race-tracks D3: every track): the departure to a
+// track waits for the server's away claim (the departure coroutine is held before its first step), the drive's mileage
+// and dirt are sent when leaving the track, and the claim is released once the return's examine report has run.
 [HarmonyPatch]
-public static class TestDriveSync
+public static class TrackDriveSync
 {
 	private const float FlushWaitSeconds = 3f;
 	private const float ReadyWaitSeconds = 20f;
@@ -28,6 +29,8 @@ public static class TestDriveSync
 	private static Phase phase;
 	private static int departingLoader = -1;
 	private static string departingScene;
+	private static SceneType departingType;
+	private static CarAwayKind departingKind;
 	private static float grantedAt;
 	private static string refusalMessage;
 
@@ -53,15 +56,19 @@ public static class TestDriveSync
 
 	public static bool HoldDeparture(string sceneName, SceneType sceneType)
 	{
-		if (sceneType != SceneType.TestTrack || !Connected || ClientScene.LocalScene != GameScene.Garage) return false;
+		var scene = ClientScene.FromSceneType(sceneType);
+		if (!TrackScenes.IsTrack(scene) || !Connected || ClientScene.LocalScene != GameScene.Garage) return false;
 		if (Driving.RideAlong.IsPassenger) return false;
 		int loader = LoaderOfSelectedCar();
-		if (loader < 0 || CarAwaySync.IsMine(loader, CarAwayKind.TestTrack)) return false;
+		var kind = TrackScenes.KindOf(scene);
+		if (loader < 0 || CarAwaySync.IsMine(loader, kind)) return false;
 
 		phase = Phase.Asking;
 		departingLoader = loader;
 		departingScene = sceneName;
-		CarAwaySync.Request(loader, CarAwayKind.TestTrack,
+		departingType = sceneType;
+		departingKind = kind;
+		CarAwaySync.Request(loader, kind,
 			() =>
 			{
 				phase = Phase.Granted;
@@ -72,7 +79,7 @@ public static class TestDriveSync
 				phase = Phase.Refused;
 				refusalMessage = refusal switch
 				{
-					CarAwayRefusal.Busy => $"{CarAwaySync.OwnerName(owner)} has this car {CarAwaySync.Activity(CarAwaySync.All.TryGetValue(loader, out var away) ? away.Kind : CarAwayKind.TestTrack)}.",
+					CarAwayRefusal.Busy => $"{CarAwaySync.OwnerName(owner)} has this car {CarAwaySync.Activity(CarAwaySync.All.TryGetValue(loader, out var away) ? away.Kind : kind)}.",
 					CarAwayRefusal.InUse => "Another player is working on this car.",
 					CarAwayRefusal.NotReady => "This car is still loading for multiplayer.",
 					_ => "The server did not answer. Try again.",
@@ -85,7 +92,7 @@ public static class TestDriveSync
 	[HarmonyPrefix]
 	private static bool BeforeDepartureStep(NotificationCenter._SelectSceneToLoad_d__34 __instance, ref bool __result)
 	{
-		if (phase == Phase.None || __instance.__1__state != 0 || __instance.sceneType != SceneType.TestTrack) return true;
+		if (phase == Phase.None || __instance.__1__state != 0 || __instance.sceneType != departingType) return true;
 		switch (phase)
 		{
 			case Phase.Asking:
@@ -99,12 +106,12 @@ public static class TestDriveSync
 					return false;
 				}
 				phase = Phase.None;
-				Log.Info($"[TestDrive] Loader {departingLoader}: departing to the test track.");
-				SceneHooks.Leave(departingScene, SceneType.TestTrack);
+				Log.Info($"[TrackDrive] Loader {departingLoader}: departing to the {TrackScenes.Get(departingKind).Name}.");
+				SceneHooks.Leave(departingScene, departingType);
 				return true;
 			default:
 				phase = Phase.None;
-				Log.Info($"[TestDrive] Loader {departingLoader}: departure cancelled ({refusalMessage}).");
+				Log.Info($"[TrackDrive] Loader {departingLoader}: departure cancelled ({refusalMessage}).");
 				GlobalData.SelectedCarLoader = "";
 				GlobalData.TestToShow = "";
 				ModNotify.ShowToast(refusalMessage);
@@ -115,19 +122,19 @@ public static class TestDriveSync
 
 	private static void OnLeavingScene(GameScene from, GameScene to)
 	{
-		if (from != GameScene.TestTrack || to != GameScene.Garage) return;
+		if (!TrackScenes.IsTrack(from) || to != GameScene.Garage) return;
 		foreach (var pair in CarAwaySync.All)
 		{
-			if (pair.Value.Owner != Client.Instance.ID || pair.Value.Kind != CarAwayKind.TestTrack) continue;
+			if (pair.Value.Owner != Client.Instance.ID || !TrackScenes.IsTrackKind(pair.Value.Kind)) continue;
 			if (SkipNextResult)
 			{
 				SkipNextResult = false;
-				Log.Info($"[TestDrive] Loader {pair.Key}: result skipped (harness), NewMileage {GlobalData.NewMileage} kept.");
+				Log.Info($"[TrackDrive] Loader {pair.Key}: result skipped (harness), NewMileage {GlobalData.NewMileage} kept.");
 				return;
 			}
 			var trackCar = PrepareCarPhysics.Get()?.CarLoader ?? Object.FindObjectOfType<CarLoader>();
 			var cosmetics = trackCar == null ? null : CarDetailsIO.Read(trackCar, CarDetailSection.BodyCosmetics).BodyCosmetics;
-			Log.Info($"[TestDrive] Loader {pair.Key}: result sent (+{GlobalData.NewMileage} km, {cosmetics?.Count ?? 0} parts).");
+			Log.Info($"[TrackDrive] Loader {pair.Key}: result sent (+{GlobalData.NewMileage} km, {cosmetics?.Count ?? 0} parts).");
 			Client.Instance.Send(new TestDriveResultPacket { CarLoaderID = pair.Key, SpawnSeq = pair.Value.SpawnSeq, MileageDeltaKm = GlobalData.NewMileage, Cosmetics = cosmetics });
 			return;
 		}
@@ -135,7 +142,7 @@ public static class TestDriveSync
 
 	public static void OnResultAck(TestDriveResultAckPacket packet)
 	{
-		Log.Info($"[TestDrive] Loader {packet.CarLoaderID}: result {(packet.Applied ? "applied" : "not applied")} by the server.");
+		Log.Info($"[TrackDrive] Loader {packet.CarLoaderID}: result {(packet.Applied ? "applied" : "not applied")} by the server.");
 		if (packet.Applied) GlobalData.NewMileage = 0;
 	}
 
@@ -145,7 +152,7 @@ public static class TestDriveSync
 		float deadline = Time.realtimeSinceStartup + ReadyWaitSeconds;
 		while (loader >= 0 && (!CarPartsSync.IsReady(loader) || CarDetailsSync.IsApplying(loader)) && Time.realtimeSinceStartup < deadline)
 			yield return null;
-		if (loader >= 0 && !CarPartsSync.IsReady(loader)) Log.Warn($"[TestDrive] Loader {loader} was not ready after {ReadyWaitSeconds} s.");
+		if (loader >= 0 && !CarPartsSync.IsReady(loader)) Log.Warn($"[TrackDrive] Loader {loader} was not ready after {ReadyWaitSeconds} s.");
 
 		if (GlobalData.NewMileage != 0)
 		{
@@ -155,11 +162,11 @@ public static class TestDriveSync
 				var info = carLoader.CarInfoData;
 				info.Mileage += GlobalData.NewMileage;
 				carLoader.CarInfoData = info;
-				Log.Info($"[TestDrive] Loader {loader}: {GlobalData.NewMileage} km added locally (no result applied).");
+				Log.Info($"[TrackDrive] Loader {loader}: {GlobalData.NewMileage} km added locally (no result applied).");
 			}
 			else
 			{
-				Log.Info($"[TestDrive] {GlobalData.NewMileage} km dropped: no car '{GlobalData.SelectedCarLoader}'.");
+				Log.Info($"[TrackDrive] {GlobalData.NewMileage} km dropped: no car '{GlobalData.SelectedCarLoader}'.");
 			}
 			GlobalData.NewMileage = 0;
 		}
@@ -168,7 +175,7 @@ public static class TestDriveSync
 	public static void ReleaseAfterReturn()
 	{
 		foreach (var pair in CarAwaySync.All)
-			if (pair.Value.Owner == Client.Instance.ID && pair.Value.Kind == CarAwayKind.TestTrack)
+			if (pair.Value.Owner == Client.Instance.ID && TrackScenes.IsTrackKind(pair.Value.Kind))
 			{
 				MelonLoader.MelonCoroutines.Start(ReleaseWhenFlushed(pair.Key));
 				return;
@@ -180,7 +187,7 @@ public static class TestDriveSync
 		float deadline = Time.realtimeSinceStartup + FlushWaitSeconds;
 		yield return new WaitForSeconds(0.5f);
 		while (PartChangeTracker.IsPending(loader) && Time.realtimeSinceStartup < deadline) yield return null;
-		Log.Info($"[TestDrive] Loader {loader}: back from the test track, claim released.");
+		Log.Info($"[TrackDrive] Loader {loader}: back from the track, claim released.");
 		CarAwaySync.Release(loader);
 	}
 

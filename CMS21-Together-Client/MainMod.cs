@@ -162,7 +162,7 @@ namespace CMS21Together
 			PlayerSettings.Initialize();
 			GuardSettings.Initialize();
 			Logic.Car.Details.CarDetailsSync.Initialize();
-			Logic.Car.Away.TestDriveSync.Initialize();
+			Logic.Car.Away.TrackDriveSync.Initialize();
 			Logic.Car.Locks.CarLockMirror.Initialize();
 			Logic.Car.Locks.LockLifecycle.Initialize();
 			Logic.Car.Locks.LockPreviews.Initialize();

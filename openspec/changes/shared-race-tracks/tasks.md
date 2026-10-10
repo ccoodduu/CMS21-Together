@@ -9,36 +9,43 @@ Prerequisites (all merged): rows 6, 7, 13, 14a, 17 part 2, 21. Followed by 27b `
       work with `guard-allow`, mileage returns, no claim, no drive relay on the race track
       (`docs/spikes/singleplayer-features.md` section 5; runs `20261008-230909_L2_sp-features-probe`,
       `20261008-231615_L2_sp-features-probe2`).
-- [ ] 1.1 Classify all 49 `TestTrack` references (40 in client, core and server, 9 in the harness) as driving scene or
-      test-track feature; the table goes into design.md D1. Gate for group 3.
-- [ ] 1.2 Decompile `RaceTrackManager.LastTime`, `NextCheckPoint` and `_Restart_d__20` and check them with
+- [x] 1.1 Classify all 49 `TestTrack` references (40 in client, core and server, 9 in the harness) as driving scene or
+      test-track feature; the table goes into design.md D1. Gate for group 3. Done 2026-10-10: 33 move to the track
+      set, 11 stay test-track features, 5 are definitions (design.md D1).
+- [x] 1.2 Decompile `RaceTrackManager.LastTime`, `NextCheckPoint` and `_Restart_d__20` and check them with
       `work\at.py`; on the race track, trace them and `TrackManager.ReturnToGarage` and the pause menu buttons; name the
       lap value, per-lap or per-finish, and the type and unit of `ProfileData.BestRaceTime`; check whether a restart can
       produce a `LastTime` without all checkpoints. On the speed track, check whether `FreeTrackManager.topSpeed`/
-      `lastTopSpeed` reach `ProfileData.TopSpeed`. Done when D6 names the hook and the fields.
+      `lastTopSpeed` reach `ProfileData.TopSpeed`. Done when D6 names the hook and the fields. Done 2026-10-10
+      (static, design.md D6 "Task 1.2 result"): per lap, `timer.ElapsedMilliseconds`, `BestRaceTime` is `long` ms, a
+      restart cannot produce a partial lap, the top speed reaches `ProfileData.TopSpeed` (`int` km/h) on return. The
+      runtime path is the proof scenario's `track-lap` (the real `LastTime`); the pause menu buttons stay hand check 5.1.
 
 ## 2. Core and server
 
-- [ ] 2.1 `TrackScenes`; `CarAwayKind.RaceTrack`, `SpeedTrack` (appended); `RideUpdate.Scene`; packets `TrackRecord`,
+- [x] 2.1 `TrackScenes`; `CarAwayKind.RaceTrack`, `SpeedTrack` (appended); `RideUpdate.Scene`; packets `TrackRecord`,
       `TrackRecordUpdate`.
-- [ ] 2.2 `CarAwayRegistry`, `Rides`, `CarDetailsStore` track-owner check and `DriveHandlers` use the track set (D3, D4);
+- [x] 2.2 `CarAwayRegistry`, `Rides`, `CarDetailsStore` track-owner check and `DriveHandlers` use the track set (D3, D4);
       `AwayCheck` self-check for the three kinds.
-- [ ] 2.3 `TrackRecords` (D6): per-player best and group record, `self`/`world` optional fields, broadcast rules,
-      bounds; server command `records`.
+- [x] 2.3 `TrackRecords` (D6): per-player best and group record, `self`/`world` optional fields, broadcast rules,
+      bounds; server command `records`. Also the speed track's top speed (task 1.2), the same rules with the
+      higher value winning; a slower or ignored value is answered with the stored best (D16).
 
 ## 3. Client
 
-- [ ] 3.1 Scene identity (D2): `ClientScene.FromSceneName`, `SceneReady`.
-- [ ] 3.2 `TrackDriveSync` (D3) replacing the test-track-only departure; `CarAwaySync` texts; `DriveCapture` loader
+- [x] 3.1 Scene identity (D2): `ClientScene.FromSceneName`, `SceneReady`.
+- [x] 3.2 `TrackDriveSync` (D3) replacing the test-track-only departure; `CarAwaySync` texts; `DriveCapture` loader
       lookup and `RemoteCars` (D4); `RideAlong` track set and `TrackManager.Instance` return (D5).
-- [ ] 3.3 Lap records (D6): `LastTime` postfix (driver only, complete laps), `PlayerRestore` writes `BestRaceTime`,
-      toast for the group record; harness `track-lap` (real path) and `track-record-send`.
-- [ ] 3.4 Guard (owner row 27): `Scene RaceTrack`, `Scene SpeedTrack` allowed; labels for `DragStrip`, `CustomTrack`,
+- [x] 3.3 Lap records (D6): `LastTime` postfix (driver only, complete laps), `PlayerRestore` writes `BestRaceTime`,
+      toast for the group record; harness `track-lap` (real path) and `track-record-send`. Built as a prefix (reads
+      `timer` before `LastTime` restarts it) plus a postfix (sends); `FreeTrackManager.ReturnToGarage` prefix for the top
+      speed; harness `track-topspeed`. `Il2CppSystem.dll` added to the client libs for the `Stopwatch` type.
+- [x] 3.4 Guard (owner row 27): `Scene RaceTrack`, `Scene SpeedTrack` allowed; labels for `DragStrip`, `CustomTrack`,
       `FunTrack`, `OffroadTrack`.
 
 ## 4. Proof
 
-- [ ] 4.1 Scenario `race-track` (two clients, guard on Enforce, `guard-allow Mode:CarDrive` as in `test-drive` and
+- [x] 4.1 Scenario `race-track` (two clients, guard on Enforce, `guard-allow Mode:CarDrive` as in `test-drive` and
       `drive-track`):
       1. A spawns a car, `track-go 0 RaceTrack` → A on `RaceTrack` in both rosters; B's `away` shows A's claim of kind
          `RaceTrack`; B `part-unmount` on that car → refused with "A has this car on the race track.";
@@ -57,14 +64,20 @@ Prerequisites (all merged): rows 6, 7, 13, 14a, 17 part 2, 21. Followed by 27b `
       Old-code failure: run with `guard-allow Scene:RaceTrack`; it fails at step 1, "B's `away` shows A's claim of kind
       `RaceTrack`" (spike run 2: `away` empty). Verify: `Run-Session.ps1 -Scenario race-track` passes; `test-drive`,
       `drive-track`, `ride-along`, `test-drive-latejoin` and the smoke set pass (`Run-All -Changed`, area `driving`).
+      Done 2026-10-10: fails on the old code (`origin/main` `4ec5c78` in `CMS21-Together-wt	racks-base`, `-OpenGuard`)
+      at step 1 (`20261010-041057_L1`: `away` empty, no block, no relay; aborts at the unknown `track-lap`), passes
+      (`20261010-040634_L1`, 70 checks, incl. the server restart); `20261010-041514_regression.json` 14/14 (smoke,
+      `race-track`, `drive-track`, `drive-latejoin`, `ride-along`, `test-drive`, `test-drive-latejoin`, `diagnostics`,
+      `guard`, `rejoin`, server saves); `--check-away`, `--check-locks`, `--check-tools`, `--check-merges` pass.
 
 ## 5. Hand checks
 
 - [ ] 5.1 docs/playtest.md: drive with a friend on the race track (cars pass through each other until 27c, group record
       toast), speed track ride along, the speed track's pause menu and return, the race track's pause menu restart while
-      the friend watches.
+      the friend watches. Written into docs/playtest.md (Test drive and diagnostics, item 5) and docs/try-it.md;
+      open until a playtest.
 
 ## 6. Docs
 
-- [ ] 6.1 Rows 13, 17 and 21 documents: "test track" rules now apply to the track set (one line each); ROADMAP row 27a
+- [x] 6.1 Rows 13, 17 and 21 documents: "test track" rules now apply to the track set (one line each); ROADMAP row 27a
       status; STATUS entry with run ids.

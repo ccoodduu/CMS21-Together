@@ -1,4 +1,6 @@
 using System;
+using System.Runtime.Serialization;
+using CMS21_Together_Core.Data.Enum;
 
 namespace CMS21_Together_Core.Network.Packets;
 
@@ -21,4 +23,5 @@ public class RideUpdatePacket : INetworkData
 	public int CarLoaderID;
 	public bool Active;
 	public RideEndReason Reason;
+	[OptionalField] public GameScene Scene;
 }

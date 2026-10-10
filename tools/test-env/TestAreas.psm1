@@ -44,6 +44,7 @@ tools/TestHarness/Features/TestDrive*                          testdrive
 tools/TestHarness/Features/Tools*                              tools
 tools/TestHarness/Features/Visual*                             visuals
 tools/TestHarness/Features/Drive*                              driving
+tools/TestHarness/Features/Track*                              driving
 tools/TestHarness/Features/Lock*                               locks
 tools/TestHarness/Features/Ping*                               ping
 tools/TestHarness/Features/PartShader*                         parts, visuals
@@ -74,6 +75,7 @@ CMS21-Together-*/Network/Handlers/TestDrive*                   testdrive
 CMS21-Together-*/Network/Handlers/Tool*                        tools
 CMS21-Together-*/Network/Handlers/Visual*                      visuals, presence
 CMS21-Together-*/Network/Handlers/Drive*                       driving, testdrive
+CMS21-Together-*/Network/Handlers/Track*                       driving
 CMS21-Together-*/Network/Handlers/Ping*                        ping
 CMS21-Together-*/Network/Handlers/WorldStates*                 connect, persistence
 CMS21-Together-*/Diagnostics/*                                 bugreport
@@ -101,6 +103,8 @@ CMS21-Together-Core/Network/Packets/TestDrive*                 testdrive
 CMS21-Together-Core/Network/Packets/Tool*                      tools
 CMS21-Together-Core/Network/Packets/VisualPackets.cs           visuals, presence
 CMS21-Together-Core/Network/Packets/DrivePackets.cs            driving, testdrive
+CMS21-Together-Core/Network/Packets/TrackPackets.cs            driving
+CMS21-Together-Core/Network/Packets/RidePackets.cs             driving, testdrive, presence
 CMS21-Together-Core/Network/Packets/PingPackets.cs             ping
 CMS21-Together-Core/Network/Packets/WorldStates*               connect, persistence
 CMS21-Together-Core/PacketTypes.cs                             smoke
@@ -112,8 +116,10 @@ CMS21-Together-Core/Data/InventoryState.cs                     parts, economy
 CMS21-Together-Core/Data/UidRanges.cs                          parts
 CMS21-Together-Core/Data/ParkingLayout.cs                      placement
 CMS21-Together-Core/Data/Player*                               presence, persistence
+CMS21-Together-Core/Data/TrackScenes.cs                        driving, testdrive
 CMS21-Together-Core/Data/GameType/ModJob*                      jobs
 CMS21-Together-Core/Data/GameType/ModGarageLook*               garage
+CMS21-Together-Core/Data/GameType/ModTrackRecord*              driving, persistence
 CMS21-Together-Core/Data/GameType/ModTool*                     tools
 CMS21-Together-Core/Data/GameType/ModCarDetails*               details
 CMS21-Together-Core/Data/GameType/ModPaint*                    details, tools
@@ -163,6 +169,7 @@ CMS21-Together-Client/Data/ClientScene.cs                      presence, connect
 CMS21-Together-Server/Data/Cars/CarLocks*                      locks, parts, placement, economy
 CMS21-Together-Server/Data/Cars/CarDetails*                    details, cars
 CMS21-Together-Server/Data/Cars/CarAway*                       testdrive, cars
+CMS21-Together-Server/Data/Cars/AwayCheck*                     testdrive, cars
 CMS21-Together-Server/Data/Cars/InventoryChanges.cs            parts, economy
 CMS21-Together-Server/Data/Cars/*                              cars, parts
 CMS21-Together-Server/Data/Economy/*                           economy
@@ -176,11 +183,13 @@ CMS21-Together-Server/Data/Presence/*                          presence, persist
 CMS21-Together-Server/Data/Reconciliation/*                    resync
 CMS21-Together-Server/Data/Tools/*                             tools
 CMS21-Together-Server/Data/Garage/*                            garage
+CMS21-Together-Server/Data/Tracks/*                            driving, persistence
 CMS21-Together-Server/Data/CompatibilityPolicy.cs              connect
 CMS21-Together-Server/Data/ModCheck.cs                         connect
 CMS21-Together-Server/Data/SharedDlc.cs                        connect, cars
 CMS21-Together-Server/Data/ServerConfig.cs                     hosting, connect
 CMS21-Together-Server/Network/Command*                         hosting, persistence
+CMS21-Together-Client/Libs/*                                   smoke
 CMS21-Together-Client/*                                        unmapped
 CMS21-Together-Server/*                                        unmapped
 CMS21-Together-Core/*                                          unmapped

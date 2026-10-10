@@ -53,7 +53,8 @@ namespace CMS21_Together_Server.Network
 					Logger.Info("  jobs expire <id>  - Expire an open order now");
 					Logger.Info("  jobs reopen <id>  - Delete an active job's car and open the order again");
 					Logger.Info("  cardetails <id>   - Show the stored details of a loader");
-					Logger.Info("  away              - Show cars on the test track, test path or dyno");
+					Logger.Info("  away              - Show cars on a track, the test path or the dyno");
+					Logger.Info("  records           - Show the race track lap and speed track top speed records");
 					Logger.Info("  locks             - Show the part, fluid and car locks and the lock counters");
 					Logger.Info("  tools             - Show the workshop machines, tool positions and claims");
 					Logger.Info("  shoplist          - Show the shared shopping list");
@@ -127,6 +128,12 @@ namespace CMS21_Together_Server.Network
 				case "locks":
 					foreach (string line in CarLocks.Describe(Data.ServerTime.Time))
 						Logger.Info($"[Locks] {line}");
+					break;
+
+				case "records":
+					Logger.Info("Track records:");
+					foreach (string line in Data.Tracks.TrackRecords.Describe())
+						Logger.Info(line);
 					break;
 
 				case "away":

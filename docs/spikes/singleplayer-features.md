@@ -99,6 +99,12 @@ ROADMAP rows 25–30 (user wishes of 2026-10-08). Static decompile (setup in `na
     "SpeedTrack ready as TestTrack" and started a drive stream for car -1;
   - no away claim on either trip (B's `away` empty), no drive state reached B on the race track;
   - mileage reached the car: 0 → 4 km after two 2.5 km drives (stored by the server).
+- Row 27a spike 1.2 (static, `native\out\tracks27a_clean`): `RaceTrackManager.LastTime` runs once per lap, called
+  only by `CheckPoints.OnTriggerEnter` on the finish (`Meta`) trigger when every checkpoint is done; the lap is
+  `timer.ElapsedMilliseconds`, the best goes to `lastBestTime` and `ProfileData.BestRaceTime` (`long`, ms), then the
+  timer restarts. `Restart` re-runs `Prepare`, which resets the checkpoints and the timer, so no partial lap reaches
+  `LastTime`. `FreeTrackManager.ReturnToGarage` writes the speed track's `topSpeed` into `ProfileData.TopSpeed`
+  (`int`, km/h). Details: `openspec/changes/shared-race-tracks/design.md` D6.
 
 ## 6. Garage customization
 

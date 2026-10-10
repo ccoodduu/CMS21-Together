@@ -17,6 +17,7 @@
         <Reference Include="0Harmony" Private="false"><HintPath>$(ClientLibs)\0Harmony.dll</HintPath></Reference>
         <Reference Include="UnhollowerBaseLib" Private="false"><HintPath>$(ClientLibs)\UnhollowerBaseLib.dll</HintPath></Reference>
         <Reference Include="Il2Cppmscorlib" Private="false"><HintPath>$(ClientLibs)\Il2Cppmscorlib.dll</HintPath></Reference>
+        <Reference Include="Il2CppSystem" Private="false"><HintPath>$(ClientLibs)\Il2CppSystem.dll</HintPath></Reference>
         <Reference Include="Assembly-CSharp" Private="false"><HintPath>$(ClientLibs)\Assembly-CSharp.dll</HintPath></Reference>
         <Reference Include="Assembly-CSharp-firstpass" Private="false"><HintPath>$(ClientLibs)\Assembly-CSharp-firstpass.dll</HintPath></Reference>
         <Reference Include="UnityEngine" Private="false"><HintPath>$(ClientLibs)\UnityEngine.dll</HintPath></Reference>

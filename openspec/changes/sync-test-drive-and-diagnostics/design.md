@@ -2,6 +2,8 @@
 
 ## Context
 
+Since row 27a (`shared-race-tracks`, 2026-10-10) the test-track rules below (departure hold, claim release, result on return) apply to the track set (`TrackScenes`: test, race and speed track); the examine report stays test-track only.
+
 See proposal.md for the why and specs/test-drive-sync/spec.md for the required behaviour. Facts that shape the
 approach, from `docs/spikes/test-drive.md` (static decompile, 2026-10-06), `docs/spikes/workshop-car-tools.md`,
 `docs/spikes/car-details.md` and the code on `main` (rows 1, 2, 3, 4, 6, 7, 14 built):

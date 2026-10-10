@@ -20,10 +20,18 @@ namespace CMS21_Together_Server.Data.Presence
 			client.RestoreOffered = true;
 
 			var record = PlayerRecords.Get(client.Identity);
-			if (record == null || record.Scene != GameScene.Garage || record.Position == null || record.Rotation == null) return 0;
+			if (record == null) return 0;
+			bool position = record.Scene == GameScene.Garage && record.Position != null && record.Rotation != null;
+			bool records = record.BestLapMs > 0 || record.TopSpeedKmh > 0;
+			if (!position && !records) return 0;
 
-			Server.SendToClient(new PlayerRestorePacket { Position = record.Position, Rotation = record.Rotation }, clientId);
-			Logger.Info($"[Players] Client[{clientId}] restored to its last garage position {PlayerRecords.Format(record.Position)}.");
+			Server.SendToClient(new PlayerRestorePacket
+			{
+				Position = position ? record.Position : null, Rotation = position ? record.Rotation : null,
+				BestLapMs = record.BestLapMs, TopSpeedKmh = record.TopSpeedKmh,
+			}, clientId);
+			if (position) Logger.Info($"[Players] Client[{clientId}] restored to its last garage position {PlayerRecords.Format(record.Position)}.");
+			if (records) Logger.Info($"[Players] Client[{clientId}] gets its track records: best lap {record.BestLapMs} ms, top speed {record.TopSpeedKmh} km/h.");
 			return 1;
 		}
 	}

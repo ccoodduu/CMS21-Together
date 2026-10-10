@@ -52,6 +52,13 @@ Report problems with both players' `MelonLoader\Latest.log` and the server's `Lo
    (pie `mode_bonus_assemble`/`mode_bonus_disassemble`), paint the car with it; the other player sees the part and its
    paint (scenario `car-bonus` drives the same game calls headless).
 4. Sit in a car and start the engine: the other player sees you seated and hears the engine.
+5. Race track and speed track (scenario `race-track` covers the claims, the driving stream, the records and the rides
+   headless). **Hand check** with visible games: drive with a friend on the race track, each in their own car (cars
+   pass through each other); finish a real lap through every checkpoint and beat the group's best: both see "New group
+   record on the race track: <name>, m:ss.fff". The race track's pause menu restart while the friend watches: the car
+   jumps back to the start on the friend's screen too. Ride along to the speed track; there, the pause menu and its
+   return to the garage (the speed track reports itself as the test track to the game) bring both of you back with the
+   driven kilometres.
 
 ## Travel and sessions
 
@@ -67,5 +74,6 @@ Report problems with both players' `MelonLoader\Latest.log` and the server's `Lo
 
 ## Not shared yet
 
-Shared junkyard, barn and auction (row 15), seeing other players' actions as animations (row 17), the drag strip.
+Shared junkyard, barn and auction (row 15), seeing other players' actions as animations (row 17), the drag strip
+(Drag Racing DLC) and Workshop tracks.
 The game refuses blocked features with "... is not supported in multiplayer yet".

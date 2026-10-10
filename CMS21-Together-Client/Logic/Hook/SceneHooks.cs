@@ -30,7 +30,7 @@ namespace CMS21Together.Logic.Hook
 			}
 
 			if (!ClientData.IsInitialSyncFinished) return;
-			if (Car.Away.TestDriveSync.HoldDeparture(newSceneName, sceneType)) return;
+			if (Car.Away.TrackDriveSync.HoldDeparture(newSceneName, sceneType)) return;
 			Leave(newSceneName, sceneType);
 		}
 
@@ -39,6 +39,7 @@ namespace CMS21Together.Logic.Hook
 			var from = ClientScene.LocalScene;
 			var to = ClientScene.FromSceneType(sceneType);
 			Log.Info($"[Scene] Leaving {from} for {to} ({newSceneName}), profile slot {Singleton<GameManager>.Instance.ProfileManager.selectedProfile}.");
+			ClientScene.Destination = to;
 			ClientScene.RaiseLeavingScene(from, to);
 
 			SeatEngine.Reset();

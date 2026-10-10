@@ -62,6 +62,17 @@ time. In a session, **F9** shows the players with their ping, your Steam friends
 - Bonus parts (spoilers, scoops, roof signs) fitted, painted and taken off look the same for everyone.
 - **F7** reloads the garage from the server if something looks wrong.
 
+## Please try: the race track and the speed track
+
+1. **Drive a car to the race track** from the map while a friend stays in the garage. Your friend should see "<name>
+   has this car on the race track." when they try to work on it. Report: anything your friend could change on it.
+2. **Drive together:** your friend takes another car to the race track. You should see each other's car drive. Report:
+   a car that does not appear, jumps or hangs.
+3. **Drive a full lap.** When it beats the group's best, everyone sees "New group record on the race track: <name>,
+   m:ss.fff". Rejoin later: the race track should still show your best time. Report: a record that was lost.
+4. **Ride along** to the speed track: sit in the passenger seat before your friend drives there. Report: where you
+   ended up, and whether the pause menu's return brought you both back.
+
 ## Please try: the garage look
 
 1. **Customise the garage** at the garage-look computer and close the window. Your friends should see the new walls
@@ -114,8 +125,8 @@ Two or more players on one car. For each item, report what you saw, and if it we
 
 ## Not yet
 
-Driving around, the race tracks and the separate Parking scene are not
-shared yet. The showroom (the car viewer in the main menu) is single-player only. While connected, the game refuses
+Driving around in the garage, the drag strip (Drag Racing DLC), Workshop tracks and the separate Parking scene are
+not shared yet. The showroom (the car viewer in the main menu) is single-player only. While connected, the game refuses
 them with "... is not supported in multiplayer yet", so the garages cannot drift apart. The junkyard, barns and
 auction are each player's own (not shared).
 

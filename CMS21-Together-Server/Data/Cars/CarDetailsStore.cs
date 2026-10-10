@@ -215,7 +215,7 @@ namespace CMS21_Together_Server.Data.Cars
 
 		public static bool FoldTestDrive(int clientId, TestDriveResultPacket packet)
 		{
-			if (!CarAwayRegistry.IsOwner(packet.CarLoaderID, clientId, CarAwayKind.TestTrack, packet.SpawnSeq) || !IsValid(packet.CarLoaderID, out var stored))
+			if (!CarAwayRegistry.IsTrackOwner(packet.CarLoaderID, clientId, packet.SpawnSeq) || !IsValid(packet.CarLoaderID, out var stored))
 			{
 				Logger.Info($"[CarDetails] Test drive result for loader {packet.CarLoaderID} from client {clientId} not applied (no claim or no valid details).");
 				return false;

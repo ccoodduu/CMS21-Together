@@ -48,7 +48,12 @@ public static class SceneReady
 		}
 		if (!Client.Instance.IsConnectionValid || ClientScene.LocalScene != GameScene.Loading) yield break;
 
-		var scene = ClientScene.FromSceneType(GameScript.Get().CurrentSceneType);
+		var byType = ClientScene.FromSceneType(GameScript.Get().CurrentSceneType);
+		var byName = ClientScene.FromSceneName(sceneName);
+		var scene = byName != GameScene.Unknown ? byName : byType;
+		if (scene != byType) Log.Info($"[Scene] {sceneName}: the game reports {byType}, taken as {scene}.");
+		if (ClientScene.Destination != GameScene.Unknown && ClientScene.Destination != scene)
+			Log.Warn($"[Scene] {sceneName}: travelled to {ClientScene.Destination}, arrived in {scene}.");
 		ClientScene.LocalScene = scene;
 		PresenceManager.FindLocalMotor();
 		SpawnPlacement.PlaceLocalPlayer();
