@@ -77,7 +77,15 @@ public static class DetailsMerge
 		if (incoming.Paint != null) stored.Paint = incoming.Paint;
 		if (incoming.Plates != null) stored.Plates = incoming.Plates;
 		if (incoming.Info != null) stored.Info = incoming.Info;
-		if (incoming.BonusParts != null) stored.BonusParts = incoming.BonusParts;
+		if (incoming.BonusSlots != null)
+		{
+			stored.BonusSlots ??= new List<ModBonusSlot>();
+			foreach (var slot in incoming.BonusSlots)
+			{
+				stored.BonusSlots.RemoveAll(s => s.Slot == slot.Slot);
+				stored.BonusSlots.Add(slot);
+			}
+		}
 		if (incoming.Dyno != null) stored.Dyno = incoming.Dyno;
 	}
 
@@ -133,6 +141,11 @@ public static class DetailsMerge
 			};
 			if (tuning.Gearbox != null || tuning.Modules.Count > 0) result.Tuning = tuning;
 		}
+		if (details.BonusSlots != null)
+		{
+			var slots = details.BonusSlots.Where(s => keep.Contains(CarDetailEntries.Bonus(s.Slot))).ToList();
+			if (slots.Count > 0) result.BonusSlots = slots;
+		}
 		if (keep.Contains(CarDetailEntries.Paint)) result.Paint = details.Paint;
 		if (keep.Contains(CarDetailEntries.Plates)) result.Plates = details.Plates;
 		if (keep.Contains(CarDetailEntries.Info)) result.Info = details.Info;
@@ -142,5 +155,5 @@ public static class DetailsMerge
 
 	public static bool IsEmpty(ModCarDetails details) =>
 		details.Fluids == null && details.Wheels == null && details.Alignment == null && details.BodyCosmetics == null && details.Tuning == null
-		&& details.Paint == null && details.Plates == null && details.Info == null && details.Dyno == null && details.BonusParts == null;
+		&& details.Paint == null && details.Plates == null && details.Info == null && details.Dyno == null && details.BonusSlots == null;
 }

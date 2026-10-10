@@ -59,6 +59,7 @@ time. In a session, **F9** shows the players with their ping, your Steam friends
   the server; one player customises at a time.
 - Tuning at the dyno's tuning computer (gearbox, ECU, carburettor): one player tunes a car at a time, and a tuned part
   you take off keeps its tuning in the shared inventory and on the next car it goes on.
+- Bonus parts (spoilers, scoops, roof signs) fitted, painted and taken off look the same for everyone.
 - **F7** reloads the garage from the server if something looks wrong.
 
 ## Please try: the garage look
@@ -69,6 +70,13 @@ time. In a session, **F9** shows the players with their ping, your Steam friends
    opens. Report: a black screen or a window that opened anyway.
 3. **Reset a wall to its default** and close; then let a friend open and close the window without changing anything.
    The wall should stay default for everyone.
+
+## Please try: bonus parts
+
+1. **Fit a spoiler or a roof sign** in the bonus assembly mode and paint the car in the paint shop. Your friends
+   should see the part with your paint. Report: a missing part or another colour.
+2. **Both pick the same empty slot at once.** One of you gets the part on the car; the other is told why and keeps
+   the part in the inventory. Report: a part that disappeared from the inventory without being on the car.
 
 ## Please try: tuning
 
@@ -99,7 +107,7 @@ Two or more players on one car. For each item, report what you saw, and if it we
 
 ## Not yet
 
-Driving around, the race tracks, bonus parts, building a new engine and the separate Parking scene are not
+Driving around, the race tracks, building a new engine and the separate Parking scene are not
 shared yet. The showroom (the car viewer in the main menu) is single-player only. While connected, the game refuses
 them with "... is not supported in multiplayer yet", so the garages cannot drift apart. The junkyard, barns and
 auction are each player's own (not shared).

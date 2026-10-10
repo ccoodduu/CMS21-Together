@@ -46,6 +46,9 @@ Report problems with both players' `MelonLoader\Latest.log` and the server's `Lo
    gearbox sliders and the ECU bars with the mouse and apply each tab; the other player sees the values (scenario
    `car-tuning` drives the tabs' apply actions headless). A second player clicking the computer is told "<name> is
    tuning this car."; leaving the window open five minutes closes it.
+   **Hand check: bonus parts** with a visible game: fit and take off a bonus part with the mouse in the bonus modes
+   (pie `mode_bonus_assemble`/`mode_bonus_disassemble`), paint the car with it; the other player sees the part and its
+   paint (scenario `car-bonus` drives the same game calls headless).
 4. Sit in a car and start the engine: the other player sees you seated and hears the engine.
 
 ## Travel and sessions

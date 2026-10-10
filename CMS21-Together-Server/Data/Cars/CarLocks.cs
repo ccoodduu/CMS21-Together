@@ -2,6 +2,7 @@ using System.Collections.Generic;
 using System.Linq;
 using CMS21_Together_Core.Data;
 using CMS21_Together_Core.Data.Enum;
+using CMS21_Together_Core.Data.GameType;
 using CMS21_Together_Core.Network.Packets;
 using CMS21_Together_Server.Data.Presence;
 using CMS21_Together_Server.Log;
@@ -98,6 +99,8 @@ namespace CMS21_Together_Server.Data.Cars
 					RequestId = request.RequestId, Granted = false, Refusal = refused.Refusal, HolderPlayerId = refused.Holder, ConflictKey = refused.Key,
 					HolderKind = refused.HolderKind
 				}, clientId);
+				if (refused.Refusal == CarLockRefusal.Stale && LockKeys.IsBonus(refused.Key))
+					CarDetailsStore.SendEntry(request.CarLoaderID, CarDetailEntries.Bonus(LockKeys.BonusSlot(refused.Key)), clientId);
 				return;
 			}
 			Count("granted");
@@ -130,7 +133,9 @@ namespace CMS21_Together_Server.Data.Cars
 
 			var x = request.X.Distinct().ToList();
 			foreach (string key in x.Concat(request.S))
-				if (!Exists(entry, key)) return new Refused { Refusal = CarLockRefusal.Invalid, Key = key };
+				if (!Exists(request.CarLoaderID, entry, key)) return new Refused { Refusal = CarLockRefusal.Invalid, Key = key };
+			var stale = StaleBonusSlot(request, x);
+			if (stale != null) return new Refused { Refusal = CarLockRefusal.Stale, Key = stale };
 			var s = Derive(entry, x, request.S);
 			var knownItems = KnownItems(request, clientId);
 
@@ -181,9 +186,30 @@ namespace CMS21_Together_Server.Data.Cars
 			return null;
 		}
 
-		private static bool Exists(CarLoaderEntry entry, string key)
+		private static string StaleBonusSlot(CarLockRequestPacket request, List<string> x)
+		{
+			if (request.Kind != CarLockKind.BonusPart || request.Expect == null) return null;
+			foreach (string key in x.Where(LockKeys.IsBonus))
+			{
+				string stored = CarDetailsStore.StoredEntry(request.CarLoaderID, CarDetailEntries.Bonus(LockKeys.BonusSlot(key)));
+				if (stored != null && stored != request.Expect)
+				{
+					Count("staleBonusSlot");
+					Logger.Info($"[Locks] Request {request.RequestId} on loader {request.CarLoaderID} {key}: the client expects {request.Expect}, the server has {stored}.");
+					return key;
+				}
+			}
+			return null;
+		}
+
+		private static bool Exists(int loader, CarLoaderEntry entry, string key)
 		{
 			if (!LockKeys.IsWellFormed(key)) return false;
+			if (LockKeys.IsBonus(key))
+			{
+				int slots = CarDetailsStore.BonusSlotCount(loader);
+				return slots < 0 || LockKeys.BonusSlot(key) < slots;
+			}
 			if (LockKeys.IsBody(key)) return entry.BodyParts.ContainsKey(int.Parse(key.Substring(2)));
 			if (LockKeys.IsSub(key)) return entry.SubParts.ContainsKey(key.Substring(2));
 			return true;

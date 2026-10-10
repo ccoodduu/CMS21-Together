@@ -319,6 +319,7 @@ public static class CarDetailsSync
 		if (details.Plates != null) sections |= CarDetailSection.Plates;
 		if (details.Info != null) sections |= CarDetailSection.Info;
 		if (details.Dyno != null) sections |= CarDetailSection.Dyno;
+		if (details.BonusSlots != null) sections |= CarDetailSection.BonusParts;
 		return sections;
 	}
 
@@ -335,6 +336,7 @@ public static class CarDetailsSync
 			CarDetailSection.Plates => details.Plates,
 			CarDetailSection.Info => details.Info,
 			CarDetailSection.Dyno => details.Dyno,
+			CarDetailSection.BonusParts => details.BonusSlots,
 			_ => null,
 		};
 		return CarDetailEntries.Signature(value);

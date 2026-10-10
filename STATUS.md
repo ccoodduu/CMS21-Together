@@ -2,6 +2,19 @@
 
 Newest first. One entry per work session.
 
+## 2026-10-10 (02:30–03:15) — row 25 part 2, bonus parts (`feat/bonus-parts`, lane 1)
+
+- Bonus slots in the car details as `x:<slot>` entries (`ModBonusSlot`, cars section v4); receivers apply them with
+  `BonusPart.Change`/`Paint`/`TakeOn` and `TakeOff` + `TryDeleteBonusPart`. Lock kind `BonusPart` on `x:<slot>`: the
+  fit is gated in `SelectPartToMount`, the remove in `TakeOffBonusPart`; the request carries the slot the client sees
+  and the server refuses a different stored slot as `Stale` and sends it ("This slot just changed."). A fit onto a
+  filled slot is refused (the game would remove the part and delete the selected item). Paint shop marks bonus parts.
+  Guard: both bonus modes and pies allowed.
+- Spike 1.3 (`20261009-225008_L1`, `20261009-225816_L1` `bonus-spike`): the fit's item removal is already synced
+  (`Inventory.Delete`); `Paint` works with an array-built `CustomColor`.
+- Proof `car-bonus` fails on the old code (`20261010-024945_L1`) and passes (`20261010-025058_regression.json`, with
+  smoke and touched scenarios; `guard` rerun `20261010-031053_L1`).
+
 ## 2026-10-10 (01:40–02:50) — playtest 3 wheel looks fixed (`fix/wheel-visuals`, lane 1)
 
 - **Tires missing, rims hollow, magenta wheels, a wheel left in the air:** one cause. The car-details wheel apply

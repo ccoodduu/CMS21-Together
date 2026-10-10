@@ -146,6 +146,7 @@ public static class LockHooks
 		string type = game.IOMouseOverType;
 		var carLoader = game.IOMouseOverCarLoader;
 		var io = game.IOMouseOverIO;
+		if (io != null && io.specialType == IOSpecialType.BonusPart) return LockBonusHooks.FitAction(game, item, io);
 		if (string.IsNullOrEmpty(type) || carLoader == null || !TryResolveBody(carLoader, type.Substring(1), out int loader, out int index, out var part)) return null;
 		var set = LockSets.ForBody(loader, index);
 		if (set == null) return null;
@@ -302,6 +303,7 @@ public static class LockHooks
 	private static bool BeforeSelectPartToMount(GameScript __instance, BaseItem selectToMount)
 	{
 		if (!LockGate.Active || selectToMount == null) return true;
+		if (Mode == gameMode.BonusAssemble && !LockGate.IsBypassed(selectToMount) && LockBonusHooks.RefuseFilledSlot(__instance)) return false;
 		var group = selectToMount.TryCast<GroupItem>();
 		if (group != null && !BodyModes.Contains(Mode))
 		{

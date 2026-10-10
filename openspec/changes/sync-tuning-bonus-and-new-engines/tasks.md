@@ -23,11 +23,15 @@ unblocks `Window Tune`).
       parts `t_v8_gearbox_stary` and `t_v8_gaznik_1` (the car has a carburettor, no ECU); D6 holds (the taken-off
       items carry `GearboxData` and `tuningData`). Addition: `DoMount` copies an item's tuning into the part without
       `PartModule.Tune`, so a part change that mounts a mechanical part also marks `Tuning` dirty.
-- [ ] 1.3 Bonus parts: buy a bonus part (`give-item`), fit it through `SelectPartToMount` and remove it through `ClickIO`
+- [x] 1.3 Bonus parts: buy a bonus part (`give-item`), fit it through `SelectPartToMount` and remove it through `ClickIO`
       with the harness; log `TakeOffBonusPart`, inventory add/remove and sounds. Confirm the remove path has no side
       effect before `TakeOffBonusPart` (D4) and that slot `UID`s match on two clients for three cars with bonus slots.
       Apply a fitted, painted slot on B through D3's setters and read it back (the `Paint` struct argument); use the
-      fallback if it fails.
+      fallback if it fails. **Done** (`20261009-225008_L1_bonus-spike`, `20261009-225816_L1_bonus-spike`; spike doc
+      section 2): the remove has only a sound before `TakeOffBonusPart`; the fit removes the item through
+      `Inventory.Delete` (synced), so D4's removal postfix is not needed; `Paint` works with a `CustomColor` built from
+      its array (no fallback); slot UIDs match for the two cars that loaded (Bolt Atlanta, Six Once Bulion). A fit onto
+      a filled slot turns into the game's remove and deletes the selected item, so it is refused.
 
 ## 2. Tuning
 
@@ -52,21 +56,26 @@ unblocks `Window Tune`).
 
 ## 3. Bonus parts
 
-- [ ] 3.1 Core: `ModBonusSlot`, `BonusSlots`, `x:` entries, merge, caps; cars section version bump.
-- [ ] 3.2 Client read/apply (D3, `TryDeleteBonusPart` on remove, `bonusSlotMismatch` counter); `LockHooks` bonus branch,
+- [x] 3.1 Core: `ModBonusSlot`, `BonusSlots`, `x:` entries, merge, caps; cars section version bump.
+- [x] 3.2 Client read/apply (D3, `TryDeleteBonusPart` on remove, `bonusSlotMismatch` counter); `LockHooks` bonus branch,
       `SelectPartToMount`/`BodyMount` postfixes, `TakeOffBonusPart` remove gate and postfix (D4); `CarLockKind.BonusPart`,
       `LockKeys.Bonus`, `IsWellFormed` and `CarLocks.Exists` for `x:`; `CarLockRequestPacket.Expect` and the server's
       `Stale` refusal with the stored entry.
-- [ ] 3.3 Guard: modes `BonusAssemble`, `BonusDisassemble` and pies `mode_bonus_assemble`, `mode_bonus_disassemble`
+- [x] 3.3 Guard: modes `BonusAssemble`, `BonusDisassemble` and pies `mode_bonus_assemble`, `mode_bonus_disassemble`
       allowed (owner row 25). The `guard` scenario's blocked example (`BonusDisassemble`, STATUS 2026-10-06) moves to a
       feature that stays blocked (`Benchmark`).
-- [ ] 3.4 Harness `bonus-probe`, `bonus-fit`, `bonus-remove`. Scenario `car-bonus` (two clients): A fits a bonus part
+- [x] 3.4 Harness `bonus-probe`, `bonus-fit`, `bonus-remove`. Scenario `car-bonus` (two clients): A fits a bonus part
       from the inventory → B sees it in the slot, the item is gone from both inventories once; A paints the car in the
       paint shop → B's slot paint equal; A removes it → empty slot on B, the item back once in the shared inventory; A
       and B click the same slot at once (`net-hold`) → one fit, the other refused with the message and its item still in
       its inventory; A fits, then B fits the same slot with `net-hold` on the car details only → B refused (`Stale`), B's
       item still in its inventory, one part on the car, B's slot shows A's part; late join and server restart keep the
-      fitted part. Fails on the old code at the first step.
+      fitted part. Fails on the old code at the first step. **Done** on a Six Once Bulion (trunk slot, spoilers;
+      the Bolt Atlanta's roof items cannot be painted), the held slot taken with `lock-take`: fails on the old code
+      `20261010-024945_L1_car-bonus` (B's slot empty after 5 s), passes in `20261010-025058_regression.json` with the
+      smoke set, `car-details`, `car-tuning`, `car-place-same`, `lock-mount-target`, `locks-basic/car/race` and
+      `tools-car-effects`; `guard` (its mode example `BonusDisassemble` → `Benchmark`, which is log-only, so the check
+      became log-only) passes `20261010-031053_L1`; `--check-locks` (bonus cases) and `--check-merges` pass.
 
 ## 4. New engine on the stand
 
