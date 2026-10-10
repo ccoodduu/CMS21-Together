@@ -34,15 +34,16 @@ public static class RemoteBuildSpike
     {
         var parts = (args ?? "").Trim().Split(new[] { ' ' }, StringSplitOptions.RemoveEmptyEntries);
         string verb = parts.Length > 0 ? parts[0] : "report";
-        PatchOnce();
         switch (verb)
         {
             case "wait":
+                PatchOnce();
                 waitMode = parts.Length > 1 ? parts[1] : "game";
                 if (waitMode == "settle") settleSeconds = float.Parse(parts[2], System.Globalization.CultureInfo.InvariantCulture);
                 else if (waitMode != "game" && waitMode != "none") throw new ArgumentException("usage: remote-build wait game|none|settle <s>");
                 return new { waitMode, settleSeconds };
             case "trace":
+                PatchOnce();
                 string mode = parts.Length > 1 ? parts[1] : "report";
                 if (mode == "on") { events.Clear(); tracing = true; }
                 else if (mode == "off") tracing = false;
