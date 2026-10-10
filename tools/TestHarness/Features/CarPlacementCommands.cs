@@ -8,12 +8,18 @@ namespace TogetherTestHarness.Features;
 
 public static class CarPlacementCommands
 {
+    // car-place <loader> <CarPlace> [<CarPlace>...]: each place in turn within one frame, as a remote move does.
     [HarnessCommand("car-place")]
     private static object CarPlace(string args)
     {
-        var (carLoader, place) = LoaderAndPlace(args, "usage: car-place <loader> <CarPlace>");
-        carLoader.ResetCarLifter();
-        carLoader.ChangePosition((int)place);
+        var parts = (args ?? "").Split(new[] { ' ' }, StringSplitOptions.RemoveEmptyEntries);
+        if (parts.Length < 2) throw new ArgumentException("usage: car-place <loader> <CarPlace> [<CarPlace>...]");
+        var carLoader = CarLoaderPlaces.Get().GetCarLoaderByIndex(int.Parse(parts[0])) ?? throw new ArgumentException($"no car loader {parts[0]}");
+        foreach (var name in parts.Skip(1))
+        {
+            carLoader.ResetCarLifter();
+            carLoader.ChangePosition((int)ParsePlace(name));
+        }
         return Placement(carLoader);
     }
 
@@ -215,9 +221,10 @@ public static class CarPlacementCommands
         var parts = (args ?? "").Split(new[] { ' ' }, StringSplitOptions.RemoveEmptyEntries);
         if (parts.Length != 2) throw new ArgumentException(usage);
         var carLoader = CarLoaderPlaces.Get().GetCarLoaderByIndex(int.Parse(parts[0])) ?? throw new ArgumentException($"no car loader {parts[0]}");
-        var place = int.TryParse(parts[1], out int number) ? (CarPlace)number : (CarPlace)Enum.Parse(typeof(CarPlace), parts[1]);
-        return (carLoader, place);
+        return (carLoader, ParsePlace(parts[1]));
     }
+
+    private static CarPlace ParsePlace(string text) => int.TryParse(text, out int number) ? (CarPlace)number : (CarPlace)Enum.Parse(typeof(CarPlace), text);
 
     private static Dictionary<string, object> Lifter(int index, CarLifter lifter)
     {
@@ -237,7 +244,9 @@ public static class CarPlacementCommands
             ["index"] = index,
             ["state"] = lifter.GetState().ToString(),
             ["isMoving"] = lifter.isMoving,
+            ["applying"] = CMS21Together.Logic.Car.Placement.LifterSync.IsApplying(index),
             ["connectedLoader"] = connected == null ? -1 : places.GetCarLoaderId(connected),
+            ["blocked"] = connected != null && connected.ToolsData.OilbinIsConnected || lifter.IsPlayerInside() && lifter.GetState() == CarLifterState.Up,
             ["connectedObject"] = lifter.connectedGameObject != null,
             ["active"] = lifter.gameObject.activeInHierarchy,
             ["nearestPlace"] = nearest,

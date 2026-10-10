@@ -17,9 +17,14 @@ public static class LifterSync
 {
 	private const float CarWaitSeconds = 25f;
 	private const float StepWaitSeconds = 15f;
+	private const int MaxSteps = 3;
+	private const float StuckSeconds = 20f;
+	private const float StuckCheckSeconds = 1f;
 
 	private static readonly HashSet<int> applying = new HashSet<int>();
 	private static readonly Dictionary<int, int> remoteSteps = new Dictionary<int, int>();
+	private static readonly Dictionary<int, float> movingSince = new Dictionary<int, float>();
+	private static float nextStuckCheck;
 
 	public static bool IsApplying(int lifterIndex) => applying.Contains(lifterIndex) || remoteSteps.ContainsKey(lifterIndex);
 
@@ -33,10 +38,22 @@ public static class LifterSync
 		return -1;
 	}
 
+	private static bool InGarage(int index, CarLifter lifter)
+	{
+		if (!ClientScene.IsGarageReady || lifter == null) return false;
+		var lifters = GarageLoader.Get()?.carLifter;
+		return lifters != null && index < lifters.Length && lifters[index] == lifter;
+	}
+
 	[HarmonyPatch(typeof(CarLifter), nameof(CarLifter.Action))]
 	[HarmonyPrefix]
 	private static bool BeforeAction(CarLifter __instance, int actionType, out (int State, bool Moving) __state)
 	{
+		if (__instance == null)
+		{
+			__state = default;
+			return false;
+		}
 		__state = ((int)__instance.GetState(), __instance.isMoving);
 		int index = IndexOf(__instance);
 		var connected = __instance.GetConnectedCarLoader();
@@ -50,7 +67,7 @@ public static class LifterSync
 	[HarmonyPostfix]
 	private static void AfterAction(CarLifter __instance, int actionType, (int State, bool Moving) __state, bool __runOriginal)
 	{
-		if (!__runOriginal || !Active || __state.Moving || !__instance.isMoving) return;
+		if (!__runOriginal || __instance == null || !Active || __state.Moving || !__instance.isMoving) return;
 		int index = IndexOf(__instance);
 		if (index < 0 || applying.Contains(index)) return;
 		int to = __state.State + (actionType == 0 ? 1 : -1);
@@ -66,49 +83,63 @@ public static class LifterSync
 
 	private static IEnumerator Apply(LifterStatePacket packet, int snapshotId)
 	{
+		int index = packet.LifterIndex;
 		var lifters = GarageLoader.Get()?.carLifter;
-		if (lifters == null || packet.LifterIndex < 0 || packet.LifterIndex >= lifters.Length)
+		if (lifters == null || index < 0 || index >= lifters.Length)
 		{
-			Log.Error($"[Placement] Lift {packet.LifterIndex} not found.");
+			Log.Error($"[Placement] Lift {index} not found.");
 			SyncTracker.Applied(SyncOrder.CarPlacementKey, snapshotId);
 			yield break;
 		}
-		var lifter = lifters[packet.LifterIndex];
-		remoteSteps[packet.LifterIndex] = (remoteSteps.TryGetValue(packet.LifterIndex, out int running) ? running : 0) + 1;
+		var lifter = lifters[index];
+		remoteSteps[index] = (remoteSteps.TryGetValue(index, out int running) ? running : 0) + 1;
 		try
 		{
 			float deadline = Time.realtimeSinceStartup + CarWaitSeconds;
-			while ((lifter.isMoving || lifter.GetConnectedCarLoader() == null && packet.State != 0) && Time.realtimeSinceStartup < deadline)
+			while (InGarage(index, lifter) && (lifter.isMoving || lifter.GetConnectedCarLoader() == null && packet.State != 0) && Time.realtimeSinceStartup < deadline)
 				yield return new WaitForSeconds(0.25f);
 
-			if (lifter.GetConnectedCarLoader() == null && packet.State != 0)
+			if (!InGarage(index, lifter))
 			{
-				Log.Error($"[Placement] Lift {packet.LifterIndex}: no car on it after {CarWaitSeconds} s; leaving it on the floor.");
+				Log.Info($"[Placement] Lift {index}: step to {packet.State} dropped, the garage was left.");
+			}
+			else if (lifter.GetConnectedCarLoader() == null && packet.State != 0)
+			{
+				Log.Error($"[Placement] Lift {index}: no car on it after {CarWaitSeconds} s; leaving it on the floor.");
 			}
 			else if (packet.Instant)
 			{
-				Set(packet.LifterIndex, lifter, packet.State);
+				Set(index, lifter, packet.State);
 			}
 			else
 			{
-				while ((int)lifter.GetState() != packet.State)
+				for (int step = 0; step < MaxSteps && InGarage(index, lifter) && (int)lifter.GetState() != packet.State; step++)
 				{
-					applying.Add(packet.LifterIndex);
+					applying.Add(index);
 					try { lifter.Action(packet.State > (int)lifter.GetState() ? 0 : 1); }
-					finally { applying.Remove(packet.LifterIndex); }
+					finally { applying.Remove(index); }
 					if (!lifter.isMoving)
 					{
-						Set(packet.LifterIndex, lifter, packet.State);
+						Set(index, lifter, packet.State);
 						break;
 					}
 					deadline = Time.realtimeSinceStartup + StepWaitSeconds;
-					while (lifter.isMoving && Time.realtimeSinceStartup < deadline) yield return new WaitForSeconds(0.1f);
+					while (InGarage(index, lifter) && lifter.isMoving && Time.realtimeSinceStartup < deadline) yield return new WaitForSeconds(0.1f);
+				}
+				if (!InGarage(index, lifter))
+				{
+					Log.Info($"[Placement] Lift {index}: step to {packet.State} dropped, the garage was left.");
+				}
+				else if ((int)lifter.GetState() != packet.State)
+				{
+					if (lifter.isMoving) Log.Warn($"[Placement] Lift {index}: still {(int)lifter.GetState()} and moving after {MaxSteps} steps toward {packet.State}.");
+					else Set(index, lifter, packet.State);
 				}
 			}
 		}
 		finally
 		{
-			if (--remoteSteps[packet.LifterIndex] <= 0) remoteSteps.Remove(packet.LifterIndex);
+			if (--remoteSteps[index] <= 0) remoteSteps.Remove(index);
 		}
 		SyncTracker.Applied(SyncOrder.CarPlacementKey, snapshotId);
 	}
@@ -120,5 +151,47 @@ public static class LifterSync
 		try { lifter.InstantSet(state, true); }
 		finally { applying.Remove(index); }
 		Log.Info($"[Placement] Lift {index} set to {state}.");
+	}
+
+	public static void Update()
+	{
+		if (Time.realtimeSinceStartup < nextStuckCheck) return;
+		nextStuckCheck = Time.realtimeSinceStartup + StuckCheckSeconds;
+		var lifters = ClientScene.IsGarageReady ? GarageLoader.Get()?.carLifter : null;
+		if (lifters == null)
+		{
+			movingSince.Clear();
+			return;
+		}
+		for (int i = 0; i < lifters.Length; i++)
+		{
+			var lifter = lifters[i];
+			if (lifter == null || !lifter.isMoving)
+			{
+				movingSince.Remove(i);
+				continue;
+			}
+			if (!movingSince.TryGetValue(i, out float since))
+			{
+				movingSince[i] = Time.time;
+				continue;
+			}
+			if (Time.time - since < StuckSeconds) continue;
+			movingSince.Remove(i);
+			Unstick(i, lifter);
+		}
+	}
+
+	// The game's lift coroutine and tween callbacks throw when the car is disconnected mid-move, and isMoving stays
+	// set; the lift then ignores every Action and InstantSet.
+	private static void Unstick(int index, CarLifter lifter)
+	{
+		bool hasCar = lifter.GetConnectedCarLoader() != null;
+		int state = hasCar ? (int)lifter.GetState() : 0;
+		Log.Warn($"[Placement] Lift {index}: still moving after {StuckSeconds:0} s ({(hasCar ? "car on it" : "no car")}); setting it to {state}.");
+		lifter.isMoving = false;
+		applying.Add(index);
+		try { lifter.InstantSet(state, true); }
+		finally { applying.Remove(index); }
 	}
 }

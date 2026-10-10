@@ -19,10 +19,10 @@ public static class LockCarHooks
 		return new GatedAction
 		{
 			Set = set, Target = lifter, TargetKey = LockKeys.Car,
-			Context = () => !lifter.isMoving && (int)lifter.GetState() == state && lifter.GetConnectedCarLoader() == carLoader && CarPartsSync.SpawnSeq(loader) == seq,
+			Context = () => lifter != null && !lifter.isMoving && (int)lifter.GetState() == state && lifter.GetConnectedCarLoader() == carLoader && CarPartsSync.SpawnSeq(loader) == seq,
 			Run = () => lifter.Action(actionType),
 			Started = () => lifter.isMoving,
-			OnStarted = lockId => LockLifecycle.Track(lockId, set, LockKeys.Car, finished: () => !lifter.isMoving),
+			OnStarted = lockId => LockLifecycle.Track(lockId, set, LockKeys.Car, finished: () => lifter == null || !lifter.isMoving),
 		};
 	}
 

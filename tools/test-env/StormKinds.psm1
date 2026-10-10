@@ -255,7 +255,7 @@ function Invoke-K5($Ctx, $Record, $Rng) {
     if ((Send-HarnessCommand -Instance $helper -Verb dump).tools.WheelBalancer.uid) {
         try { Send-HarnessCommand -Instance $helper -Verb tool-take -Arguments "WheelBalancer" | Out-Null } catch { }
     }
-    Send-HarnessCommand -Instance $victim -Verb part-claim -Arguments "$loader $key" | Out-Null
+    Send-HarnessCommand -Instance $victim -Verb lock-take -Arguments "$loader unmount $key bare" | Out-Null
     $wheel = (Send-HarnessCommand -Instance $victim -Verb give-group -Arguments "wheel").UID
     Send-HarnessCommand -Instance $victim -Verb tool-put -Arguments "WheelBalancer $wheel" | Out-Null
     Send-HarnessCommand -Instance $victim -Verb tool-balance | Out-Null
@@ -279,11 +279,11 @@ function Invoke-K5($Ctx, $Record, $Rng) {
     } catch { }
     Add-StormCheck $Record ([bool]$released) "the claim and the balancer lock of the killed $victim are released within 15 s"
     $helperId = [int](Get-HarnessStatus $helper).playerId
-    Send-HarnessCommand -Instance $helper -Verb part-claim -Arguments "$loader $key" | Out-Null
+    Send-HarnessCommand -Instance $helper -Verb lock-take -Arguments "$loader unmount $key bare" | Out-Null
     $claimed = $null
     try { $claimed = Wait-HarnessDump -Instance $helper -TimeoutSec 10 -What "helper's claim" -Condition ({ param($d) $c = @($d.cars | Where-Object { $_.index -eq $loader })[0]; @($c.claims | Where-Object { $_.key -eq $key -and $_.owner -eq $helperId }).Count -eq 1 }.GetNewClosure()) } catch { }
     Add-StormCheck $Record ([bool]$claimed) "$helper can claim $key afterwards"
-    Send-HarnessCommand -Instance $helper -Verb part-claim -Arguments "$loader $key release" | Out-Null
+    Send-HarnessCommand -Instance $helper -Verb lock-take -Arguments "$loader unmount $key release" | Out-Null
     $take = Send-HarnessCommand -Instance $helper -Verb tool-take -Arguments "WheelBalancer"
     Add-StormCheck $Record (-not $take.refused) "$helper can take the wheel off the balancer"
     Save-KilledLogs $Ctx $killed

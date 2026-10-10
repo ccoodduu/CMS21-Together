@@ -116,10 +116,13 @@ public static class CarPlacementSync
 	public static bool IsMovingLocally(int loader) => LocalMoveRunning && localMoves.Values.Any(m => m.Loader == loader);
 
 	// ChangeCarPos raises the lift to Middle when the car it puts on a lift misses a wheel or has wheels of different
-	// sizes on one axle (native NotificationCenter.<ChangeCarPos>d__20 states 4 and 6).
+	// sizes on one axle (native NotificationCenter.<ChangeCarPos>d__20 states 4 and 6). A lift that is not built
+	// (inactive) never moves.
 	public static int LiftStateAfterArrival(CarLoader carLoader, int place)
 	{
 		if (place != (int)CarPlace.CarLifter1 && place != (int)CarPlace.CarLifter2) return 0;
+		var lifter = CarLoaderPlaces.Get()?.GetPlaceTransform((CarPlace)place)?.GetComponent<CarLifter>();
+		if (lifter == null || !lifter.gameObject.activeInHierarchy) return 0;
 		bool unsteady = carLoader.CheckIfHaveWheels() == CheckCarCanDriveState.MissingWheels
 			|| !carLoader.FrontWheelsHaveThisSameSize() || !carLoader.RearWheelsHaveThisSameSize();
 		return unsteady ? (int)CarLifterState.Middle : 0;
@@ -129,7 +132,7 @@ public static class CarPlacementSync
 	{
 		var carLoader = CarLoaderPlaces.Get()?.GetCarLoaderByIndex(packet.CarLoaderID);
 		if (carLoader == null || string.IsNullOrEmpty(carLoader.carToLoad)) return;
-		if (!carLoader.IsCarLoaded())
+		if (!carLoader.IsCarLoaded() || CarLoading.IsLoading(packet.CarLoaderID))
 		{
 			pendingPlaces[packet.CarLoaderID] = packet.Place;
 			Log.Info($"[Placement] Loader {packet.CarLoaderID}: place {packet.Place} kept until the car has loaded.");
