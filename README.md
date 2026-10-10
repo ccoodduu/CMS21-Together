@@ -23,7 +23,8 @@ Everyone else joins it from the main menu or through Steam. Your own single-play
   is mounting, and locked move options in the pie of a car someone works on. Lifts, moving cars, the garage
   parking, the engine crane.
 - **Car details.** Fluids, wheels, tires and alignment, plates, paint, livery, window tint, mileage, dirt and lights.
-- **Tuning.** Gearbox, ECU and carburettor tuning at the dyno, one tuner per car.
+- **Tuning.** Gearbox, ECU and carburettor tuning at the dyno, one tuner per car; bonus (visual tuning) parts such as
+  spoilers and roof signs, with their paint.
 - **Jobs.** Orders and story missions come in for the whole group. Accept a job, work on the customer car together,
   hand it back: the payout and XP arrive once.
 - **The workshop.** Tire changer, wheel balancer, spring clamp, engine stand, brake lathe, battery charger, repair
@@ -51,7 +52,7 @@ While you are connected, the game blocks these with "... is not supported in mul
 cannot drift apart:
 
 - the race track, the other tracks and the photo location;
-- bonus (visual tuning) parts and building a new engine on the engine stand;
+- building a new engine on the engine stand;
 - the separate Parking scene (the garage parking works); the showroom, the main menu's car viewer, is single-player
   only;
 - the tutorial, and saving or loading from the game's menus (the server saves the session).
@@ -62,7 +63,7 @@ Also not yet:
 - A texture pack for the garage is shared by its id only: a player who does not have it installed sees the default
   garage textures.
 
-Planned: the race track, bonus parts and building new engines. The DLC tracks, the photo
+Planned: the race track and building new engines. The DLC tracks, the photo
 location, the tutorial and saving or loading stay blocked.
 
 ## Get started
@@ -97,6 +98,11 @@ the game, click **Multiplayer** in the main menu.
   open the others cannot take off the tuned parts, run the dyno with that car, or lift, move, park or delete it. The
   window closes by itself after five minutes without an applied change. A tuned part that is taken off keeps its
   tuning in the shared inventory and on the car it is fitted to next.
+- **Bonus parts:** spoilers, hood scoops, roof signs and the other bonus parts you fit or take off in the bonus modes
+  look the same for everyone, painted as you painted them (the paint shop paints them with the car). The part leaves
+  the shared inventory once when fitted and comes back once when taken off. One player works on a bonus slot at a
+  time ("<name> is fitting a bonus part here."); if the slot changed a moment ago and your game has not shown it yet,
+  your fit is refused ("This slot just changed."), you keep your part and then see the new one.
 - **Job achievements:** when a job is finished, the Steam stats and achievements for it (finished orders, the XP and
   money bonus, the last story mission) count for every connected player who worked on it: who took the order, who
   changed, examined or locked a part of its car, and who finished it. The host can give them to everyone in the garage

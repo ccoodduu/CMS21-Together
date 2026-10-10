@@ -38,6 +38,17 @@ ROADMAP rows 25–30 (user wishes of 2026-10-08). Static decompile (setup in `na
 - Runtime: Bolt Atlanta has one slot, `#BonusDummy`, unmounted, unpainted.
 - Fit and remove paths: `car-details.md` section 9 (`TakeOffBonusPart`, real `Inventory.Add` on remove, inlined
   `RemoveAt` on fit).
+- Row 25 spike 1.3 (`20261009-225008_L1_bonus-spike`, `20261009-225816_L1_bonus-spike`, headless): Six Once Bulion has
+  two slots (`bonusPart0` hood, `bonusPart1` trunk), the same on both clients (the third car did not load in the
+  harness). 17 bonus items (`BonusPart.GetItems`); hood scoop and spoilers can be painted, the roof items cannot
+  (`PartProperty.CanPaint`, which `BonusPart.Paint` checks). The fit through `SelectPartToMount` (mode
+  `BonusAssemble`, the slot's `InteractiveObject` under the mouse) removes the item through `Inventory.Delete`, so the
+  removal is already synced (the inlined `RemoveAt` in the decompile is not the path that runs); the remove through
+  `ClickIO(1)` (mode `BonusDisassemble`) plays a sound, then `TakeOffBonusPart` adds a new item through
+  `Inventory.Add`. On a receiver `Change` + `Paint` + `TakeOn` and `TakeOff` + `TryDeleteBonusPart` work;
+  `BonusPart.Paint` takes a `CustomColor` built from its float array (its 4-float constructor throws
+  `ObjectCollectedException`). A fit onto a slot that is already filled turns into the game's remove and still deletes
+  the selected item, so the mod refuses it ("This slot just changed.").
 
 ## 3. New engine on the stand
 
