@@ -249,6 +249,22 @@ public static class CarCommands
     private static object Resync(string args) =>
         CMS21Together.Session.ResyncController.Request((args ?? "").Trim() == "force") ?? "reloading";
 
+    [HarnessCommand("part-groups")]
+    private static object PartGroups(string args)
+    {
+        var registry = PartRegistry.Build(Loader((args ?? "").Trim()));
+        return registry.SubKeys.OrderBy(k => k, StringComparer.Ordinal)
+            .Where(k => registry.Sub(k).GetUnmountWith().Count > 0)
+            .Select(k => new Dictionary<string, object>
+            {
+                ["key"] = k,
+                ["members"] = registry.Sub(k).GetUnmountWith().ToArray()
+                    .Select(m => registry.TryGetSubPath(m, out var path) ? CMS21_Together_Core.Network.Packets.PartKeys.Sub(path) : null)
+                    .Where(m => m != null).ToList(),
+            })
+            .ToList();
+    }
+
     [HarnessCommand("part-fast-mount")]
     private static object PartFastMount(string args)
     {
@@ -288,7 +304,7 @@ public static class CarCommands
         var candidates = neighbours.Keys
             .Where(k => !registry.Sub(k).IsUnmounted && !registry.Sub(k).IsBlocked() && registry.Sub(k).GetUnmountWith().Count == 0)
             .OrderByDescending(k => neighbours[k].Count).ToList();
-        return new Dictionary<string, object> { ["actual"] = actual, ["expected"] = expected, ["blocks"] = neighbours, ["candidates"] = candidates };
+        return new Dictionary<string, object> { ["actual"] = actual, ["expected"] = expected, ["blocks"] = neighbours, ["candidates"] = candidates, ["drifts"] = PartBlockCheck.Drifts };
     }
 
     [HarnessCommand("part-special")]

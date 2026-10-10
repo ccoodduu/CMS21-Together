@@ -158,6 +158,13 @@ function Get-WheelKeys([string]$Actor, [int]$Loader) {
     @(try { Send-HarnessCommand -Instance $Actor -Verb wheel-parts -Arguments "$Loader" | ForEach-Object { $_.key } } catch { })
 }
 
+# Parts with unmountWith members and the members leave it too: the soak's unmount takes the members along and its
+# item-less mount puts back only the part, and without an item the game's ShowMounted stops before it blocks the parts
+# behind it on the actor (soak 20261010-020148_L2), so the clients' blocked-counter check would report it.
+function Get-GroupKeys([string]$Actor, [int]$Loader) {
+    @(try { Send-HarnessCommand -Instance $Actor -Verb part-groups -Arguments "$Loader" | ForEach-Object { $_.key; $_.members } } catch { })
+}
+
 function Get-ReadyCars([string]$Actor) {
     @(Get-Placement $Actor | Where-Object { $seated.Values -notcontains $_.loader } | Where-Object { Test-Ready $Actor $_.loader })
 }
@@ -175,7 +182,7 @@ function Invoke-Parts([string]$Actor) {
         $cache = $partCache[$car.loader]
         if (-not $cache -or $cache.Car -ne $car.carToLoad) {
             $dumpCar = @((Send-HarnessCommand -Instance $Actor -Verb dump).cars | Where-Object { $_.index -eq $car.loader })[0]
-            $wheelKeys = @(Get-WheelKeys $Actor $car.loader)
+            $wheelKeys = @(Get-WheelKeys $Actor $car.loader) + @(Get-GroupKeys $Actor $car.loader)
             $cache = @{ Car = $car.carToLoad; Keys = @($dumpCar.subParts | Where-Object { -not $_.unmounted -and -not $_.blocked -and $wheelKeys -notcontains $_.key } | ForEach-Object { $_.key }) }
             $partCache[$car.loader] = $cache
         }

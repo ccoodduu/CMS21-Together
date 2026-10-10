@@ -38,6 +38,7 @@ public static class ClientData
 		Logic.ShopList.ShopListSync.Reset();
 		Logic.Car.Details.CarDetailsSync.Reset();
 		PartChangeTracker.Reset();
+		PartBlockCheck.Reset();
 		PartClaims.Reset();
 		Logic.Car.Locks.CarLockMirror.Reset();
 		Logic.Car.Locks.LockGate.Reset();
