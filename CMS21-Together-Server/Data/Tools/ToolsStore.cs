@@ -32,6 +32,10 @@ namespace CMS21_Together_Server.Data.Tools
 
 		private static ToolsState State => GameDataManager.CurrentState.ToolsState;
 
+		public static int CreatedEngines { get; private set; }
+
+		public static void ResetCounters() => CreatedEngines = 0;
+
 		public static void Initialize()
 		{
 			PresenceEvents.Left += ReleaseOwner;
@@ -49,20 +53,33 @@ namespace CMS21_Together_Server.Data.Tools
 			var incoming = packet.State;
 			if (incoming == null || !ModTools.IsMachine(incoming.Tool)) return;
 			var current = Slot(incoming.Tool);
-			string reason = Check(clientId, current, incoming, packet.ExpectedUid);
+			string reason = TryStore(clientId, packet);
 			if (reason != null)
 			{
 				var outcome = IsPut(current, incoming) ? PutRefused(clientId, incoming) : SlotItemOutcome.Unchanged;
 				Server.SendToClient(new ToolSlotRejectedPacket { Current = current, Reason = reason, ClientSeq = packet.ClientSeq, Item = outcome }, clientId);
-				Logger.Info($"[Tools] {incoming.Tool}: update from client {clientId} rejected ({reason}; item {outcome}).");
+				Logger.Info($"[Tools] {incoming.Tool}: update from client {clientId} rejected ({reason}{(packet.Created ? ", a built engine" : "")}; item {outcome}).");
 				return;
 			}
+			Server.SendToClients(packet, clientId);
+		}
 
+		public static string TryStore(int clientId, ToolSlotUpdatePacket packet)
+		{
+			var incoming = packet.State;
+			var current = Slot(incoming.Tool);
+			string reason = Check(clientId, current, incoming, packet.ExpectedUid);
+			if (reason != null) return reason;
 			var stored = Normalize(incoming, current);
 			State.Slots[stored.Tool] = stored;
 			packet.State = stored;
-			Server.SendToClients(packet, clientId);
+			if (packet.Created && IsPut(current, stored))
+			{
+				CreatedEngines++;
+				Logger.Info($"[Tools] {stored.Tool}: client {clientId} built a new engine {stored.Group?.ID} ({stored.Uid}).");
+			}
 			Logger.Info($"[Tools] {stored.Tool}: {Describe(stored)} from client {clientId} (was {current.Uid}).");
+			return null;
 		}
 
 		private static string Check(int clientId, ToolSlotState current, ToolSlotState incoming, long expectedUid)
@@ -263,7 +280,7 @@ namespace CMS21_Together_Server.Data.Tools
 
 		public static IEnumerable<string> Describe()
 		{
-			yield return $"items: unknownSlotItem {InventoryChanges.Counter("unknownSlotItem")}, removeMissing {InventoryChanges.Counter("removeMissing")}";
+			yield return $"items: unknownSlotItem {InventoryChanges.Counter("unknownSlotItem")}, removeMissing {InventoryChanges.Counter("removeMissing")}; createdEngines {CreatedEngines}";
 			foreach (var tool in Enum.GetValues(typeof(ModToolId)).Cast<ModToolId>().Where(ModTools.IsMachine))
 			{
 				var slot = Slot(tool);
