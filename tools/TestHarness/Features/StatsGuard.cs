@@ -6,7 +6,8 @@ using MelonLoader;
 namespace TogetherTestHarness.Features;
 
 // Test games run on the user's Steam account; their junkyard trips and tire balancing unlocked real achievements.
-// Steamworks.SteamUserStats lives in the game's com.rlabrecque.steamworks.net, which the harness does not reference.
+// Steamworks.SteamUserStats lives in the game's com.rlabrecque.steamworks.net, which the harness does not reference;
+// the mod's Facepunch.Steamworks has a class of the same full name.
 public static class StatsGuard
 {
     private static readonly string[] Blocked = { "SetAchievement", "SetStat", "StoreStats", "IndicateAchievementProgress", "UpdateAvgRateStat" };
@@ -16,8 +17,9 @@ public static class StatsGuard
 
     public static void Install(HarmonyLib.Harmony harmony)
     {
-        try { System.Reflection.Assembly.Load("com.rlabrecque.steamworks.net"); } catch (Exception) { }
-        var type = AccessTools.TypeByName("Steamworks.SteamUserStats");
+        System.Reflection.Assembly steamworks = null;
+        try { steamworks = System.Reflection.Assembly.Load("com.rlabrecque.steamworks.net"); } catch (Exception) { }
+        var type = steamworks?.GetType("Steamworks.SteamUserStats");
         if (type == null)
         {
             MelonLogger.Warning("[Harness] Steamworks.SteamUserStats not found; achievements are not blocked.");
@@ -37,7 +39,7 @@ public static class StatsGuard
                 MelonLogger.Warning($"[Harness] Could not block SteamUserStats.{method.Name}: {e.Message}");
             }
         }
-        MelonLogger.Msg($"[Harness] Steam stats and achievements blocked ({patched} methods).");
+        MelonLogger.Msg($"[Harness] Steam stats and achievements blocked ({patched} methods in {type.Assembly.GetName().Name}: {string.Join(", ", blockedNames)}; complete {Active}).");
     }
 
     private static bool Skip(ref bool __result)
