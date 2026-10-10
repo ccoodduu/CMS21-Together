@@ -2,6 +2,19 @@
 
 Newest first. One entry per work session.
 
+## 2026-10-10 (14:40–15:10) — the away label sits over the car (`fix/away-label-car-root`, lane 2)
+
+- `fix/away-label-car-root` (lane 2, not merged). `AwayLabels` anchored "<name> has this car on …" at the
+  `CarLoader` object (loader 0: the origin, CarLifter1), so for a car on any other place the label floated over that
+  spot. It now uses `VisualScope.CarRoot` (new `AwayLabels.Anchor`, harness verb `away-label`).
+- Proof `away-label` (car at Entrance1, A on the test track): fails on the old code (`20261010-144321_L2`: anchor 13.7 m
+  from the car), passes with the fix (in the regression below, `20261010-144518_L2`).
+- Regression (lane 2, headless): smoke, `away-label`, `test-drive`, `test-drive-latejoin`, `test-drive-trace`,
+  `diagnostics`, `drive-track` and `server-saves`, 12/12 passed (`20261010-144503_regression.json`).
+- Other `carLoader.transform` uses in the client checked: `CarToolActions.CarPosition`, `FluidEffects` and
+  `PartRegistry` already use the root; `OutdoorDigest`'s `pos` field is a digest key computed the same way on every
+  client (not a drawn position), left as it is. No other use means "where the car is".
+
 ## 2026-10-10 (14:15–14:50) — remote pose and panel ghosts aim at the car (`fix/remote-pose-car-centre`, lane 2)
 
 - `fix/remote-pose-car-centre` (lane 2, not merged). `WorkPose.CarCentre` and `PartGhosts` (a body panel's pull-away
@@ -14,7 +27,7 @@ Newest first. One entry per work session.
   `visuals.players.<id>.facingCar` and `ghostsActive[].outward`.
 - Regression (lane 2, headless): smoke, `visual-parts`, `visual-activity`, `visual-latejoin`, `visual-lift`,
   `visual-fluids`, `visual-car-centre` and `server-saves`, 12/12 passed (`20261010-142721_regression.json`).
-- Not fixed (same pattern, other feature): `AwayLabels.Draw` puts the "<name> has this car on …" label over
+- Fixed later on `fix/away-label-car-root` (entry above): `AwayLabels.Draw` puts the "<name> has this car on …" label over
   `carLoader.transform.position`, so for a car that is not on its loader object's place the label should float over
   that spot instead of the car (read in the code, not checked in a run).
 
