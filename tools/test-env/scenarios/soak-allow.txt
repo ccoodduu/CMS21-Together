@@ -5,3 +5,4 @@ Exception in Harmony patch of method void CarLoader::DeleteCar\(\) | vanilla Car
 Erreur sending TCP data to \d+ : Unable to write data to the transport connection | server writes to a client a storm has just killed; expected during storms | 11 (storms)
 Error ConnectCallback : No connection could be made because the target machine actively refused it | a client reconnects while a storm has the server stopped; expected during storms K6-K8 | 11 (storms)
 Disconnected from server during loading! | a storm stops or kills the server while a client is still loading the garage; expected during storms K6-K8 | 11 (storms)
+Exception in Harmony patch of method bool GameScript\+_EndJobCoroutine_d__139::MoveNext\(\) | vanilla end coroutine throws when the job car is not finished (job-finish on an unrepaired car); JobEndContext drops the end (f6748e6, scenario job-end-refused) | 3 (sync-orders-and-jobs)
