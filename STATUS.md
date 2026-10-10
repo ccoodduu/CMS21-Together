@@ -14,6 +14,10 @@ Newest first. One entry per work session.
     note above 0.13 s; one run had a 130.4 ms frame (`20261010-121423_L2`). `drive-latejoin` checks ≤ 1.5 s.
 - Regression `20261010-121718_regression.json`: smoke, `remote-car-timing`, `drive-*`, `race-*`, `ride-along` all
   passed (`guard` FLAKY in the batch: "no PieMenuController in this scene", passed alone).
+- After merging main with row 27c (`372f798`, `RemoteCars.cs` keeps both the wait and the collider hooks):
+  `20261010-123858_regression.json` with smoke, `remote-car-timing` (shown 0.62–0.65 s after arrival, frames
+  87–93 ms), `track-collide`, `race-start`, `drive-latejoin`, `ride-along`: all passed (`guard` FLAKY again in the
+  batch, "Inventory did not open after the blocked mode change", passed alone).
 
 ## 2026-10-10 (10:30–11:30) — row 31 faster-remote-cars: spike and design (lane 2)
 
