@@ -149,6 +149,16 @@ function Brake([string]$Name) { (@((Cmd $Name dump).carDetails) | Where-Object {
 
 Cmd $a cardetails-fluid "$loader Brake 0 0.2" | Out-Null
 Start-Sleep -Seconds 2
+$capInfo = Cmd $a vfx-pour "$loader BrakeRefill cap"
+Write-Host "brake fill cap: $($capInfo | ConvertTo-Json -Compress)"
+if (-not $capInfo.unmounted) {
+    Cmd $a vfx-unscrew "$loader $($capInfo.capKey)" | Out-Null
+    try {
+        Wait-HarnessDump -Instance $a -TimeoutSec 30 -What "cap off" -Condition { param($d) $d.visuals.unscrew.state -eq "finished" } | Out-Null
+    } catch {
+        Check $false "A unscrews the brake fill cap (now: $((Cmd $a dump).visuals.unscrew | ConvertTo-Json -Compress))"
+    }
+}
 $pourStart = Cmd $a vfx-pour "$loader BrakeRefill start"
 Write-Host "A opens $($pourStart.cap) ($($pourStart.capKey)) and takes the brake fluid can"
 $deadline = (Get-Date).AddSeconds(15)

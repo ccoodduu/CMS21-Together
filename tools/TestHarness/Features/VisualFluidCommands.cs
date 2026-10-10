@@ -57,7 +57,7 @@ public static class VisualFluidCommands
     private static object Pour(string args)
     {
         var parts = (args ?? "").Split(new[] { ' ' }, StringSplitOptions.RemoveEmptyEntries);
-        if (parts.Length < 3) throw new ArgumentException("usage: vfx-pour <loader> <ToolType> start|hold <seconds>|end|status");
+        if (parts.Length < 3) throw new ArgumentException("usage: vfx-pour <loader> <ToolType> cap|start|hold <seconds>|end|status");
         int loader = int.Parse(parts[0]);
         var type = (ToolType)Enum.Parse(typeof(ToolType), parts[1], true);
         var tools = ToolsManager.Get() ?? throw new InvalidOperationException("no ToolsManager in this scene");
@@ -66,19 +66,16 @@ public static class VisualFluidCommands
         var logic = refill.fluidRefillLogic;
         switch (parts[2])
         {
+            case "cap":
+            {
+                var (registry, caps) = Caps(carLoader, refill.carFluidType);
+                var cap = caps.Count == 0 ? null : registry.Sub(caps[0]);
+                return new { capKey = caps.FirstOrDefault(), cap = cap?.id, unmounted = cap != null && cap.IsUnmounted, candidates = caps.Select(k => registry.Sub(k).id).ToList() };
+            }
             case "start":
             {
                 var fluid = refill.carFluidType;
-                var registry = CMS21Together.Logic.Car.Parts.PartRegistry.Build(carLoader);
-                var inventory = GameInventory.Instance;
-                var caps = registry.SubKeys.OrderBy(k => k, StringComparer.Ordinal).Where(k =>
-                {
-                    var script = registry.Sub(k);
-                    if (inventory?.GetItemProperty(script.id)?.SpecialGroup != SpecialGroup.OilDrainCheckFill) return false;
-                    if ((script.id ?? "").StartsWith("korek_spustowy", StringComparison.Ordinal)) return false;
-                    var container = script.GetComponentInParent<CarFluid>();
-                    return container != null && container.FluidType == fluid && container.ID == 0;
-                }).ToList();
+                var (registry, caps) = Caps(carLoader, fluid);
                 string capKey = caps.FirstOrDefault();
                 var cap = capKey == null ? null : registry.Sub(capKey);
                 if (cap == null) throw new InvalidOperationException($"no cap in a {fluid} container");
@@ -93,7 +90,7 @@ public static class VisualFluidCommands
                     opened = true;
                 }
                 tools.Use(type);
-                return new { capKey, cap = cap.id, candidates = caps.Select(k => registry.Sub(k).id).ToList(), opened, fluid = fluid.ToString(), active = tools.ToolIsActive };
+                return new { capKey, cap = cap.id, opened, fluid = fluid.ToString(), active = tools.ToolIsActive };
             }
             case "hold":
             {
@@ -108,8 +105,24 @@ public static class VisualFluidCommands
             case "status":
                 return PourStatus(tools, refill, carLoader);
             default:
-                throw new ArgumentException("usage: vfx-pour <loader> <ToolType> start|hold <seconds>|end|status");
+                throw new ArgumentException("usage: vfx-pour <loader> <ToolType> cap|start|hold <seconds>|end|status");
         }
+    }
+
+    // The fill caps (OilDrainCheckFill parts, the oil drain plug aside) in a container of that fluid, first by key.
+    private static (CMS21Together.Logic.Car.Parts.PartRegistry, List<string>) Caps(CarLoader carLoader, CarFluidType fluid)
+    {
+        var registry = CMS21Together.Logic.Car.Parts.PartRegistry.Build(carLoader);
+        var inventory = GameInventory.Instance;
+        var caps = registry.SubKeys.OrderBy(k => k, StringComparer.Ordinal).Where(k =>
+        {
+            var script = registry.Sub(k);
+            if (inventory?.GetItemProperty(script.id)?.SpecialGroup != SpecialGroup.OilDrainCheckFill) return false;
+            if ((script.id ?? "").StartsWith("korek_spustowy", StringComparison.Ordinal)) return false;
+            var container = script.GetComponentInParent<CarFluid>();
+            return container != null && container.FluidType == fluid && container.ID == 0;
+        }).ToList();
+        return (registry, caps);
     }
 
     private static System.Collections.IEnumerator Hold(FluidRefillLogic logic, float seconds)
