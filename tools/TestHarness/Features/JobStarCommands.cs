@@ -22,7 +22,13 @@ public static class JobStarCommands
         for (int i = 0; job.jobTasks != null && i < job.jobTasks.Length; i++)
         {
             var task = job.jobTasks[i];
-            var items = JobHelper.CheckJobPartAndGetItems(carLoader, ref job, ref task);
+            Il2CppSystem.Collections.Generic.List<CMS.UI.Logic.CarInfo.CarInfoPart> items;
+            try { items = JobHelper.CheckJobPartAndGetItems(carLoader, ref job, ref task); }
+            catch (Exception e)
+            {
+                rows.Add(new { task = task.type, error = e.GetType().Name });
+                continue;
+            }
             for (int k = 0; items != null && k < items.Count; k++)
             {
                 var item = items[k];

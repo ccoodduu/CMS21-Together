@@ -77,7 +77,7 @@ foreach ($name in $Ctx.Instances) {
 Start-Sleep -Seconds 2
 
 $candidates = @()
-for ($attempt = 0; $attempt -lt 6 -and $candidates.Count -lt 2; $attempt++) {
+for ($attempt = 0; $attempt -lt 10 -and $candidates.Count -lt 2; $attempt++) {
     $known = @((Cmd $a dump).jobs.orders | ForEach-Object { $_.id })
     $gen = if ((Get-HarnessStatus $b).isOrderGenerator) { $b } else { $a }
     Cmd $gen orders-generate | Out-Null
@@ -102,8 +102,18 @@ for ($attempt = 0; $attempt -lt 6 -and $candidates.Count -lt 2; $attempt++) {
     $threshold = [double](Cmd $a job-star-state "$id").globalCondition
     Write-Host "job $id on loader $loader (condition $threshold) starred: $(@($starred.starred | ForEach-Object { "$($_.key)=$($_.id) c$([math]::Round($_.condition, 2))$(if ($_.blocked) { ' blocked' })$(if ($_.members) { ' group' })" }) -join ', ')"
     $bolted = @(Cmd $a vfx-parts "$loader" | ForEach-Object { $_.key })
-    foreach ($s in @($starred.starred | Where-Object { $bolted -contains $_.key })) {
+    $usable = @($starred.starred | Where-Object { $bolted -contains $_.key })
+    foreach ($s in $usable) {
         $candidates += [pscustomobject]@{ Job = $id; Loader = $loader; Key = $s.key; Id = $s.id; Threshold = $threshold }
+    }
+    if ($usable.Count -eq 0) {
+        Cmd $a job-end-direct "$id" | Out-Null
+        $deadline = (Get-Date).AddSeconds(30)
+        do {
+            Start-Sleep -Milliseconds 700
+            $gone = @((Cmd $a dump).jobs.active | Where-Object { $_.id -eq $id }).Count -eq 0
+        } while (-not $gone -and (Get-Date) -lt $deadline)
+        Start-Sleep -Seconds 3
     }
 }
 Check ($candidates.Count -ge 2) "two replaceable starred job parts ($($candidates.Count))"
