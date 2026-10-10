@@ -48,9 +48,7 @@ public static class WorldStatesPackets
 			profile.globalDataWrapper.PlayerExp = GlobalData.PlayerExp;
 			profile.globalDataWrapper.PlayerMoney = GlobalData.PlayerMoney;
 		}
-		int currentPlatformLevel = Singleton<GameManager>.Instance.PlatformManager.GetStatValue("stat_level");
-		int levelDifference = GlobalData.RealPlayerLevel - currentPlatformLevel;
-		Singleton<GameManager>.Instance.PlatformManager.IncrementStat("stat_level", levelDifference);
+		Logic.Achievements.SharedAchievements.RaiseLevel(GlobalData.RealPlayerLevel);
 
 		// UIManager is part of the scene, so it is gone while a scene loads (a resync).
 		var ui = UIManager.Get();

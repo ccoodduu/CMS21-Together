@@ -107,7 +107,9 @@ public static class GarageUpgrades
 		}
 
 		IsSyncing = true;
-		
+		bool garageUnlocked = false;
+		bool skillUnlocked = false;
+
 		foreach (var upgradeEntry in packet.GarageUpgradeLevels)
 		{
 			foreach (var upgradeData in tools.upgradeSystem.UpgradesForMoney)
@@ -118,6 +120,7 @@ public static class GarageUpgrades
 					{
 						if (upgradeData.Unlocked.Length > i)
 						{
+							if (upgradeEntry.Value[i] && !upgradeData.Unlocked[i]) garageUnlocked = true;
 							upgradeData.Unlocked[i] = upgradeEntry.Value[i];
 						}
 					}
@@ -136,6 +139,7 @@ public static class GarageUpgrades
 					{
 						if (skillData.Unlocked.Length > i)
 						{
+							if (skillEntry.Value[i] && !skillData.Unlocked[i]) skillUnlocked = true;
 							skillData.Unlocked[i] = skillEntry.Value[i];
 						}
 					}
@@ -156,6 +160,7 @@ public static class GarageUpgrades
 		}
 
 		IsSyncing = false;
+		Achievements.SharedAchievements.AfterUpgrades(tools.upgradeSystem, garageUnlocked, skillUnlocked);
 		Log.Success("Garage and Skills synchronized successfully!");
 		GarageLookSync.Receive(packet.Look);
 		ClientData.IsGarageStateSynced = true;

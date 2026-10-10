@@ -145,6 +145,7 @@ CMS21-Together-Client/Logic/Economy/*                          economy
 CMS21-Together-Client/Logic/Outdoor/*                          outdoor, economy, presence
 CMS21-Together-Client/Logic/Garage/GarageLook*                 garage, resync
 CMS21-Together-Client/Logic/Garage/*                           economy, placement
+CMS21-Together-Client/Logic/Achievements/*                     economy, placement, jobs
 CMS21-Together-Client/Logic/Hook/CarSpawnHooks.cs              cars
 CMS21-Together-Client/Logic/Hook/InventoryHook.cs              parts, economy
 CMS21-Together-Client/Logic/Hook/NotificationCenterItemsHook.cs parts

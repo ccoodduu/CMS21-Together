@@ -35,6 +35,7 @@ public static class ClientData
 		Logic.Car.CarSpawnManager.Reset();
 		Logic.Jobs.JobsSync.Reset();
 		Logic.Jobs.JobStats.Reset();
+		Logic.Achievements.SharedAchievements.Reset();
 		Logic.ShopList.ShopListSync.Reset();
 		Logic.Car.Details.CarDetailsSync.Reset();
 		PartChangeTracker.Reset();

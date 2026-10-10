@@ -205,6 +205,7 @@ public static class ParkingSync
 		GlobalData.UnlockedParkingLevels = packet.UnlockedLevels;
 		var profile = Data.CurrentProfileData;
 		if (profile?.globalDataWrapper != null) profile.globalDataWrapper.UnlockedParkingLevels = packet.UnlockedLevels;
+		Achievements.SharedAchievements.AfterParking(packet.UnlockedLevels);
 		int usable = ParkingLayout.UsableSlots(packet.UnlockedLevels);
 		foreach (int slot in mirror.Keys.Concat(Enumerable.Range(0, usable)).Distinct().ToList())
 			if (!packet.Occupied.ContainsKey(slot) && !IsEmpty(slot)) WriteSlot(slot, null);
