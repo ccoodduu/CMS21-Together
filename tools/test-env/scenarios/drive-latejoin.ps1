@@ -1,7 +1,8 @@
 # areas: driving, testdrive, presence
 # remote-visual-feedback 12.1: A drives on the test track; B joins the session and travels there mid-drive and sees
 # A's car within 2 s where A is now (no replay of the path). B then disconnects from the track, goes back to the menu,
-# reconnects and travels again while A still drives: the same. A's disconnect removes the car on B.
+# reconnects and travels again while A still drives: the same. The new session does not keep the track car selected
+# in the session B left. A's disconnect removes the car on B.
 param($Ctx)
 
 $a, $b = $Ctx.Instances
@@ -86,6 +87,8 @@ Cmd $b to-menu | Out-Null
 Wait-HarnessStatus -Instance $b -TimeoutSec 120 -What "menu" -Condition { param($s) $s.scene -eq "Menu" -and $s.playable } | Out-Null
 Check ((Cmd $a dump).remoteCars.local.active) "A still drives while B is away"
 Connect-HarnessInstance $b; Wait-InGarage $b
+$selected = (Cmd $b track-state).selected
+Check (-not $selected) "B's new session does not keep the track car selected in the session B left ('$selected')"
 Cmd $b guard-allow "Mode:CarDrive" | Out-Null
 Wait-Ready $b 1
 Start-Sleep -Seconds 3

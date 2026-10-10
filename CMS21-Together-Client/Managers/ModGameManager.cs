@@ -44,6 +44,9 @@ public static class ModGameManager
 		Log.Info($"[SessionGuard] Session profile slot {manager.ProfileManager.selectedProfile}, name '{CurrentSave?.Name}'.");
 		manager.GameDataManager.LoadProfile();
 		manager.StartCoroutine(manager.GameDataManager.Load(true));
+		GlobalData.SelectedCarLoader = "";
+		GlobalData.TestToShow = "";
+		GlobalData.NewMileage = 0;
 		NotificationCenter.m_instance.StartCoroutine(NotificationCenter.m_instance.SelectSceneToLoad("garage", SceneType.Garage, true, false));
 	}
 
