@@ -2,6 +2,27 @@
 
 Newest first. One entry per work session.
 
+## 2026-10-10 (09:00–10:30) — fix/deploy-guard: runs only test their own build; job end and soak lift fixes (lane 2)
+
+- `fix/deploy-guard` (lane 2, not merged).
+  - `18e0d17`: Run-All deploys in every session of a lane (batch and each rerun alone), and Run-Session checks inside
+    the lane locks that the lane's mod, harness, core and server files equal this worktree's build output (file hashes,
+    `TestLanes` `Get-LaneBuildMismatch`); on a mismatch it stops and names the deploying worktree unless
+    `-AllowForeignDeploy` (warning in each result; Run-All and Run-Soak pass it on; the release smoke after
+    `Install-ReleaseToTestEnv` needs it). Checks: with `blocked-drift` deployed, Run-Session from `deploy-guard`
+    stops in 1 s before any game starts; with `-AllowForeignDeploy` it runs with the warning
+    (`20261010-091728_L2_connect`); a Run-All rerun deploys again (`20261010-091625_L2` 09:16:10, rerun
+    `20261010-091636_L2` 09:16:35).
+  - `f6748e6`: the soak's `world.exp` resend (`20261010-045235_L2`) was real: a job end the game refused left the
+    job-end context open for 10 s, and it took the player's next work experience as job XP that is only sent on a
+    committed end. The context now ends with the refusal. Proof `job-end-refused`: fails on `f04fe22`
+    (`20261010-092216_L2`, 481 / 480), passes (`20261010-092729_L2`).
+  - `30dbde3`: the soak's `lift-same` "did not start" was a soak artifact: CarLifter2 is not built in the test profiles
+    (`lifters` `active=false`), so the game never moves it; a probe showed it for any car there. The soak picks only
+    active lifts now.
+- Smoke plus the jobs area: `20261010-094515_regression.json`, all 15 passed. Soak 15 min `20261010-101146_L2_soak`:
+  PASS with WARN (budgets), rules 1, 2, 4, 8, 9 pass.
+
 ## 2026-10-10 (03:30–10:05) — row 25 done, fluids, race tracks, races, blocked counter merged
 
 - `main` = `216d857`. Merged: new engines (`4ec5c78`, row 25 part 3; row 25 complete), remote fluid visuals
