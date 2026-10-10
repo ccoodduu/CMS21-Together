@@ -1,8 +1,8 @@
 # areas: jobs, parts
 # User report 2026-10-10: a part starred in the order tab stays highlighted after it was replaced. A takes a job and
-# stars its parts (the tab's own MarkAction). A replaces one starred part itself, B replaces another, B puts a third
-# back below the job's condition: on A, the two that now count as repaired lose star and highlight, the third keeps
-# them. B starred nothing and has no marked part.
+# stars its parts (the tab's own MarkAction, which sets PartScript.markImportantPart, the input of the highlight).
+# A replaces one starred part itself, B another: each first below the job's condition (A keeps the star), then at
+# 100 % (A's star goes, as the part now counts as repaired for the job). B starred nothing and has no marked part.
 param($Ctx)
 
 $a, $b = $Ctx.Instances
@@ -77,7 +77,7 @@ foreach ($name in $Ctx.Instances) {
 Start-Sleep -Seconds 2
 
 $candidates = @()
-for ($attempt = 0; $attempt -lt 6 -and $candidates.Count -lt 3; $attempt++) {
+for ($attempt = 0; $attempt -lt 6 -and $candidates.Count -lt 2; $attempt++) {
     $known = @((Cmd $a dump).jobs.orders | ForEach-Object { $_.id })
     $gen = if ((Get-HarnessStatus $b).isOrderGenerator) { $b } else { $a }
     Cmd $gen orders-generate | Out-Null
@@ -106,30 +106,25 @@ for ($attempt = 0; $attempt -lt 6 -and $candidates.Count -lt 3; $attempt++) {
         $candidates += [pscustomobject]@{ Job = $id; Loader = $loader; Key = $s.key; Id = $s.id; Threshold = $threshold }
     }
 }
-Check ($candidates.Count -ge 3) "three replaceable starred job parts ($($candidates.Count))"
-if ($candidates.Count -ge 3) {
+Check ($candidates.Count -ge 2) "two replaceable starred job parts ($($candidates.Count))"
+if ($candidates.Count -ge 2) {
     $first = $candidates[0]
     $before = Star $a $first.Job $first.Key
     Write-Host "A before: $($before | ConvertTo-Json -Compress)"
     Check ([bool]$before.mark) "A has $($first.Key) starred"
     Check (@((Cmd $b job-star-state "$($first.Job)").starred).Count -eq 0) "B, who starred nothing, has no marked part"
 
-    $own = $candidates[0]
-    Replace $a $own.Loader $own.Key $own.Id 1.0
-    $after = Wait-Star $a $own.Job $own.Key $false
-    Check (-not $after) "A replaced $($own.Key) itself at 100 %: no longer starred ($($after | ConvertTo-Json -Compress))"
-
-    $remote = $candidates[1]
-    Replace $b $remote.Loader $remote.Key $remote.Id 1.0
-    $after = Wait-Star $a $remote.Job $remote.Key $false
-    Check (-not $after) "B replaced $($remote.Key) at 100 %: A no longer stars it ($($after | ConvertTo-Json -Compress))"
-    Check (@((Cmd $b job-star-state "$($remote.Job)").starred).Count -eq 0) "B still has no marked part"
-
-    $low = $candidates[2]
-    $lowCondition = [math]::Max(0.05, [math]::Round($low.Threshold - 0.2, 2))
-    Replace $b $low.Loader $low.Key $low.Id $lowCondition
-    $after = Wait-Star $a $low.Job $low.Key $true 4
-    Check ([bool]$after) "B replaced $($low.Key) at $lowCondition (job wants $($low.Threshold)): A still stars it ($($after | ConvertTo-Json -Compress))"
+    foreach ($case in @(@{ Who = $a; Part = $candidates[0]; Label = "A replaced" }, @{ Who = $b; Part = $candidates[1]; Label = "B replaced" })) {
+        $p = $case.Part
+        $low = [math]::Max(0.05, [math]::Round($p.Threshold - 0.2, 2))
+        Replace $case.Who $p.Loader $p.Key $p.Id $low
+        $after = Wait-Star $a $p.Job $p.Key $true 4
+        Check ([bool]$after) "$($case.Label) $($p.Key) at $low (job wants $($p.Threshold)): A still stars it ($($after | ConvertTo-Json -Compress))"
+        Replace $case.Who $p.Loader $p.Key $p.Id 1.0
+        $after = Wait-Star $a $p.Job $p.Key $false
+        Check (-not $after) "$($case.Label) $($p.Key) at 100 %: A no longer stars it ($($after | ConvertTo-Json -Compress))"
+        Check (@((Cmd $b job-star-state "$($p.Job)").starred).Count -eq 0) "B still has no marked part"
+    }
 }
 
 $Ctx.Result.notes += $failures
