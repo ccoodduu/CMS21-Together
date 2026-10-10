@@ -160,7 +160,7 @@ public class WorkPose
 		if (loader < 0) return null;
 		var carLoader = CarLoaderPlaces.Get()?.GetCarLoaderByIndex(loader);
 		if (carLoader == null || string.IsNullOrEmpty(carLoader.carToLoad)) return null;
-		return carLoader.transform.position + Vector3.up * CarCentreHeight;
+		return VisualScope.CarRoot(carLoader).position + Vector3.up * CarCentreHeight;
 	}
 
 	private static Vector3? MachinePosition(ModToolId tool)
