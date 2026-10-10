@@ -2,6 +2,24 @@
 
 Newest first. One entry per work session.
 
+## 2026-10-10 (09:00–11:05) — fix/job-star-highlight: a starred job part keeps its highlight (lanes 1/2)
+
+- User report: a part starred in the order tab stays highlighted after it was replaced. The star sets
+  `PartScript.markImportantPart`, `PartScript.Update` turns it into the highlight every frame, and only the star
+  button writes the field (byte-store scan of GameAssembly, `native\out\jobstar_clean`); `IsRepaired` is called only
+  by the job checks, which read the mark. The star is per player and never synced. On main the starring player keeps
+  the star after their own mount through the game's DoMount/ShowMounted and after another player's mount (remote
+  apply) alike, so the game itself (single player included) never clears it.
+- `ba10659`: `JobStars.Refresh` clears the mark once the part is mounted and `IsRepaired(job.globalCondition)` holds
+  for the car's job; it runs for each mechanical record a client sends and each one it applies. Below the job's
+  condition the star stays.
+- Proof `job-star` (new; harness verbs `job-star`, `job-star-state`): fails on the base (`50c6cf3`+`21a7387`,
+  `20261010-101825_L1_job-star_base`, copied from the removed base worktree: both 100 % replacements keep the star, the
+  below-condition ones pass) and passes (`20261010-101022_L2_job-star`, batch `20261010-110038_L1_job-star`).
+- Regression `20261010-102012_regression.json` (smoke, `jobs*`, `locks-*`, `lock-mount-target`, `car-mount-wear`):
+  all pass except `job-star` in the batch, a harness fault (JobHelper reused the loader's part script cache of an
+  earlier car; `4a0a7f7`), passing in the batch above. Its single rerun hit another agent's deploy on lane 1.
+
 ## 2026-10-10 (02:20–05:15) — fix/blocked-drift: blocked counters and the locks-select-2 pie (lane 2)
 
 - `fix/blocked-drift` (lane 2, not merged). The soak's `blocked` drift (`20261010-020148_L2`: radiator `s:29.3`
