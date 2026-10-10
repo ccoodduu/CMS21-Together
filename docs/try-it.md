@@ -60,6 +60,8 @@ time. In a session, **F9** shows the players with their ping, your Steam friends
 - Tuning at the dyno's tuning computer (gearbox, ECU, carburettor): one player tunes a car at a time, and a tuned part
   you take off keeps its tuning in the shared inventory and on the next car it goes on.
 - Bonus parts (spoilers, scoops, roof signs) fitted, painted and taken off look the same for everyone.
+- Seeing each other work: bolts turn, parts slide off and on, doors and hoods swing, oil drains and refill cans pour,
+  and the avatar holds the tool. `RemoteVisuals = false` in `UserData\MelonPreferences.cfg` turns the pictures off.
 - **F7** reloads the garage from the server if something looks wrong.
 
 ## Please try: the race track and the speed track
@@ -111,6 +113,18 @@ time. In a session, **F9** shows the players with their ping, your Steam friends
 2. **Click the tuning computer while a friend tunes the same car.** You should see "<name> is tuning this car." and
    nothing opens. Report: a window that opened anyway or a stuck screen.
 3. **Take off a tuned ECU or carburettor** and fit it to another car of the same engine. The tuning should come along.
+
+## Please try: seeing each other work
+
+1. **Watch a friend take a wheel or a brake caliper off.** You should see the bolts turn one after the other, then the
+   part slide away, and your friend's avatar turned to it with a working arm. Report: bolts that did not move, a part
+   that stayed, or a part that came back after it was off.
+2. **Watch a friend use the OBD scanner, then a refill can.** The tool should be in the avatar's hand; the can should
+   tilt and pour at the reservoir. Report: a tool in the wrong place or one that stayed after your friend put it away.
+3. **Watch a friend drain the oil.** You should see the oil stream from the drain plug and hear it. Report: a stream
+   that does not stop.
+4. Report anything that stayed changed on your own game after a picture ended (a part, a bolt, a fluid level, money
+   or your inventory).
 
 ## Please try: parts in use (locks)
 

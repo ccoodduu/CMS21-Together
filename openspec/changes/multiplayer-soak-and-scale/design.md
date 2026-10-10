@@ -160,6 +160,7 @@ and row 14 (d)'s bundle includes the newest `perf_*.jsonl` (one line in its file
 | 3 | jobs (`orders-generate`, `orders-accept`, `job-finish`) | ≤ 1 active job |
 | 2 | travel to the junkyard and back (`travel`) | ≤ 1 client away |
 | 5 | network: `net-delay` 0–250 ms on one client; `net-hold` 2–5 s | one client at a time |
+| 8 (`-Visuals`, row 17) | a hand tool for 2–8 s (`vfx-tool <tool> <loader>`, then `vfx-tool none`), or a part unscrewed bolt by bolt (`vfx-unscrew`, waited for) and mounted again 2–20 s later like the unmount row | one tool per client; ≤ 3 open per car |
 
 - Each step appends `{step, t, actor, verb, args, ok, error, ms}` to `actions.jsonl`. A verb error is expected
   sometimes (a part that cannot come off) and counted per verb; a verb above 20 % errors is listed in the report (a

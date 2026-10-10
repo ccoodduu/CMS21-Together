@@ -2,6 +2,37 @@
 
 Newest first. One entry per work session.
 
+## 2026-10-10 (13:50–14:30) — row 17 part 1 leftovers (`fix/row17-leftovers`, lane 2)
+
+- `fix/row17-leftovers` (lane 2, not merged). `visual-screens` passes in the background graphics mode
+  (`CMS21_TEST_BACKGROUND=1`, windows minimized, user idle > 40 min): `20261010-140730_L2_visual-screens`. Fixed:
+  A's name came from an empty dump field (`stand-before ""`, the failure in `20261010-031455_regression.json`); the
+  car was spawned without a place, so on the spawner it stayed under the floor (y −99.7, no place) while B showed it
+  at Entrance1; `vfx-stand` stood beside the `CarLoader` object, which stays at the origin (= CarLifter1) whatever
+  place the car is on, so it now uses the car root. The shots come from B's own camera aimed at the target (new
+  harness verb `vfx-shot`), which works with the window minimized. Off ghost fade is `dissolve`; `ArmsUp` checked
+  under the raised lift.
+- **For the user's look** (in `tools\runs\20261010-140730_L2_visual-screens`, rendered on D, the receiver):
+  `shot_bolts-half_D.png` (exhaust manifold half unscrewed, hood open), `shot_off-ghost_D.png` (its Off ghost held
+  half-way), `shot_hood-swing_D.png` (the hood's swing ghost half-way), `shot_obd-in-hand_D.png` (A with the OBD
+  scanner), `shot_arms-up_D.png` (A under the raised car).
+- README "Playing together" and docs/try-it.md: the full remote-visuals section (parts, bolts, doors, pose, tools,
+  fluids, late join, `RemoteVisuals = false`) and a "Please try" list.
+- Lane-3 budget scenario `visual-budget` written, **not run** (lane 3 is the user's). Run it with lanes 1 and 2 free:
+  `tools\test-env\Run-Session.ps1 -Scenario visual-budget -Lane 3 -Deploy` (headless, 3 min loop, about 10 min in
+  all). Frame comparison: add `-Visible` (with `CMS21_TEST_BACKGROUND=1` to keep the four windows minimized) or
+  `-ScenarioArgs @{ CompareFrames = $true }`; loop length `-ScenarioArgs @{ Minutes = 3; OffMinutes = 1 }`. Bytes per
+  packet type land in the run's `budget.json`, `perf_budget.txt` and the notes; they go to design.md "Measurements"
+  (task 7.3; PlayerActivity over 1.2 kB per packet goes to QUESTIONS.md). The soak got a `visuals` row
+  (`soak.ps1 -Visuals`, weight 8); not run either.
+- Regression (lane 2, headless): smoke plus `visual-parts`, `visual-activity`, `visual-latejoin`, `visual-lift`,
+  `visual-fluids` and `server-saves`, 11/11 passed (`20261010-140748_regression.json`).
+- Open (mod bug, not fixed here): `WorkPose.CarCentre` aims a remote avatar at `carLoader.transform.position`, the
+  `CarLoader` object at the origin, not at the car. A player using the OBD scanner (or another activity without a
+  part) on a car that is not on CarLifter1 is shown turned towards CarLifter1: `shot_obd-in-hand_D.png` shows A
+  facing away from the car at Entrance1. `PartGhosts` uses the same point for a body panel's pull-away direction and
+  the unmount-direction fallback. The fix is the car root (`carLoader.root`, as `PartRegistry` uses).
+
 ## 2026-10-10 (13:00–13:50) — fix/guard-flake: the `guard` batch flake (lane 2)
 
 - `fix/guard-flake` (lane 2, not merged). Cause of the "Inventory did not open after the blocked mode change" flakes
