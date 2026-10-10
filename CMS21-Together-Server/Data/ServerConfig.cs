@@ -46,6 +46,8 @@ namespace CMS21_Together_Server.Data
 		public bool PasswordSteam { get; private set; }
 		public string AdminKey { get; private set; } = string.Empty;
 		public Gamemode NewSessionDifficulty { get; private set; } = Gamemode.Normal;
+		public int NewSessionMoney { get; private set; } = 4000;
+		public int NewSessionLevel { get; private set; } = 1;
 
 		private static readonly string[][] HostingKeyLines =
 		{
@@ -53,6 +55,8 @@ namespace CMS21_Together_Server.Data
 			new[] { "password_steam", "# Ask Steam joins for the password too (True/False)", "password_steam = False" },
 			new[] { "admin_key", "# Players whose game sends this key (CMS21Together.AdminKey) may kick others. Empty = no admin", "admin_key = \"\"" },
 			new[] { "new_session_difficulty", "# Difficulty of a new session when no save exists: Easy, Normal or Expert", "new_session_difficulty = Normal" },
+			new[] { "new_session_money", "# Money of a new session when no save exists (the game starts a new profile with 4000)", "new_session_money = 4000" },
+			new[] { "new_session_level", "# Level of a new session when no save exists (the game starts a new profile at level 1)", "new_session_level = 1" },
 		};
 
 		private static readonly string[][] CompatibilityKeyLines =
@@ -361,6 +365,12 @@ namespace CMS21_Together_Server.Data
 							break;
 						case "new_session_difficulty":
 							if (TryParseDifficulty(value, out var difficulty)) config.NewSessionDifficulty = difficulty;
+							break;
+						case "new_session_money":
+							if (int.TryParse(value, out int startMoney) && startMoney > 0) config.NewSessionMoney = startMoney;
+							break;
+						case "new_session_level":
+							if (int.TryParse(value, out int startLevel) && startLevel >= 1) config.NewSessionLevel = startLevel;
 							break;
 					}
 				}

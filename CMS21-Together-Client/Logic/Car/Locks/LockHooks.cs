@@ -123,7 +123,13 @@ public static class LockHooks
 			Set = set, Target = item, TargetKey = key, ExtendLockId = slot?.LockId ?? 0,
 			EndsSlotOnFailure = slot != null,
 			Context = () => part != null && part.IsUnmounted,
-			Run = () => game.SelectPartToMount(item),
+			Run = () =>
+			{
+				var pointed = game.partMouseOver;
+				game.partMouseOver = part;
+				try { game.SelectPartToMount(item); }
+				finally { game.partMouseOver = pointed; }
+			},
 			Started = () => Mode == gameMode.PartMount || !main.IsUnmounted,
 			OnStarted = lockId =>
 			{
@@ -137,10 +143,10 @@ public static class LockHooks
 
 	private static GatedAction BodyMountAction(GameScript game, BaseItem item)
 	{
-		var io = game.IOMouseOverIO;
-		if (io != null && io.specialType == IOSpecialType.BonusPart) return LockBonusHooks.FitAction(game, item, io);
 		string type = game.IOMouseOverType;
 		var carLoader = game.IOMouseOverCarLoader;
+		var io = game.IOMouseOverIO;
+		if (io != null && io.specialType == IOSpecialType.BonusPart) return LockBonusHooks.FitAction(game, item, io);
 		if (string.IsNullOrEmpty(type) || carLoader == null || !TryResolveBody(carLoader, type.Substring(1), out int loader, out int index, out var part)) return null;
 		var set = LockSets.ForBody(loader, index);
 		if (set == null) return null;
@@ -151,7 +157,13 @@ public static class LockHooks
 		{
 			Set = set, Target = item, TargetKey = PartKeys.Body(index),
 			Context = () => part.Unmounted == before,
-			Run = () => game.SelectPartToMount(item),
+			Run = () =>
+			{
+				var (pointedType, pointedLoader, pointedIo) = (game.IOMouseOverType, game.IOMouseOverCarLoader, game.IOMouseOverIO);
+				(game.IOMouseOverType, game.IOMouseOverCarLoader, game.IOMouseOverIO) = (type, carLoader, io);
+				try { game.SelectPartToMount(item); }
+				finally { (game.IOMouseOverType, game.IOMouseOverCarLoader, game.IOMouseOverIO) = (pointedType, pointedLoader, pointedIo); }
+			},
 			Started = () => part.Unmounted != before || part.TakeOnOffInProgress,
 			OnStarted = lockId => LockLifecycle.Track(lockId, set, PartKeys.Body(index), body: part),
 		};

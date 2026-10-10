@@ -93,20 +93,21 @@ public static class ToolsCommands
     private static object GiveGroup(string args)
     {
         var parts = Args(args);
-        if (parts.Length < 1) throw new ArgumentException("usage: give-group <wheel|shock|groupId itemId,itemId...>");
-        var group = BuildGroup(parts[0], parts.Length > 1 ? parts[1] : null);
+        if (parts.Length < 1) throw new ArgumentException("usage: give-group <wheel [rim,tire [width/size/profile]]|shock|groupId itemId,itemId...>");
+        var group = BuildGroup(parts[0], parts.Length > 1 ? parts[1] : null, parts.Length > 2 ? parts[2] : null);
         Inv.AddGroup(group);
         return new { group.ID, group.UID, items = group.ItemList.Count };
     }
 
-    private static GroupItem BuildGroup(string kind, string itemIds)
+    private static GroupItem BuildGroup(string kind, string itemIds, string wheelSize = null)
     {
         string[] ids = kind switch
         {
-            "wheel" => new[] { WheelRim, WheelTire },
+            "wheel" => itemIds?.Split(',') ?? new[] { WheelRim, WheelTire },
             "shock" => Shock,
             _ => (itemIds ?? kind).Split(','),
         };
+        var size = (wheelSize ?? "195/15/65").Split('/').Select(int.Parse).ToArray();
         var group = new GroupItem(ids[0]) { ItemList = new Il2CppSystem.Collections.Generic.List<Item>(), IsNormalGroup = true };
         foreach (string id in ids)
         {
@@ -114,9 +115,9 @@ public static class ToolsCommands
             if (kind == "wheel")
             {
                 var wheel = item.WheelData;
-                wheel.Size = 15;
-                wheel.Width = 195;
-                wheel.Profile = 65;
+                wheel.Width = size[0];
+                wheel.Size = size[1];
+                wheel.Profile = size[2];
                 wheel.ET = 35;
                 item.WheelData = wheel;
             }

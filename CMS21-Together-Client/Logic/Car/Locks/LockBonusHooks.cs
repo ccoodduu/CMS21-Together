@@ -43,13 +43,15 @@ public static class LockBonusHooks
 			                && CarDetailsIO.BonusSignature(carLoader, slot) == before,
 			Run = () =>
 			{
-				game.IOMouseOverIO = io;
-				game.IOMouseOverCarLoader = carLoader;
-				game.IOMouseOverType = type;
-				game.IOMouseOverGO = go;
+				var (pointedType, pointedLoader, pointedIo, pointedGo) = (game.IOMouseOverType, game.IOMouseOverCarLoader, game.IOMouseOverIO, game.IOMouseOverGO);
+				(game.IOMouseOverType, game.IOMouseOverCarLoader, game.IOMouseOverIO, game.IOMouseOverGO) = (type, carLoader, io, go);
 				fitting = true;
 				try { game.SelectPartToMount(item); }
-				finally { fitting = false; }
+				finally
+				{
+					fitting = false;
+					(game.IOMouseOverType, game.IOMouseOverCarLoader, game.IOMouseOverIO, game.IOMouseOverGO) = (pointedType, pointedLoader, pointedIo, pointedGo);
+				}
 			},
 			Started = () => CarDetailsIO.BonusSignature(carLoader, slot) != before,
 			OnStarted = lockId => Commit(loader, carLoader, lockId),

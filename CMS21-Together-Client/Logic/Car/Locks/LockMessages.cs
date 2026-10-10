@@ -29,6 +29,7 @@ public static class LockMessages
 
 	public static string ForKey(int loader, string name, string key, string targetKey, CarLockKind? holderKind = null)
 	{
+		if (LockKeys.IsPlace(key)) return $"{name} is moving a car there.";
 		if (holderKind == CarLockKind.Tune || key == LockKeys.Tune) return Tuning(name);
 		if (holderKind == CarLockKind.BonusPart || LockKeys.IsBonus(key)) return $"{name} is fitting a bonus part here.";
 		if (targetKey == LockKeys.Car) return $"{name} is working on this car.";

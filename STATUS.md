@@ -2,6 +2,82 @@
 
 Newest first. One entry per work session.
 
+## 2026-10-10 (01:40–02:50) — playtest 3 wheel looks fixed (`fix/wheel-visuals`, lane 1)
+
+- **Tires missing, rims hollow, magenta wheels, a wheel left in the air:** one cause. The car-details wheel apply
+  called `CarLoader.UpdateWheels`, the game's load-time path (`PartScript.ResizeWheel(CarLoader, Wheel)`): it puts the
+  rim and tire prefabs' material assets on the renderers and into an existing `ShadersBackup` entry (any part hidden
+  once since the car loaded); the next backup update (`TunePart`, a mount) `DestroyImmediate`s them. From then on every
+  wheel using those materials draws with null materials (magenta) or Unity's default Standard (hollow rim, no tire),
+  for the rest of the game session, also after F7. On an unmounted wheel the same call swapped the X-ray look for
+  real materials, so the wheel stayed visible where it had been taken off (the "ghost"; not a `TogetherGhost`). The
+  apply now calls `SetET`, `SetWheelSize` (its `DoWheelMath` sets the blend shapes) and `UpdateWheelMeshCollider`
+  only (`c965705`); the c369763 id restore went with it. Spike note corrected (`docs/spikes/car-details.md`).
+- Harness: `wheel-visuals` (rim and tire meshes, blend shapes, scales, materials, prefab materials, ghost objects);
+  `give-group wheel <rim,tire> <w/s/p>`. Proof `car-wheel-looks` fails on `main` `67837a4`
+  (`20261010-022532_L1`, run in `CMS21-Together-wt\wheels-base`: B's prefab materials destroyed, B's unmounted front
+  left wheel drawn with real materials, Standard and null materials after the resync) and passes (`20261010-022655_L1`,
+  and on the merged `8495b86` in batch `20261010-022844_L1_batch`). Same batch passes smoke, `car-wheel-swap`,
+  `car-details`, `car-details-request`, `tools-slots`, `tools-race`, `tools-item-race`, `tools-latejoin`,
+  `visual-parts`, `visual-activity`, `visual-lift`, `visual-latejoin`.
+- Open: the rim hub plate (`tyl`) x-scale of a remotely changed wheel differs slightly from the actor's (1.619 vs
+  1.629, 1.537 after a resync; it follows the ET, which the game scales from the current value); not in the shape
+  check; whether it shows is not known (headless).
+
+## 2026-10-10 (01:30–02:30) — fix/place-same ready for merge (lane 2)
+
+- `fix/place-same` with `main` merged in (`5d744a8`). Fixes: `348159e` (the move lock covers the target place, so a
+  second move to the same free place is refused before the game moves anything, "<name> is moving a car there."; a move
+  the server still refuses answers with every car's place, then the lift states), `a76e45f` (a car snapshot waits for
+  `LoadCarFromFile` to end: the examined flags after an unpark), `5a8fb16` (local moves tracked per coroutine; lift
+  states kept with the places until the local move ends). `place-same` is out of `soak-contention-known.txt`.
+- Proofs: `car-place-same` fails on `84beea6` (`20261008-231901_L2`, `20261008-232111_L2`) and passes
+  (`20261008-232642_L2`); `park-return` fails on `348159e` (`20261008-233419_L2`, `20261008-233527_L2`, the soak's 7
+  parts) and passes (`20261008-233709_L2`). After the merge, smoke plus `car-place-same`, `park-return`, `locks-car`,
+  `car-placement`, `car-placement-race`: `20261010-013846_regression.json`, all passed. Earlier, smoke plus 17 touched
+  scenarios: `20261009-011337_regression.json` (`locks-select-2`, `desync-autofix` FLAKY).
+- Soak `Run-Soak.ps1 -Lane 2 -ContentionKinds place-same -Hours 0.25`: `20261010-020148_L2_soak`, 12 of 12
+  `place-same` groups passed (rules 8 and 9 pass, no confirmed desync). Rule 1 fails from checkpoint 4 on: one part's
+  `blocked` flag (`s:29.3` on loader 4, a sibling of `s:29.1` that C unmounted and mounted with `part-fast-*`) is set on
+  D only. That flag is not synced and not in the digests; the same drift is in the soak `20261008-210843_L2` from row
+  19 part 2 (not this branch). Not fixed here.
+- `locks-select-2` "after B's release the move options are as before" is pre-existing: the game's own pie input
+  (`PieMenuController.HandleInput` -> `NotificationCenter.ButtonAccept`) accepts `move_carLift1` while the harness holds
+  the pie open, with no mouse button or Return the game sees, and A's car moves. On `c4bd1c3` alone: fails
+  `20261009-220034_L2`, `20261009-220954_L2` (spurious accepts also in the passing `20261009-220207_L2`,
+  `20261009-221126_L2`); on the branch 1 of 4 (`20261009-220342_L2`). Base runs copied to
+  `CMS21-Together-wt\place-same\tools\runs\base-c4bd1c3`; the `place-same-base` worktree is removed. Harness fix not done.
+## 2026-10-10 (01:30–02:30) — playtest 3 fixes proven (`fix/mount-replay-target`, lane 1)
+
+- Proofs (old code = this branch with the three fixes reverted; both batches in lane 1):
+  - `lock-mount-target` (mount target, also a body part): fails `20261010-015214_L1` (the pick for `s:13.17` turned
+    `s:14.0` into `wentylator_2`; the hood's item turned the trunk into `tunedId hood`, hood still off), passes
+    `20261010-014750_L1`. New harness: `lock-try ... repoint <key>` and `lock-try <loader> body-mount <index> <uid>`.
+  - `car-mount-wear` (remote mount wear): fails `20261010-015316_L1` (A's RustWeight 0.8 at condition 1.0, F7 gives
+    0.0), passes `20261010-014855_L1`. New verb `part-shader <loader> <key> [refresh]`.
+  - `shop-buy-popup` (shop popup and sound): fails `20261010-015351_L1` (no popup, no sound), passes
+    `20261010-014930_L1`. New verbs `shop-buy`, `popup-trace`.
+- `origin/main` merged; smoke plus locks, `car-mount-race`, `car-live`, `car-wheel-swap`, `visual-parts`,
+  `purchases`, `economy-*` and the three proofs pass (`20261010-015457_regression.json`).
+
+## 2026-10-09/10 (23:00–01:40) — playtest 3 (dev.1169/1170), findings
+
+- New session start values (`e159fff`): `new_session_money` 4000 and `new_session_level` 1 by default (the game's
+  `ProfileData.InitGlobalData`); test lanes keep 12500 / 8. Playtest builds `0.6.0-dev.1169`, then `dev.1170` from
+  `fix/mount-replay-target`. Save, logs and bug reports: `Desktop\CMS21-Together-playtest-20261009`.
+- **Mount into the wrong slot (fixed on `fix/mount-replay-target`, proof pending):** after the lock grant the item
+  gate replayed `GameScript.SelectPartToMount`, which mounts into the part under the mouse at that moment; when the
+  mouse moved during the round trip the item replaced a mounted part's identity (pads into the brake disc slot,
+  rollers into the engine block and head as `TunedID`). The save was repaired by hand (`13.2`, `13.6` of
+  `car_griffintyro` from backup `bak5`).
+- **Remote-mounted part shows the old part's wear until F7 (fixed, proof pending):** shader values are now updated
+  when `ShowMounted` shows the part.
+- **No buy popup or sound in the shop (fixed, proof pending):** the buy hook now shows `PopUp_NewItem` and plays `Popup`.
+- **Open:** tires missing and rims hollow on both players although cars, details and server agree (wheel shape is not
+  rebuilt after our wheel apply; mounting again and F7 do not help); a wheel ghost stuck in the air at the friend's
+  name tag (only on the receiving player); magenta wheels (only on the receiving player; car sold before a test);
+  no remote oil drain animation; the bonus parts (row 25 part 2) and `fix/place-same` branches are paused.
+
 ## 2026-10-09 (22:00–23:00) — row 25 part 1, tuning at the dyno (`feat/tuning-window`, lane 1)
 
 - `GearboxTab.ApplyAction` marks the car's tuning dirty; one tuner per car through the new lock kind `Tune` (keys

@@ -14,7 +14,8 @@ namespace TogetherTestHarness.Features;
 
 // part-locks D13: lock-try drives a gated entry point the way a player's click does and reports what the gate did;
 // "finish" completes the started work under the held lock (bolts out or in, then the part commits), so the release
-// on commit really happens.
+// on commit really happens. "repoint <key>" moves the game's mouse-over to another part while the item pick waits for
+// its lock answer, as a player's mouse does during the round trip.
 public static class LockTryCommands
 {
     private const float FinishTimeoutSeconds = 60f;
@@ -29,12 +30,15 @@ public static class LockTryCommands
         public bool Release;
         public long ItemUid;
         public List<long> GroupUids;
+        public string Repoint;
+        public bool Repointed;
         public GateReport Report;
         public string State = "waiting";
         public bool Finished;
         public float StartedAt;
         public PartScript Part;
         public CarPart Body;
+        public bool BodyUnmountedTarget = true;
         public Func<bool> Done;
         public Action Finisher;
     }
@@ -80,6 +84,7 @@ public static class LockTryCommands
         ["lockId"] = t.Report?.LockId ?? 0,
         ["state"] = t.State,
         ["finished"] = t.Finished,
+        ["repointed"] = t.Repointed,
     };
 
     [HarnessCommand("lock-try")]
@@ -88,10 +93,12 @@ public static class LockTryCommands
         Subscribe();
         var parts = Args(args);
         if (parts.Length == 2 && parts[0] == "result") return tries.TryGetValue(int.Parse(parts[1]), out var found) ? Result(found) : throw new ArgumentException($"no lock-try {parts[1]}");
-        if (parts.Length < 2) throw new ArgumentException("usage: lock-try <loader> unmount <key>|mount <key> [uid|group <uid...>]|body <index>|crane-out|fill <type> <id> [level <x>]|drain <type> <id>|oil|lift <lifter> up|down [nogate]|move <place> [nogate] [finish|hold|release] | result <id>");
+        if (parts.Length < 2) throw new ArgumentException("usage: lock-try <loader> unmount <key>|mount <key> [uid|group <uid...>] [repoint <key>]|body <index>|body-mount <index> <uid> [repoint <index>]|crane-out|fill <type> <id> [level <x>]|drain <type> <id>|oil|lift <lifter> up|down [nogate]|move <place> [nogate] [finish|hold|release] | result <id>");
         int loader = int.Parse(parts[0]);
         var carLoader = CarLoaderPlaces.Get().GetCarLoaderByIndex(loader) ?? throw new ArgumentException($"no car loader {loader}");
         var t = new Try { Id = nextId++, Loader = loader, What = string.Join(" ", parts.Skip(1)), Finish = parts.Contains("finish"), Release = parts.Contains("release") };
+        int repointAt = Array.IndexOf(parts, "repoint");
+        if (repointAt > 0) t.Repoint = parts[repointAt + 1];
         tries[t.Id] = t;
         current = t;
         var game = GameScript.Get();
@@ -129,6 +136,23 @@ public static class LockTryCommands
                     t.Body = part;
                     SetMode(gameMode.GarageDisassemble);
                     carLoader.TakeOffCarPart(part.name);
+                    break;
+                }
+                case "body-mount":
+                {
+                    int index = int.Parse(parts[2]);
+                    t.Key = PartKeys.Body(index);
+                    t.Body = carLoader.carParts[index];
+                    t.BodyUnmountedTarget = false;
+                    var item = Singleton<GameManager>.Instance.Inventory.GetItem(long.Parse(parts[3])) ?? throw new ArgumentException($"no item {parts[3]}");
+                    SetMode(gameMode.GarageAssemble);
+                    PointAtBody(game, carLoader, t.Body);
+                    game.SelectPartToMount(item);
+                    if (t.Repoint != null && current == t && LockGate.HasPending)
+                    {
+                        PointAtBody(game, carLoader, carLoader.carParts[int.Parse(t.Repoint)]);
+                        t.Repointed = true;
+                    }
                     break;
                 }
                 case "crane-out":
@@ -280,6 +304,12 @@ public static class LockTryCommands
         tries[inner.Id] = inner;
         current = inner;
         GameScript.Get().SelectPartToMount(item);
+        if (t.Repoint != null && inner.Report == null && LockGate.HasPending)
+        {
+            var carLoader = CarLoaderPlaces.Get().GetCarLoaderByIndex(t.Loader);
+            GameScript.Get().SetPartMouseOver(PartRegistry.Build(carLoader).Sub(t.Repoint) ?? throw new ArgumentException($"no part {t.Repoint}"));
+            t.Repointed = true;
+        }
         float deadline = Time.realtimeSinceStartup + CarLockMirror.TimeoutSeconds + 1f;
         while (inner.Report == null && Time.realtimeSinceStartup < deadline) yield return null;
         t.State = $"item {inner.Report?.Result ?? "no answer"}";
@@ -297,6 +327,16 @@ public static class LockTryCommands
         var io = parent == null ? null : parent.GetComponent<InteractiveObject>();
         if (io == null && parent != null && parent.parent != null) io = parent.parent.GetComponent<InteractiveObject>();
         return io;
+    }
+
+    private static void PointAtBody(GameScript game, CarLoader carLoader, CarPart part)
+    {
+        var io = part.handle == null ? null : part.handle.GetComponentInChildren<InteractiveObject>(true);
+        if (io == null || string.IsNullOrEmpty(io.type)) throw new ArgumentException($"body part {part.name} has no interactive object");
+        game.SetPartMouseOver(null);
+        game.IOMouseOverCarLoader = carLoader;
+        game.IOMouseOverType = io.type;
+        game.IOMouseOverIO = io;
     }
 
     private static IEnumerator PickGroup(Try t)
@@ -338,7 +378,7 @@ public static class LockTryCommands
     private static IEnumerator FinishBody(Try t)
     {
         var part = t.Body;
-        bool target = true;
+        bool target = t.BodyUnmountedTarget;
         float deadline = Time.realtimeSinceStartup + FinishTimeoutSeconds;
         while ((part.TakeOnOffInProgress || part.Unmounted != target) && Time.realtimeSinceStartup < deadline) yield return null;
         t.Finished = part.Unmounted == target && !part.TakeOnOffInProgress;

@@ -15,11 +15,12 @@ public sealed class LockSet
 	public readonly List<string> X = new List<string>();
 	public readonly List<string> S = new List<string>();
 	public readonly List<long> Items = new List<long>();
+	public int Place = -1;
 	public string Expect;
 
 	public IEnumerable<string> AllKeys => X.Concat(S);
 
-	public override string ToString() => $"{Kind} X[{string.Join(",", X)}] S[{string.Join(",", S)}]{(Items.Count > 0 ? $" items[{string.Join(",", Items)}]" : "")}";
+	public override string ToString() => $"{Kind} X[{string.Join(",", X)}] S[{string.Join(",", S)}]{(Items.Count > 0 ? $" items[{string.Join(",", Items)}]" : "")}{(Place >= 0 ? $" to place {Place}" : "")}";
 }
 
 public sealed class CarRelations

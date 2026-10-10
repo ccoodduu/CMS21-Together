@@ -207,7 +207,6 @@ public static class CarDetailsIO
 	{
 		if (wheels == null) return;
 		var local = carLoader.WheelsData?.Wheels;
-		bool front = false, rear = false;
 		for (int i = 0; local != null && i < wheels.Length && i < local.Length; i++)
 		{
 			var wheel = wheels[i];
@@ -215,31 +214,7 @@ public static class CarDetailsIO
 			if ((int)local[i].Width == wheel.Width && (int)local[i].Size == wheel.RimSize && (int)local[i].Profile == wheel.TireSize && local[i].ET == wheel.ET) continue;
 			carLoader.SetET((WheelType)i, wheel.ET);
 			carLoader.SetWheelSize(wheel.Width, wheel.RimSize, wheel.TireSize, (WheelType)i);
-			if (i < 2) front = true; else rear = true;
-		}
-		if (!front && !rear) return;
-		var wheelParts = WheelPartIds(carLoader);
-		if (front) carLoader.UpdateWheels(true);
-		if (rear) carLoader.UpdateWheels(false);
-		RestoreWheelPartIds(wheelParts);
-	}
-
-	// UpdateWheels gives every rim and tire on the axle the ids in WheelsData, which the game sets only when the car loads.
-	private static List<(PartScript Script, string Id)> WheelPartIds(CarLoader carLoader)
-	{
-		var root = carLoader.root != null ? carLoader.root.transform : carLoader.transform;
-		return root.GetComponentsInChildren<PartScript>(true)
-			.Where(PartApplier.IsWheelPart)
-			.Select(script => (script, PartApplier.EffectiveId(script)))
-			.ToList();
-	}
-
-	private static void RestoreWheelPartIds(List<(PartScript Script, string Id)> wheelParts)
-	{
-		foreach (var (script, id) in wheelParts)
-		{
-			if (script == null || PartApplier.EffectiveId(script) == id) continue;
-			script.TunePart(id);
+			carLoader.UpdateWheelMeshCollider((WheelType)i);
 		}
 	}
 

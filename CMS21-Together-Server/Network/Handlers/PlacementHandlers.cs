@@ -59,7 +59,7 @@ namespace CMS21_Together_Server.Network.Handlers
 			if (refusal != null)
 			{
 				Logger.Info($"[Placement] Move of loader {request.CarLoaderID} {request.FromPlace}->{request.ToPlace} from client {clientId} refused: {refusal}.");
-				Server.SendToClient(new CarPlaceChangedPacket { CarLoaderID = request.CarLoaderID, Place = stored }, (int)clientId);
+				PlacementRules.SendCarPlaces((int)clientId);
 				return;
 			}
 

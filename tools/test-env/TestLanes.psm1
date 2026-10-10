@@ -147,7 +147,8 @@ function Set-LaneServerConfig($LaneInfo) {
             "log_level = 1"
         )
     }
-    $lines = @(Get-Content -LiteralPath $config | Where-Object { $_ -notmatch '^\s*port\s*=' }) + "port = $($LaneInfo.Port)"
+    $lines = @(Get-Content -LiteralPath $config | Where-Object { $_ -notmatch '^\s*(port|new_session_money|new_session_level)\s*=' }) +
+        "port = $($LaneInfo.Port)" + "new_session_money = 12500" + "new_session_level = 8"
     Set-Content -LiteralPath $config -Encoding ascii -Value $lines
 }
 
