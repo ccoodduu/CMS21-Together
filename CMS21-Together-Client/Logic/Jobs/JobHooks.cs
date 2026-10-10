@@ -124,6 +124,24 @@ public static class JobHooks
 		return true;
 	}
 
+	[HarmonyPatch(typeof(GameScript), nameof(GameScript.EndJob))]
+	[HarmonyPostfix]
+	private static void AfterEndJob()
+	{
+		if (JobEndContext.IsActive && !JobEndContext.CoroutineStarted) JobEndContext.Drop("the game refused it before its end coroutine");
+	}
+
+	[HarmonyPatch(typeof(GameScript._EndJobCoroutine_d__139), nameof(GameScript._EndJobCoroutine_d__139.MoveNext))]
+	[HarmonyPrefix]
+	private static void BeforeEndJobStep() => JobEndContext.OnCoroutineStep();
+
+	[HarmonyPatch(typeof(GameScript._EndJobCoroutine_d__139), nameof(GameScript._EndJobCoroutine_d__139.MoveNext))]
+	[HarmonyPostfix]
+	private static void AfterEndJobStep(bool __result)
+	{
+		if (!__result) JobEndContext.Drop("the game's checks refused it");
+	}
+
 	[HarmonyPatch(typeof(CMS.MainMenu.Windows.TutorialsWindow), "RunTutorialAction")]
 	[HarmonyPrefix]
 	private static bool BeforeTutorial()
