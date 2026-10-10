@@ -48,6 +48,20 @@ Newest first. One entry per work session.
 - Open: the rim hub plate (`tyl`) x-scale of a remotely changed wheel differs slightly from the actor's (1.619 vs
   1.629, 1.537 after a resync; it follows the ET, which the game scales from the current value); not in the shape
   check; whether it shows is not known (headless).
+## 2026-10-10 (02:30–03:40) — remote fluid visuals built (`feat/remote-fluid-visuals`, lane 2)
+
+- Playtest 3 finding "no oil drain animation for the friend". Spike `docs/spikes/remote-fluids.md`, design
+  `docs/design/remote-fluid-visuals.md`. While another player's activity is the oil bin on a car, the receiver plays
+  the game's drain on a script- and collider-free copy of its own `Oil_drain_h` at the drain plug (stream coloured by
+  the oil's condition, `OilDrain` loop and its tail, plug hidden with `forceRenderingOff`); a refill can's pour shows
+  the can at the fill cap, tilting and streaming (with its sound) while the actor holds the pour (the `Fluid` activity
+  now carries the cap's key and the pour power). Visual only; `RemoteVisuals`, caps, cancel on leave/scene/car change.
+  The extractor stays prop-only (its animation is a first-person overlay).
+- Proof `visual-fluids`: old code (client of `main`) fails `20261010-031321_L2`, without the pour commit only the pour
+  checks fail `20261010-030818_L2`, the branch passes `20261010-030649_L2`. Smoke plus `visual-*`, `tools-car-effects`
+  pass (`20261010-031455_regression.json`; `visual-screens` failed on an empty `stand-before` name, it is
+  `run-all: skip` and needs graphics). Base runs in `CMS21-Together-wt\fluids\tools\runs\base-*`.
+- Open: on the spawning test game the brake servo and its cap sit at y −99 (the other game has them at the car).
 
 ## 2026-10-10 (01:30–02:30) — fix/place-same ready for merge (lane 2)
 

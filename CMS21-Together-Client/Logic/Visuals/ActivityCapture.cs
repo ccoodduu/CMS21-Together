@@ -165,7 +165,20 @@ public static class ActivityCapture
 		if (ExamineTools.Contains(type)) kind = ActivityKind.Examine;
 		else if (FluidTools.Contains(type)) kind = ActivityKind.Fluid;
 		else return null;
-		return new PlayerActivityState { Kind = kind, ToolType = type, CarLoaderID = MouseOverLoader() };
+		var state = new PlayerActivityState { Kind = kind, ToolType = type, CarLoaderID = MouseOverLoader() };
+		if (kind == ActivityKind.Fluid) AddPour(tools, state);
+		return state;
+	}
+
+	private static void AddPour(ToolsManager tools, PlayerActivityState state)
+	{
+		var logic = FluidReplay.Refill(tools, (ToolType)state.ToolType)?.fluidRefillLogic;
+		if (logic == null || !logic.gameObject.activeSelf || state.CarLoaderID < 0 || tools.ItemWorkOn == null) return;
+		var cap = tools.ItemWorkOn.GetComponent<PartScript>();
+		var registry = VisualScope.RegistryOf(state.CarLoaderID);
+		if (cap == null || registry == null || !registry.TryGetSubPath(cap, out int[] path)) return;
+		state.PartKey = PartKeys.Sub(path);
+		state.Progress = PlayerActivityState.QuantizeProgress(logic.power);
 	}
 
 	private static PlayerActivityState FromInterior()
