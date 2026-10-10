@@ -1,4 +1,4 @@
-# areas: economy, placement
+# areas: economy, placement, jobs
 # shared-achievements: an achievement that follows from shared save state reaches every player, counted once.
 # A buys every garage upgrade, unlocks every skill and the tenth parking level; A and B each get stat_full_garage,
 # stat_unlock_allupgrade and stat_unlock_parking once, and nothing before the last one. More garage and world states
