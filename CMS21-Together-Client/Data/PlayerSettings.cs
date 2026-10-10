@@ -17,6 +17,7 @@ public static class PlayerSettings
 	private static MelonPreferences_Entry<string> bugReportHotkey;
 	private static MelonPreferences_Entry<bool> remoteVisuals;
 	private static MelonPreferences_Entry<string> pingHotkey;
+	private static MelonPreferences_Entry<bool> trackCollisions;
 
 	public const string DefaultPingKey = "Mouse2";
 
@@ -36,6 +37,7 @@ public static class PlayerSettings
 		bugReportHotkey = category.CreateEntry("BugReportHotkey", "F8", description: "Key that saves a bug report (logs, settings, mod list, shared state) to UserData\\CMS21Together\\BugReports; when connected the server and the other players save theirs with the same id.");
 		remoteVisuals = category.CreateEntry("RemoteVisuals", true, description: "Show other players' work as it happens (parts moving off and on, bolts turning, the avatar working with a tool). Off: their changes still apply, without animation.");
 		pingHotkey = category.CreateEntry("PingHotkey", DefaultPingKey, description: "Key that pings the part or spot you look at: the other players in your scene see it marked with your name for a few seconds, also through walls. Mouse2 = middle mouse button; None = off.");
+		trackCollisions = category.CreateEntry("TrackCollisions", true, description: "Your car collides with the other players' cars on the test, race and speed tracks. Their cars are never pushed; the host can turn it off for everyone (track_collisions = off).");
 	}
 
 	public static UnityEngine.KeyCode PingKey =>
@@ -84,6 +86,15 @@ public static class PlayerSettings
 		set
 		{
 			if (remoteVisuals != null) remoteVisuals.Value = value;
+		}
+	}
+
+	public static bool TrackCollisions
+	{
+		get => trackCollisions == null || trackCollisions.Value;
+		set
+		{
+			if (trackCollisions != null) trackCollisions.Value = value;
 		}
 	}
 

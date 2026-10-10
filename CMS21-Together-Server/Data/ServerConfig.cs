@@ -41,6 +41,7 @@ namespace CMS21_Together_Server.Data
 		public int OutdoorRejoinGraceSeconds { get; private set; } = 60;
 		public bool OutdoorFillAllSpawnPoints { get; private set; }
 		public Jobs.JobStatsRule JobStatsTo { get; private set; } = Jobs.JobStatsRule.Contributors;
+		public bool TrackCollisions { get; private set; } = true;
 
 		public string Password { get; private set; } = string.Empty;
 		public bool PasswordSteam { get; private set; }
@@ -106,7 +107,12 @@ namespace CMS21_Together_Server.Data
 			new[] { "job_stats_to", "# Who gets the Steam stats and achievements of a finished job besides the player who finishes it: contributors (players who worked on it), garage (everyone in the garage) or finisher (nobody else)", "job_stats_to = contributors" },
 		};
 
-		private static string[][] OptionalKeyLines => HostingKeyLines.Concat(CompatibilityKeyLines).Concat(EconomyKeyLines).Concat(DiagnosticsKeyLines).Concat(DesyncKeyLines).Concat(LockKeyLines).Concat(OutdoorKeyLines).Concat(JobKeyLines).ToArray();
+		private static readonly string[][] TrackKeyLines =
+		{
+			new[] { "track_collisions", "# Players' cars collide on the test, race and speed tracks (on/off). Off turns it off for everyone; on leaves it to each player's own setting", "track_collisions = on" },
+		};
+
+		private static string[][] OptionalKeyLines => HostingKeyLines.Concat(CompatibilityKeyLines).Concat(EconomyKeyLines).Concat(DiagnosticsKeyLines).Concat(DesyncKeyLines).Concat(LockKeyLines).Concat(OutdoorKeyLines).Concat(JobKeyLines).Concat(TrackKeyLines).ToArray();
 
 		public void ApplyArguments(string[] args)
 		{
@@ -160,12 +166,30 @@ namespace CMS21_Together_Server.Data
 			return true;
 		}
 
+		private static bool TryParseSwitch(string value, out bool on)
+		{
+			switch (Unquote(value).Trim().ToLowerInvariant())
+			{
+				case "on":
+				case "true":
+					on = true;
+					return true;
+				case "off":
+				case "false":
+					on = false;
+					return true;
+				default:
+					on = true;
+					return false;
+			}
+		}
+
 		private static string Masked(string secret) => string.IsNullOrEmpty(secret) ? "none" : "set";
 
 		public string Describe() =>
 			$"name '{ServerName}', port {Port}, max players {MaxPlayers}, steam {UseSteam}, public address '{PublicAddress}', autosave {AutosaveIntervalSeconds}s, backups {BackupCount}, " +
 			$"password {Masked(Password)}{(PasswordSteam ? " (also Steam)" : "")}, admin key {Masked(AdminKey)}, new sessions {NewSessionDifficulty}, " +
-			$"travel fees {TravelFees}, max car sale {MaxCarSalePrice}, max car purchase {MaxCarPurchasePrice}, perf log {(PerfLogIntervalSeconds > 0 ? $"{PerfLogIntervalSeconds}s" : "off")}, desync resend [{string.Join(", ", DesyncResendKeys)}], desync stall {DesyncStallSeconds}s, lock scope {LockScope}, lock expiry {LockExpirySeconds}s, job stats to {JobStatsTo.ToString().ToLowerInvariant()}, shared outdoor scenes {OutdoorScenes.Format(SharedOutdoorScenes)}, car selector {CarSelector}, outdoor rejoin grace {OutdoorRejoinGraceSeconds}s, fill all spawn points {OutdoorFillAllSpawnPoints}, game version {GameVersion}, mods required [{string.Join(", ", ModsRequired)}], ignored [{string.Join(", ", ModsIgnored)}], gameplay [{string.Join(", ", ModsGameplay)}]";
+			$"travel fees {TravelFees}, max car sale {MaxCarSalePrice}, max car purchase {MaxCarPurchasePrice}, perf log {(PerfLogIntervalSeconds > 0 ? $"{PerfLogIntervalSeconds}s" : "off")}, desync resend [{string.Join(", ", DesyncResendKeys)}], desync stall {DesyncStallSeconds}s, lock scope {LockScope}, lock expiry {LockExpirySeconds}s, job stats to {JobStatsTo.ToString().ToLowerInvariant()}, shared outdoor scenes {OutdoorScenes.Format(SharedOutdoorScenes)}, car selector {CarSelector}, outdoor rejoin grace {OutdoorRejoinGraceSeconds}s, fill all spawn points {OutdoorFillAllSpawnPoints}, track collisions {(TrackCollisions ? "on" : "off")}, game version {GameVersion}, mods required [{string.Join(", ", ModsRequired)}], ignored [{string.Join(", ", ModsIgnored)}], gameplay [{string.Join(", ", ModsGameplay)}]";
 
 		public static ServerConfig LoadOrCreate()
 		{
@@ -359,6 +383,10 @@ namespace CMS21_Together_Server.Data
 							break;
 						case "outdoor_rejoin_grace_seconds":
 							if (int.TryParse(value, out int grace) && grace >= 0) config.OutdoorRejoinGraceSeconds = grace;
+							break;
+						case "track_collisions":
+							if (TryParseSwitch(value, out bool trackCollisions)) config.TrackCollisions = trackCollisions;
+							else Logger.Warn($"Unknown track_collisions '{value}'; use on or off.");
 							break;
 						case "outdoor_fill_all_spawn_points":
 							if (bool.TryParse(value, out bool fillAll)) config.OutdoorFillAllSpawnPoints = fillAll;
