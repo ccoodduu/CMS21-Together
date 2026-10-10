@@ -12,6 +12,7 @@
 # (..\SoakContention.ps1): two to four players act on the same part, item, detail, machine, lift or car in a seeded
 # server order; rules 8 (conservation) and 9 (outcome); -ContentionKinds forces the kinds drawn. Each checkpoint's
 # forced digest round covers every key, and a key that is not ready at two checkpoints in a row fails rule 2.
+# -Visuals adds the row "visuals" (weight -VisualsWeight; remote-visual-feedback 7.3): vfx-tool and vfx-unscrew.
 param(
     $Ctx,
     [double]$Minutes = 10,
@@ -25,7 +26,9 @@ param(
     [switch]$Contention,
     [int]$ContentionWeight = 15,
     [string[]]$ContentionKinds = @(),
-    [switch]$ContentionIncludeKnown
+    [switch]$ContentionIncludeKnown,
+    [switch]$Visuals,
+    [int]$VisualsWeight = 8
 )
 
 Import-Module (Join-Path $PSScriptRoot "..\ScaleSession.psm1")
@@ -360,6 +363,41 @@ function Invoke-Network([string]$Actor) {
     return $true
 }
 
+# remote-visual-feedback 7.3 (-Visuals): a hand tool shown for a few seconds, or a part unscrewed bolt by bolt the way
+# a player does (vfx-unscrew, so the others replay the bolts and the Off ghost) and mounted back later like a soak
+# unmount. The unscrew is waited for, so no checkpoint starts while bolts turn.
+$visualTools = @("OBD", "Multimeter", "Compression", "TireTreadDepthTester", "OilBayonet")
+$toolHeld = @{}
+function Invoke-Visuals([string]$Actor) {
+    $car = Pick @(Get-ReadyCars $Actor)
+    if (-not $car) { return $false }
+    if ($rng.NextDouble() -lt 0.5) {
+        if ($toolHeld.ContainsKey($Actor)) { return $false }
+        if (-not (Invoke-Step $Actor vfx-tool "$(Pick $visualTools) $($car.loader)" -Action "visuals")) { return $true }
+        $toolHeld[$Actor] = $true
+        Add-Pending ($rng.Next(2, 9)) $Actor vfx-tool "none" "visuals" "visuals"
+        return $true
+    }
+    if ((Get-OpenCount $car.loader) -ge 3) { return $false }
+    $exclude = @(Get-WheelKeys $Actor $car.loader) + @(Get-GroupKeys $Actor $car.loader) + @($open | ForEach-Object { $_.Key })
+    $part = Pick @(Send-HarnessCommand -Instance $Actor -Verb vfx-parts -Arguments "$($car.loader)" | Where-Object { $exclude -notcontains $_.key })
+    if (-not $part) { return $false }
+    $r = Invoke-Step $Actor vfx-unscrew "$($car.loader) $($part.key)" -Action "visuals"
+    if (-not $r -or $r.blocked -or -not $r.key) { return $true }
+    $step = $script:stepNo
+    $deadline = (Get-Date).AddSeconds(60)
+    do {
+        Start-Sleep -Milliseconds 500
+        $state = try { (Send-HarnessCommand -Instance $Actor -Verb vfx-unscrew -Arguments "$($car.loader) $($part.key) status").state } catch { "gone" }
+    } while ($state -notin @("finished", "timeout", "part not committed", "gone") -and (Get-Date) -lt $deadline)
+    if ($state -eq "finished") {
+        $open.Add([pscustomobject]@{ Loader = $car.loader; Car = $car.carToLoad; Key = $part.key; Step = $step; By = $Actor; Due = (Get-Date).AddSeconds($rng.Next(2, 21)) })
+    } else {
+        Invoke-Step $Actor vfx-unscrew "$($car.loader) $($part.key) undo" -Action "visuals" | Out-Null
+    }
+    return $true
+}
+
 . (Join-Path $PSScriptRoot "..\SoakContention.ps1")
 
 $catalogue = @(
@@ -376,6 +414,7 @@ $catalogue = @(
     @{ Weight = 5; Name = "network"; Run = ${function:Invoke-Network} }
 )
 if ($Contention) { $catalogue += @{ Weight = $ContentionWeight; Name = "contention"; Run = ${function:Invoke-Contention} } }
+if ($Visuals) { $catalogue += @{ Weight = $VisualsWeight; Name = "visuals"; Run = ${function:Invoke-Visuals} } }
 $totalWeight = ($catalogue | ForEach-Object { $_.Weight } | Measure-Object -Sum).Sum
 
 function Invoke-RandomAction {
@@ -397,6 +436,7 @@ function Invoke-DuePending([switch]$All) {
         $pending.Remove($item) | Out-Null
         Invoke-Step $item.Actor $item.Verb $item.Args -Action $item.Action | Out-Null
         if ($item.Kind -eq "network") { $script:netBusy = $null }
+        if ($item.Kind -eq "visuals") { $toolHeld.Remove($item.Actor) }
         if ($item.Kind -eq "travel") {
             try { Wait-InGarage $item.Actor 240 | Out-Null } catch { Write-Host "$($item.Actor) did not get back to the garage: $($_.Exception.Message)" }
             $script:away = $null
