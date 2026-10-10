@@ -326,7 +326,7 @@ public static class CarCommands
         var registry = PartRegistry.Build(Loader((args ?? "").Trim()));
         var twins = registry.SubKeys.OrderBy(k => k, StringComparer.Ordinal)
             .Select(k => (Key: k, Script: registry.Sub(k)))
-            .Where(p => !p.Script.IsUnmounted && !p.Script.IsBlocked() && p.Script.GetUnmountWith().Count == 0)
+            .Where(p => !string.IsNullOrEmpty(p.Script.id) && !p.Script.IsUnmounted && !p.Script.IsBlocked() && p.Script.GetUnmountWith().Count == 0)
             .GroupBy(p => p.Script.id)
             .FirstOrDefault(g => g.Count() >= 2) ?? throw new ArgumentException("no two free parts share an id");
         return new Dictionary<string, object> { ["id"] = twins.Key, ["keys"] = twins.Take(2).Select(p => p.Key).ToList() };

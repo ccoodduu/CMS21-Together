@@ -246,6 +246,7 @@ public static class CarPlacementCommands
             ["isMoving"] = lifter.isMoving,
             ["applying"] = CMS21Together.Logic.Car.Placement.LifterSync.IsApplying(index),
             ["connectedLoader"] = connected == null ? -1 : places.GetCarLoaderId(connected),
+            ["blocked"] = connected != null && connected.ToolsData.OilbinIsConnected || lifter.IsPlayerInside() && lifter.GetState() == CarLifterState.Up,
             ["connectedObject"] = lifter.connectedGameObject != null,
             ["active"] = lifter.gameObject.activeInHierarchy,
             ["nearestPlace"] = nearest,

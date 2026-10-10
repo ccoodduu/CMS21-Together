@@ -4,6 +4,9 @@
 # A contention group: a seeded kind picks 2-4 members and a target, runs its setup steps, then holds every member's
 # outgoing packets (net-hold out), issues each member's verb, and releases the members one at a time in a seeded order,
 # member i+1 only after the server logged member i's packet. The observed server order goes into the "contend" marker.
+# Verbs behind a car lock (lift, car-move) send a lock request that their client drops after 3 s, so such a group
+# releases its members quickly and waits for the server only while the oldest request is young enough; a group in which
+# a request still timed out is "invalid".
 # After up to 10 s for the members' dumps to agree, rule 8 (conservation: items of a contended part's id, and every
 # contended UID in at most one place, in none if it was mounted or sold) and rule 9 (the kind's outcome) are checked.
 # A kind in soak-contention-known.txt is reported as "known gap" instead of failing; the random draw leaves such kinds
@@ -18,6 +21,8 @@ $ContentionKindsAll = @(
 $ContentionManyMembers = @("part-same", "details-same", "machine-same-slot", "item-trades", "lift-same")
 $contentionFile = Join-Path $runDir "contention.jsonl"
 $MaxHoldSeconds = 7  # a stalled client must answer a heartbeat within the server's 10 s
+$GatedVerbs = @("lift", "car-move")
+$LockTimeoutSeconds = 3  # CarLockMirror.TimeoutSeconds: the client drops a lock request unanswered for this long
 $script:contentionIndex = 0
 $script:contentionStats = @{ groups = 0; passed = 0; failed = 0; known = 0; invalid = 0; replayOrder = 0; replayOrderSame = 0 }
 
@@ -129,7 +134,7 @@ $ContentionBuilders = @{
         $car = Get-ContentionCar $Members[0]
         if (-not $car) { return $null }
         $twins = Invoke-Step $Members[0] part-twins "$($car.loader)" -Action "contention"
-        if (-not $twins -or @($twins.keys).Count -lt 2) { return $null }
+        if (-not $twins -or -not $twins.id -or @($twins.keys).Count -lt 2) { return $null }
         $keys = @($twins.keys)
         foreach ($key in $keys) { Invoke-Step $Members[0] part-fast-unmount "$($car.loader) $key" -Action "contention" | Out-Null; $open.Add([pscustomobject]@{ Loader = [int]$car.loader; Car = $car.carToLoad; Key = $key; Step = $script:stepNo; By = $Members[0]; Due = (Get-Date).AddSeconds(30) }) }
         $given = Invoke-Step $Members[0] give-item "$($twins.id) 1.00" -Action "contention"
@@ -272,7 +277,7 @@ $ContentionBuilders = @{
     }
     "lift-same" = {
         param($Members)
-        $lifter = Pick @(Send-HarnessCommand -Instance $Members[0] -Verb lifters | Where-Object { $_.active -and [int]$_.connectedLoader -ge 0 })
+        $lifter = Pick @(Send-HarnessCommand -Instance $Members[0] -Verb lifters | Where-Object { $_.active -and [int]$_.connectedLoader -ge 0 -and -not $_.blocked -and -not $_.isMoving -and -not $_.applying })
         if (-not $lifter) { return $null }
         $index = [int]$lifter.index
         $direction = if ("$($lifter.state)" -eq "Up") { "down" } else { "up" }
@@ -479,13 +484,20 @@ $ContentionCheckers = @{
     }
     "lift-same" = {
         param($Spec, $Before, $After, $Lines, $Ids, $Observed, $MemberSteps)
+        $problems = @(Test-LockAnswers $Spec $Observed)
         $accepted = Count-Lines $Lines "\[Placement\] Lift $($Spec.data.lifter) \S+ by client"
-        @{ problems = @(if ($accepted -ne 1) { "$accepted lift steps accepted, expected 1" }); consumed = @{} }
+        if ($accepted -ne 1) { $problems += "$accepted lift steps accepted, expected 1 (lift locks granted $(Count-Lines $Lines "\[Locks\] Lock \d+ granted to client $(Get-IdAlternation $Ids): loader \d+ Lift "), denied $(Count-Lines $Lines "\[Locks\] Request \d+ by client $(Get-IdAlternation $Ids) on loader \d+ \(Lift\) denied"))" }
+        @{ problems = $problems; consumed = @{} }
     }
     "place-same" = {
         param($Spec, $Before, $After, $Lines, $Ids, $Observed, $MemberSteps)
+        $problems = @(Test-LockAnswers $Spec $Observed)
         $inPlace = @($After.dump.placement.cars | Where-Object { $_.inPlace -eq $Spec.data.place }).Count
-        @{ problems = @(if ($inPlace -gt 1) { "$inPlace cars stand on $($Spec.data.place)" }); consumed = @{} }
+        if ($inPlace -gt 1) { $problems += "$inPlace cars stand on $($Spec.data.place)" }
+        $placeNo = [array]::IndexOf($places, "$($Spec.data.place)")
+        $moves = Count-Lines $Lines "\[Placement\] Loader \d+ (moved -?\d+->$placeNo|swapped places with loader \d+ \(-?\d+<->$placeNo\)) by client"
+        if ($moves -lt 1) { $problems += "no move to $($Spec.data.place) accepted" }
+        @{ problems = $problems; consumed = @{} }
     }
     "park-stale" = {
         param($Spec, $Before, $After, $Lines, $Ids, $Observed, $MemberSteps)
@@ -519,6 +531,27 @@ $ContentionCheckers = @{
         $partCache.Remove($Spec.loader)
         @{ problems = $problems; consumed = @{} }
     }
+}
+
+# Every member of a gated kind gets a lock grant or a denial from the server; a member missing from the observed order
+# refused the action locally or never sent its request.
+function Test-LockAnswers($Spec, $Observed) {
+    $missing = @(0..(@($Spec.members).Count - 1) | Where-Object { @($Observed) -notcontains $_ } | ForEach-Object { $Spec.members[$_].actor })
+    if ($missing.Count) { "no lock answer on the server for $($missing -join ', ') (refused locally or never sent)" }
+}
+
+function Get-GateCounters($Members) {
+    $counters = @{}
+    foreach ($m in $Members) { $counters[$m.actor] = try { Send-HarnessCommand -Instance $m.actor -Verb lock-counters } catch { $null } }
+    $counters
+}
+
+function Get-GateTimeouts($Members, $Before) {
+    $after = Get-GateCounters $Members
+    @(foreach ($m in $Members) {
+        $n = [int]$after[$m.actor].timeouts - [int]$Before[$m.actor].timeouts
+        if ($n -gt 0) { "$($m.actor) $n" }
+    })
 }
 
 # Rule 8: the items of each contended part's id follow its mount flips, and each contended UID is in at most one place
@@ -562,21 +595,30 @@ function Invoke-ContentionAct($Spec, [int[]]$Order, $Recorded) {
         if ($entry) { [int]$entry.step } else { 0 }
     }
     $before = Get-ContentionState $Spec
+    $gated = @($members | Where-Object { $GatedVerbs -contains $_.verb }).Count -gt 0
+    $gateBefore = if ($gated) { Get-GateCounters $members } else { $null }
     $memberSteps = @{}
     $failedVerbs = @()
     $holdStart = Get-Date
     for ($i = 0; $i -lt $members.Count; $i++) { Invoke-Step $members[$i].actor net-hold "out" -Action "contention" -Group $index -Phase "hold" -Member $i -Step (StepOf "hold" $i) | Out-Null }
+    $actStart = Get-Date
     for ($i = 0; $i -lt $members.Count; $i++) {
         $r = Invoke-Step $members[$i].actor $members[$i].verb $members[$i].args -Template $members[$i].template -Action "contention" -Group $index -Phase "act" -Member $i -Step (StepOf "act" $i)
         $memberSteps[$i] = $script:stepNo
         if ($null -eq $r) { $failedVerbs += "$($members[$i].actor) $($members[$i].verb)" }
     }
-    Start-Sleep -Milliseconds 1200
-    $held = @($members | ForEach-Object { try { [int](Send-HarnessCommand -Instance $_.actor -Verb net-hold -Arguments "status").heldOut } catch { -1 } })
+    if ($gated) {
+        Start-Sleep -Milliseconds 300
+        $held = @()
+    } else {
+        Start-Sleep -Milliseconds 1200
+        $held = @($members | ForEach-Object { try { [int](Send-HarnessCommand -Instance $_.actor -Verb net-hold -Arguments "status").heldOut } catch { -1 } })
+    }
     $mark = Get-ServerLogMark
     foreach ($i in $Order) {
         Invoke-Step $members[$i].actor net-hold "off" -Action "contention" -Group $index -Phase "release" -Member $i -Step (StepOf "release" $i) | Out-Null
         $budget = $MaxHoldSeconds - ((Get-Date) - $holdStart).TotalSeconds
+        if ($gated) { $budget = [math]::Min($budget, $LockTimeoutSeconds - 0.6 - ((Get-Date) - $actStart).TotalSeconds) }
         if ($failedVerbs.Count -gt 0 -or $budget -lt 1) { continue }
         try { Wait-ServerLog -Pattern (Get-MemberPattern $members[$i].verb $ids[$members[$i].actor]) -After $mark -TimeoutSec ([int][math]::Floor($budget)) | Out-Null } catch { }
     }
@@ -592,7 +634,8 @@ function Invoke-ContentionAct($Spec, [int[]]$Order, $Recorded) {
     $settled = $true
     $settled = Wait-ContentionSettle $actors $Spec.sections
     $after = Get-ContentionState $Spec
-    [pscustomobject]@{ Before = $before; After = $after; Lines = $lines; Ids = $ids; Observed = $observed; MemberSteps = $memberSteps; Held = $held; Settled = $settled; FailedVerbs = $failedVerbs }
+    $timedOut = if ($gated) { @(Get-GateTimeouts $members $gateBefore) } else { @() }
+    [pscustomobject]@{ Before = $before; After = $after; Lines = $lines; Ids = $ids; Observed = $observed; MemberSteps = $memberSteps; Held = $held; Settled = $settled; FailedVerbs = $failedVerbs; TimedOut = $timedOut }
 }
 
 function Complete-ContentionGroup($Spec, [int[]]$Order, $Act, $RecordedObserved) {
@@ -604,6 +647,10 @@ function Complete-ContentionGroup($Spec, [int[]]$Order, $Act, $RecordedObserved)
     if ($Act.FailedVerbs.Count -gt 0) {
         $verdict = "invalid"
         $rule9 = @("member verbs failed: $($Act.FailedVerbs -join ', ')")
+        $script:contentionStats.invalid++
+    } elseif ($Act.TimedOut.Count -gt 0) {
+        $verdict = "invalid"
+        $rule9 = @("lock requests timed out while held: $($Act.TimedOut -join ', ')")
         $script:contentionStats.invalid++
     } else {
         try { $outcome = & $ContentionCheckers[$kind] $Spec $Act.Before $Act.After $Act.Lines $Act.Ids $Act.Observed $Act.MemberSteps }
