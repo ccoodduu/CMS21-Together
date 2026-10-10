@@ -13,6 +13,17 @@ Newest first. One entry per work session.
 - Playtest build `0.6.0-dev.1191` on the Desktop.
 - In progress: row 25 part 3 new engines (lane 1); the `blocked` flag drift seen in the soak and the `locks-select-2`
   pie harness flake (lane 2); remote fluid visuals (oil drain etc.; lane 2 after).
+## 2026-10-10 (03:10–03:45) — row 25 part 3, new engines on the stand (`feat/new-engines`, lane 1)
+
+- `CreateEngineAction` is refused on a stand that holds or is receiving an engine ("Take the engine off the stand
+  first."); the put of a built engine is marked `Created` (matched by the built engine item) and sent with the stand's
+  UID from before the build, a refused built engine is discarded instead of returned, and a remote put waits while
+  a local build runs. Server counts `createdEngines` (`tools`), self-check `--check-tools`. Guard: `Window CreateEngine`
+  and pie `engine_new` allowed (the `guard` scenario's blocked pie is now `settings_load`).
+- Spike 1.1b (`20261010-031447_L1`, `20261010-031658_L1` `engine-build-probe`): the build waits for end-of-frame,
+  which never comes headless; stepped every frame (`stand-nofade`) it builds, so the build is proven in the harness.
+- Proof `engine-build` fails on the old code (`20261010-032613_L1`) and passes (`20261010-032430_L1`,
+  `20261010-032836_regression.json` with smoke and the tools scenarios). All three parts of row 25 are built.
 
 ## 2026-10-10 (02:30–03:15) — row 25 part 2, bonus parts (`feat/bonus-parts`, lane 1)
 

@@ -52,7 +52,6 @@ While you are connected, the game blocks these with "... is not supported in mul
 cannot drift apart:
 
 - the race track, the other tracks and the photo location;
-- building a new engine on the engine stand;
 - the separate Parking scene (the garage parking works); the showroom, the main menu's car viewer, is single-player
   only;
 - the tutorial, and saving or loading from the game's menus (the server saves the session).
@@ -63,7 +62,7 @@ Also not yet:
 - A texture pack for the garage is shared by its id only: a player who does not have it installed sees the default
   garage textures.
 
-Planned: the race track and building new engines. The DLC tracks, the photo
+Planned: the race track. The DLC tracks, the photo
 location, the tutorial and saving or loading stay blocked.
 
 ## Get started
@@ -103,6 +102,9 @@ the game, click **Multiplayer** in the main menu.
   the shared inventory once when fitted and comes back once when taken off. One player works on a bonus slot at a
   time ("<name> is fitting a bonus part here."); if the slot changed a moment ago and your game has not shown it yet,
   your fit is refused ("This slot just changed."), you keep your part and then see the new one.
+- **Building an engine:** a new engine block built on the engine stand ("New engine" in its pie menu) appears on the
+  stand for everyone, free as in single player. The stand must be empty ("Take the engine off the stand first."); if
+  two players build at the same moment, one engine ends up on the stand and the other player is told.
 - **Job achievements:** when a job is finished, the Steam stats and achievements for it (finished orders, the XP and
   money bonus, the last story mission) count for every connected player who worked on it: who took the order, who
   changed, examined or locked a part of its car, and who finished it. The host can give them to everyone in the garage

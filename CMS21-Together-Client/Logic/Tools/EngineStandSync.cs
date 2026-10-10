@@ -1,6 +1,7 @@
 using System.Collections;
 using System.Collections.Generic;
 using CMS21_Together_Core.Data.GameType;
+using CMS21_Together_Core.Logging;
 using CMS21_Together_Core.Network.Packets;
 using CMS21Together.Data;
 using CMS21Together.Logic.Car.Parts;
@@ -114,16 +115,67 @@ public sealed class EngineStandSync : ToolMachine
 [HarmonyPatch]
 public static class EngineStandHooks
 {
+	public const string OccupiedMessage = "Take the engine off the stand first.";
+	private const float BuildSeconds = 30f;
+
 	private static readonly HashSet<ModToolId> pendingPuts = new HashSet<ModToolId>();
+	private static bool creating;
+	private static long builtUid;
+	private static long builtExpected;
+	private static float builtAt;
+	private static bool subscribed;
+
+	public static bool Building => builtUid != 0 && Time.realtimeSinceStartup - builtAt < BuildSeconds;
+
+	public static void ForgetBuild()
+	{
+		creating = false;
+		builtUid = 0;
+	}
+
+	[HarmonyPatch(typeof(CMS.UI.Windows.CreateEngineWindow), nameof(CMS.UI.Windows.CreateEngineWindow.CreateEngineAction))]
+	[HarmonyPrefix]
+	[HarmonyPriority(Priority.First)]
+	private static bool BeforeCreateEngine()
+	{
+		if (!ToolSync.CanSend) return true;
+		if (!subscribed)
+		{
+			subscribed = true;
+			ClientScene.LeavingScene += (from, to) => ForgetBuild();
+		}
+		var logic = ToolSync.Machine(ModToolId.EngineStand1) is EngineStandSync stand ? stand.Logic : null;
+		if (logic != null && (HoldsEngine(logic) || !ToolSync.Mirror(ModToolId.EngineStand1).IsEmpty || ToolSync.IsApplyPending(ModToolId.EngineStand1) || Building))
+		{
+			Log.Info("[Tools] EngineStand1: building a new engine refused, the stand is not empty.");
+			Car.Locks.LockMessages.Refuse(OccupiedMessage);
+			return false;
+		}
+		creating = true;
+		builtExpected = ToolSync.Mirror(ModToolId.EngineStand1).Uid;
+		return true;
+	}
+
+	private static bool HoldsEngine(EngineStandLogic logic) => logic.engineGameObject != null || logic.GroupOnEngineStand != null && logic.GroupOnEngineStand.UID != 0;
+
+	private static long EngineItemUid(GroupItem group) => group?.ItemList != null && group.ItemList.Count > 0 ? group.ItemList[0].UID : 0;
+
+	[HarmonyPatch(typeof(CMS.UI.Windows.CreateEngineWindow), nameof(CMS.UI.Windows.CreateEngineWindow.CreateEngineAction))]
+	[HarmonyPostfix]
+	private static void AfterCreateEngine() => creating = false;
 
 	[HarmonyPatch(typeof(EngineStandLogic), nameof(EngineStandLogic.SetGroupOnEngineStand))]
 	[HarmonyPostfix]
-	private static void AfterPutStarted(EngineStandLogic __instance)
+	private static void AfterPutStarted(EngineStandLogic __instance, GroupItem groupItem)
 	{
 		var stand = EngineStandSync.For(__instance);
 		ToolSync.TraceEvent($"{stand?.Tool} SetGroupOnEngineStand");
 		if (stand == null || ToolSync.IsApplyingRemote(stand.Tool) || !ToolSync.CanSend) return;
 		pendingPuts.Add(stand.Tool);
+		if (!creating || stand.Tool != ModToolId.EngineStand1 || groupItem == null) return;
+		builtUid = EngineItemUid(groupItem);
+		builtAt = Time.realtimeSinceStartup;
+		Log.Info($"[Tools] EngineStand1: building a new {groupItem.ID} (group {groupItem.UID}, engine {builtUid}).");
 	}
 
 	[HarmonyPatch(typeof(EngineStandLogic._SetGroupOnEngineStand_d__8), nameof(EngineStandLogic._SetGroupOnEngineStand_d__8.MoveNext))]
@@ -138,7 +190,10 @@ public static class EngineStandHooks
 			pendingPuts.Remove(tool);
 			stand.AppliedUid = stand.Logic.GroupOnEngineStand.UID;
 			stand.Rebuild();
-			ToolSync.SendLocal(stand.CaptureForSend());
+			bool created = builtUid != 0 && tool == ModToolId.EngineStand1 && EngineItemUid(stand.Logic.GroupOnEngineStand) == builtUid;
+			if (builtUid != 0) Log.Debug($"[Tools] EngineStand1: built group {stand.AppliedUid}, engine {EngineItemUid(stand.Logic.GroupOnEngineStand)} (expected engine {builtUid}).");
+			if (created) builtUid = 0;
+			ToolSync.SendLocal(stand.CaptureForSend(), expectedUid: created ? builtExpected : (long?)null, created: created);
 		}
 	}
 
@@ -150,6 +205,7 @@ public static class EngineStandHooks
 		ToolSync.TraceEvent($"{stand?.Tool} ClearEngineStand");
 		if (stand == null || ToolSync.IsApplyingRemote(stand.Tool)) return;
 		var group = __instance.GroupOnEngineStand;
+		if (builtUid != 0 && EngineItemUid(group) == builtUid) builtUid = 0;
 		if (group == null || !ToolSync.CanSend || !InInventory(group))
 		{
 			stand.Forget();

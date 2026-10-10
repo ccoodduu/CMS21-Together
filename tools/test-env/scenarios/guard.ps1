@@ -43,13 +43,13 @@ $inventory = Try-Guard $a "Window:Inventory" "allowed"
 if (-not $inventory.shown) { $failures += "Inventory did not open after the blocked mode change" }
 Start-Sleep -Seconds 2
 
-Try-Guard $a "Pie:engine_new" "blocked" | Out-Null
+Try-Guard $a "Pie:settings_load" "blocked" | Out-Null
 Try-Guard $a "Pie:wheel_take" "allowed" | Out-Null
 $null = Send-HarnessCommand -Instance $a -Verb guard-try -Arguments "PieMenu:EngineStand"
 Start-Sleep -Milliseconds 1500
 $menu = Send-HarnessCommand -Instance $a -Verb guard-try -Arguments "PieState:EngineStand"
 $menu.options | Set-Content -LiteralPath (Join-Path $Ctx.RunDir "pie_enginestand.txt") -Encoding utf8
-if (-not ($menu.options | Where-Object { $_ -like "engine_new enabled=False" })) { $failures += "engine stand menu does not show engine_new locked: $($menu.options -join ', ')" }
+if ($menu.options | Where-Object { $_ -like "engine_new enabled=False" }) { $failures += "engine stand menu shows engine_new locked: $($menu.options -join ', ')" }
 if ($menu.options | Where-Object { $_ -like "engine_add enabled=False" }) { $failures += "engine stand menu shows engine_add locked: $($menu.options -join ', ')" }
 Start-Sleep -Seconds 1
 Save-HarnessScreenshot -Instance $a -RunDir $Ctx.RunDir -Label "pie_enginestand"
@@ -67,7 +67,7 @@ if ($dumpA.local.scene -ne "Garage") { $failures += "A left the garage after blo
 
 $log = Send-HarnessCommand -Instance $a -Verb guard-log
 $log | ConvertTo-Json -Depth 5 | Set-Content -LiteralPath (Join-Path $Ctx.RunDir "guard_log_A.json") -Encoding utf8
-foreach ($key in @("Window:RevertBackup", "Scene:Showroom", "Pie:engine_new")) {
+foreach ($key in @("Window:RevertBackup", "Scene:Showroom", "Pie:settings_load")) {
     if ($log.keys -notcontains $key) { $failures += "guard-log on A lacks $key" }
 }
 
