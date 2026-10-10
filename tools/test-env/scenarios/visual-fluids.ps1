@@ -108,23 +108,23 @@ Check ($before.plug -and $before.plug.active -and $before.plug.renderers -gt 0) 
 $use = Cmd $a tool-use "OilBin $loader"
 $started = Get-Date
 Write-Host "A drains (oil $($use.oil))"
-$during = Wait-Report $b "drain replay" { param($r) (DrainsOfA $r).Count -eq 1 -and (Playing $r).Count -eq 1 -and $r.plug.hidden -gt 0 } 4
+$during = Wait-Report $b "drain replay" { param($r) @(DrainsOfA $r).Count -eq 1 -and @(Playing $r).Count -eq 1 -and $r.plug.hidden -gt 0 } 4
 $latency = ((Get-Date) - $started).TotalSeconds
 Save "during_$b" $during
 Save "during_$a" (Report $a)
-Check ((DrainsOfA $during).Count -eq 1) "B has a Drain effect for A on loader $loader while A drains ($(@($during.effects) | ConvertTo-Json -Compress))"
-Check ((Playing $during).Count -eq 1) "B has one TogetherFluid copy with its particles playing ($(@($during.copies) | ConvertTo-Json -Compress -Depth 5))"
+Check (@(DrainsOfA $during).Count -eq 1) "B has a Drain effect for A on loader $loader while A drains ($(@($during.effects) | ConvertTo-Json -Compress))"
+Check (@(Playing $during).Count -eq 1) "B has one TogetherFluid copy with its particles playing ($(@($during.copies) | ConvertTo-Json -Compress -Depth 5))"
 Check ($during.plug.hidden -eq $during.plug.renderers -and $during.plug.active) "B's drain plug is hidden by its renderers and stays active ($($during.plug | ConvertTo-Json -Compress))"
-Check ((Loops $during "PlayLoopSFX" | Where-Object { $_.sound -eq "OilDrain" }).Count -eq 1) "B started the OilDrain loop on its copy ($(@($during.sounds) | ConvertTo-Json -Compress))"
-Check ((Loops (Report $a) "PlayLoopSFX").Count -eq 0) "A plays no replay of its own drain"
+Check (@(Loops $during "PlayLoopSFX" | Where-Object { $_.sound -eq "OilDrain" }).Count -eq 1) "B started the OilDrain loop on its copy ($(@($during.sounds) | ConvertTo-Json -Compress))"
+Check (@(Loops (Report $a) "PlayLoopSFX").Count -eq 0) "A plays no replay of its own drain"
 Write-Host "B's replay started $([math]::Round($latency, 2)) s after A's drain"
 
-$after = Wait-Report $b "replay gone" { param($r) (Copies $r).Count -eq 0 -and @($r.effects).Count -eq 0 -and $r.plug.hidden -eq 0 } 15
+$after = Wait-Report $b "replay gone" { param($r) @(Copies $r).Count -eq 0 -and @($r.effects).Count -eq 0 -and $r.plug.hidden -eq 0 } 15
 Wait-DrainEnd
 Save "after_$b" $after
-Check (@($after.effects).Count -eq 0 -and (Copies $after).Count -eq 0) "B's replay and copy are gone after A's drain"
+Check (@($after.effects).Count -eq 0 -and @(Copies $after).Count -eq 0) "B's replay and copy are gone after A's drain"
 Check ($after.plug.hidden -eq 0 -and $after.renderersHidden -eq 0) "no renderer stays hidden on B ($($after.plug | ConvertTo-Json -Compress), $($after.renderersHidden))"
-Check ((Loops $after "StopLoopSFX" | Where-Object { $_.playEnd }).Count -ge 1) "B ended the loop with the drain's tail"
+Check (@(Loops $after "StopLoopSFX" | Where-Object { $_.playEnd }).Count -ge 1) "B ended the loop with the drain's tail"
 Check ($after.leaks -eq 0) "no state leak on B ($($after.leaks))"
 Wait-Oil "after the drain" 0
 Wait-Same "after the drain"
@@ -136,7 +136,7 @@ $skippedBefore = [int]$(if ($null -ne (Report $b).skipped.disabled) { (Report $b
 Cmd $a tool-use "OilBin $loader" | Out-Null
 Start-Sleep -Seconds 2
 $off = Report $b
-Check (@($off.effects).Count -eq 0 -and (Copies $off).Count -eq 0 -and $off.plug.hidden -eq 0) "with RemoteVisuals off B shows no drain ($($off | ConvertTo-Json -Compress -Depth 5))"
+Check (@($off.effects).Count -eq 0 -and @(Copies $off).Count -eq 0 -and $off.plug.hidden -eq 0) "with RemoteVisuals off B shows no drain ($($off | ConvertTo-Json -Compress -Depth 5))"
 Check ([int]$off.skipped.disabled -gt $skippedBefore) "B counted the drain as skipped (disabled: $($off.skipped.disabled))"
 Wait-DrainEnd
 Cmd $b vfx-enable "on" | Out-Null
@@ -155,25 +155,25 @@ $deadline = (Get-Date).AddSeconds(15)
 do { Start-Sleep -Milliseconds 500; $pa = Cmd $a vfx-pour "$loader BrakeRefill status" } while (-not $pa.canUse -and (Get-Date) -lt $deadline)
 Save "pour-ready_$a" $pa
 Check $pa.canUse "A's can is out and ready to pour ($($pa | ConvertTo-Json -Compress))"
-$can = Wait-Report $b "pour can" { param($r) (PoursOfA $r).Count -eq 1 -and (Copies $r).Count -eq 1 } 4
+$can = Wait-Report $b "pour can" { param($r) @(PoursOfA $r).Count -eq 1 -and @(Copies $r).Count -eq 1 } 4
 Save "pour-can_$b" $can
-Check ((PoursOfA $can).Count -eq 1 -and (Copies $can).Count -eq 1) "B shows A's can at the reservoir ($(@($can.effects) | ConvertTo-Json -Compress))"
-Check ((Streaming $can).Count -eq 0) "B's can does not stream before A pours"
+Check (@(PoursOfA $can).Count -eq 1 -and @(Copies $can).Count -eq 1) "B shows A's can at the reservoir ($(@($can.effects) | ConvertTo-Json -Compress))"
+Check (@(Streaming $can).Count -eq 0) "B's can does not stream before A pours"
 if ($pa.logicPosition -and @(Copies $can).Count -eq 1) {
     $p = @(Copies $can)[0].position
     $gap = [math]::Sqrt([math]::Pow($p[0] - $pa.logicPosition[0], 2) + [math]::Pow($p[1] - $pa.logicPosition[1], 2) + [math]::Pow($p[2] - $pa.logicPosition[2], 2))
     Check ($gap -lt 0.05) "B's can stands where A's can is ($([math]::Round($gap, 3)) m apart)"
 }
 Cmd $a vfx-pour "$loader BrakeRefill hold 3" | Out-Null
-$pouring = Wait-Report $b "stream" { param($r) (Streaming $r).Count -eq 1 } 3
+$pouring = Wait-Report $b "stream" { param($r) @(Streaming $r).Count -eq 1 } 3
 Save "pouring_$b" $pouring
-Check ((Streaming $pouring).Count -eq 1) "B's can streams while A pours ($(@($pouring.copies) | ConvertTo-Json -Compress -Depth 5))"
+Check (@(Streaming $pouring).Count -eq 1) "B's can streams while A pours ($(@($pouring.copies) | ConvertTo-Json -Compress -Depth 5))"
 Start-Sleep -Seconds 3
-$stopped = Wait-Report $b "stream stopped" { param($r) (Streaming $r).Count -eq 0 } 4
-Check ((Streaming $stopped).Count -eq 0 -and (PoursOfA $stopped).Count -eq 1) "B's stream stops when A lets go, the can stays"
+$stopped = Wait-Report $b "stream stopped" { param($r) @(Streaming $r).Count -eq 0 } 4
+Check (@(Streaming $stopped).Count -eq 0 -and @(PoursOfA $stopped).Count -eq 1) "B's stream stops when A lets go, the can stays"
 Cmd $a vfx-pour "$loader BrakeRefill end" | Out-Null
-$away = Wait-Report $b "can away" { param($r) (Copies $r).Count -eq 0 -and @($r.effects).Count -eq 0 } 6
-Check ((Copies $away).Count -eq 0 -and @($away.effects).Count -eq 0) "B's can is gone after A puts it away"
+$away = Wait-Report $b "can away" { param($r) @(Copies $r).Count -eq 0 -and @($r.effects).Count -eq 0 } 6
+Check (@(Copies $away).Count -eq 0 -and @($away.effects).Count -eq 0) "B's can is gone after A puts it away"
 Check ($away.leaks -eq 0 -and $away.renderersHidden -eq 0) "no state leak or hidden renderer on B ($($away.leaks), $($away.renderersHidden))"
 $deadline = (Get-Date).AddSeconds(10)
 do { Start-Sleep -Milliseconds 500; $ba = Brake $a; $bb = Brake $b } while (($null -eq $ba -or $null -eq $bb -or [math]::Abs($ba.Level - $bb.Level) -gt 0.01) -and (Get-Date) -lt $deadline)
@@ -183,15 +183,15 @@ Wait-Same "after the pour"
 # 4. A leaves mid-drain: B's replay is cancelled and its sound stopped.
 Fill-Oil "before the cut drain"
 Cmd $a tool-use "OilBin $loader" | Out-Null
-$cut = Wait-Report $b "drain replay" { param($r) (DrainsOfA $r).Count -eq 1 } 4
-Check ((DrainsOfA $cut).Count -eq 1) "B replays the drain before A leaves"
-$stopsBefore = (Loops $cut "StopLoopSFX").Count
+$cut = Wait-Report $b "drain replay" { param($r) @(DrainsOfA $r).Count -eq 1 } 4
+Check (@(DrainsOfA $cut).Count -eq 1) "B replays the drain before A leaves"
+$stopsBefore = @(Loops $cut "StopLoopSFX").Count
 Cmd $a to-menu | Out-Null
-$gone = Wait-Report $b "replay cancelled" { param($r) (Copies $r).Count -eq 0 -and @($r.effects).Count -eq 0 } 8
+$gone = Wait-Report $b "replay cancelled" { param($r) @(Copies $r).Count -eq 0 -and @($r.effects).Count -eq 0 } 8
 Save "left_$b" $gone
-Check (@($gone.effects).Count -eq 0 -and (Copies $gone).Count -eq 0) "B's replay is gone after A left"
+Check (@($gone.effects).Count -eq 0 -and @(Copies $gone).Count -eq 0) "B's replay is gone after A left"
 Check ($gone.plug.hidden -eq 0 -and $gone.renderersHidden -eq 0) "B's drain plug is shown again after A left"
-Check ((Loops $gone "StopLoopSFX").Count -gt $stopsBefore) "B stopped the loop when A left"
+Check (@(Loops $gone "StopLoopSFX").Count -gt $stopsBefore) "B stopped the loop when A left"
 Check ($gone.leaks -eq 0) "no state leak on B ($($gone.leaks))"
 $status = Get-HarnessStatus -Instance $b
 Check ($status.playable -and $status.scene -eq "garage") "B stays playable in the garage"

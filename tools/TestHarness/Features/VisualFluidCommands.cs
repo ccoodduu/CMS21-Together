@@ -70,11 +70,16 @@ public static class VisualFluidCommands
             {
                 var fluid = refill.carFluidType;
                 var registry = CMS21Together.Logic.Car.Parts.PartRegistry.Build(carLoader);
-                string capKey = registry.SubKeys.OrderBy(k => k, StringComparer.Ordinal).FirstOrDefault(k =>
+                var inventory = GameInventory.Instance;
+                var caps = registry.SubKeys.OrderBy(k => k, StringComparer.Ordinal).Where(k =>
                 {
-                    var container = registry.Sub(k).transform.parent?.GetComponent<CarFluid>();
+                    var script = registry.Sub(k);
+                    if (inventory?.GetItemProperty(script.id)?.SpecialGroup != SpecialGroup.OilDrainCheckFill) return false;
+                    if ((script.id ?? "").StartsWith("korek_spustowy", StringComparison.Ordinal)) return false;
+                    var container = script.GetComponentInParent<CarFluid>();
                     return container != null && container.FluidType == fluid && container.ID == 0;
-                });
+                }).ToList();
+                string capKey = caps.FirstOrDefault();
                 var cap = capKey == null ? null : registry.Sub(capKey);
                 if (cap == null) throw new InvalidOperationException($"no cap in a {fluid} container");
                 carLoader.CurrentUsedFluid = fluid;
@@ -88,7 +93,7 @@ public static class VisualFluidCommands
                     opened = true;
                 }
                 tools.Use(type);
-                return new { capKey, cap = cap.id, opened, fluid = fluid.ToString(), active = tools.ToolIsActive };
+                return new { capKey, cap = cap.id, candidates = caps.Select(k => registry.Sub(k).id).ToList(), opened, fluid = fluid.ToString(), active = tools.ToolIsActive };
             }
             case "hold":
             {
@@ -128,6 +133,8 @@ public static class VisualFluidCommands
             logicActive = logic != null && logic.gameObject.activeSelf,
             canUse = logic != null && logic.canUse,
             power = logic == null ? 0f : logic.power,
+            cap = cap == null ? null : cap.id,
+            capActive = cap != null && cap.gameObject.activeInHierarchy,
             capUnmounted = cap != null && cap.IsUnmounted,
             capAnimationDone = cap != null && cap.MountAnimationCompleted,
             level = carLoader.FluidsData.GetLevel(refill.carFluidType, 0, false),
