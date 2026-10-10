@@ -25,6 +25,18 @@ Newest first. One entry per work session.
   `20261009-220034_L2`, `20261009-220954_L2` (spurious accepts also in the passing `20261009-220207_L2`,
   `20261009-221126_L2`); on the branch 1 of 4 (`20261009-220342_L2`). Base runs copied to
   `CMS21-Together-wt\place-same\tools\runs\base-c4bd1c3`; the `place-same-base` worktree is removed. Harness fix not done.
+## 2026-10-10 (01:30–02:30) — playtest 3 fixes proven (`fix/mount-replay-target`, lane 1)
+
+- Proofs (old code = this branch with the three fixes reverted; both batches in lane 1):
+  - `lock-mount-target` (mount target, also a body part): fails `20261010-015214_L1` (the pick for `s:13.17` turned
+    `s:14.0` into `wentylator_2`; the hood's item turned the trunk into `tunedId hood`, hood still off), passes
+    `20261010-014750_L1`. New harness: `lock-try ... repoint <key>` and `lock-try <loader> body-mount <index> <uid>`.
+  - `car-mount-wear` (remote mount wear): fails `20261010-015316_L1` (A's RustWeight 0.8 at condition 1.0, F7 gives
+    0.0), passes `20261010-014855_L1`. New verb `part-shader <loader> <key> [refresh]`.
+  - `shop-buy-popup` (shop popup and sound): fails `20261010-015351_L1` (no popup, no sound), passes
+    `20261010-014930_L1`. New verbs `shop-buy`, `popup-trace`.
+- `origin/main` merged; smoke plus locks, `car-mount-race`, `car-live`, `car-wheel-swap`, `visual-parts`,
+  `purchases`, `economy-*` and the three proofs pass (`20261010-015457_regression.json`).
 
 ## 2026-10-09/10 (23:00–01:40) — playtest 3 (dev.1169/1170), findings
 
