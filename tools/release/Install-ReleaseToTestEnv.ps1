@@ -3,7 +3,8 @@
 Installs release zips from Build-Release.ps1 into one test lane: the client zip into the lane's two test installs
 (plus the test harness, built from this worktree), the server zip into the lane's server folder, keeping its
 server_config.ini (port set to the lane's), Saves\ and Log\. Then run
-tools\test-env\Run-Session.ps1 -Scenario release-smoke -Lane <n>. Deploy-Mod.ps1 -Lane <n> restores the dev build.
+tools\test-env\Run-Session.ps1 -Scenario release-smoke -Lane <n> -AllowForeignDeploy (the release is not this
+worktree's build output). Deploy-Mod.ps1 -Lane <n> restores the dev build.
 
 Without -ClientZip/-ServerZip the newest client zip in tools\release\out and its server zip are used.
 -NoSteamLib removes UserLibs\steam_api64.dll from the test installs again (Steam off, as in dev runs).
@@ -82,4 +83,4 @@ Remove-Item -LiteralPath $extractRoot -Recurse -Force
 $manifest = Get-Content -LiteralPath (Join-Path $serverDir "release.json") -Raw | ConvertFrom-Json
 Write-Host ("Installed {0} into lane {1} ({2}, {3}, port {4}){5}" -f $manifest.fullVersion, $Lane,
     ($laneInfo.Instances -join ', '), $serverDir, $laneInfo.Port, $(if ($NoSteamLib) { ", without steam_api64.dll" } else { "" }))
-Write-Host "Next: tools\test-env\Run-Session.ps1 -Scenario release-smoke -Lane $Lane"
+Write-Host "Next: tools\test-env\Run-Session.ps1 -Scenario release-smoke -Lane $Lane -AllowForeignDeploy"

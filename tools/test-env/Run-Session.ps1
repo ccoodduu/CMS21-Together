@@ -12,7 +12,10 @@ Scenarios with a .launch.psd1 or a "# run-all: fresh" line run as single session
 rest of a batch whose clients do not get back to the menu within 90 s.
 
 Lane locks: the run holds the lock of every lane it uses (lane 3: lanes 1 and 2) from start to end, waiting up to
--LaneWaitMinutes for a busy lane. -Deploy runs Deploy-Mod.ps1 for the lane inside the locks. -ScenarioArgs is a
+-LaneWaitMinutes for a busy lane. -Deploy runs Deploy-Mod.ps1 for the lane inside the locks. Inside the locks the run
+also checks that the lane's installed mod, harness and server files are this worktree's build output; when they are not
+(another worktree deployed in between, or a release install), it stops unless -AllowForeignDeploy, which runs them with
+a warning in each result. -ScenarioArgs is a
 hashtable splatted into the scenario after -Ctx. By default every instance runs headless (-batchmode -nographics: no
 window, no mouse capture, about 6 GB less RAM each); -Visible (or CMS21_TEST_VISIBLE=1) shows the windows, -Headless C,D
 makes only those headless, and a scenario with a "# needs: graphics" line runs visible and outside a batch.
@@ -32,6 +35,7 @@ param(
     [hashtable]$ScenarioArgs = @{},
     [switch]$Deploy,
     [switch]$NoBuild,
+    [switch]$AllowForeignDeploy,
     [double]$LaneWaitMinutes = 120,
     [string[]]$Headless = @(),
     [switch]$Visible
@@ -179,6 +183,7 @@ function New-RunResult([string]$Name) {
     if ($deployed.Mixed) { Write-Host "WARNING: the installs and server of lane $Lane carry different builds (see deployed in result.json)" -ForegroundColor Yellow }
     $result = [ordered]@{ scenario = $Name; lane = $Lane; passed = $false; notes = @(); started = (Get-Date).ToString("s"); deployed = $deployed.Builds }
     if ($deployed.Mixed) { $result.notes += "WARNING: mixed builds in lane $Lane (deployed in result.json)" }
+    if ($script:foreignBuild) { $result.notes += "WARNING: $script:foreignBuild" }
     if ($ScenarioArgs.Count -gt 0) { $result.scenarioArgs = $ScenarioArgs }
     if ($Headless.Count -gt 0) { $result.headless = $Headless }
     return $result
@@ -220,7 +225,8 @@ function Complete-Run($Result, [string]$RunDir, [string[]]$HarmonyAtLaunch = @()
 function Invoke-FreshSession([string]$Name) {
     try {
         & $thisScript -Scenario $Name -Lane $Lane -Window $Window -Sound:$Sound -MinCommitHeadroomGb $MinCommitHeadroomGb `
-            -MinFreeMemoryGb $MinFreeMemoryGb -ScenarioArgs $ScenarioArgs -LaneWaitMinutes $LaneWaitMinutes -Headless $Headless
+            -MinFreeMemoryGb $MinFreeMemoryGb -ScenarioArgs $ScenarioArgs -LaneWaitMinutes $LaneWaitMinutes -Headless $Headless `
+            -AllowForeignDeploy:$AllowForeignDeploy
     } catch {
         Write-Host "ERROR: $($_.Exception.Message)" -ForegroundColor Red
         Write-Host ("RESULT L{0} {1}: FAILED" -f $Lane, $Name)
@@ -317,6 +323,15 @@ function Invoke-BatchScenario([string]$Name, $HarnessReset) {
 $laneLocks = Enter-LaneLocks -Lane $Lane -WaitMinutes $LaneWaitMinutes
 try {
     if ($Deploy) { & (Join-Path $PSScriptRoot "Deploy-Mod.ps1") -Lane $Lane -NoBuild:$NoBuild | Out-Host }
+    $mismatch = @(Get-LaneBuildMismatch "$repo" $laneInfo)
+    $script:foreignBuild = $null
+    if ($mismatch.Count -gt 0) {
+        $from = @((Get-LaneDeployedBuilds $laneInfo).Builds.Values | Where-Object { $_ } | ForEach-Object { "$($_.repo) $($_.commit)" } | Select-Object -Unique) -join ", "
+        $text = "lane $Lane does not run the build of $repo ($($mismatch[0])$(if ($mismatch.Count -gt 1) { " and $($mismatch.Count - 1) more" })); deployed.json names $(if ($from) { $from } else { 'nothing' })"
+        if (-not $AllowForeignDeploy) { throw "$text. Use -Deploy, or -AllowForeignDeploy to run what is installed." }
+        Write-Host "WARNING: $text" -ForegroundColor Yellow
+        $script:foreignBuild = $text
+    }
 
     if (-not $batchMode) {
         $scenarioFile = Join-Path $PSScriptRoot "scenarios\$Scenario.ps1"

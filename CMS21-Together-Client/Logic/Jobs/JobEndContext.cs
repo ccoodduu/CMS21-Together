@@ -11,6 +11,7 @@ namespace CMS21Together.Logic.Jobs;
 public static class JobEndContext
 {
 	private const float TimeoutSeconds = 10f;
+	private const float StepGapSeconds = 1f;
 
 	private static int jobId = -1;
 	private static int loader = -1;
@@ -19,13 +20,21 @@ public static class JobEndContext
 	private static int xp;
 	private static int moneyBefore;
 	private static float startedAt;
+	private static float lastStepAt = -1f;
 	private static readonly EconomyScopeEntry scope = new EconomyScopeEntry
 	{
 		Name = "JobPayout", Mode = EconomyMode.Covered, Claims = EconomyKind.Money | EconomyKind.Exp,
 		CaptureMoney = amount => CaptureMoney(amount), CaptureExp = amount => CaptureExp(amount),
 	};
 
-	public static bool IsActive => jobId >= 0 && Time.realtimeSinceStartup - startedAt < TimeoutSeconds;
+	public static bool IsActive
+	{
+		get
+		{
+			if (jobId >= 0 && lastStepAt >= 0f && Time.realtimeSinceStartup - lastStepAt > StepGapSeconds) Drop("its end coroutine stopped before the payout");
+			return jobId >= 0 && Time.realtimeSinceStartup - startedAt < TimeoutSeconds;
+		}
+	}
 
 	public static EconomyScopeEntry Scope => IsActive ? scope : null;
 
@@ -38,6 +47,7 @@ public static class JobEndContext
 		xp = 0;
 		moneyBefore = GlobalData.PlayerMoney;
 		startedAt = Time.realtimeSinceStartup;
+		lastStepAt = -1f;
 		Log.Info($"[Jobs] Ending job {jobId} on loader {loader}.");
 	}
 
@@ -56,6 +66,21 @@ public static class JobEndContext
 	}
 
 	public static bool IsCommit(int cancelledId) => IsActive && cancelledId == jobId;
+
+	public static bool CoroutineStarted => lastStepAt >= 0f;
+
+	public static void OnCoroutineStep()
+	{
+		if (jobId >= 0) lastStepAt = Time.realtimeSinceStartup;
+	}
+
+	public static void Drop(string why)
+	{
+		if (jobId < 0) return;
+		Log.Info($"[Jobs] Job {jobId} not ended: {why}.");
+		if (xp > 0) EconomyRequests.SendWork(xp);
+		jobId = -1;
+	}
 
 	public static void Commit(Job job)
 	{
