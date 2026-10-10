@@ -45,6 +45,11 @@ public static class RemoteCollider
 	// Unnamed and without colliders on the tracks; 27 and 30 look free but are the game's "EMPTY3" and "StaticObjects".
 	public const int Layer = 3;
 	public static bool? Forced;
+	// A copy shown late, or extrapolated past a stop, sinks into the local car; pushed out at the game's 8 m/s it lifted cars.
+	public const float DefaultDepenetrationCap = 1.5f;
+	public static float DepenetrationCap = DefaultDepenetrationCap;
+	private static Rigidbody cappedBody;
+	private static float savedDepenetration;
 
 	private static Rigidbody localBody;
 	private static int localMask;
@@ -60,6 +65,28 @@ public static class RemoteCollider
 		if (!RemoteCars.All.Any()) return;
 		RefreshLocal();
 		foreach (var car in RemoteCars.All) Step(car);
+		CapDepenetration(RemoteCars.All.Any(c => c.Collider != null && c.Collider.Touching));
+	}
+
+	private static void CapDepenetration(bool touching)
+	{
+		if (localBody == null || DepenetrationCap <= 0f)
+		{
+			if (cappedBody != null && cappedBody == localBody) localBody.maxDepenetrationVelocity = savedDepenetration;
+			cappedBody = null;
+			return;
+		}
+		if (touching && cappedBody != localBody)
+		{
+			cappedBody = localBody;
+			savedDepenetration = localBody.maxDepenetrationVelocity;
+			localBody.maxDepenetrationVelocity = DepenetrationCap;
+		}
+		else if (!touching && cappedBody == localBody)
+		{
+			localBody.maxDepenetrationVelocity = savedDepenetration;
+			cappedBody = null;
+		}
 	}
 
 	public static void RefreshLocal()
