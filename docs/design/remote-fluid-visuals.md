@@ -24,8 +24,10 @@ reported with options; the drain does not depend on it.
   40 m, `RemoteVisuals`, `notInGarage`, `beforeSync`; counted in `started`/`finished`/`skipped`; leak detector on).
 - It owns a **copy** of the receiver's own tool object (`ToolsManager.Oil_drain_h`, or the refill's
   `fluidRefillLogic` object): instantiated under an inactive holder, every `MonoBehaviour` removed before it is
-  activated (so `FluidRefillLogic.Update` never runs and never writes fluids), renamed `TogetherFluid[<kind> <player>]`,
-  at the scene root. Particle systems and `AudioSource` stay.
+  activated (so `FluidRefillLogic.Update` never runs and never writes fluids), colliders (the cans' `EmitCollision`
+  and the oil funnel on layer 29 would catch the receiver's clicks) and cameras removed too, renamed
+  `TogetherFluid[<kind> <player>]`, at the scene root with the source's world scale. Particle systems, renderers and
+  `AudioSource` stay.
 - The only write to existing objects: `forceRenderingOff` on the drain plug's renderers (`korek_spustowy_1(0)` under
   `e_engine_h`), recorded and restored by `VisualScope` like a ghost's hidden part. The plug's `SetActive`,
   `EnableIO`, the oil bin's `InteractiveObject.on`, `FluidsData` and `OnOilDrainFinished` are never touched.

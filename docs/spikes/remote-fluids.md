@@ -107,9 +107,15 @@ frame and moves the piston and the tube's blend shape (in the overlay), then `Se
 - `ToolType.OilDrain` (9) has no case in `ToolsManager.Use` (it only sets `ToolIsActive`); the drain is the oil bin.
 - `MountObjectSpray` (14): rust spray on bolts, not a fluid.
 
-## Needs a game run
+## Runtime (`vfx-fluids probe`, `20261010-024128_L2_visual-fluids`, headless)
 
-- `Oil_drain_h`: its components and children (particle systems, renderers, `AudioSource`, scripts), layer, and whether
-  a copy (instantiated under an inactive parent, scripts removed) plays its particles headless.
-- `fluidRefillLogic` of each refill: children (`puszka`, `emit`, `emitFull`), scripts, layer, `AudioSource`.
-- `GameVolume` on the test games (when 0, `PlayLoopSFX` returns at once; the scenario then checks the call trace).
+- `Oil_drain_h` is a GameObject `OilDrain` (inactive until the first drain, no components) with the child `Emit`
+  (`ParticleSystem`, the stream) and under it `GoopPool` (`ParticleSystem`, inactive; nothing in the drain turns it
+  on). Layer 0, no script, no collider, no `AudioSource` (`PlayLoopSFX` adds one).
+- Each refill tool is `<Name>FluidRefill` (`FluidRefill`; brake and washer also carry a `PartGroup`) with the pour
+  object as its child of the same name: `AudioSource` + `FluidRefillLogic`, inactive. Under it the can mesh
+  (`puszka`: `Engine_Oil_Container_1`, `Brake_Fluid_Container_1`, …) with the `Emit` stream as the can's child,
+  `EmitFull`, `CameraPosition` (empty) and a `BoxCollider` `EmitCollision` on layer 29 (oil: a funnel mesh with a
+  `MeshCollider` on layer 29 instead). The pour object is always a child of the tool (`logicIsChildOfTool`).
+- `GameSettings.AudioSettingsData.GameVolume` is 0.1 on the test games, so `PlayLoopSFX` runs.
+- On A the game's own drain is traced as `PlayLoopSFX(OilDrain, "OilDrain")` and the plug is inactive during it.
