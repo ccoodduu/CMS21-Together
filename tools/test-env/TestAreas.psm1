@@ -45,6 +45,7 @@ tools/TestHarness/Features/Tools*                              tools
 tools/TestHarness/Features/Visual*                             visuals
 tools/TestHarness/Features/Drive*                              driving
 tools/TestHarness/Features/Track*                              driving
+tools/TestHarness/Features/Race*                               driving
 tools/TestHarness/Features/Lock*                               locks
 tools/TestHarness/Features/Ping*                               ping
 tools/TestHarness/Features/PartShader*                         parts, visuals
@@ -76,6 +77,7 @@ CMS21-Together-*/Network/Handlers/Tool*                        tools
 CMS21-Together-*/Network/Handlers/Visual*                      visuals, presence
 CMS21-Together-*/Network/Handlers/Drive*                       driving, testdrive
 CMS21-Together-*/Network/Handlers/Track*                       driving
+CMS21-Together-*/Network/Handlers/Race*                        driving
 CMS21-Together-*/Network/Handlers/Ping*                        ping
 CMS21-Together-*/Network/Handlers/WorldStates*                 connect, persistence
 CMS21-Together-*/Diagnostics/*                                 bugreport
@@ -104,6 +106,7 @@ CMS21-Together-Core/Network/Packets/Tool*                      tools
 CMS21-Together-Core/Network/Packets/VisualPackets.cs           visuals, presence
 CMS21-Together-Core/Network/Packets/DrivePackets.cs            driving, testdrive
 CMS21-Together-Core/Network/Packets/TrackPackets.cs            driving
+CMS21-Together-Core/Network/Packets/RacePackets.cs             driving
 CMS21-Together-Core/Network/Packets/RidePackets.cs             driving, testdrive, presence
 CMS21-Together-Core/Network/Packets/PingPackets.cs             ping
 CMS21-Together-Core/Network/Packets/WorldStates*               connect, persistence
@@ -120,6 +123,7 @@ CMS21-Together-Core/Data/TrackScenes.cs                        driving, testdriv
 CMS21-Together-Core/Data/GameType/ModJob*                      jobs
 CMS21-Together-Core/Data/GameType/ModGarageLook*               garage
 CMS21-Together-Core/Data/GameType/ModTrackRecord*              driving, persistence
+CMS21-Together-Core/Data/GameType/ModRaceResult*               driving, persistence
 CMS21-Together-Core/Data/GameType/ModTool*                     tools
 CMS21-Together-Core/Data/GameType/ModCarDetails*               details
 CMS21-Together-Core/Data/GameType/ModPaint*                    details, tools

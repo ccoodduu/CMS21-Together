@@ -105,6 +105,12 @@ ROADMAP rows 25–30 (user wishes of 2026-10-08). Static decompile (setup in `na
   timer restarts. `Restart` re-runs `Prepare`, which resets the checkpoints and the timer, so no partial lap reaches
   `LastTime`. `FreeTrackManager.ReturnToGarage` writes the speed track's `topSpeed` into `ProfileData.TopSpeed`
   (`int`, km/h). Details: `openspec/changes/shared-race-tracks/design.md` D6.
+- Row 27b spike 1.1 (`20261010-050051_L1_race-spike`, headless, 10 restarts; scenario `race-spike`, harness
+  `race-spike-*`): `RunRestart` → fade in, `WaitForSeconds(1)`, `Prepare` (`LoadCar`, `WaitForSeconds(1.5)`, fade
+  out) reaches the throttle wait in 4.34 s every run. The lights start only on the player's throttle
+  (`_Prepare_d__19` states 3/4 check `carInput.throttle > 0`), then three `WaitForSecond` (1 s) to the green
+  (`readySetGo`, `canMove`); throttle to green 3067–3076 ms at 15 fps. `WaitForEndOfFrame` resumes in these headless
+  games. One start spot (`PrepareCarPhysics.StartPosition`). Details: `openspec/changes/track-races/design.md` D2.
 
 ## 6. Garage customization
 

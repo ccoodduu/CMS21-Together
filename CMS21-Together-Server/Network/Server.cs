@@ -288,6 +288,7 @@ namespace CMS21_Together_Server.Network
         {
             if (!isRunning) return;
             isRunning = false;
+            lock (Data.GameDataManager.StateLock) Data.Tracks.TrackRaces.Stop();
             
             foreach (Client client in Clients.Values)
             {
@@ -347,6 +348,7 @@ namespace CMS21_Together_Server.Network
             Data.Cars.CarDetailsStore.Tick(Data.ServerTime.Time);
             Data.Cars.CarAwayRegistry.Tick(Data.ServerTime.Time);
             Data.Presence.Rides.Tick(Data.ServerTime.Time);
+            Data.Tracks.TrackRaces.Tick(Data.ServerTime.Time);
             Data.Outdoor.OutdoorInstances.Tick(Data.ServerTime.Time);
             foreach (var client in Clients.Values)
             {

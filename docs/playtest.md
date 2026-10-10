@@ -59,6 +59,11 @@ Report problems with both players' `MelonLoader\Latest.log` and the server's `Lo
    jumps back to the start on the friend's screen too. Ride along to the speed track; there, the pause menu and its
    return to the garage (the speed track reports itself as the test track to the game) bring both of you back with the
    driven kilometres.
+   **Hand check: a race** with visible games (scenario `race-start` covers the start, the result and the DNF rules
+   headless): both on the race track, F9, two laps, "Start race". Both cars jump to the start, the lights turn green
+   at the same moment by eye, pressing the throttle before that does not start the lights; drive two real laps
+   through every checkpoint; both see the result toast and the "Last race" line in F9. A friend who arrives on the
+   track during the race only watches.
 
 ## Travel and sessions
 

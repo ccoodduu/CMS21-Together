@@ -37,7 +37,8 @@ Everyone else joins it from the main menu or through Steam. Your own single-play
   you buy go to the shared parking. Travel fees follow one server setting.
 - **See each other work and drive.** Bolts turn and parts slide off and on when another player works, and their
   avatar holds the tool. On the test track, the race track and the speed track you see each other's cars drive, a
-  passenger can ride along, and the server keeps everyone's best lap and top speed.
+  passenger can ride along, and the server keeps everyone's best lap and top speed. On the race track you can race
+  each other with one start for everyone.
 - **Ping and shopping list.** Point out a part to the others, and share one shopping list.
 - **Sit in a car and start the engine**: the others see and hear it.
 - **Hosting.** Host from the game with one click, or run the dedicated server on another PC. Password for IP joins,
@@ -63,7 +64,7 @@ Also not yet:
 - A texture pack for the garage is shared by its id only: a player who does not have it installed sees the default
   garage textures.
 
-Planned: a shared race start on the race track, and cars that collide on the tracks. The DLC tracks, Workshop
+Planned: cars that collide on the tracks. The DLC tracks, Workshop
 tracks, the photo location, the tutorial and saving or loading stay blocked.
 
 ## Get started
@@ -120,6 +121,12 @@ the game, click **Multiplayer** in the main menu.
 - **Lap records:** the server keeps each player's best race-track lap and speed-track top speed across sessions and
   restarts; the race track shows your own best as in single player. When someone sets a new best for the group,
   everyone is told ("New group record on the race track: Ann, 1:23.456"). Only the driver's laps count.
+- **Races:** on the race track, open the session panel (F9), pick the number of laps and press "Start race". Everyone
+  driving on the race track at that moment takes part: each car jumps back to the start and the game's own start
+  lights turn green at the same moment for everyone (timed with each player's ping). The server collects the lap
+  times and shows everyone the result, fastest total first. Leaving the track, disconnecting, the pause menu's
+  restart or ten minutes without finishing count as "did not finish". The last ten results are kept with the session.
+  Who arrives during a race watches it; a new race can start once the running one has its result.
 - **Ride along:** sit in the passenger seat of a car before its driver takes it to a track, and you travel to that
   track with them ("Riding along with <name>."). A few seconds after you arrive you sit next to the driver: the
   mouse turns your head, you cannot drive or steer, and the driver sees you in the passenger seat. When the driver

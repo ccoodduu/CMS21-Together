@@ -65,6 +65,12 @@ namespace CMS21_Together_Server
 				return;
 			}
 
+			if (Array.IndexOf(args, "--check-races") >= 0)
+			{
+				Environment.Exit(Data.Tracks.RaceCheck.Run());
+				return;
+			}
+
 			if (Array.IndexOf(args, "--check-tools") >= 0)
 			{
 				Environment.Exit(Data.Tools.ToolsCheck.Run());
@@ -143,6 +149,7 @@ namespace CMS21_Together_Server
 			Data.Jobs.JobContributors.Rule = Config.JobStatsTo;
 			Data.Cars.CarAwayRegistry.Initialize();
 			Data.Presence.Rides.Initialize();
+			Data.Tracks.TrackRaces.Initialize();
 			Data.Cars.CarLocks.Initialize(Config.LockScope, Config.LockExpirySeconds);
 			Data.Tools.ToolsStore.Initialize();
 			Data.Garage.GarageLookService.Initialize();

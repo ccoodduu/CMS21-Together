@@ -23,6 +23,7 @@ public class WorldState : INetworkData
 	[OptionalField] public int Barns;
 	[OptionalField] public ModTrackRecord GroupBestLap;
 	[OptionalField] public ModTrackRecord GroupTopSpeed;
+	[OptionalField] public List<ModRaceResult> RaceResults = new List<ModRaceResult>();
 }
 
 [Serializable]

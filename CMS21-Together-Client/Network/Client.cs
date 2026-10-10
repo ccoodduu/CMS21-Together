@@ -121,6 +121,7 @@ public class Client
 		SessionNotifications.Reset();
 		Logic.Driving.RideAlong.Reset();
 		Logic.Driving.TrackRecords.Reset();
+		Logic.Driving.TrackRaceSync.Reset();
 		Log.Info("Disconnected from server.");
 	}
 }

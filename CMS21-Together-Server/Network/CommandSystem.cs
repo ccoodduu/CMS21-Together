@@ -55,6 +55,7 @@ namespace CMS21_Together_Server.Network
 					Logger.Info("  cardetails <id>   - Show the stored details of a loader");
 					Logger.Info("  away              - Show cars on a track, the test path or the dyno");
 					Logger.Info("  records           - Show the race track lap and speed track top speed records");
+					Logger.Info("  races             - Show the running race and the stored race results");
 					Logger.Info("  locks             - Show the part, fluid and car locks and the lock counters");
 					Logger.Info("  tools             - Show the workshop machines, tool positions and claims");
 					Logger.Info("  shoplist          - Show the shared shopping list");
@@ -133,6 +134,12 @@ namespace CMS21_Together_Server.Network
 				case "records":
 					Logger.Info("Track records:");
 					foreach (string line in Data.Tracks.TrackRecords.Describe())
+						Logger.Info(line);
+					break;
+
+				case "races":
+					Logger.Info("Races:");
+					foreach (string line in Data.Tracks.TrackRaces.Describe(Data.ServerTime.Time))
 						Logger.Info(line);
 					break;
 
