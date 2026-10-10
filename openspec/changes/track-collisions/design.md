@@ -49,25 +49,26 @@ push-out at 8 m/s threw cars.
 The collider is on unless one of these holds, checked in this order. The first one that holds is the reason that
 `remote-collider` shows:
 
-1. `setting`: the client setting is off.
-2. `host`: the server forces it off.
-3. `passenger`: the local player rides along (row 21). This covers the copy that carries them.
-4. `no-local-car`: no local track car in `CarDrive`.
-5. `race-start`: a 27b countdown is running, or after one, the copy has not yet been more than 10 m from the local car.
-6. `snap`: the copy snapped (`DriveInterpolator.Snaps`) or teleported, or the local car jumped 5 m or more, in the last
+1. `host`: the host turned collisions off for everyone.
+2. `passenger`: the local player rides along (row 21). This covers the copy that carries them.
+3. `no-local-car`: no local track car in `CarDrive`.
+4. `race-start`: a 27b countdown is running, or after one, the copy has not yet been more than 10 m from the local car.
+5. `snap`: the copy snapped (`DriveInterpolator.Snaps`) or teleported, or the local car jumped 5 m or more, in the last
    1 s. The race restart and the pause-menu restart are such jumps.
-7. `overlap`: the box would overlap the local car (`Physics.OverlapBox` of the box plus 0.1 m against the local
+6. `overlap`: the box would overlap the local car (`Physics.OverlapBox` of the box plus 0.1 m against the local
    rigidbody's colliders). This is checked only while the box is off, so a running contact never turns it off.
 
 The snap is a counter on `DriveInterpolator`, not an event: the collider reads it every physics step. A contact is
 counted when the box plus 0.05 m starts to touch the local car's colliders. The passenger's own frozen track car gets
 no change.
 
-### D4. Settings
+### D4. Host switch
 
-Client: `TrackCollisions` in `PlayerSettings` (MelonPreferences category `CMS21Together`, default on). Server:
-`track_collisions = on|off` in the server config (default on, `true`/`false` also accepted), sent as
-`ServerInfoPacket.TrackCollisionsOff` (`[OptionalField]`, so a missing field reads as false, which means on). Off forces
+User decision 2026-10-10: there is no per-player setting. Collisions are on for everyone, and only the host turns
+them off. A per-player setting made the contacts one-sided in a bad way: a player who turned it off still pushed
+the others, because on their screens his copy drove wherever his car went (spike: 5.7 m for a parked car). The host
+sets `track_collisions = on|off` in the server config (default on, `true`/`false` also accepted), sent as
+`ServerInfoPacket.TrackCollisionsOff` (`[OptionalField]`, so a missing field reads as false, which means on). Off turns
 every client's collider off. Nothing is stored beyond the config, and nothing is relayed.
 
 ### D5. Late join
@@ -139,10 +140,10 @@ The box's layer does meet the checkpoint triggers (both use layer 0), so the tag
 
 **Real copy.** The proof scenario `track-collide` covers contact with another player's real stream (run
 `20261010-112757`). Bob drives at Ann's parked car and stops one car length behind it, and Ann moves 0.3 m on her client.
-The one-sided rule shows in two ways. When one client lets its car through (the spike's deep-overlap guard in run 2,
-or Bob's setting off in `track-collide`), that car's copy pushes the other player's car on the other client: 94 m in
-run 2, and 5.7 m for Ann held still in `track-collide`. Each client's copy of the other is a wall that moves wherever
-the other car really goes.
+The one-sided rule shows when one client lets its car through: the spike's deep-overlap guard in run 2, or Bob's
+per-player setting off in an earlier `track-collide`. That car's copy then pushes the other player's car on the other
+client: 94 m in run 2, and 5.7 m for Ann held still. Each client's copy of the other is a wall that moves wherever
+the other car really goes. This is why the per-player setting was removed (D4).
 
 **Verdict: GO.** The D1 criteria hold: no stall in 10 spawns on the car spot, checkpoints unaffected, and contact at
 30 km/h in 10 of 10 runs.
@@ -154,11 +155,10 @@ the other car really goes.
 - [Checkpoint triggers react to the copy] → they count only `Player`-tagged colliders (spike 2).
 - [A copy driving into a parked car pushes it like a wall (kinematic, infinite mass)] → the cheap form the user
   accepted. Where the other driver is stopped by your copy on their client, their copy stops at your car too.
-- [One-sided contacts feel unfair in a race] → the setting, the host switch, and 27b's start rule.
-- [A player who turns collisions off still pushes the others: their copy drives through his car on his screen, so on
-  their screen his copy pushes them] → open. Option: send the setting with the drive start (`CarDriveStartPacket`,
-  optional field) and switch the box off on copies whose driver has it off. That makes the setting work both ways.
-- [A late or extrapolated copy sinks into a parked car] → the 1.5 m/s depenetration limit while touching (D2).
+- [One-sided contacts feel unfair in a race] → the host switch and 27b's start rule.
+- [A player who could turn collisions off alone would still push the others] → no per-player setting (D4).
+- [A late or extrapolated copy sinks into a parked car] → the 1.5 m/s depenetration limit while touching (D2). Kept
+  for now; the user decides later (QUESTIONS.md).
 
 ## Migration Plan
 

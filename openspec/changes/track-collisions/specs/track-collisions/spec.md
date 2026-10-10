@@ -9,15 +9,15 @@ appears next to it.
 
 ### Requirement: Cars collide on the tracks
 On the test, race and speed tracks, a player's car SHALL collide with the cars of the other players it can see, unless
-the player or the host has turned collisions off. The other player's car SHALL NOT be pushed by the contact.
+the host has turned collisions off for everyone. The other player's car SHALL NOT be pushed by the contact.
 
 #### Scenario: Driving into a parked car
 - **WHEN** player B's car stands on the track and player A drives into it slowly with collisions on
 - **THEN** A's car is stopped or deflected by B's car
 
 #### Scenario: Collisions turned off
-- **WHEN** player A has turned collisions off and drives into B's car
-- **THEN** A's car passes through B's car
+- **WHEN** the host has turned collisions off and player A drives into B's car
+- **THEN** A's car passes through B's car, and B's car is not pushed on B's screen
 
 ### Requirement: Collisions never stall a car
 A car SHALL never get stuck because another player's car appears on or overlaps it, at arrival on a track, after the

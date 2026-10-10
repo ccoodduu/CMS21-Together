@@ -77,8 +77,7 @@ time. In a session, **F9** shows the players with their ping, your Steam friends
 5. **Ride along** to the speed track: sit in the passenger seat before your friend drives there. Report: where you
    ended up, and whether the pause menu's return brought you both back.
 6. **Bump into each other:** on the tracks your car now hits your friends' cars (their car is never pushed on their
-   screen; at high speed a hit can come a few metres behind their car). Don't want it? Set `TrackCollisions = false`
-   in `UserData\MelonPreferences.cfg` (category `CMS21Together`); the host turns it off for everyone with
+   screen; at high speed a hit can come a few metres behind their car). The host can turn it off for everyone with
    `track_collisions = off` in the server config. Report: a car you could not drive away from, or a hit that felt wrong.
 
 ## Please try: the garage look

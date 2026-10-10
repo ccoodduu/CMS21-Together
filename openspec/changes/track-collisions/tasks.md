@@ -26,8 +26,9 @@ Prerequisites: 27a `shared-race-tracks` merged; rows 17 part 2 and 21 (merged). 
       read from the existing `DriveInterpolator.Snaps` counter every physics step, not an event. After the spike, the
       local car's depenetration speed is limited to 1.5 m/s while it touches a box (D2).
 - [x] 2.2 Enable rules (D3), including ride-along and the race start.
-- [x] 2.3 Settings (D4): client `TrackCollisions`, server config key `track_collisions`,
-      `ServerInfoPacket.TrackCollisionsOff` (inverted, so a missing field means on).
+- [x] 2.3 Settings (D4): server config key `track_collisions`, `ServerInfoPacket.TrackCollisionsOff` (inverted, so a
+      missing field means on). The client setting `TrackCollisions` was built and then removed by user decision
+      (2026-10-10): only the host turns collisions off, for everyone.
 - [x] 2.4 Harness `remote-collider`; dump `remoteCars[].collider`. Also `collide-set`, `collide-ghost*`,
       `collide-cruise`, `collide-hold`, `collide-trace`, `collide-probe`, `collide-wheels`, `collide-box`,
       `collide-race`, `collide-clock`.
@@ -47,7 +48,9 @@ Prerequisites: 27a `shared-race-tracks` merged; rows 17 part 2 and 21 (merged). 
       `race-track`, `race-start` (if merged) and the smoke set pass (`Run-All -Changed`, area `driving`).
       **Done 2026-10-10.** Roles as built: Ann arrives first and Bob arrives on her car spot (step 3, done first, so
       each sees the other appear on their own car). Ann parks ahead, held still; Bob drives at her car and stops one car
-      length behind, then with his setting off drives through. Then the ride (step 4).
+      length behind. Then the ride (step 4). Step 2 became the host switch (user decision 2026-10-10, no per-player
+      setting): `track_collisions = off` and a server restart give reason `host` on both clients; Bob drives through
+      Ann's car and does not push it on her client (0 m). Passes `20261010-121204_L1` (after merging main `bcef5a8`).
       - Fails on the old code (main `216d857`, `20261010-113338_L1_track-collide`): Bob drives through Ann's car,
         37.5 m with her car at 24.0 m.
       - Passes: `20261010-112757_L1` alone, and in the batch `20261010-113802_regression.json`, 14/14: the smoke set,
@@ -58,4 +61,5 @@ Prerequisites: 27a `shared-race-tracks` merged; rows 17 part 2 and 21 (merged). 
 ## 4. Docs
 
 - [x] 4.1 docs/playtest.md: bumping a friend's car at low and high speed (phantom contacts expected at speed);
-      docs/try-it.md: the setting and the host switch; ROADMAP row 27c status; STATUS entry with run ids.
+      docs/try-it.md: the host switch; ROADMAP row 27c status; STATUS entry with run ids. Also README and
+      docs/hosting.md (`track_collisions`).
