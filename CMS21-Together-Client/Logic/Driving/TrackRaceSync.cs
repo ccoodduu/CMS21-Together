@@ -194,6 +194,7 @@ public static class TrackRaceSync
 		if (race == null || !race.readySetGo) return;
 		Current.GreenWallMs = WallMs;
 		Current.Phase = Phase.Racing;
+		RaceGrid.Restore("green");
 		Log.Info($"[Race] Race {Current.RaceId}: green at {Current.GreenWallMs} ({Current.GreenWallMs - Current.StartWallMs:+0;-0;0} ms from the plan).");
 	}
 
@@ -259,7 +260,6 @@ public static class TrackRaceSync
 		if (Current == null || Current.Phase != Phase.Countdown || !Current.Restarted) return;
 		int state = __instance.__1__state;
 		if (state != 3 && state != 4) return;
-		RaceGrid.Restore("restart done");
 		var input = __instance.__4__this?.carInput;
 		if (input == null) return;
 		long now = NowMs;
@@ -274,6 +274,15 @@ public static class TrackRaceSync
 		Current.ReleasedWallMs = WallMs;
 		long late = now - releaseAt;
 		Log.Info($"[Race] Race {Current.RaceId}: lights released{(late > 100 ? $" {late} ms late (the restart took longer)" : "")}.");
+	}
+
+	// The arrival's Prepare can still sit in its throttle wait when the restart starts, so the spawn goes back once the
+	// restart's own LoadCar has placed the car.
+	[HarmonyPatch(typeof(PrepareCarPhysics._LoadCar_d__35), nameof(PrepareCarPhysics._LoadCar_d__35.MoveNext))]
+	[HarmonyPostfix]
+	private static void AfterLoadCar(bool __result)
+	{
+		if (!__result) RaceGrid.Restore("car placed");
 	}
 
 	[HarmonyPatch(typeof(RaceTrackManager._Restart_d__20), nameof(RaceTrackManager._Restart_d__20.MoveNext))]
