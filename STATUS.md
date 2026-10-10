@@ -2,6 +2,28 @@
 
 Newest first. One entry per work session.
 
+## 2026-10-10 (01:40–02:50) — playtest 3 wheel looks fixed (`fix/wheel-visuals`, lane 1)
+
+- **Tires missing, rims hollow, magenta wheels, a wheel left in the air:** one cause. The car-details wheel apply
+  called `CarLoader.UpdateWheels`, the game's load-time path (`PartScript.ResizeWheel(CarLoader, Wheel)`): it puts the
+  rim and tire prefabs' material assets on the renderers and into an existing `ShadersBackup` entry (any part hidden
+  once since the car loaded); the next backup update (`TunePart`, a mount) `DestroyImmediate`s them. From then on every
+  wheel using those materials draws with null materials (magenta) or Unity's default Standard (hollow rim, no tire),
+  for the rest of the game session, also after F7. On an unmounted wheel the same call swapped the X-ray look for
+  real materials, so the wheel stayed visible where it had been taken off (the "ghost"; not a `TogetherGhost`). The
+  apply now calls `SetET`, `SetWheelSize` (its `DoWheelMath` sets the blend shapes) and `UpdateWheelMeshCollider`
+  only (`c965705`); the c369763 id restore went with it. Spike note corrected (`docs/spikes/car-details.md`).
+- Harness: `wheel-visuals` (rim and tire meshes, blend shapes, scales, materials, prefab materials, ghost objects);
+  `give-group wheel <rim,tire> <w/s/p>`. Proof `car-wheel-looks` fails on `main` `67837a4`
+  (`20261010-022532_L1`, run in `CMS21-Together-wt\wheels-base`: B's prefab materials destroyed, B's unmounted front
+  left wheel drawn with real materials, Standard and null materials after the resync) and passes (`20261010-022655_L1`,
+  and on the merged `8495b86` in batch `20261010-022844_L1_batch`). Same batch passes smoke, `car-wheel-swap`,
+  `car-details`, `car-details-request`, `tools-slots`, `tools-race`, `tools-item-race`, `tools-latejoin`,
+  `visual-parts`, `visual-activity`, `visual-lift`, `visual-latejoin`.
+- Open: the rim hub plate (`tyl`) x-scale of a remotely changed wheel differs slightly from the actor's (1.619 vs
+  1.629, 1.537 after a resync; it follows the ET, which the game scales from the current value); not in the shape
+  check; whether it shows is not known (headless).
+
 ## 2026-10-10 (01:30–02:30) — fix/place-same ready for merge (lane 2)
 
 - `fix/place-same` with `main` merged in (`5d744a8`). Fixes: `348159e` (the move lock covers the target place, so a
