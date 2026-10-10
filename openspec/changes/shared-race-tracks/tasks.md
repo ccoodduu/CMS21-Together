@@ -9,13 +9,17 @@ Prerequisites (all merged): rows 6, 7, 13, 14a, 17 part 2, 21. Followed by 27b `
       work with `guard-allow`, mileage returns, no claim, no drive relay on the race track
       (`docs/spikes/singleplayer-features.md` section 5; runs `20261008-230909_L2_sp-features-probe`,
       `20261008-231615_L2_sp-features-probe2`).
-- [ ] 1.1 Classify all 49 `TestTrack` references (40 in client, core and server, 9 in the harness) as driving scene or
-      test-track feature; the table goes into design.md D1. Gate for group 3.
-- [ ] 1.2 Decompile `RaceTrackManager.LastTime`, `NextCheckPoint` and `_Restart_d__20` and check them with
+- [x] 1.1 Classify all 49 `TestTrack` references (40 in client, core and server, 9 in the harness) as driving scene or
+      test-track feature; the table goes into design.md D1. Gate for group 3. Done 2026-10-10: 33 move to the track
+      set, 11 stay test-track features, 5 are definitions (design.md D1).
+- [x] 1.2 Decompile `RaceTrackManager.LastTime`, `NextCheckPoint` and `_Restart_d__20` and check them with
       `work\at.py`; on the race track, trace them and `TrackManager.ReturnToGarage` and the pause menu buttons; name the
       lap value, per-lap or per-finish, and the type and unit of `ProfileData.BestRaceTime`; check whether a restart can
       produce a `LastTime` without all checkpoints. On the speed track, check whether `FreeTrackManager.topSpeed`/
-      `lastTopSpeed` reach `ProfileData.TopSpeed`. Done when D6 names the hook and the fields.
+      `lastTopSpeed` reach `ProfileData.TopSpeed`. Done when D6 names the hook and the fields. Done 2026-10-10
+      (static, design.md D6 "Task 1.2 result"): per lap, `timer.ElapsedMilliseconds`, `BestRaceTime` is `long` ms, a
+      restart cannot produce a partial lap, the top speed reaches `ProfileData.TopSpeed` (`int` km/h) on return. The
+      runtime path is the proof scenario's `track-lap` (the real `LastTime`); the pause menu buttons stay hand check 5.1.
 
 ## 2. Core and server
 
