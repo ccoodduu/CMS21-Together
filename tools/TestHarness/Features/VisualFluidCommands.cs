@@ -57,7 +57,7 @@ public static class VisualFluidCommands
     private static object Pour(string args)
     {
         var parts = (args ?? "").Split(new[] { ' ' }, StringSplitOptions.RemoveEmptyEntries);
-        if (parts.Length < 3) throw new ArgumentException("usage: vfx-pour <loader> <ToolType> cap|start|hold <seconds>|end|status");
+        if (parts.Length < 3) throw new ArgumentException("usage: vfx-pour <loader> <ToolType> cap|start [noopen]|hold <seconds>|end|status");
         int loader = int.Parse(parts[0]);
         var type = (ToolType)Enum.Parse(typeof(ToolType), parts[1], true);
         var tools = ToolsManager.Get() ?? throw new InvalidOperationException("no ToolsManager in this scene");
@@ -84,7 +84,7 @@ public static class VisualFluidCommands
                 GameScript.Get().IOMouseOverCarLoader = carLoader;
                 tools.ItemWorkOn = cap.gameObject;
                 bool opened = false;
-                if (!cap.IsUnmounted)
+                if (!cap.IsUnmounted && !parts.Contains("noopen"))
                 {
                     cap.StartCoroutine(cap.ActionAutomatic());
                     opened = true;
@@ -105,7 +105,7 @@ public static class VisualFluidCommands
             case "status":
                 return PourStatus(tools, refill, carLoader);
             default:
-                throw new ArgumentException("usage: vfx-pour <loader> <ToolType> cap|start|hold <seconds>|end|status");
+                throw new ArgumentException("usage: vfx-pour <loader> <ToolType> cap|start [noopen]|hold <seconds>|end|status");
         }
     }
 

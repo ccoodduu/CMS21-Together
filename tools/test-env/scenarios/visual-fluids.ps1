@@ -151,6 +151,10 @@ Cmd $a cardetails-fluid "$loader Brake 0 0.2" | Out-Null
 Start-Sleep -Seconds 2
 $capInfo = Cmd $a vfx-pour "$loader BrakeRefill cap"
 Write-Host "brake fill cap: $($capInfo | ConvertTo-Json -Compress)"
+# The can is placed at the cap while it is still on (FluidRefill.Use); the game's UseAnim then waits for the cap to
+# come off, which the harness does by unscrewing it as a player would.
+$pourStart = Cmd $a vfx-pour "$loader BrakeRefill start noopen"
+Write-Host "A takes the brake fluid can at $($pourStart.cap) ($($pourStart.capKey))"
 if (-not $capInfo.unmounted) {
     Cmd $a vfx-unscrew "$loader $($capInfo.capKey)" | Out-Null
     try {
@@ -159,8 +163,6 @@ if (-not $capInfo.unmounted) {
         Check $false "A unscrews the brake fill cap (now: $((Cmd $a dump).visuals.unscrew | ConvertTo-Json -Compress))"
     }
 }
-$pourStart = Cmd $a vfx-pour "$loader BrakeRefill start"
-Write-Host "A opens $($pourStart.cap) ($($pourStart.capKey)) and takes the brake fluid can"
 $deadline = (Get-Date).AddSeconds(15)
 do { Start-Sleep -Milliseconds 500; $pa = Cmd $a vfx-pour "$loader BrakeRefill status" } while (-not $pa.canUse -and (Get-Date) -lt $deadline)
 Save "pour-ready_$a" $pa
