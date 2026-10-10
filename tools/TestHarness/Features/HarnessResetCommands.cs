@@ -30,6 +30,7 @@ public static class HarnessResetCommands
         PresenceCommands.Reset(changed);
         SceneCommands.Reset(changed);
         VisualCommands.Reset(changed);
+        VisualFluidCommands.Reset(changed);
         DriveCommands.Reset(changed);
         LockTraceCommands.Reset(changed);
         LockCommands.Reset(changed);

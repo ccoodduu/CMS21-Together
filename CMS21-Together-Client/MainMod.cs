@@ -119,6 +119,7 @@ namespace CMS21Together
 			if (Client.Instance.IsConnectionValid) Logic.Visuals.ActivityCapture.Update();
 			if (Client.Instance.IsConnectionValid) Logic.Pings.CoopPings.Update();
 			Logic.Pings.PingMarkers.Update();
+			if (Client.Instance.IsConnectionValid) Logic.Visuals.FluidReplay.Update();
 			Logic.Visuals.VisualScope.Update();
 			Logic.Driving.RideAlong.Update();
 			Logic.Driving.DriveCapture.Update();
