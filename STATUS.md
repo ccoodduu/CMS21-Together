@@ -2,6 +2,25 @@
 
 Newest first. One entry per work session.
 
+## 2026-10-10 (04:50–09:40) — row 27b, races on the race track (`feat/track-races`, lane 1)
+
+- Spike 1.1 (`20261010-050051_L1_race-spike`, 10 restarts): `RunRestart` reaches the throttle wait in 4.34 s; the
+  game's lights start only on the throttle and turn green 3 s plus a frame later. D2 keeps the game's lights: the
+  racer restarts at once and a prefix on `_Prepare_d__19.MoveNext` holds the throttle until 3 s (plus 1.5 frames)
+  before the shared start; countdown 10 s instead of 5 s; no overlay. One start spot (27c).
+- Built: packets `RaceStartRequest`, `RaceRefused`, `RaceCountdown`, `RaceLap`, `RaceQuit`, `RaceResult` (appended),
+  `WorldState.RaceResults` (last 10); server `TrackRaces` (racers = players driving on the race track, laps in order
+  and in bounds, DNF on quit, leaving, disconnect, 10-minute timeout; a player arriving during a race watches;
+  `races`, `--check-races`); client `TrackRaceSync` (F9 race block on the race track only, laps from 27a's
+  `LastTime` postfix, quit from a pause-menu restart during the race), `PacketClock` (receive time on the network
+  thread, so the countdown does not start a frame late). Harness `race-start`, `race-state`, `race-restart`, dump
+  `race`.
+- Proof `race-start` fails on the old code (`20261010-091535_L1`, main `5debf9d`) and passes after merging main
+  (`20261010-092317_L1`, green lights 14 ms apart); `20261010-091648_regression.json` 10/10 (smoke, `race-track`,
+  `drive-track`, `drive-latejoin`, `ride-along`, `guard`) and server-saves. Before the merge `ride-along` was FLAKY
+  in the batch once ("Ann's car did not move from Bob's input", passed alone; `20261010-051807_regression.json`).
+- Open: hand check with visible games (playtest 5: lights by eye, real laps through the checkpoints).
+
 ## 2026-10-10 (02:20–05:15) — fix/blocked-drift: blocked counters and the locks-select-2 pie (lane 2)
 
 - `fix/blocked-drift` (lane 2, not merged). The soak's `blocked` drift (`20261010-020148_L2`: radiator `s:29.3`
