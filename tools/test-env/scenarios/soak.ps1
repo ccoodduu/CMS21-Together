@@ -79,9 +79,11 @@ Send-ServerCommand "money add 2000000"
 $models = @(Get-BaseGameCars $names[0])
 $shuffled = @($models | Select-Object -Skip 1 | Sort-Object { $rng.Next() })
 $models = @($models[0]) + @($shuffled | Select-Object -First 4)
-$lifterCount = [math]::Max(1, @(Send-HarnessCommand -Instance $names[0] -Verb lifters).Count)
+# A lift the garage has not built yet (inactive) never moves.
+$activeLifters = @(Send-HarnessCommand -Instance $names[0] -Verb lifters | Where-Object { $_.active } | ForEach-Object { [int]$_.index })
+if ($activeLifters.Count -eq 0) { $activeLifters = @(0) }
 $homeSpot = (Send-HarnessCommand -Instance $names[0] -Verb dump).local.position
-Write-Host "models: $($models -join ', '); lifters: $lifterCount; home $(Format-Position $homeSpot)"
+Write-Host "models: $($models -join ', '); lifters: $($activeLifters -join ','); home $(Format-Position $homeSpot)"
 
 $places = @("Entrance1", "Entrance2", "Entrance3", "CarLifter1", "CarLifter2")
 $garageLoaders = 0..3
@@ -224,7 +226,7 @@ function Invoke-Cars([string]$Actor) {
 
 function Invoke-Placement([string]$Actor) {
     if ($rng.NextDouble() -lt 0.5) {
-        Invoke-Step $Actor lift "$($rng.Next($lifterCount)) $(Pick @('up', 'down'))" -Action "placement" | Out-Null
+        Invoke-Step $Actor lift "$(Pick $activeLifters) $(Pick @('up', 'down'))" -Action "placement" | Out-Null
         return $true
     }
     $placement = @(Get-Placement $Actor)
