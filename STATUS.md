@@ -2,6 +2,29 @@
 
 Newest first. One entry per work session.
 
+## 2026-10-10 (09:30–12:05) — row 27c, collisions on the tracks (`feat/track-collisions`, lane 1)
+
+- Spike 1.1 (`collide-spike`; runs `20261010-094840`, `-100150`, `-101506`, `-111733`): **GO**. The local car's only
+  solid collider is on layer 0 and its wheels are on layer 8. Each copy's box is on unnamed layer 3 (30 is the game's
+  "StaticObjects") and meets layer 0 only. A box under a wheel leaves the wheel's ground hit unchanged. The race
+  track's checkpoints count only `Player`-tagged colliders. The overlap guard held 10 of 10 spawns on the car spot
+  (no frame over 118 ms); snaps and restarts go `snap` → `overlap`. Contact 10 of 10 at 30 km/h, and at 80 and
+  150 km/h. Lag 0.19–0.22 s (4.5 m at 77 km/h), no extrapolation.
+- Fixed during the spike: a box could come on at the world origin before the copy's first pose and teleport into the
+  car. A "deep overlap" guard let cars through at 150 km/h and was removed. The "rebound" of 37 km/h after every hit
+  was the harness: `drive-stop` leaves the brake pressed and the game reverses at a standstill. A late or extrapolated
+  copy sinking into a parked car pushed it out at 8 m/s (4.8 m/s, 0.64 m lift); the local car's depenetration is now
+  1.5 m/s while it touches a copy (1.6 m/s, 0.01 m).
+- Built: `RemoteCollider` (box per copy, `FixedUpdate`, rules setting → host → passenger → no local car → race start
+  → snap/jump → overlap), client setting `TrackCollisions`, server `track_collisions = on|off` sent as
+  `ServerInfo.TrackCollisionsOff`. Harness `remote-collider` (and dump `remoteCars[].collider`), `collide-*` verbs.
+- Proof `track-collide` fails on the old code (`20261010-113338_L1`, main `216d857`: Bob drives through Ann's car)
+  and passes (`20261010-112757_L1`); `20261010-113802_regression.json` 14/14 (smoke, `drive-track`,
+  `drive-latejoin`, `race-track`, `race-start` with new collider checks, `ride-along`, `test-drive`, `connect`,
+  `track-collide`, server-saves).
+- Open: a player with the setting off still pushes the others (on their screen his copy is a moving wall); option:
+  send the setting with the drive start. Hand check with visible games (playtest 5).
+
 ## 2026-10-10 (04:50–09:40) — row 27b, races on the race track (`feat/track-races`, lane 1)
 
 - Spike 1.1 (`20261010-050051_L1_race-spike`, 10 restarts): `RunRestart` reaches the throttle wait in 4.34 s; the

@@ -39,7 +39,10 @@ Atlanta). Each `FixedUpdate` it moves with `MovePosition`/`MoveRotation` to the 
 or more is a teleport and counts as a jump (D3). `Physics.IgnoreLayerCollision` lets layer 3 collide only with the
 layers of the local car's non-trigger, non-wheel colliders on its rigidbody (spike: layer 0 Default). The wheel colliders
 are on layer 8 and ignore the box. The copy's own colliders stay off (`MakeInert` unchanged). There is no collider
-extrapolation (open question 2): the box sits on the copy as it is shown.
+extrapolation (open question 2): the box sits on the copy as it is shown. While the local car touches a box, its
+`maxDepenetrationVelocity` is 1.5 m/s instead of the game's 8 m/s, and it is restored once the car no longer touches.
+This was added after the spike: a copy shown late, or extrapolated past a stop, sinks into the local car, and the
+push-out at 8 m/s threw cars.
 
 ### D3. Enable rules
 
@@ -76,8 +79,9 @@ stalls the local car.
 ## Spike results (task 1.1, 2026-10-10): GO
 
 Scenario `collide-spike` (lane 1, headless; output `spike_*.json` in the run folders). Runs: `20261010-094840` (all
-phases, layer 30), `20261010-100150` (spawns, hits and lag from the car spot, layer 3) and `20261010-101506` (rebound
-comparison, with the deep-overlap guard removed).
+phases, layer 30), `20261010-100150` (spawns, hits and lag from the car spot, layer 3), `20261010-101506` (rebound
+comparison, with the deep-overlap guard removed), and `20261010-111733` (rebound and two-player contact with the brake
+released, with and without the depenetration limit).
 
 **Layers.** The local car's rigidbody is `VPP BluePrint` (layer 8 "Table", tag `Player`, 1699 kg, `Discrete`). Its only
 enabled solid collider is `CarPhysicCollider(Clone)`, a convex `MeshCollider` on layer 0 (material `VP_Vehicle Body`,
@@ -113,10 +117,17 @@ The box's layer does meet the checkpoint triggers (both use layer 0), so the tag
 - Run 2 turned the collider off inside a contact when the car was more than 0.3 m deep (a "deep overlap" guard), so
   at 150 km/h the car drove through. That guard is gone (run 3: contact and stop at 148 km/h, twice). Teleports are
   covered by the jump rules.
-- Every hit throws the car back at 36–38 km/h, whatever the speed. A plain static `BoxCollider` (the kind of obstacle
-  the game itself has) and a kinematic test box give the same rebound (36.5–38.2 km/h). So this is how the car reacts to
-  any solid obstacle when the harness drives it, not something the remote box adds. A larger `contactOffset` (0.3 m)
-  changed nothing and is not used.
+- Rebound. In runs 1–3 every hit seemed to throw the car back at 36–38 km/h, and a static `BoxCollider` did the same.
+  A per-frame trace showed the cause: the car stops at the contact and then accelerates backwards with no contact.
+  The harness's `drive-stop` leaves the brake pressed, and the game shifts into reverse when the brake is held at a
+  standstill. With the inputs released (run `20261010-111733`), a hit at 30 km/h simply stops the car (−1.8 km/h,
+  then standstill). Hits at 80 and 150 km/h rebound at 5 and 10–12 km/h. The static and the kinematic box still
+  behave the same. A larger `contactOffset` (0.3 m) changed nothing and is not used.
+- Two players (`mutual`, 8 km/h into a parked car, run `20261010-111733`). The driver stops a car length behind on his
+  own client. On the parked player's client, the driver's copy arrives late and is extrapolated past its stop, so it
+  sinks into the parked car. At the game's depenetration limit (8 m/s) a parked car standing free was pushed out at
+  4.8 m/s, lifted 0.64 m and moved 15.9 m. With the limit at 1.5 m/s while touching a copy (now D2), the same case gave
+  1.6 m/s, 0.01 m and 3.5 m. A parked car that is held moved 0.26–0.35 m either way.
 - Lag of the shown copy on one PC (loopback, headless): 0.19–0.22 s (the 100 ms delay, up to 67 ms of 15 Hz stream,
   and 80–110 ms headless frames). Position error at steady speed: 1.6–1.9 m at 27 km/h and 4.5 m at 77 km/h. That makes
   about 5.5 m at 100 km/h and 8.5 m at 150 km/h, plus speed × ½ ping online. At 60 fps the frame share drops by about
@@ -126,10 +137,12 @@ The box's layer does meet the checkpoint triggers (both use layer 0), so the tag
   100–150 km/h) where the car never goes. Phantom contacts at speed are accepted (proposal), so the box stays on the
   shown car.
 
-**Real copy.** Run 1 placed Ann behind Bob's real copy by moving her rigidbody, which put her below the ground. Run 2
-used the deep-overlap guard. Neither gives a clean real-copy contact, so the proof scenario `track-collide` covers that.
-Run 2 showed the one-sided rule in action: Ann went through Bob's copy (guard), and on Bob's client her kinematic copy
-pushed his parked car 94 m. Each client's copy of the other is a moving wall to its own car.
+**Real copy.** The proof scenario `track-collide` covers contact with another player's real stream (run
+`20261010-112757`). Bob drives at Ann's parked car and stops one car length behind it, and Ann moves 0.3 m on her client.
+The one-sided rule shows in two ways. When one client lets its car through (the spike's deep-overlap guard in run 2,
+or Bob's setting off in `track-collide`), that car's copy pushes the other player's car on the other client: 94 m in
+run 2, and 5.7 m for Ann held still in `track-collide`. Each client's copy of the other is a wall that moves wherever
+the other car really goes.
 
 **Verdict: GO.** The D1 criteria hold: no stall in 10 spawns on the car spot, checkpoints unaffected, and contact at
 30 km/h in 10 of 10 runs.
@@ -142,8 +155,10 @@ pushed his parked car 94 m. Each client's copy of the other is a moving wall to 
 - [A copy driving into a parked car pushes it like a wall (kinematic, infinite mass)] → the cheap form the user
   accepted. Where the other driver is stopped by your copy on their client, their copy stops at your car too.
 - [One-sided contacts feel unfair in a race] → the setting, the host switch, and 27b's start rule.
-- [The rebound after a hit (about 37 km/h back) feels hard] → the same as the game's own walls when the harness
-  drives; to be judged in a real playtest (docs/playtest.md).
+- [A player who turns collisions off still pushes the others: their copy drives through his car on his screen, so on
+  their screen his copy pushes them] → open. Option: send the setting with the drive start (`CarDriveStartPacket`,
+  optional field) and switch the box off on copies whose driver has it off. That makes the setting work both ways.
+- [A late or extrapolated copy sinks into a parked car] → the 1.5 m/s depenetration limit while touching (D2).
 
 ## Migration Plan
 
