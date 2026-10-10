@@ -11,7 +11,10 @@ Scenarios with a "# run-all: skip" header line only run when named in -Scenarios
 would run, with the reason, and exits.
 Scale lane: scenarios with a "# run-all: lane 3" header line run only with -Lanes 3, which must be the only lane
 given (it uses all four installs and takes the locks of lanes 1 and 2); lanes 1 and 2 skip them unless named.
-The build happens once; each lane deploys it inside its own lane locks (Run-Session.ps1 -Deploy -NoBuild).
+The build happens once; every session of a lane, the batch and each rerun alone, deploys it inside its own lane
+locks (Run-Session.ps1 -Deploy -NoBuild), because another worktree may deploy to the lane between two sessions.
+-SkipDeploy runs the installed build, which Run-Session.ps1 accepts only when it is this worktree's build output
+(-AllowForeignDeploy runs it anyway, with a warning in each result).
 
 Test areas (policy: a change merges after the scenarios of its areas plus the smoke set; the full set runs for
 changes the path table cannot place and before a release). Every scenario carries a "# areas: a, b" header line;
@@ -33,6 +36,7 @@ param(
     [switch]$Changed,
     [Parameter(Position = 0)][string]$ChangedSince,
     [switch]$SkipDeploy,
+    [switch]$AllowForeignDeploy,
     [switch]$Fresh,
     [switch]$List
 )
@@ -144,9 +148,8 @@ if (-not $SkipDeploy) { & (Join-Path $PSScriptRoot "Deploy-Mod.ps1") -BuildOnly 
 $started = Get-Date
 $runSession = Join-Path $PSScriptRoot "Run-Session.ps1"
 $laneWork = {
-    param($RunSession, $Lane, $Names, $Batch, $Deploy)
+    param($RunSession, $Lane, $Names, $Batch, $Deploy, $AllowForeign)
     $gate = @{ Lane = $Lane }
-    $script:deployPending = $Deploy
 
     function Get-Result([string]$Output, [string]$Name) {
         $found = [regex]::Matches($Output, "RESULT L$Lane $([regex]::Escape($Name)): (PASSED|FAILED)( \(batch\))?")
@@ -165,7 +168,8 @@ $laneWork = {
     }
 
     function Invoke-RunSession([hashtable]$Arguments) {
-        if ($script:deployPending) { $Arguments.Deploy = $true; $Arguments.NoBuild = $true; $script:deployPending = $false }
+        if ($Deploy) { $Arguments.Deploy = $true; $Arguments.NoBuild = $true }
+        if ($AllowForeign) { $Arguments.AllowForeignDeploy = $true }
         $collected = New-Object System.Collections.Generic.List[object]
         try { & $RunSession @Arguments @gate *>&1 | ForEach-Object { $collected.Add($_) } } catch { $collected.Add("ERROR: $($_.Exception.Message)") }
         $collected | Out-String
@@ -198,7 +202,7 @@ $laneWork = {
 $jobs = @()
 for ($i = 0; $i -lt $Lanes.Count; $i++) {
     $names = @(for ($j = $i; $j -lt $Scenarios.Count; $j += $Lanes.Count) { $Scenarios[$j] })
-    if ($names.Count -gt 0) { $jobs += Start-Job -ScriptBlock $laneWork -ArgumentList $runSession, $Lanes[$i], $names, (-not $Fresh), (-not $SkipDeploy) }
+    if ($names.Count -gt 0) { $jobs += Start-Job -ScriptBlock $laneWork -ArgumentList $runSession, $Lanes[$i], $names, (-not $Fresh), (-not $SkipDeploy), [bool]$AllowForeignDeploy }
 }
 $serverJob = Start-Job -ScriptBlock { param($script) & $script *>&1 | Out-String } -ArgumentList (Join-Path $PSScriptRoot "Test-ServerSaves.ps1")
 

@@ -24,6 +24,38 @@ Newest first. One entry per work session.
   `track-collide`, server-saves).
 - Open: a player with the setting off still pushes the others (on their screen his copy is a moving wall); option:
   send the setting with the drive start. Hand check with visible games (playtest 5).
+## 2026-10-10 (09:00–10:30) — fix/deploy-guard: runs only test their own build; job end and soak lift fixes (lane 2)
+
+- `fix/deploy-guard` (lane 2, not merged).
+  - `18e0d17`: Run-All deploys in every session of a lane (batch and each rerun alone), and Run-Session checks inside
+    the lane locks that the lane's mod, harness, core and server files equal this worktree's build output (file hashes,
+    `TestLanes` `Get-LaneBuildMismatch`); on a mismatch it stops and names the deploying worktree unless
+    `-AllowForeignDeploy` (warning in each result; Run-All and Run-Soak pass it on; the release smoke after
+    `Install-ReleaseToTestEnv` needs it). Checks: with `blocked-drift` deployed, Run-Session from `deploy-guard`
+    stops in 1 s before any game starts; with `-AllowForeignDeploy` it runs with the warning
+    (`20261010-091728_L2_connect`); a Run-All rerun deploys again (`20261010-091625_L2` 09:16:10, rerun
+    `20261010-091636_L2` 09:16:35).
+  - `f6748e6`: the soak's `world.exp` resend (`20261010-045235_L2`) was real: a job end the game refused left the
+    job-end context open for 10 s, and it took the player's next work experience as job XP that is only sent on a
+    committed end. The context now ends with the refusal. Proof `job-end-refused`: fails on `f04fe22`
+    (`20261010-092216_L2`, 481 / 480), passes (`20261010-092729_L2`).
+  - `30dbde3`: the soak's `lift-same` "did not start" was a soak artifact: CarLifter2 is not built in the test profiles
+    (`lifters` `active=false`), so the game never moves it; a probe showed it for any car there. The soak picks only
+    active lifts now.
+- Smoke plus the jobs area: `20261010-094515_regression.json`, all 15 passed. Soak 15 min `20261010-101146_L2_soak`:
+  PASS with WARN (budgets), rules 1, 2, 4, 8, 9 pass.
+
+## 2026-10-10 (03:30–10:05) — row 25 done, fluids, race tracks, races, blocked counter merged
+
+- `main` = `216d857`. Merged: new engines (`4ec5c78`, row 25 part 3; row 25 complete), remote fluid visuals
+  (`7e78c00`; tested with main `20261010-033807_regression.json`), race and speed track (`faa28fe`, row 27a; tested
+  with main `20261010-043751_regression.json`), the blocked-counter drift fix with drift detection and the
+  `locks-select-2` pie fix (`5debf9d`; tested with main `20261010-052655_regression.json`), races with a shared start
+  (`216d857`, row 27b; proof `race-start` fails `20261010-091535_L1`, passes `20261010-092317_L1`).
+- Agents were stopped 05:30–09:10 by the API usage limit and resumed.
+- In progress: row 27c collisions (spike first, lane 1); the job star highlight that stays after a part is replaced
+  (user report: the game clears it only when the new part counts as repaired); the harness check that a run never
+  tests another worktree's deploy, plus the soak's `world.exp` resend and `lift-same` (lane 2).
 
 ## 2026-10-10 (04:50–09:40) — row 27b, races on the race track (`feat/track-races`, lane 1)
 
@@ -43,6 +75,23 @@ Newest first. One entry per work session.
   `drive-track`, `drive-latejoin`, `ride-along`, `guard`) and server-saves. Before the merge `ride-along` was FLAKY
   in the batch once ("Ann's car did not move from Bob's input", passed alone; `20261010-051807_regression.json`).
 - Open: hand check with visible games (playtest 5: lights by eye, real laps through the checkpoints).
+## 2026-10-10 (09:00–11:05) — fix/job-star-highlight: a starred job part keeps its highlight (lanes 1/2)
+
+- User report: a part starred in the order tab stays highlighted after it was replaced. The star sets
+  `PartScript.markImportantPart`, `PartScript.Update` turns it into the highlight every frame, and only the star
+  button writes the field (byte-store scan of GameAssembly, `native\out\jobstar_clean`); `IsRepaired` is called only
+  by the job checks, which read the mark. The star is per player and never synced. On main the starring player keeps
+  the star after their own mount through the game's DoMount/ShowMounted and after another player's mount (remote
+  apply) alike, so the game itself (single player included) never clears it.
+- `ba10659`: `JobStars.Refresh` clears the mark once the part is mounted and `IsRepaired(job.globalCondition)` holds
+  for the car's job; it runs for each mechanical record a client sends and each one it applies. Below the job's
+  condition the star stays.
+- Proof `job-star` (new; harness verbs `job-star`, `job-star-state`): fails on the base (`50c6cf3`+`21a7387`,
+  `20261010-101825_L1_job-star_base`, copied from the removed base worktree: both 100 % replacements keep the star, the
+  below-condition ones pass) and passes (`20261010-101022_L2_job-star`, batch `20261010-110038_L1_job-star`).
+- Regression `20261010-102012_regression.json` (smoke, `jobs*`, `locks-*`, `lock-mount-target`, `car-mount-wear`):
+  all pass except `job-star` in the batch, a harness fault (JobHelper reused the loader's part script cache of an
+  earlier car; `4a0a7f7`), passing in the batch above. Its single rerun hit another agent's deploy on lane 1.
 
 ## 2026-10-10 (02:20–05:15) — fix/blocked-drift: blocked counters and the locks-select-2 pie (lane 2)
 

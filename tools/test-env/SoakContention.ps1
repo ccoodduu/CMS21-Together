@@ -272,7 +272,7 @@ $ContentionBuilders = @{
     }
     "lift-same" = {
         param($Members)
-        $lifter = Pick @(Send-HarnessCommand -Instance $Members[0] -Verb lifters | Where-Object { [int]$_.connectedLoader -ge 0 })
+        $lifter = Pick @(Send-HarnessCommand -Instance $Members[0] -Verb lifters | Where-Object { $_.active -and [int]$_.connectedLoader -ge 0 })
         if (-not $lifter) { return $null }
         $index = [int]$lifter.index
         $direction = if ("$($lifter.state)" -eq "Up") { "down" } else { "up" }
