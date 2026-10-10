@@ -5,7 +5,11 @@ function Get-HarnessDir([string]$Instance) { Join-Path $script:TestRoot "$Instan
 
 function Get-HarnessStatus([string]$Instance) {
     $path = Join-Path (Get-HarnessDir $Instance) "status.json"
-    try { Get-Content -LiteralPath $path -Raw -ErrorAction Stop | ConvertFrom-Json } catch { $null }
+    # The harness rewrites status.json every second by deleting it and moving a new file in; a read in between fails.
+    for ($try = 0; $try -lt 15; $try++) {
+        try { return Get-Content -LiteralPath $path -Raw -ErrorAction Stop | ConvertFrom-Json } catch { Start-Sleep -Milliseconds 100 }
+    }
+    $null
 }
 
 function Wait-HarnessStatus {
