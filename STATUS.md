@@ -2,6 +2,24 @@
 
 Newest first. One entry per work session.
 
+## 2026-10-10 (03:50–04:45) — row 27a, race and speed track (`feat/shared-race-tracks`, lane 1)
+
+- Spikes: 1.1 classifies the 49 `TestTrack` references (33 to the track set, 11 test-track features, 5 definitions;
+  design.md D1). 1.2 (static, `native\out\tracks27a_clean`): `RaceTrackManager.LastTime` runs once per lap with
+  `timer.ElapsedMilliseconds` and writes `BestRaceTime` (`long` ms) before restarting the timer; a pause-menu restart
+  resets checkpoints and timer, so no partial lap; the speed track writes `ProfileData.TopSpeed` (`int` km/h) on return.
+- Built: `TrackScenes` (test, race, speed track); `CarAwayKind.RaceTrack`, `SpeedTrack`; claims, results, drive relay
+  and rides on every track (`TrackDriveSync` replaces `TestDriveSync`); scene identity by Unity name (the speed track
+  is `SpeedTrack`, not the game's `TestTrack`); passenger return through `TrackManager.Instance`. Lap and top speed
+  records: `LastTime` prefix/postfix and `FreeTrackManager.ReturnToGarage` prefix, server `TrackRecords` (personal
+  bests in the player records, group records in `world`, notices, bounds 10 s–30 min and 1–700 km/h, D16 answers),
+  `PlayerRestore` writes the bests into the session profile. Guard: race and speed track allowed, drag strip "Drag
+  strip (Drag Racing DLC)". Server `records`, `--check-away`. `Il2CppSystem.dll` added to the client libs.
+- Proof `race-track` fails on the old code (`20261010-041057_L1`, run from `CMS21-Together-wt\tracks-base`: no claim,
+  no relay) and passes (`20261010-040634_L1`); `20261010-041514_regression.json` 14/14 (smoke and the driving,
+  test drive, ride-along, diagnostics, guard and rejoin scenarios).
+- Open: hand check 5.1 (real lap through the checkpoints, race track restart, speed track pause menu).
+
 ## 2026-10-10 (01:40–03:30) — playtest 3 fixes, wheels, place-same and bonus parts merged; build dev.1191
 
 - `main` = `657609c`. Merged: `fix/place-same` (`5754234`; move lock covers the target place, unpark examined flags),

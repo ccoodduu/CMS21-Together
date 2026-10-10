@@ -36,7 +36,8 @@ Everyone else joins it from the main menu or through Steam. Your own single-play
   one player takes from a pile is gone for the others. Parts you buy at the junkyard go to the shared inventory; cars
   you buy go to the shared parking. Travel fees follow one server setting.
 - **See each other work and drive.** Bolts turn and parts slide off and on when another player works, and their
-  avatar holds the tool. On the test track you see each other's cars drive, and a passenger can ride along.
+  avatar holds the tool. On the test track, the race track and the speed track you see each other's cars drive, a
+  passenger can ride along, and the server keeps everyone's best lap and top speed.
 - **Ping and shopping list.** Point out a part to the others, and share one shopping list.
 - **Sit in a car and start the engine**: the others see and hear it.
 - **Hosting.** Host from the game with one click, or run the dedicated server on another PC. Password for IP joins,
@@ -51,7 +52,7 @@ Everyone else joins it from the main menu or through Steam. Your own single-play
 While you are connected, the game blocks these with "... is not supported in multiplayer yet", so that the garages
 cannot drift apart:
 
-- the race track, the other tracks and the photo location;
+- the drag strip (Drag Racing DLC), Workshop tracks and the photo location;
 - the separate Parking scene (the garage parking works); the showroom, the main menu's car viewer, is single-player
   only;
 - the tutorial, and saving or loading from the game's menus (the server saves the session).
@@ -62,8 +63,8 @@ Also not yet:
 - A texture pack for the garage is shared by its id only: a player who does not have it installed sees the default
   garage textures.
 
-Planned: the race track. The DLC tracks, the photo
-location, the tutorial and saving or loading stay blocked.
+Planned: a shared race start on the race track, and cars that collide on the tracks. The DLC tracks, Workshop
+tracks, the photo location, the tutorial and saving or loading stay blocked.
 
 ## Get started
 
@@ -111,12 +112,18 @@ the game, click **Multiplayer** in the main menu.
   instead, or only to the finisher (`job_stats_to` in `server_config.ini`).
 - **Shopping list:** the group shares one shopping list. What anyone adds, removes or clears shows up for everyone,
   and the server keeps it with the session.
-- **Test drive together:** players who are on the test track at the same time see each other's car drive (it
-  appears a few seconds after you arrive). Cars pass through each other and through players.
-- **Ride along:** sit in the passenger seat of a car before its driver starts a test drive, and you travel to the
-  test track with them ("Riding along with <name>."). A few seconds after you arrive you sit next to the driver: the
+- **Driving together:** take a garage car to the test track, the race track or the speed track from the map. While
+  you are there the car is yours: the others see "<name> has this car on the race track." and cannot change, move,
+  sell or delete it, and the driven kilometres and the dirt come back with you. Players who are on the same track at
+  the same time see each other's car drive (it appears a few seconds after you arrive). Cars pass through each other
+  and through players.
+- **Lap records:** the server keeps each player's best race-track lap and speed-track top speed across sessions and
+  restarts; the race track shows your own best as in single player. When someone sets a new best for the group,
+  everyone is told ("New group record on the race track: Ann, 1:23.456"). Only the driver's laps count.
+- **Ride along:** sit in the passenger seat of a car before its driver takes it to a track, and you travel to that
+  track with them ("Riding along with <name>."). A few seconds after you arrive you sit next to the driver: the
   mouse turns your head, you cannot drive or steer, and the driver sees you in the passenger seat. When the driver
-  drives back to the garage or leaves the game, you come back to the garage too. Only the driver's test drive counts
+  drives back to the garage or leaves the game, you come back to the garage too. Only the driver's drive counts
   (mileage, examined parts). To leave early, use the pause menu's return button.
 - **Drive:** the Drive option in a car's pie menu opens the map, as in the game.
 - **Test path:** the test path is for one player; it does not start while another player sits in the car ("<name> is

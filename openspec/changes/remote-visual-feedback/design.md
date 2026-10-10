@@ -216,6 +216,8 @@ twice the estimate goes to QUESTIONS.md before merge.
 
 ### D9. Driving: authority, stream, interpolation (part 2)
 
+Since row 27a (`shared-race-tracks`, 2026-10-10) "the test track" in D9 means the track set (`TrackScenes`: test, race and speed track): the client captures and the server relays on each of them, to the players on the same track.
+
 - The driver's client simulates (vanilla VPP physics); nobody else simulates that car. `DriveCapture` reads the
   driven car's root and rigidbody (`BaseCarPhysics.rigidBody` on the track, the garage car root for `car_drive`),
   `VehicleController` steer and wheel speed, `res.engineCurrentRPM`, gear, brake and light flags, and sends
