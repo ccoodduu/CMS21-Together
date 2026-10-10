@@ -303,6 +303,8 @@ function Start-HarnessInstance {
         $size = $Window.Split('x')
         $arguments = @(
             "--melonloader.disablestartscreen", "--melonloader.agfoffline",
+            # MelonLoader stops writing warnings and errors to Latest.log after 100 of each per process.
+            "--melonloader.maxwarnings", "0", "--melonloader.maxerrors", "0",
             "-screen-fullscreen", "0", "-screen-width", $size[0], "-screen-height", $size[1],
             "--harness.name=$Instance", "--harness.window=$Window"
         )
