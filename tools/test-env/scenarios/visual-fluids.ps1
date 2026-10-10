@@ -2,7 +2,9 @@
 # remote-fluid-visuals: while A drains a car's oil with the oil bin (the game's UseOilbin through the lock gate), B
 # replays the drain on its own copy of the drain object: the stream particles play, the OilDrain loop is started on
 # the copy and the drain plug's renderers are hidden. After A's drain B's copy, sound and hidden plug are gone and the
-# oil is equal. With RemoteVisuals off B plays nothing; when A leaves mid-drain B's replay is cancelled at once.
+# oil is equal. With RemoteVisuals off B plays nothing. When A refills brake fluid (cap opened, can out, pour held), B
+# shows the can at the reservoir, its stream only while A pours, and nothing after A puts the can away. When A leaves
+# mid-drain B's replay is cancelled at once.
 param($Ctx)
 
 $a, $b = $Ctx.Instances
@@ -140,7 +142,45 @@ Wait-DrainEnd
 Cmd $b vfx-enable "on" | Out-Null
 Wait-Oil "after the hidden drain" 0
 
-# 3. A leaves mid-drain: B's replay is cancelled and its sound stopped.
+# 3. A refills brake fluid: B shows the can at the reservoir, streams only while A holds the pour.
+function PoursOfA($r) { @($r.effects | Where-Object { $_.kind -eq "Pour" -and $_.playerId -eq $script:idA -and $_.loader -eq $loader }) }
+function Streaming($r) { @(Copies $r | Where-Object { @($_.particles | Where-Object { $_.name -eq "Emit" -and $_.emitting }).Count -gt 0 }) }
+function Brake([string]$Name) { (@((Cmd $Name dump).carDetails) | Where-Object { $_.loader -eq $loader }).entries.'f:Brake.0' }
+
+Cmd $a cardetails-fluid "$loader Brake 0 0.2" | Out-Null
+Start-Sleep -Seconds 2
+$pourStart = Cmd $a vfx-pour "$loader BrakeRefill start"
+Write-Host "A opens $($pourStart.cap) ($($pourStart.capKey)) and takes the brake fluid can"
+$deadline = (Get-Date).AddSeconds(15)
+do { Start-Sleep -Milliseconds 500; $pa = Cmd $a vfx-pour "$loader BrakeRefill status" } while (-not $pa.canUse -and (Get-Date) -lt $deadline)
+Save "pour-ready_$a" $pa
+Check $pa.canUse "A's can is out and ready to pour ($($pa | ConvertTo-Json -Compress))"
+$can = Wait-Report $b "pour can" { param($r) (PoursOfA $r).Count -eq 1 -and (Copies $r).Count -eq 1 } 4
+Save "pour-can_$b" $can
+Check ((PoursOfA $can).Count -eq 1 -and (Copies $can).Count -eq 1) "B shows A's can at the reservoir ($(@($can.effects) | ConvertTo-Json -Compress))"
+Check ((Streaming $can).Count -eq 0) "B's can does not stream before A pours"
+if ($pa.logicPosition -and @(Copies $can).Count -eq 1) {
+    $p = @(Copies $can)[0].position
+    $gap = [math]::Sqrt([math]::Pow($p[0] - $pa.logicPosition[0], 2) + [math]::Pow($p[1] - $pa.logicPosition[1], 2) + [math]::Pow($p[2] - $pa.logicPosition[2], 2))
+    Check ($gap -lt 0.05) "B's can stands where A's can is ($([math]::Round($gap, 3)) m apart)"
+}
+Cmd $a vfx-pour "$loader BrakeRefill hold 3" | Out-Null
+$pouring = Wait-Report $b "stream" { param($r) (Streaming $r).Count -eq 1 } 3
+Save "pouring_$b" $pouring
+Check ((Streaming $pouring).Count -eq 1) "B's can streams while A pours ($(@($pouring.copies) | ConvertTo-Json -Compress -Depth 5))"
+Start-Sleep -Seconds 3
+$stopped = Wait-Report $b "stream stopped" { param($r) (Streaming $r).Count -eq 0 } 4
+Check ((Streaming $stopped).Count -eq 0 -and (PoursOfA $stopped).Count -eq 1) "B's stream stops when A lets go, the can stays"
+Cmd $a vfx-pour "$loader BrakeRefill end" | Out-Null
+$away = Wait-Report $b "can away" { param($r) (Copies $r).Count -eq 0 -and @($r.effects).Count -eq 0 } 6
+Check ((Copies $away).Count -eq 0 -and @($away.effects).Count -eq 0) "B's can is gone after A puts it away"
+Check ($away.leaks -eq 0 -and $away.renderersHidden -eq 0) "no state leak or hidden renderer on B ($($away.leaks), $($away.renderersHidden))"
+$deadline = (Get-Date).AddSeconds(10)
+do { Start-Sleep -Milliseconds 500; $ba = Brake $a; $bb = Brake $b } while (($null -eq $ba -or $null -eq $bb -or [math]::Abs($ba.Level - $bb.Level) -gt 0.01) -and (Get-Date) -lt $deadline)
+Check ($ba -and $bb -and [math]::Abs($ba.Level - $bb.Level) -le 0.01 -and $ba.Level -gt 0.25) "A poured and B has A's brake fluid level (A $($ba.Level), B $($bb.Level))"
+Wait-Same "after the pour"
+
+# 4. A leaves mid-drain: B's replay is cancelled and its sound stopped.
 Fill-Oil "before the cut drain"
 Cmd $a tool-use "OilBin $loader" | Out-Null
 $cut = Wait-Report $b "drain replay" { param($r) (DrainsOfA $r).Count -eq 1 } 4

@@ -51,6 +51,101 @@ public static class VisualFluidCommands
         }
     }
 
+    // vfx-pour drives a refill on the actor as a player does: the cap opens (ActionAutomatic), ToolsManager.Use through
+    // the lock gate, the pour button held by keeping FluidRefillLogic.power at 1, then the tool put away.
+    [HarnessCommand("vfx-pour")]
+    private static object Pour(string args)
+    {
+        var parts = (args ?? "").Split(new[] { ' ' }, StringSplitOptions.RemoveEmptyEntries);
+        if (parts.Length < 3) throw new ArgumentException("usage: vfx-pour <loader> <ToolType> start|hold <seconds>|end|status");
+        int loader = int.Parse(parts[0]);
+        var type = (ToolType)Enum.Parse(typeof(ToolType), parts[1], true);
+        var tools = ToolsManager.Get() ?? throw new InvalidOperationException("no ToolsManager in this scene");
+        var refill = RefillOf(tools, type) ?? throw new ArgumentException($"{type} is not a refill can");
+        var carLoader = CarLoaderPlaces.Get()?.GetCarLoaderByIndex(loader) ?? throw new ArgumentException($"no car loader {loader}");
+        var logic = refill.fluidRefillLogic;
+        switch (parts[2])
+        {
+            case "start":
+            {
+                var fluid = refill.carFluidType;
+                var registry = CMS21Together.Logic.Car.Parts.PartRegistry.Build(carLoader);
+                string capKey = registry.SubKeys.OrderBy(k => k, StringComparer.Ordinal).FirstOrDefault(k =>
+                {
+                    var container = registry.Sub(k).transform.parent?.GetComponent<CarFluid>();
+                    return container != null && container.FluidType == fluid && container.ID == 0;
+                });
+                var cap = capKey == null ? null : registry.Sub(capKey);
+                if (cap == null) throw new InvalidOperationException($"no cap in a {fluid} container");
+                carLoader.CurrentUsedFluid = fluid;
+                carLoader.CurrentUsedFluidId = 0;
+                GameScript.Get().IOMouseOverCarLoader = carLoader;
+                tools.ItemWorkOn = cap.gameObject;
+                bool opened = false;
+                if (!cap.IsUnmounted)
+                {
+                    cap.StartCoroutine(cap.ActionAutomatic());
+                    opened = true;
+                }
+                tools.Use(type);
+                return new { capKey, cap = cap.id, opened, fluid = fluid.ToString(), active = tools.ToolIsActive };
+            }
+            case "hold":
+            {
+                float seconds = float.Parse(parts[3], System.Globalization.CultureInfo.InvariantCulture);
+                MelonLoader.MelonCoroutines.Start(Hold(logic, seconds));
+                return PourStatus(tools, refill, carLoader);
+            }
+            case "end":
+                refill.Hide();
+                tools.HideTool();
+                return PourStatus(tools, refill, carLoader);
+            case "status":
+                return PourStatus(tools, refill, carLoader);
+            default:
+                throw new ArgumentException("usage: vfx-pour <loader> <ToolType> start|hold <seconds>|end|status");
+        }
+    }
+
+    private static System.Collections.IEnumerator Hold(FluidRefillLogic logic, float seconds)
+    {
+        float until = Time.realtimeSinceStartup + seconds;
+        while (Time.realtimeSinceStartup < until && logic != null)
+        {
+            logic.power = 1f;
+            yield return null;
+        }
+    }
+
+    private static object PourStatus(ToolsManager tools, FluidRefill refill, CarLoader carLoader)
+    {
+        var logic = refill.fluidRefillLogic;
+        var cap = tools.ItemWorkOn == null ? null : tools.ItemWorkOn.GetComponent<PartScript>();
+        return new
+        {
+            toolActive = tools.ToolIsActive,
+            used = tools.currentUsedTool.ToString(),
+            logicActive = logic != null && logic.gameObject.activeSelf,
+            canUse = logic != null && logic.canUse,
+            power = logic == null ? 0f : logic.power,
+            capUnmounted = cap != null && cap.IsUnmounted,
+            capAnimationDone = cap != null && cap.MountAnimationCompleted,
+            level = carLoader.FluidsData.GetLevel(refill.carFluidType, 0, false),
+            logicPosition = logic == null ? null : Vec(logic.transform.position),
+            capPosition = cap == null ? null : Vec(cap.transform.position),
+        };
+    }
+
+    private static FluidRefill RefillOf(ToolsManager tools, ToolType type) => type switch
+    {
+        ToolType.OilRefill => tools.OilRefill,
+        ToolType.BrakeRefill => tools.BrakeRefill,
+        ToolType.CoolantRefill => tools.CoolantRefill,
+        ToolType.WindscreenWashRefill => tools.WindscreenWashRefill,
+        ToolType.PowerSteeringRefill => tools.PowerSteeringRefill,
+        _ => null
+    };
+
     private static Dictionary<string, object> Report(int loader)
     {
         var copies = new List<object>();
