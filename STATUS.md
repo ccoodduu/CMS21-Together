@@ -2,6 +2,96 @@
 
 Newest first. One entry per work session.
 
+## 2026-10-10 (03:50–04:45) — row 27a, race and speed track (`feat/shared-race-tracks`, lane 1)
+
+- Spikes: 1.1 classifies the 49 `TestTrack` references (33 to the track set, 11 test-track features, 5 definitions;
+  design.md D1). 1.2 (static, `native\out\tracks27a_clean`): `RaceTrackManager.LastTime` runs once per lap with
+  `timer.ElapsedMilliseconds` and writes `BestRaceTime` (`long` ms) before restarting the timer; a pause-menu restart
+  resets checkpoints and timer, so no partial lap; the speed track writes `ProfileData.TopSpeed` (`int` km/h) on return.
+- Built: `TrackScenes` (test, race, speed track); `CarAwayKind.RaceTrack`, `SpeedTrack`; claims, results, drive relay
+  and rides on every track (`TrackDriveSync` replaces `TestDriveSync`); scene identity by Unity name (the speed track
+  is `SpeedTrack`, not the game's `TestTrack`); passenger return through `TrackManager.Instance`. Lap and top speed
+  records: `LastTime` prefix/postfix and `FreeTrackManager.ReturnToGarage` prefix, server `TrackRecords` (personal
+  bests in the player records, group records in `world`, notices, bounds 10 s–30 min and 1–700 km/h, D16 answers),
+  `PlayerRestore` writes the bests into the session profile. Guard: race and speed track allowed, drag strip "Drag
+  strip (Drag Racing DLC)". Server `records`, `--check-away`. `Il2CppSystem.dll` added to the client libs.
+- Proof `race-track` fails on the old code (`20261010-041057_L1`, run from `CMS21-Together-wt\tracks-base`: no claim,
+  no relay) and passes (`20261010-040634_L1`); `20261010-041514_regression.json` 14/14 (smoke and the driving,
+  test drive, ride-along, diagnostics, guard and rejoin scenarios).
+- Open: hand check 5.1 (real lap through the checkpoints, race track restart, speed track pause menu).
+
+## 2026-10-10 (01:40–03:30) — playtest 3 fixes, wheels, place-same and bonus parts merged; build dev.1191
+
+- `main` = `657609c`. Merged: `fix/place-same` (`5754234`; move lock covers the target place, unpark examined flags),
+  the playtest-3 fixes (`7ec8dff`; proofs `lock-mount-target`, `car-mount-wear`, `shop-buy-popup` fail on the old code
+  and pass; `20261010-015457_regression.json` 24/24), the wheel visuals fix (`a41279e`; `CarLoader.UpdateWheels` on a
+  loaded car destroyed shared rim/tire materials: magenta, hollow rims, missing tires, a taken-off wheel left visible;
+  proof `car-wheel-looks`; batch `20261010-022844_L1_batch` 16/16), bonus parts (`657609c`, row 25 part 2; proof
+  `car-bonus` fails `20261010-024945_L1`, passes `20261010-025058_regression.json`).
+- Playtest build `0.6.0-dev.1191` on the Desktop.
+- In progress: row 25 part 3 new engines (lane 1); the `blocked` flag drift seen in the soak and the `locks-select-2`
+  pie harness flake (lane 2); remote fluid visuals (oil drain etc.; lane 2 after).
+## 2026-10-10 (03:10–03:45) — row 25 part 3, new engines on the stand (`feat/new-engines`, lane 1)
+
+- `CreateEngineAction` is refused on a stand that holds or is receiving an engine ("Take the engine off the stand
+  first."); the put of a built engine is marked `Created` (matched by the built engine item) and sent with the stand's
+  UID from before the build, a refused built engine is discarded instead of returned, and a remote put waits while
+  a local build runs. Server counts `createdEngines` (`tools`), self-check `--check-tools`. Guard: `Window CreateEngine`
+  and pie `engine_new` allowed (the `guard` scenario's blocked pie is now `settings_load`).
+- Spike 1.1b (`20261010-031447_L1`, `20261010-031658_L1` `engine-build-probe`): the build waits for end-of-frame,
+  which never comes headless; stepped every frame (`stand-nofade`) it builds, so the build is proven in the harness.
+- Proof `engine-build` fails on the old code (`20261010-032613_L1`) and passes (`20261010-032430_L1`,
+  `20261010-032836_regression.json` with smoke and the tools scenarios). All three parts of row 25 are built.
+
+## 2026-10-10 (02:30–03:15) — row 25 part 2, bonus parts (`feat/bonus-parts`, lane 1)
+
+- Bonus slots in the car details as `x:<slot>` entries (`ModBonusSlot`, cars section v4); receivers apply them with
+  `BonusPart.Change`/`Paint`/`TakeOn` and `TakeOff` + `TryDeleteBonusPart`. Lock kind `BonusPart` on `x:<slot>`: the
+  fit is gated in `SelectPartToMount`, the remove in `TakeOffBonusPart`; the request carries the slot the client sees
+  and the server refuses a different stored slot as `Stale` and sends it ("This slot just changed."). A fit onto a
+  filled slot is refused (the game would remove the part and delete the selected item). Paint shop marks bonus parts.
+  Guard: both bonus modes and pies allowed.
+- Spike 1.3 (`20261009-225008_L1`, `20261009-225816_L1` `bonus-spike`): the fit's item removal is already synced
+  (`Inventory.Delete`); `Paint` works with an array-built `CustomColor`.
+- Proof `car-bonus` fails on the old code (`20261010-024945_L1`) and passes (`20261010-025058_regression.json`, with
+  smoke and touched scenarios; `guard` rerun `20261010-031053_L1`).
+
+## 2026-10-10 (01:40–02:50) — playtest 3 wheel looks fixed (`fix/wheel-visuals`, lane 1)
+
+- **Tires missing, rims hollow, magenta wheels, a wheel left in the air:** one cause. The car-details wheel apply
+  called `CarLoader.UpdateWheels`, the game's load-time path (`PartScript.ResizeWheel(CarLoader, Wheel)`): it puts the
+  rim and tire prefabs' material assets on the renderers and into an existing `ShadersBackup` entry (any part hidden
+  once since the car loaded); the next backup update (`TunePart`, a mount) `DestroyImmediate`s them. From then on every
+  wheel using those materials draws with null materials (magenta) or Unity's default Standard (hollow rim, no tire),
+  for the rest of the game session, also after F7. On an unmounted wheel the same call swapped the X-ray look for
+  real materials, so the wheel stayed visible where it had been taken off (the "ghost"; not a `TogetherGhost`). The
+  apply now calls `SetET`, `SetWheelSize` (its `DoWheelMath` sets the blend shapes) and `UpdateWheelMeshCollider`
+  only (`c965705`); the c369763 id restore went with it. Spike note corrected (`docs/spikes/car-details.md`).
+- Harness: `wheel-visuals` (rim and tire meshes, blend shapes, scales, materials, prefab materials, ghost objects);
+  `give-group wheel <rim,tire> <w/s/p>`. Proof `car-wheel-looks` fails on `main` `67837a4`
+  (`20261010-022532_L1`, run in `CMS21-Together-wt\wheels-base`: B's prefab materials destroyed, B's unmounted front
+  left wheel drawn with real materials, Standard and null materials after the resync) and passes (`20261010-022655_L1`,
+  and on the merged `8495b86` in batch `20261010-022844_L1_batch`). Same batch passes smoke, `car-wheel-swap`,
+  `car-details`, `car-details-request`, `tools-slots`, `tools-race`, `tools-item-race`, `tools-latejoin`,
+  `visual-parts`, `visual-activity`, `visual-lift`, `visual-latejoin`.
+- Open: the rim hub plate (`tyl`) x-scale of a remotely changed wheel differs slightly from the actor's (1.619 vs
+  1.629, 1.537 after a resync; it follows the ET, which the game scales from the current value); not in the shape
+  check; whether it shows is not known (headless).
+## 2026-10-10 (02:30–03:40) — remote fluid visuals built (`feat/remote-fluid-visuals`, lane 2)
+
+- Playtest 3 finding "no oil drain animation for the friend". Spike `docs/spikes/remote-fluids.md`, design
+  `docs/design/remote-fluid-visuals.md`. While another player's activity is the oil bin on a car, the receiver plays
+  the game's drain on a script- and collider-free copy of its own `Oil_drain_h` at the drain plug (stream coloured by
+  the oil's condition, `OilDrain` loop and its tail, plug hidden with `forceRenderingOff`); a refill can's pour shows
+  the can at the fill cap, tilting and streaming (with its sound) while the actor holds the pour (the `Fluid` activity
+  now carries the cap's key and the pour power). Visual only; `RemoteVisuals`, caps, cancel on leave/scene/car change.
+  The extractor stays prop-only (its animation is a first-person overlay).
+- Proof `visual-fluids`: old code (client of `main`) fails `20261010-031321_L2`, without the pour commit only the pour
+  checks fail `20261010-030818_L2`, the branch passes `20261010-030649_L2`. Smoke plus `visual-*`, `tools-car-effects`
+  pass (`20261010-031455_regression.json`; `visual-screens` failed on an empty `stand-before` name, it is
+  `run-all: skip` and needs graphics). Base runs in `CMS21-Together-wt\fluids\tools\runs\base-*`.
+- Open: on the spawning test game the brake servo and its cap sit at y −99 (the other game has them at the car).
+
 ## 2026-10-10 (01:30–02:30) — fix/place-same ready for merge (lane 2)
 
 - `fix/place-same` with `main` merged in (`5d744a8`). Fixes: `348159e` (the move lock covers the target place, so a
@@ -25,6 +115,18 @@ Newest first. One entry per work session.
   `20261009-220034_L2`, `20261009-220954_L2` (spurious accepts also in the passing `20261009-220207_L2`,
   `20261009-221126_L2`); on the branch 1 of 4 (`20261009-220342_L2`). Base runs copied to
   `CMS21-Together-wt\place-same\tools\runs\base-c4bd1c3`; the `place-same-base` worktree is removed. Harness fix not done.
+## 2026-10-10 (01:30–02:30) — playtest 3 fixes proven (`fix/mount-replay-target`, lane 1)
+
+- Proofs (old code = this branch with the three fixes reverted; both batches in lane 1):
+  - `lock-mount-target` (mount target, also a body part): fails `20261010-015214_L1` (the pick for `s:13.17` turned
+    `s:14.0` into `wentylator_2`; the hood's item turned the trunk into `tunedId hood`, hood still off), passes
+    `20261010-014750_L1`. New harness: `lock-try ... repoint <key>` and `lock-try <loader> body-mount <index> <uid>`.
+  - `car-mount-wear` (remote mount wear): fails `20261010-015316_L1` (A's RustWeight 0.8 at condition 1.0, F7 gives
+    0.0), passes `20261010-014855_L1`. New verb `part-shader <loader> <key> [refresh]`.
+  - `shop-buy-popup` (shop popup and sound): fails `20261010-015351_L1` (no popup, no sound), passes
+    `20261010-014930_L1`. New verbs `shop-buy`, `popup-trace`.
+- `origin/main` merged; smoke plus locks, `car-mount-race`, `car-live`, `car-wheel-swap`, `visual-parts`,
+  `purchases`, `economy-*` and the three proofs pass (`20261010-015457_regression.json`).
 
 ## 2026-10-09/10 (23:00–01:40) — playtest 3 (dev.1169/1170), findings
 

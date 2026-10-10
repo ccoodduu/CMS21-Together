@@ -54,6 +54,64 @@ references (client: `GuardRules` 1, `CarAwaySync` 3, `TestDriveSync` 9, `DriveCa
 `GameScene` 1, `TestDrivePackets` 1; server: `CarAwayRegistry` 4, `CarDetailsStore` 1, `Rides` 7, `DriveHandlers` 1;
 harness: 9) into a table below this decision; group 3 starts only after it.
 
+Task 1.1 classification (2026-10-10, `origin/main` `4ec5c78`; lines as on that commit). **Track** = means "a driving
+scene" and moves to the track set; **test track** = the test track's own feature, stays; **definition** = the value
+itself.
+
+| # | File:line | What | Class | Change |
+|---|---|---|---|---|
+| 1 | `Guard/GuardRules.cs:44` | `Scene TestTrack` allowed | test track | stays; `RaceTrack`, `SpeedTrack` get their own rows (3.4) |
+| 2 | `Driving/RideAlong.cs:164` | passenger loads `Test_track_1` | track | loads `RideUpdate.Scene`'s track (D5) |
+| 3 | `RideAlong.cs:190` | `OnLeavingScene` only from the test track | track | `IsTrack(from)` |
+| 4 | `RideAlong.cs:213` | travelling ends on arrival at the test track | track | arrival at the ride's track |
+| 5 | `RideAlong.cs:222` | waiting/seated only on the test track | track | the ride's track |
+| 6 | `RideAlong.cs:277` | `FindObjectOfType<TestTrackManager>()` return | track | `TrackManager.Instance` (D5) |
+| 7 | `RideAlong.cs:376` | `OwnTrackCar` | track | `IsTrack` |
+| 8 | `RideAlong.cs:384` | `CopyOf` | track | `IsTrack` |
+| 9 | `RideAlong.cs:402` | `TryGetAvatarSeat` | track | `IsTrack` |
+| 10 | `RideAlong.cs:420` | `LateUpdate` camera and avatars | track | `IsTrack` |
+| 11 | `Driving/DriveCapture.cs:70` | capture starts | track | `IsTrack` |
+| 12 | `DriveCapture.cs:74` | capture stops | track | `IsTrack` |
+| 13 | `DriveCapture.cs:112` | loader from the own `TestTrack` claim | track | `IsTrackKind` (the speed track's "car -1") |
+| 14 | `Car/Away/CarAwaySync.cs:112` | `LockedForMe` out-parameter default | definition | stays (unused when false) |
+| 15 | `CarAwaySync.cs:133` | `Activity` "on the test track" | test track | stays; race and speed track texts added |
+| 16 | `CarAwaySync.cs:140` | `Label` "test drive" | test track | stays; race and speed track labels added |
+| 17 | `Car/Away/TestDriveSync.cs:56` | departure hold only for `SceneType.TestTrack` | track | `TrackDriveSync`, any track (D3) |
+| 18 | `TestDriveSync.cs:59` | `IsMine(loader, TestTrack)` | track | `KindOf(scene)` |
+| 19 | `TestDriveSync.cs:64` | request kind `TestTrack` | track | `KindOf(scene)` |
+| 20 | `TestDriveSync.cs:75` | refusal text fallback kind | track | the requested kind |
+| 21 | `TestDriveSync.cs:88` | `MoveNext` prefix scene type | track | the departing scene type |
+| 22 | `TestDriveSync.cs:103` | `SceneHooks.Leave(…, TestTrack)` | track | the departing scene type |
+| 23 | `TestDriveSync.cs:118` | result sent when leaving the test track | track | `IsTrack(from)` |
+| 24 | `TestDriveSync.cs:121` | result for the own `TestTrack` claim | track | `IsTrackKind` |
+| 25 | `TestDriveSync.cs:171` | release after the return | track | `IsTrackKind` |
+| 26 | `Core/…/TestDrivePackets.cs:9` | `CarAwayKind.TestTrack` | definition | `RaceTrack`, `SpeedTrack` appended |
+| 27 | `Core/Data/Enum/GameScene.cs:15` | `GameScene.TestTrack` | definition | stays (`RaceTrack`, `SpeedTrack` exist) |
+| 28 | `Server/…/DriveHandlers.cs:23` | `driveScenes = { TestTrack }` | track | the track set (D4) |
+| 29 | `Server/…/CarAwayRegistry.cs:107` | scene rules only for `TestTrack` claims | track | `IsTrackKind` |
+| 30 | `CarAwayRegistry.cs:110` | released unless the owner goes to the test track | track | the claim kind's own track |
+| 31 | `CarAwayRegistry.cs:124` | 60 s grace back in the garage | track | `IsTrackKind` |
+| 32 | `CarAwayRegistry.cs:126` | 15-minute watchdog skips `TestTrack` | track | `IsTrackKind` |
+| 33 | `Server/…/CarDetailsStore.cs:218` | result only from a `TestTrack` owner | track | owner of any track kind |
+| 34 | `Server/…/Rides.cs:44` | ride starts on a `TestTrack` grant | track | `IsTrackKind`; the ride keeps its track |
+| 35 | `Rides.cs:59` | ride ends on a `TestTrack` release | track | `IsTrackKind` |
+| 36 | `Rides.cs:69` | driver left the test track | track | the ride's track |
+| 37 | `Rides.cs:70` | driver arrived elsewhere | track | the ride's track |
+| 38 | `Rides.cs:75` | passenger arrived | track | the ride's track |
+| 39 | `Rides.cs:80` | passenger left | track | the ride's track |
+| 40 | `Rides.cs:86` | running rides sent to a client entering the test track | track | rides on the track entered |
+| 41 | `TestHarness/…/DriveCommands.cs:528` | `drive-start` goes to the test track | test track | stays (`track-go` covers the others) |
+| 42 | `SpFeatureProbeCommands.cs:19` | `track-go` table entry | definition | stays |
+| 43 | `SpFeatureProbeCommands.cs:26` | `track-go` usage text | definition | stays |
+| 44 | `TestDriveCommands.cs:29` | trace target `TestTrackManager.ReturnToGarage` | test track | stays (row 13 spike trace) |
+| 45 | `TestDriveCommands.cs:30` | trace target `TestTrackManager.DoneTest` | test track | stays |
+| 46 | `TestDriveCommands.cs:153` | `testdrive-hold` holds only the test-track departure | test track | stays (`departure-hold` spike) |
+| 47 | `TestDriveCommands.cs:180` | `testdrive-go` | test track | stays (sets the examine report) |
+| 48 | `TestDriveCommands.cs:346` | `testdrive-finish` uses `TestTrackManager` | test track | stays (`track-return` for any track) |
+| 49 | `TestDriveCommands.cs:348` | `DoneTest` for every listed test | test track | stays |
+
+33 lines move to the track set, 11 stay test-track features, 5 are definitions.
+
 ### D2. Scene identity
 
 `ClientScene.FromSceneName` maps the three Unity names; `SceneReady` uses the name mapping first and the game's scene type
@@ -105,6 +163,37 @@ the race track runs the game's own `RaceTrackManager.Prepare` on a frozen car; D
   is used only for the server's bounds check.
 - Speed track: if task 1.2 shows `topSpeed`/`lastTopSpeed` reach `ProfileData.TopSpeed`, the same path keeps a best top
   speed (`TrackRecord.Scene = SpeedTrack`, value in km/h); otherwise nothing is kept.
+
+Task 1.2 result (2026-10-10, static: `native\out\tracks27a_clean`, targets `work\targets\tracks27a.txt`; every body is
+its own, `at.py` finds no folded method):
+
+- `RaceTrackManager.LastTime` (`0x18098DC00`) runs **once per lap**. Its only caller is `CheckPoints.OnTriggerEnter`
+  (`xref.py`), on the `Meta` trigger with the `Player` tag and only when `numberOfCheckpoints == checkPointsList.Count
+  - 1` (= `AllCheckpointsDone()`); afterwards the caller counts `laps++`, sets `numberOfCheckpoints = 0` and arms the
+  first checkpoint again.
+- The lap is `timer.ElapsedMilliseconds` (`long`, ms) read at entry. Under 110 000 ms it counts `stat_timeattack`. If
+  (`CurrentSceneType == RaceTrack` and `lastBestTime == 0`) or the lap is below `lastBestTime`, it writes
+  `lastBestTime` and `ProfileData.BestRaceTime` (`long`, ms, offset 0x30). Then it shows the times and **restarts the
+  timer** (elapsed 0), so the hook is a prefix that reads the timer and a postfix that sends.
+- `Prepare` (`<Prepare>d__19`) loads `lastBestTime` from `ProfileData.BestRaceTime` on the race track, resets
+  `laps = 1`, `numberOfCheckpoints = 0` and the timer, and starts the lights on the first throttle; `Update` starts the
+  timer at `readySetGo`. `<Restart>d__20` fades and runs `Prepare` again. So a restart resets the checkpoint count and
+  the timer before any lap can end: **a partial lap after a restart cannot reach `LastTime`** (m6 needs no rule; the
+  prefix still checks `AllCheckpointsDone()`).
+- `RaceTrackManager.ReturnToGarage` sets `TestToShow = ""` (no examine report), saves the profile and loads `garage`.
+- Speed track: `FreeTrackManager.Update` keeps `topSpeed` (`float`, km/h also with imperial units, which only change
+  the text); `FreeTrackManager.ReturnToGarage` writes `lastTopSpeed = (int)topSpeed` and **`ProfileData.TopSpeed`
+  (`int`, km/h, offset 0x38)** when higher, and `<Prepare>d__9` loads `lastTopSpeed` from it. So the speed track keeps
+  a best top speed through the same path: a prefix on `FreeTrackManager.ReturnToGarage` reads `topSpeed`.
+- The packets carry `Value` instead of `LapMs` (lap ms on the race track, km/h on the speed track):
+  `TrackRecord { Scene, Value }`, `TrackRecordUpdate { Scene, PlayerId, PlayerName, Value, IsGroupRecord,
+  IsPersonalBest }`. The world state keeps `GroupBestLap` and `GroupTopSpeed` (`ModTrackRecord { PlayerName, Value }`),
+  the player record `BestLapMs` and `TopSpeedKmh`. An ignored value (out of bounds, or not a race or speed track) is
+  answered to its sender with the stored personal best (`IsPersonalBest = false`), which the client writes back into
+  the profile (D16).
+- Harness: `track-lap <ms>` sets the stopped `timer`'s `elapsed` (in `Stopwatch` ticks), `numberOfCheckpoints =
+  checkPointsList.Count - 1` and calls `LastTime()`; `track-topspeed <kmh>` sets `FreeTrackManager.topSpeed` before
+  `track-return`.
 
 ### D7. Late join
 

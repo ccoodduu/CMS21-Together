@@ -59,6 +59,18 @@ namespace CMS21_Together_Server
 				return;
 			}
 
+			if (Array.IndexOf(args, "--check-away") >= 0)
+			{
+				Environment.Exit(Data.Cars.AwayCheck.Run());
+				return;
+			}
+
+			if (Array.IndexOf(args, "--check-tools") >= 0)
+			{
+				Environment.Exit(Data.Tools.ToolsCheck.Run());
+				return;
+			}
+
 			if (Array.IndexOf(args, "--check-merges") >= 0)
 			{
 				Environment.Exit(Data.Cars.MergeCheck.Run());

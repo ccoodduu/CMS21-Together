@@ -19,6 +19,7 @@ namespace CMS21_Together_Server.Data.Presence
 			public int DriverId;
 			public int PassengerId;
 			public int Loader;
+			public GameScene Scene;
 			public float Since;
 			public bool Arrived;
 		}
@@ -37,17 +38,17 @@ namespace CMS21_Together_Server.Data.Presence
 
 		public static IEnumerable<string> Describe(float now) =>
 			byPassenger.Values.OrderBy(r => r.PassengerId).Select(r =>
-				$"  passenger {r.PassengerId} with driver {r.DriverId} in car {r.Loader}, {now - r.Since:0} s{(r.Arrived ? ", on the track" : ", travelling")}");
+				$"  passenger {r.PassengerId} with driver {r.DriverId} in car {r.Loader} to the {TrackScenes.NameOf(r.Scene)}, {now - r.Since:0} s{(r.Arrived ? ", on the track" : ", travelling")}");
 
 		private static void OnGranted(int loader, int driverId, CarAwayKind kind)
 		{
-			if (kind != CarAwayKind.TestTrack) return;
+			if (!TrackScenes.IsTrackKind(kind)) return;
 			foreach (var record in PresenceRegistry.All.ToList())
 			{
 				if (record.PlayerId == driverId || record.Scene != GameScene.Garage || record.SeatCarLoaderId != loader) continue;
 				if (!Server.Clients.TryGetValue(record.PlayerId, out var client) || !client.IsConnected || client.SyncState == SyncState.Connected) continue;
 				if (byPassenger.ContainsKey(record.PlayerId)) continue;
-				var ride = new Ride { DriverId = driverId, PassengerId = record.PlayerId, Loader = loader, Since = ServerTime.Time };
+				var ride = new Ride { DriverId = driverId, PassengerId = record.PlayerId, Loader = loader, Scene = TrackScenes.SceneOf(kind), Since = ServerTime.Time };
 				byPassenger[record.PlayerId] = ride;
 				Logger.Info($"[Ride] Client {record.PlayerId} sits in car {loader} ({(record.SeatLeft ? "left" : "right")}) and rides along with client {driverId}.");
 				Broadcast(ride, true, RideEndReason.None);
@@ -56,35 +57,35 @@ namespace CMS21_Together_Server.Data.Presence
 
 		private static void OnReleased(int loader, int ownerId, CarAwayKind kind)
 		{
-			if (kind != CarAwayKind.TestTrack) return;
+			if (!TrackScenes.IsTrackKind(kind)) return;
 			bool left = PresenceRegistry.Get(ownerId) == null;
 			foreach (var ride in byPassenger.Values.Where(r => r.DriverId == ownerId && r.Loader == loader).ToList())
-				End(ride, left ? RideEndReason.DriverLeft : RideEndReason.DriveCancelled, left ? "the driver left the game" : "the test drive claim was released");
+				End(ride, left ? RideEndReason.DriverLeft : RideEndReason.DriveCancelled, left ? "the driver left the game" : "the drive claim was released");
 		}
 
 		private static void OnSceneChanged(int clientId, GameScene from, GameScene to)
 		{
 			foreach (var ride in byPassenger.Values.Where(r => r.DriverId == clientId).ToList())
 			{
-				if (from == GameScene.TestTrack) End(ride, RideEndReason.DriverReturned, $"the driver went to {to}");
-				else if (from == GameScene.Loading && to != GameScene.TestTrack) End(ride, RideEndReason.DriveCancelled, $"the driver arrived in {to}");
+				if (from == ride.Scene) End(ride, RideEndReason.DriverReturned, $"the driver went to {to}");
+				else if (from == GameScene.Loading && to != ride.Scene) End(ride, RideEndReason.DriveCancelled, $"the driver arrived in {to}");
 			}
 
 			if (byPassenger.TryGetValue(clientId, out var own))
 			{
-				if (to == GameScene.TestTrack)
+				if (to == own.Scene)
 				{
 					own.Arrived = true;
-					Logger.Info($"[Ride] Client {clientId} arrived on the test track to ride with client {own.DriverId}.");
+					Logger.Info($"[Ride] Client {clientId} arrived on the {TrackScenes.NameOf(own.Scene)} to ride with client {own.DriverId}.");
 				}
-				else if (from == GameScene.TestTrack || from == GameScene.Loading && to != GameScene.TestTrack)
+				else if (from == own.Scene || from == GameScene.Loading && to != own.Scene)
 				{
 					End(own, RideEndReason.PassengerLeft, $"the passenger went to {to}");
 				}
 			}
 
-			if (to == GameScene.TestTrack)
-				foreach (var ride in byPassenger.Values.Where(r => r.PassengerId != clientId))
+			if (TrackScenes.IsTrack(to))
+				foreach (var ride in byPassenger.Values.Where(r => r.PassengerId != clientId && r.Scene == to))
 					Server.SendToClient(Packet(ride, true, RideEndReason.None), clientId);
 		}
 
@@ -98,7 +99,7 @@ namespace CMS21_Together_Server.Data.Presence
 		{
 			if (byPassenger.Count == 0) return;
 			foreach (var ride in byPassenger.Values.Where(r => !r.Arrived && now - r.Since > ArriveSeconds).ToList())
-				End(ride, RideEndReason.PassengerDidNotArrive, $"the passenger did not reach the test track within {ArriveSeconds:0} s");
+				End(ride, RideEndReason.PassengerDidNotArrive, $"the passenger did not reach the {TrackScenes.NameOf(ride.Scene)} within {ArriveSeconds:0} s");
 		}
 
 		private static void End(Ride ride, RideEndReason reason, string why)
@@ -110,7 +111,7 @@ namespace CMS21_Together_Server.Data.Presence
 
 		private static RideUpdatePacket Packet(Ride ride, bool active, RideEndReason reason) => new RideUpdatePacket
 		{
-			DriverId = ride.DriverId, PassengerId = ride.PassengerId, CarLoaderID = ride.Loader, Active = active, Reason = reason,
+			DriverId = ride.DriverId, PassengerId = ride.PassengerId, CarLoaderID = ride.Loader, Active = active, Reason = reason, Scene = ride.Scene,
 		};
 
 		private static void Broadcast(Ride ride, bool active, RideEndReason reason) => Server.SendToClients(Packet(ride, active, reason));

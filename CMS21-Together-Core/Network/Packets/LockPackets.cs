@@ -16,7 +16,8 @@ namespace CMS21_Together_Core.Network.Packets
         Crane,
         Lift,
         Move,
-        Tune
+        Tune,
+        BonusPart
     }
 
     public enum CarLockRefusal : byte
@@ -45,6 +46,12 @@ namespace CMS21_Together_Core.Network.Packets
 
         public static string Fluid(string fluidType, int id) => $"f:{fluidType}.{id}";
 
+        public static string Bonus(int slot) => $"x:{slot}";
+
+        public static bool IsBonus(string key) => key != null && key.StartsWith("x:", StringComparison.Ordinal);
+
+        public static int BonusSlot(string key) => IsBonus(key) && int.TryParse(key.Substring(2), out int slot) && slot >= 0 ? slot : -1;
+
         public static bool IsSub(string key) => key != null && key.StartsWith("s:", StringComparison.Ordinal);
 
         public static bool IsBody(string key) => key != null && key.StartsWith("b:", StringComparison.Ordinal);
@@ -60,6 +67,7 @@ namespace CMS21_Together_Core.Network.Packets
         public static bool IsWellFormed(string key)
         {
             if (key == Car || key == Engine || key == Tune) return true;
+            if (IsBonus(key)) return BonusSlot(key) >= 0;
             if (IsBody(key)) return int.TryParse(key.Substring(2), out int index) && index >= 0;
             if (IsSub(key)) return Segments(key) != null;
             if (!IsFluid(key)) return false;
@@ -111,6 +119,7 @@ namespace CMS21_Together_Core.Network.Packets
         public int OtherLoaderID = -1;
         public int OtherSpawnSeq;
         public int Place = -1;
+        [System.Runtime.Serialization.OptionalField] public string Expect;
     }
 
     [Serializable]

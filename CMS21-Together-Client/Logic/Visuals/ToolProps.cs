@@ -24,7 +24,8 @@ public class ToolProps
 
 	public void Show(PlayerActivityState activity)
 	{
-		int wanted = activity != null && (activity.Kind == ActivityKind.Examine || activity.Kind == ActivityKind.Fluid) ? activity.ToolType : PlayerActivityState.NoTool;
+		bool canAtReservoir = activity != null && activity.Kind == ActivityKind.Fluid && !string.IsNullOrEmpty(activity.PartKey);
+		int wanted = activity != null && !canAtReservoir && (activity.Kind == ActivityKind.Examine || activity.Kind == ActivityKind.Fluid) ? activity.ToolType : PlayerActivityState.NoTool;
 		if (wanted == shown) return;
 		if (shown != PlayerActivityState.NoTool && cache.TryGetValue(shown, out var old) && old != null && old.IsAlive) old.Root.SetActive(false);
 		shown = wanted;

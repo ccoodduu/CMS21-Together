@@ -11,7 +11,7 @@ using UnityEngine;
 
 namespace CMS21Together.Logic.Car.Away;
 
-// sync-test-drive-and-diagnostics D1/D3: mirror of the server's away claims (test track, test path, dyno), requests
+// sync-test-drive-and-diagnostics D1/D3: mirror of the server's away claims (tracks, test path, dyno), requests
 // with a timeout, and the lock check other features call before they edit a car.
 public static class CarAwaySync
 {
@@ -131,6 +131,8 @@ public static class CarAwaySync
 	public static string Activity(CarAwayKind kind) => kind switch
 	{
 		CarAwayKind.TestTrack => "on the test track",
+		CarAwayKind.RaceTrack => "on the race track",
+		CarAwayKind.SpeedTrack => "on the speed track",
 		CarAwayKind.PathTest => "on the test path",
 		_ => "on the dyno",
 	};
@@ -138,6 +140,8 @@ public static class CarAwaySync
 	public static string Label(CarAwayKind kind) => kind switch
 	{
 		CarAwayKind.TestTrack => "test drive",
+		CarAwayKind.RaceTrack => "race track",
+		CarAwayKind.SpeedTrack => "speed track",
 		CarAwayKind.PathTest => "test path",
 		_ => "dyno",
 	};

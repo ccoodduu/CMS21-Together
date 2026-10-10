@@ -6,6 +6,8 @@ Size S–M, no OpenSpec proposal. User idea 2026-10-08: two players in one car o
 
 ## Behaviour
 
+Since row 27a (`shared-race-tracks`, 2026-10-10) a ride starts on a claim for any base-game track (test, race, speed); `RideUpdate.Scene` names the driver's track and the passenger returns through `TrackManager.Instance.ReturnToGarage`.
+
 - **Who rides:** when the server grants a test-track away claim (row 13) to a player, every other player whose
   presence record says they sit in that car in the garage (row 6 `SeatCarLoaderId`, either seat) becomes a passenger.
   Sitting in the car before the drive starts is the consent; there is no menu. Seats are arbitrated (row 19 D17), so

@@ -8,7 +8,9 @@ namespace CMS21_Together_Core.Network.Packets
     {
         TestTrack,
         PathTest,
-        Dyno
+        Dyno,
+        RaceTrack,
+        SpeedTrack
     }
 
     public enum CarAwayRefusal

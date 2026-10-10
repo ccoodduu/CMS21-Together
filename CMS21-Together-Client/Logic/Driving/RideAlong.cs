@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using CMS21_Together_Core.Data;
 using CMS21_Together_Core.Data.Enum;
 using CMS21_Together_Core.Logging;
 using CMS21_Together_Core.Network.Packets;
@@ -54,6 +55,7 @@ public static class RideAlong
 	public static Phase Current { get; private set; }
 	public static int DriverId { get; private set; } = -1;
 	public static int Loader { get; private set; } = -1;
+	public static GameScene Scene { get; private set; } = GameScene.Unknown;
 	public static string DriverName { get; private set; }
 	public static string EndMessage { get; private set; }
 	public static bool HeadMeasured { get; private set; }
@@ -88,6 +90,7 @@ public static class RideAlong
 		Current = Phase.None;
 		DriverId = -1;
 		Loader = -1;
+		Scene = GameScene.Unknown;
 		endRequested = false;
 		carLostSince = -1f;
 		frozen = null;
@@ -148,6 +151,7 @@ public static class RideAlong
 		DriverId = packet.DriverId;
 		DriverName = Name(packet.DriverId);
 		Loader = packet.CarLoaderID;
+		Scene = TrackScenes.IsTrack(packet.Scene) ? packet.Scene : GameScene.TestTrack;
 		EndMessage = null;
 		endRequested = false;
 		lookYaw = 0f;
@@ -161,7 +165,7 @@ public static class RideAlong
 		GlobalData.NewMileage = 0;
 		ModNotify.ShowToast($"Riding along with {DriverName}.");
 		var center = NotificationCenter.m_instance;
-		center.StartCoroutine(center.SelectSceneToLoad("Test_track_1", SceneType.TestTrack, true, true));
+		center.StartCoroutine(center.SelectSceneToLoad(TrackScenes.Get(Scene).LoadName, ClientScene.ToSceneType(Scene), true, true));
 	}
 
 	private static void End(RideEndReason reason, int driverId)
@@ -171,8 +175,8 @@ public static class RideAlong
 		{
 			RideEndReason.DriverReturned => $"{DriverName} drove back to the garage.",
 			RideEndReason.DriverLeft => $"{DriverName} left the game.",
-			RideEndReason.DriveCancelled => $"{DriverName}'s test drive ended.",
-			RideEndReason.PassengerDidNotArrive => "You did not reach the test track in time.",
+			RideEndReason.DriveCancelled => $"{DriverName}'s drive ended.",
+			RideEndReason.PassengerDidNotArrive => $"You did not reach the {TrackScenes.NameOf(Scene)} in time.",
 			_ => null,
 		};
 		if (Current == Phase.Returning) return;
@@ -187,7 +191,7 @@ public static class RideAlong
 
 	private static void OnLeavingScene(GameScene from, GameScene to)
 	{
-		if (Current == Phase.None || from != GameScene.TestTrack) return;
+		if (Current == Phase.None || !TrackScenes.IsTrack(from)) return;
 		GlobalData.NewMileage = 0;
 		GlobalData.TestToShow = "";
 		GlobalData.SelectedCarLoader = "";
@@ -210,16 +214,16 @@ public static class RideAlong
 		switch (Current)
 		{
 			case Phase.Travelling:
-				if (ClientScene.LocalScene == GameScene.TestTrack) SetPhase(Phase.WaitingForCar);
+				if (ClientScene.LocalScene == Scene) SetPhase(Phase.WaitingForCar);
 				else if (ClientScene.LocalScene == GameScene.Garage && inPhase > 5f)
 				{
-					Log.Warn("[Ride] The trip to the test track did not start.");
+					Log.Warn($"[Ride] The trip to the {TrackScenes.NameOf(Scene)} did not start.");
 					Clear();
 				}
 				break;
 			case Phase.WaitingForCar:
 			case Phase.Seated:
-				if (ClientScene.LocalScene != GameScene.TestTrack) break;
+				if (ClientScene.LocalScene != Scene) break;
 				bool ownReady = Freeze();
 				if (endRequested)
 				{
@@ -274,7 +278,7 @@ public static class RideAlong
 		if (EndMessage != null) ModNotify.ShowToast(EndMessage);
 		GlobalData.NewMileage = 0;
 		GlobalData.TestToShow = "";
-		var manager = Object.FindObjectOfType<TestTrackManager>();
+		var manager = TrackManager.Instance;
 		if (manager != null)
 		{
 			manager.ReturnToGarage();
@@ -373,7 +377,7 @@ public static class RideAlong
 
 	public static CarLoader OwnTrackCar()
 	{
-		if (ClientScene.LocalScene != GameScene.TestTrack || IsPassenger) return null;
+		if (!TrackScenes.IsTrack(ClientScene.LocalScene) || IsPassenger) return null;
 		var physics = PrepareCarPhysics.Get();
 		var carLoader = physics == null ? null : physics.CarLoader;
 		return carLoader != null && carLoader.IsCarLoaded() ? carLoader : null;
@@ -381,7 +385,7 @@ public static class RideAlong
 
 	public static CarLoader CopyOf(int driverId)
 	{
-		if (ClientScene.LocalScene != GameScene.TestTrack) return null;
+		if (!TrackScenes.IsTrack(ClientScene.LocalScene)) return null;
 		var copy = RemoteCars.Of(driverId);
 		return copy != null && copy.Ready && copy.Root.gameObject.activeInHierarchy ? copy.Loader : null;
 	}
@@ -399,7 +403,7 @@ public static class RideAlong
 	{
 		position = Vector3.zero;
 		rotation = Quaternion.identity;
-		if (ClientScene.LocalScene != GameScene.TestTrack || Client.Instance == null) return false;
+		if (!TrackScenes.IsTrack(ClientScene.LocalScene) || Client.Instance == null) return false;
 		int me = Client.Instance.ID;
 		CarLoader carLoader = null;
 		bool passenger = false;
@@ -417,7 +421,7 @@ public static class RideAlong
 
 	public static void LateUpdate()
 	{
-		if (ClientScene.LocalScene != GameScene.TestTrack || rides.Count == 0 && Current == Phase.None) return;
+		if (!TrackScenes.IsTrack(ClientScene.LocalScene) || rides.Count == 0 && Current == Phase.None) return;
 		PlaceCamera();
 		PlaceAvatars();
 	}

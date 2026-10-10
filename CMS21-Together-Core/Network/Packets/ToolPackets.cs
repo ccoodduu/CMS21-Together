@@ -11,6 +11,7 @@ namespace CMS21_Together_Core.Network.Packets
         public ToolSlotState State;
         public long ExpectedUid;
         public int ClientSeq;
+        [System.Runtime.Serialization.OptionalField] public bool Created;
     }
 
     [Serializable]

@@ -15,7 +15,9 @@ namespace CMS21Together.Logic.Car.Details;
 public static class CarDetailsIO
 {
 	public const CarDetailSection Polled = CarDetailSection.Fluids | CarDetailSection.Wheels | CarDetailSection.Alignment | CarDetailSection.Info;
-	public const CarDetailSection All = Polled | CarDetailSection.Tuning | CarDetailSection.Paint | CarDetailSection.BodyCosmetics | CarDetailSection.Plates | CarDetailSection.Dyno;
+	public const CarDetailSection All = Polled | CarDetailSection.Tuning | CarDetailSection.Paint | CarDetailSection.BodyCosmetics | CarDetailSection.Plates | CarDetailSection.Dyno | CarDetailSection.BonusParts;
+
+	public static int BonusSlotMismatch { get; private set; }
 
 	public static ModCarDetails Read(CarLoader carLoader, CarDetailSection sections)
 	{
@@ -32,6 +34,7 @@ public static class CarDetailsIO
 		if (sections.HasFlag(CarDetailSection.Paint))
 			details.Paint = new ModCarPaint { Color = ToMod(carLoader.color), FactoryColor = ToMod(carLoader.factoryColor), FactoryPaintType = (ModPaintType)(int)carLoader.factoryPaintType, IsCustom = carLoader.IsCustomPaintType, PaintData = ToMod(carLoader.GetPaintData()) };
 		if (sections.HasFlag(CarDetailSection.BodyCosmetics)) details.BodyCosmetics = ReadCosmetics(carLoader);
+		if (sections.HasFlag(CarDetailSection.BonusParts)) details.BonusSlots = ReadBonus(carLoader);
 		if (sections.HasFlag(CarDetailSection.Dyno) && !Away.DynoSync.IsOpenOn(carLoader))
 			details.Dyno = new ModDynoResult { Engine = ToMod(carLoader.EngineData), MeasuredDragIndex = carLoader.MeasuredDragIndex };
 		if (sections.HasFlag(CarDetailSection.Plates))
@@ -139,6 +142,39 @@ public static class CarDetailsIO
 		return result;
 	}
 
+	private static List<ModBonusSlot> ReadBonus(CarLoader carLoader)
+	{
+		var result = new List<ModBonusSlot>();
+		var parts = carLoader.GetBonusParts();
+		for (int i = 0; parts != null && i < parts.Count; i++) result.Add(ReadSlot(parts[i], i));
+		return result;
+	}
+
+	private static ModBonusSlot ReadSlot(BonusPart part, int slot)
+	{
+		if (part.IsUnmounted || part.IsDummy()) return new ModBonusSlot { Slot = slot, Unmounted = true };
+		var entry = new ModBonusSlot { Slot = slot, Id = part.ID, IsPainted = part.IsPainted };
+		if (!part.IsPainted) return entry;
+		entry.Color = ToMod(part.Color);
+		entry.PaintType = (ModPaintType)(int)part.PaintType;
+		entry.PaintData = ToMod(part.PaintData);
+		return entry;
+	}
+
+	public static string BonusSignature(CarLoader carLoader, int slot)
+	{
+		var parts = carLoader.GetBonusParts();
+		return parts == null || slot < 0 || slot >= parts.Count ? null : CarDetailEntries.Signature(ReadSlot(parts[slot], slot));
+	}
+
+	public static int BonusSlotOf(CarLoader carLoader, InteractiveObject io)
+	{
+		var parts = carLoader?.GetBonusParts();
+		for (int i = 0; io != null && parts != null && i < parts.Count; i++)
+			if (parts[i].InteractiveObject != null && parts[i].InteractiveObject.Pointer == io.Pointer) return i;
+		return -1;
+	}
+
 	public static void Apply(CarLoader carLoader, ModCarDetails details, int wheelMask = DetailsMerge.AllWheels, AlignmentFields alignmentMask = DetailsMerge.AllAlignment)
 	{
 		Try("wheels", () => ApplyWheels(carLoader, details.Wheels, wheelMask));
@@ -147,6 +183,7 @@ public static class CarDetailsIO
 		Try("alignment", () => ApplyAlignment(carLoader, details.Alignment, alignmentMask));
 		Try("paint", () => ApplyPaint(carLoader, details.Paint));
 		Try("cosmetics", () => ApplyCosmetics(carLoader, details.BodyCosmetics));
+		Try("bonus parts", () => ApplyBonus(carLoader, details.BonusSlots));
 		Try("plates", () => ApplyPlates(carLoader, details.Plates));
 		Try("info", () => ApplyInfo(carLoader, details.Info));
 		Try("dyno", () => ApplyDyno(carLoader, details.Dyno));
@@ -170,7 +207,6 @@ public static class CarDetailsIO
 	{
 		if (wheels == null) return;
 		var local = carLoader.WheelsData?.Wheels;
-		bool front = false, rear = false;
 		for (int i = 0; local != null && i < wheels.Length && i < local.Length; i++)
 		{
 			var wheel = wheels[i];
@@ -178,31 +214,7 @@ public static class CarDetailsIO
 			if ((int)local[i].Width == wheel.Width && (int)local[i].Size == wheel.RimSize && (int)local[i].Profile == wheel.TireSize && local[i].ET == wheel.ET) continue;
 			carLoader.SetET((WheelType)i, wheel.ET);
 			carLoader.SetWheelSize(wheel.Width, wheel.RimSize, wheel.TireSize, (WheelType)i);
-			if (i < 2) front = true; else rear = true;
-		}
-		if (!front && !rear) return;
-		var wheelParts = WheelPartIds(carLoader);
-		if (front) carLoader.UpdateWheels(true);
-		if (rear) carLoader.UpdateWheels(false);
-		RestoreWheelPartIds(wheelParts);
-	}
-
-	// UpdateWheels gives every rim and tire on the axle the ids in WheelsData, which the game sets only when the car loads.
-	private static List<(PartScript Script, string Id)> WheelPartIds(CarLoader carLoader)
-	{
-		var root = carLoader.root != null ? carLoader.root.transform : carLoader.transform;
-		return root.GetComponentsInChildren<PartScript>(true)
-			.Where(PartApplier.IsWheelPart)
-			.Select(script => (script, PartApplier.EffectiveId(script)))
-			.ToList();
-	}
-
-	private static void RestoreWheelPartIds(List<(PartScript Script, string Id)> wheelParts)
-	{
-		foreach (var (script, id) in wheelParts)
-		{
-			if (script == null || PartApplier.EffectiveId(script) == id) continue;
-			script.TunePart(id);
+			carLoader.UpdateWheelMeshCollider((WheelType)i);
 		}
 	}
 
@@ -288,6 +300,50 @@ public static class CarDetailsIO
 				if (IsTintableWindow(part)) PaintHelper.SetWindowProperties(part.handle, tint);
 			}
 		}
+	}
+
+	private static void ApplyBonus(CarLoader carLoader, List<ModBonusSlot> slots)
+	{
+		if (slots == null) return;
+		var parts = carLoader.GetBonusParts();
+		foreach (var entry in slots)
+		{
+			if (parts == null || entry.Slot < 0 || entry.Slot >= parts.Count || parts[entry.Slot].UID != $"bonusPart{entry.Slot}")
+			{
+				BonusSlotMismatch++;
+				Log.Debug($"[CarDetails] {carLoader.carToLoad}: bonus slot {entry.Slot} does not match this car's slots ({parts?.Count ?? 0}); skipped.");
+				continue;
+			}
+			var part = parts[entry.Slot];
+			if (CarDetailEntries.Signature(ReadSlot(part, entry.Slot)) == CarDetailEntries.Signature(entry)) continue;
+			bool empty = part.IsUnmounted || part.IsDummy();
+			if (entry.Unmounted || string.IsNullOrEmpty(entry.Id))
+			{
+				if (empty) continue;
+				part.TakeOff(true);
+				Singleton<GameManager>.Instance.BonusPartsManager.TryDeleteBonusPart(carLoader, part, false);
+				continue;
+			}
+			if (empty || part.ID != entry.Id || part.IsPainted && !entry.IsPainted) part.Change(entry.Id, false);
+			part.Paint(entry.IsPainted, ToCustom(entry.Color), ToGame(entry.PaintData), (PaintType)(int)entry.PaintType);
+			if (part.IsUnmounted) part.TakeOn(true);
+		}
+	}
+
+	private static CustomColor ToCustom(ModColor color)
+	{
+		var custom = new CustomColor { Color = new UnhollowerBaseLib.Il2CppStructArray<float>(4) };
+		custom.Color[0] = color?.r ?? 1f;
+		custom.Color[1] = color?.g ?? 1f;
+		custom.Color[2] = color?.b ?? 1f;
+		custom.Color[3] = color?.a ?? 1f;
+		return custom;
+	}
+
+	private static ModColor ToMod(CustomColor color)
+	{
+		var values = color?.Color;
+		return values == null || values.Length < 4 ? null : new ModColor { r = values[0], g = values[1], b = values[2], a = values[3] };
 	}
 
 	// The game's own window list (WindowTintManager.PrepareWindowsArray); other parts' renderers can hold null

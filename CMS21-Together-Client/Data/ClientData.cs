@@ -59,6 +59,7 @@ public static class ClientData
 		Logic.Outdoor.OutdoorSession.Reset();
 		Logic.Outdoor.CatalogReporter.Reset();
 		Logic.Visuals.VisualScope.Reset();
+		Logic.Visuals.FluidReplay.Reset();
 		Logic.Visuals.PartGhosts.Reset();
 		Logic.Visuals.ActivityCapture.Reset();
 		Logic.Visuals.RemoteActivity.Reset();

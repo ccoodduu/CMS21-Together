@@ -129,6 +129,7 @@ public static class PartApplier
 		if (script.MountObjects != null)
 			foreach (var mountObject in script.MountObjects)
 				mountObject?.SetFullMountPosition();
+		script.UpdateShaderParams(true);
 	}
 
 	private static MountObjectData ToGame(CMS21_Together_Core.Data.GameType.ModMountObjectData data)

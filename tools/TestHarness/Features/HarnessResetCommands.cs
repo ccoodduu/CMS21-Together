@@ -30,12 +30,15 @@ public static class HarnessResetCommands
         PresenceCommands.Reset(changed);
         SceneCommands.Reset(changed);
         VisualCommands.Reset(changed);
+        VisualFluidCommands.Reset(changed);
         DriveCommands.Reset(changed);
         LockTraceCommands.Reset(changed);
         LockCommands.Reset(changed);
         LockTryCommands.Reset(changed);
         LockSelect2Commands.Reset(changed);
         TuneCommands.Reset(changed);
+        EngineBuildCommands.Reset(changed);
+        ShopBuyCommands.Reset(changed);
         return new Dictionary<string, object> { ["reset"] = changed };
     }
 }

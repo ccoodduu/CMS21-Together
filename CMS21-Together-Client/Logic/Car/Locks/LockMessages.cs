@@ -31,6 +31,7 @@ public static class LockMessages
 	{
 		if (LockKeys.IsPlace(key)) return $"{name} is moving a car there.";
 		if (holderKind == CarLockKind.Tune || key == LockKeys.Tune) return Tuning(name);
+		if (holderKind == CarLockKind.BonusPart || LockKeys.IsBonus(key)) return $"{name} is fitting a bonus part here.";
 		if (targetKey == LockKeys.Car) return $"{name} is working on this car.";
 		if (key == null || key == targetKey) return $"{name} is working on this part.";
 		if (key == LockKeys.Car) return $"{name} is working on this car.";
@@ -54,6 +55,7 @@ public static class LockMessages
 	public const string Waiting = "Waiting for the server…";
 	public const string NoAnswer = "The server did not answer. Try again.";
 	public const string Loading = "This car is still loading for multiplayer.";
+	public const string SlotChanged = "This slot just changed.";
 
 	private static string FluidName(string key)
 	{

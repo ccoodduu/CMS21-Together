@@ -38,6 +38,17 @@ ROADMAP rows 25–30 (user wishes of 2026-10-08). Static decompile (setup in `na
 - Runtime: Bolt Atlanta has one slot, `#BonusDummy`, unmounted, unpainted.
 - Fit and remove paths: `car-details.md` section 9 (`TakeOffBonusPart`, real `Inventory.Add` on remove, inlined
   `RemoveAt` on fit).
+- Row 25 spike 1.3 (`20261009-225008_L1_bonus-spike`, `20261009-225816_L1_bonus-spike`, headless): Six Once Bulion has
+  two slots (`bonusPart0` hood, `bonusPart1` trunk), the same on both clients (the third car did not load in the
+  harness). 17 bonus items (`BonusPart.GetItems`); hood scoop and spoilers can be painted, the roof items cannot
+  (`PartProperty.CanPaint`, which `BonusPart.Paint` checks). The fit through `SelectPartToMount` (mode
+  `BonusAssemble`, the slot's `InteractiveObject` under the mouse) removes the item through `Inventory.Delete`, so the
+  removal is already synced (the inlined `RemoveAt` in the decompile is not the path that runs); the remove through
+  `ClickIO(1)` (mode `BonusDisassemble`) plays a sound, then `TakeOffBonusPart` adds a new item through
+  `Inventory.Add`. On a receiver `Change` + `Paint` + `TakeOn` and `TakeOff` + `TryDeleteBonusPart` work;
+  `BonusPart.Paint` takes a `CustomColor` built from its float array (its 4-float constructor throws
+  `ObjectCollectedException`). A fit onto a slot that is already filled turns into the game's remove and still deletes
+  the selected item, so the mod refuses it ("This slot just changed.").
 
 ## 3. New engine on the stand
 
@@ -50,6 +61,13 @@ ROADMAP rows 25–30 (user wishes of 2026-10-08). Static decompile (setup in `na
   in a harness game (same as the engine stand note in STATUS 2026-10-06). The engine build stays a hand check unless
   the coroutine can be driven.
 - Only one engine stand exists in the garage (`EngineStand2` not present, `tool-list`).
+- Row 25 spike 1.1b (`20261010-031447_L1_engine-build-probe`, `20261010-031658_L1_engine-build-probe`, headless): the
+  window lists 36 engines, the Bolt Atlanta's `engine_v8_stary` among them (not a bad id). The build stalls because
+  `<SetGroupOnEngineStand>d__8` yields `WaitForEndOfFrame`, which never comes in a `-nographics` game, also without
+  the fade. Stepped every frame (as the mod's remote put does), `CreateEngineAction` builds the engine; B gets it
+  through the existing stand sync, money unchanged. A second build on the occupied stand replaces the engine with no
+  message and no inventory return (the old engine is lost for everyone), as the review expected. The coroutine copies
+  the group (new group UID) and keeps the engine item, so the built put is matched by the engine item's UID.
 
 ## 4. Salon, Showroom, car version
 
@@ -81,6 +99,12 @@ ROADMAP rows 25–30 (user wishes of 2026-10-08). Static decompile (setup in `na
     "SpeedTrack ready as TestTrack" and started a drive stream for car -1;
   - no away claim on either trip (B's `away` empty), no drive state reached B on the race track;
   - mileage reached the car: 0 → 4 km after two 2.5 km drives (stored by the server).
+- Row 27a spike 1.2 (static, `native\out\tracks27a_clean`): `RaceTrackManager.LastTime` runs once per lap, called
+  only by `CheckPoints.OnTriggerEnter` on the finish (`Meta`) trigger when every checkpoint is done; the lap is
+  `timer.ElapsedMilliseconds`, the best goes to `lastBestTime` and `ProfileData.BestRaceTime` (`long`, ms), then the
+  timer restarts. `Restart` re-runs `Prepare`, which resets the checkpoints and the timer, so no partial lap reaches
+  `LastTime`. `FreeTrackManager.ReturnToGarage` writes the speed track's `topSpeed` into `ProfileData.TopSpeed`
+  (`int`, km/h). Details: `openspec/changes/shared-race-tracks/design.md` D6.
 
 ## 6. Garage customization
 

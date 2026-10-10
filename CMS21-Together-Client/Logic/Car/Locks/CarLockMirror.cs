@@ -286,7 +286,7 @@ public static class CarLockMirror
 		{
 			RequestId = requestId, CarLoaderID = set.Loader, SpawnSeq = CarPartsSync.SpawnSeq(set.Loader), Kind = set.Kind,
 			X = set.X.ToList(), S = set.S.ToList(), Items = set.Items.ToList(), ExtendLockId = extendLockId,
-			OtherLoaderID = otherLoader, OtherSpawnSeq = otherLoader >= 0 ? CarPartsSync.SpawnSeq(otherLoader) : 0, Place = set.Place
+			OtherLoaderID = otherLoader, OtherSpawnSeq = otherLoader >= 0 ? CarPartsSync.SpawnSeq(otherLoader) : 0, Place = set.Place, Expect = set.Expect
 		};
 		Log.Debug($"[Locks] Request {requestId}: {set}{(extendLockId != 0 ? $" extends {extendLockId}" : "")}.");
 		Client.Instance.Send(packet);

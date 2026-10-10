@@ -59,7 +59,19 @@ time. In a session, **F9** shows the players with their ping, your Steam friends
   the server; one player customises at a time.
 - Tuning at the dyno's tuning computer (gearbox, ECU, carburettor): one player tunes a car at a time, and a tuned part
   you take off keeps its tuning in the shared inventory and on the next car it goes on.
+- Bonus parts (spoilers, scoops, roof signs) fitted, painted and taken off look the same for everyone.
 - **F7** reloads the garage from the server if something looks wrong.
+
+## Please try: the race track and the speed track
+
+1. **Drive a car to the race track** from the map while a friend stays in the garage. Your friend should see "<name>
+   has this car on the race track." when they try to work on it. Report: anything your friend could change on it.
+2. **Drive together:** your friend takes another car to the race track. You should see each other's car drive. Report:
+   a car that does not appear, jumps or hangs.
+3. **Drive a full lap.** When it beats the group's best, everyone sees "New group record on the race track: <name>,
+   m:ss.fff". Rejoin later: the race track should still show your best time. Report: a record that was lost.
+4. **Ride along** to the speed track: sit in the passenger seat before your friend drives there. Report: where you
+   ended up, and whether the pause menu's return brought you both back.
 
 ## Please try: the garage look
 
@@ -69,6 +81,20 @@ time. In a session, **F9** shows the players with their ping, your Steam friends
    opens. Report: a black screen or a window that opened anyway.
 3. **Reset a wall to its default** and close; then let a friend open and close the window without changing anything.
    The wall should stay default for everyone.
+
+## Please try: building an engine
+
+1. **Build a new engine** on the empty engine stand ("New engine" in the stand's menu). Your friends should see it on
+   their stand. Report: a stand that stays empty for someone.
+2. **Build on a stand that holds an engine.** You should see "Take the engine off the stand first." and the engine
+   stays. Report: an engine that disappeared.
+
+## Please try: bonus parts
+
+1. **Fit a spoiler or a roof sign** in the bonus assembly mode and paint the car in the paint shop. Your friends
+   should see the part with your paint. Report: a missing part or another colour.
+2. **Both pick the same empty slot at once.** One of you gets the part on the car; the other is told why and keeps
+   the part in the inventory. Report: a part that disappeared from the inventory without being on the car.
 
 ## Please try: tuning
 
@@ -99,8 +125,8 @@ Two or more players on one car. For each item, report what you saw, and if it we
 
 ## Not yet
 
-Driving around, the race tracks, bonus parts, building a new engine and the separate Parking scene are not
-shared yet. The showroom (the car viewer in the main menu) is single-player only. While connected, the game refuses
+Driving around in the garage, the drag strip (Drag Racing DLC), Workshop tracks and the separate Parking scene are
+not shared yet. The showroom (the car viewer in the main menu) is single-player only. While connected, the game refuses
 them with "... is not supported in multiplayer yet", so the garages cannot drift apart. The junkyard, barns and
 auction are each player's own (not shared).
 

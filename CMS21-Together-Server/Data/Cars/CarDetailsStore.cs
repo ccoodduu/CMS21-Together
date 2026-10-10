@@ -21,6 +21,7 @@ namespace CMS21_Together_Server.Data.Cars
 		private const int MaxModules = 16;
 		private const int MaxTuningValues = 64;
 		private const int MaxCosmetics = 256;
+		public const int MaxBonusSlots = 16;
 		private const int MaxString = 64;
 		private const float MaxTestDriveKm = 2000f;
 
@@ -92,6 +93,25 @@ namespace CMS21_Together_Server.Data.Cars
 			Server.SendToClients(packet);
 		}
 
+		public static string StoredEntry(int loader, string entry)
+		{
+			if (!IsValid(loader, out var details)) return null;
+			return CarDetailEntries.Signatures(details).TryGetValue(entry, out string signature) ? signature : null;
+		}
+
+		public static int BonusSlotCount(int loader) => IsValid(loader, out var details) && details.BonusSlots != null ? details.BonusSlots.Count : -1;
+
+		public static void SendEntry(int loader, string entry, int clientId)
+		{
+			if (!IsValid(loader, out var details)) return;
+			var (only, wheelMask, alignmentMask) = DetailsMerge.Only(details, DetailsMerge.AllWheels, DetailsMerge.AllAlignment, new[] { entry });
+			if (DetailsMerge.IsEmpty(only)) return;
+			Server.SendToClient(new CarDetailsUpdatePacket
+			{
+				CarLoaderID = loader, SpawnSeq = details.SpawnSeq, SourceClientId = -1, Details = only, WheelMask = wheelMask, AlignmentMask = alignmentMask
+			}, clientId);
+		}
+
 		private static ModCarDetails Clamp(ModCarDetails details)
 		{
 			if (details.Fluids != null)
@@ -130,7 +150,11 @@ namespace CMS21_Together_Server.Data.Cars
 				details.Plates.LicensePlateFrontTex = Cut(details.Plates.LicensePlateFrontTex);
 				details.Plates.LicensePlateRearTex = Cut(details.Plates.LicensePlateRearTex);
 			}
-			if (details.BonusParts?.IDs != null) details.BonusParts.IDs = details.BonusParts.IDs.Take(MaxCosmetics).Select(Cut).ToArray();
+			if (details.BonusSlots != null)
+			{
+				details.BonusSlots = details.BonusSlots.Where(s => s != null && s.Slot >= 0 && s.Slot < MaxBonusSlots).Take(MaxBonusSlots).ToList();
+				foreach (var slot in details.BonusSlots) slot.Id = Cut(slot.Id);
+			}
 			if (details.Dyno != null) ClampDyno(details.Dyno);
 			return details;
 		}
@@ -191,7 +215,7 @@ namespace CMS21_Together_Server.Data.Cars
 
 		public static bool FoldTestDrive(int clientId, TestDriveResultPacket packet)
 		{
-			if (!CarAwayRegistry.IsOwner(packet.CarLoaderID, clientId, CarAwayKind.TestTrack, packet.SpawnSeq) || !IsValid(packet.CarLoaderID, out var stored))
+			if (!CarAwayRegistry.IsTrackOwner(packet.CarLoaderID, clientId, packet.SpawnSeq) || !IsValid(packet.CarLoaderID, out var stored))
 			{
 				Logger.Info($"[CarDetails] Test drive result for loader {packet.CarLoaderID} from client {clientId} not applied (no claim or no valid details).");
 				return false;

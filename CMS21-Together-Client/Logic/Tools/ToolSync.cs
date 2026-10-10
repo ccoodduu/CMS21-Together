@@ -29,6 +29,7 @@ public static class ToolSync
 		public ToolSlotState Attempted;
 		public List<long> Added;
 		public float SentAt;
+		public bool Created;
 	}
 
 	public static readonly ToolMachine[] Machines =
@@ -71,6 +72,8 @@ public static class ToolSync
 
 	public static bool IsBusy => applyRunning.Count > 0;
 
+	public static bool IsApplyPending(ModToolId tool) => applyRunning.Contains(tool) || applyRequested.Contains(tool);
+
 	public static bool SentRecently => Time.realtimeSinceStartup - lastSendAt < SendSettleSeconds;
 
 	public static void Reset()
@@ -82,6 +85,7 @@ public static class ToolSync
 		pending.Clear();
 		takeStart.Clear();
 		applyRequested.Clear();
+		EngineStandHooks.ForgetBuild();
 		ToolPositionSync.Reset();
 		EngineStandParts.Reset();
 		CarTools.CarToolActions.Reset();
@@ -107,7 +111,7 @@ public static class ToolSync
 		if (machine != null && machine.Present) SendLocal(machine.ReadLocal());
 	}
 
-	public static void SendLocal(ToolSlotState state, IEnumerable<long> extraAdded = null)
+	public static void SendLocal(ToolSlotState state, IEnumerable<long> extraAdded = null, long? expectedUid = null, bool created = false)
 	{
 		TraceEvent($"{state.Tool} local state {state.Uid} (send {CanSend && !IsApplyingRemote(state.Tool)})");
 		if (!CanSend || IsApplyingRemote(state.Tool)) return;
@@ -128,11 +132,12 @@ public static class ToolSync
 		float now = Time.realtimeSinceStartup;
 		foreach (int old in pending.Where(p => now - p.Value.SentAt > PendingSeconds).Select(p => p.Key).ToList()) pending.Remove(old);
 		int seq = nextSeq++;
-		pending[seq] = new PendingUpdate { Previous = previous, Attempted = state, Added = added, SentAt = now };
+		pending[seq] = new PendingUpdate { Previous = previous, Attempted = state, Added = added, SentAt = now, Created = created };
 		slots[state.Tool] = state;
 		lastSendAt = now;
-		Log.Info($"[Tools] {state.Tool}: local change {previous.Uid} -> {state.Uid}.");
-		Client.Instance.Send(new ToolSlotUpdatePacket { State = state, ExpectedUid = previous.Uid, ClientSeq = seq });
+		long expected = expectedUid ?? previous.Uid;
+		Log.Info($"[Tools] {state.Tool}: local change {expected} -> {state.Uid}{(created ? " (a built engine)" : "")}.");
+		Client.Instance.Send(new ToolSlotUpdatePacket { State = state, ExpectedUid = expected, ClientSeq = seq, Created = created });
 	}
 
 	public static void SendProperty(ModToolId tool, ToolProperty property, float value)
@@ -309,6 +314,8 @@ public static class ToolSync
 	{
 		var machine = Machine(tool);
 		if (machine == null || !machine.Present) yield break;
+		float buildDeadline = Time.realtimeSinceStartup + ApplyAllTimeoutSeconds;
+		while (tool == ModToolId.EngineStand1 && EngineStandHooks.Building && Time.realtimeSinceStartup < buildDeadline) yield return null;
 		var target = Mirror(tool);
 		var local = machine.ReadLocal();
 		var uids = local.Uids().Concat(target.Uids()).ToList();
@@ -352,6 +359,11 @@ public static class ToolSync
 			bool onMachine = slots.Values.Any(s => s.Uids().Contains(uid));
 			bool inInventory = update.Attempted.Item != null ? inventory.GetItem(uid) != null : inventory.GetGroup(uid) != null;
 			if (onMachine || inInventory) yield break;
+			if (update.Created)
+			{
+				Log.Info($"[Tools] {tool}: built engine {uid} discarded, the stand was taken.");
+				yield break;
+			}
 			if (outcome == SlotItemOutcome.Gone)
 			{
 				Log.Info($"[Tools] {tool}: {uid} was used by another player; not returned.");

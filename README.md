@@ -23,7 +23,8 @@ Everyone else joins it from the main menu or through Steam. Your own single-play
   is mounting, and locked move options in the pie of a car someone works on. Lifts, moving cars, the garage
   parking, the engine crane.
 - **Car details.** Fluids, wheels, tires and alignment, plates, paint, livery, window tint, mileage, dirt and lights.
-- **Tuning.** Gearbox, ECU and carburettor tuning at the dyno, one tuner per car.
+- **Tuning.** Gearbox, ECU and carburettor tuning at the dyno, one tuner per car; bonus (visual tuning) parts such as
+  spoilers and roof signs, with their paint.
 - **Jobs.** Orders and story missions come in for the whole group. Accept a job, work on the customer car together,
   hand it back: the payout and XP arrive once.
 - **The workshop.** Tire changer, wheel balancer, spring clamp, engine stand, brake lathe, battery charger, repair
@@ -35,7 +36,8 @@ Everyone else joins it from the main menu or through Steam. Your own single-play
   one player takes from a pile is gone for the others. Parts you buy at the junkyard go to the shared inventory; cars
   you buy go to the shared parking. Travel fees follow one server setting.
 - **See each other work and drive.** Bolts turn and parts slide off and on when another player works, and their
-  avatar holds the tool. On the test track you see each other's cars drive, and a passenger can ride along.
+  avatar holds the tool. On the test track, the race track and the speed track you see each other's cars drive, a
+  passenger can ride along, and the server keeps everyone's best lap and top speed.
 - **Ping and shopping list.** Point out a part to the others, and share one shopping list.
 - **Sit in a car and start the engine**: the others see and hear it.
 - **Hosting.** Host from the game with one click, or run the dedicated server on another PC. Password for IP joins,
@@ -50,8 +52,7 @@ Everyone else joins it from the main menu or through Steam. Your own single-play
 While you are connected, the game blocks these with "... is not supported in multiplayer yet", so that the garages
 cannot drift apart:
 
-- the race track, the other tracks and the photo location;
-- bonus (visual tuning) parts and building a new engine on the engine stand;
+- the drag strip (Drag Racing DLC), Workshop tracks and the photo location;
 - the separate Parking scene (the garage parking works); the showroom, the main menu's car viewer, is single-player
   only;
 - the tutorial, and saving or loading from the game's menus (the server saves the session).
@@ -62,8 +63,8 @@ Also not yet:
 - A texture pack for the garage is shared by its id only: a player who does not have it installed sees the default
   garage textures.
 
-Planned: the race track, bonus parts and building new engines. The DLC tracks, the photo
-location, the tutorial and saving or loading stay blocked.
+Planned: a shared race start on the race track, and cars that collide on the tracks. The DLC tracks, Workshop
+tracks, the photo location, the tutorial and saving or loading stay blocked.
 
 ## Get started
 
@@ -97,18 +98,32 @@ the game, click **Multiplayer** in the main menu.
   open the others cannot take off the tuned parts, run the dyno with that car, or lift, move, park or delete it. The
   window closes by itself after five minutes without an applied change. A tuned part that is taken off keeps its
   tuning in the shared inventory and on the car it is fitted to next.
+- **Bonus parts:** spoilers, hood scoops, roof signs and the other bonus parts you fit or take off in the bonus modes
+  look the same for everyone, painted as you painted them (the paint shop paints them with the car). The part leaves
+  the shared inventory once when fitted and comes back once when taken off. One player works on a bonus slot at a
+  time ("<name> is fitting a bonus part here."); if the slot changed a moment ago and your game has not shown it yet,
+  your fit is refused ("This slot just changed."), you keep your part and then see the new one.
+- **Building an engine:** a new engine block built on the engine stand ("New engine" in its pie menu) appears on the
+  stand for everyone, free as in single player. The stand must be empty ("Take the engine off the stand first."); if
+  two players build at the same moment, one engine ends up on the stand and the other player is told.
 - **Job achievements:** when a job is finished, the Steam stats and achievements for it (finished orders, the XP and
   money bonus, the last story mission) count for every connected player who worked on it: who took the order, who
   changed, examined or locked a part of its car, and who finished it. The host can give them to everyone in the garage
   instead, or only to the finisher (`job_stats_to` in `server_config.ini`).
 - **Shopping list:** the group shares one shopping list. What anyone adds, removes or clears shows up for everyone,
   and the server keeps it with the session.
-- **Test drive together:** players who are on the test track at the same time see each other's car drive (it
-  appears a few seconds after you arrive). Cars pass through each other and through players.
-- **Ride along:** sit in the passenger seat of a car before its driver starts a test drive, and you travel to the
-  test track with them ("Riding along with <name>."). A few seconds after you arrive you sit next to the driver: the
+- **Driving together:** take a garage car to the test track, the race track or the speed track from the map. While
+  you are there the car is yours: the others see "<name> has this car on the race track." and cannot change, move,
+  sell or delete it, and the driven kilometres and the dirt come back with you. Players who are on the same track at
+  the same time see each other's car drive (it appears a few seconds after you arrive). Cars pass through each other
+  and through players.
+- **Lap records:** the server keeps each player's best race-track lap and speed-track top speed across sessions and
+  restarts; the race track shows your own best as in single player. When someone sets a new best for the group,
+  everyone is told ("New group record on the race track: Ann, 1:23.456"). Only the driver's laps count.
+- **Ride along:** sit in the passenger seat of a car before its driver takes it to a track, and you travel to that
+  track with them ("Riding along with <name>."). A few seconds after you arrive you sit next to the driver: the
   mouse turns your head, you cannot drive or steer, and the driver sees you in the passenger seat. When the driver
-  drives back to the garage or leaves the game, you come back to the garage too. Only the driver's test drive counts
+  drives back to the garage or leaves the game, you come back to the garage too. Only the driver's drive counts
   (mileage, examined parts). To leave early, use the pause menu's return button.
 - **Drive:** the Drive option in a car's pie menu opens the map, as in the game.
 - **Test path:** the test path is for one player; it does not start while another player sits in the car ("<name> is

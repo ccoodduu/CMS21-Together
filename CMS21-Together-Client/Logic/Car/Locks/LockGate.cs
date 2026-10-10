@@ -132,7 +132,8 @@ public static class LockGate
 				Grant(action, answer.LockId, answer.WaitedMs);
 				break;
 			case LockOutcome.Denied:
-				string text = answer.Refusal == CarLockRefusal.Stale || answer.Refusal == CarLockRefusal.NotReady
+				string text = answer.Refusal == CarLockRefusal.Stale && LockKeys.IsBonus(answer.ConflictKey) ? LockMessages.SlotChanged
+					: answer.Refusal == CarLockRefusal.Stale || answer.Refusal == CarLockRefusal.NotReady
 					? LockMessages.Loading
 					: LockMessages.ForKey(action.Set.Loader, LockMessages.Name(answer.Holder), answer.ConflictKey, action.TargetKey,
 						answer.Refusal == CarLockRefusal.Held ? answer.HolderKind : (CarLockKind?)null);

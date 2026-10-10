@@ -11,7 +11,9 @@ public enum VisualKind
 	On,
 	Panel,
 	Swing,
-	Bolts
+	Bolts,
+	Drain,
+	Pour
 }
 
 // A visual owns only what it creates (ghosts, material copies) plus forceRenderingOff on real renderers, which

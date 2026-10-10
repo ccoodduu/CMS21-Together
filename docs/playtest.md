@@ -25,8 +25,10 @@ Report problems with both players' `MelonLoader\Latest.log` and the server's `Lo
 6. Tire changer, wheel balancer (only one player can balance at a time), spring clamp, brake
    lathe, battery charger.
    **Hand check: the engine stand** (hang an engine on it, rotate it, take a part off, take the engine off). The harness
-   cannot build an engine on the stand (the game's own build throws when driven from outside the UI, also offline).
-   "New engine" (building one from parts on the stand) is refused for now.
+   builds new engines only with the fade stepped away (`stand-nofade`, scenario `engine-build`), because the build waits
+   for frame ends that never come headless. **Hand check: building an engine** with a visible game: "New engine" in
+   the stand's pie menu on an empty stand (fade, engine on the stand for both), then on an occupied stand (refused,
+   "Take the engine off the stand first.").
 7. Fluids, wheels and alignment, plates, paint shop and window tint; also car wash, interior
    detailing and welder: the other player sees the result. Fees are charged once, by the server.
    **Hand check:** tint some windows: the money drops once by 50 per window for both players.
@@ -46,7 +48,17 @@ Report problems with both players' `MelonLoader\Latest.log` and the server's `Lo
    gearbox sliders and the ECU bars with the mouse and apply each tab; the other player sees the values (scenario
    `car-tuning` drives the tabs' apply actions headless). A second player clicking the computer is told "<name> is
    tuning this car."; leaving the window open five minutes closes it.
+   **Hand check: bonus parts** with a visible game: fit and take off a bonus part with the mouse in the bonus modes
+   (pie `mode_bonus_assemble`/`mode_bonus_disassemble`), paint the car with it; the other player sees the part and its
+   paint (scenario `car-bonus` drives the same game calls headless).
 4. Sit in a car and start the engine: the other player sees you seated and hears the engine.
+5. Race track and speed track (scenario `race-track` covers the claims, the driving stream, the records and the rides
+   headless). **Hand check** with visible games: drive with a friend on the race track, each in their own car (cars
+   pass through each other); finish a real lap through every checkpoint and beat the group's best: both see "New group
+   record on the race track: <name>, m:ss.fff". The race track's pause menu restart while the friend watches: the car
+   jumps back to the start on the friend's screen too. Ride along to the speed track; there, the pause menu and its
+   return to the garage (the speed track reports itself as the test track to the game) bring both of you back with the
+   driven kilometres.
 
 ## Travel and sessions
 
@@ -62,5 +74,6 @@ Report problems with both players' `MelonLoader\Latest.log` and the server's `Lo
 
 ## Not shared yet
 
-Shared junkyard, barn and auction (row 15), seeing other players' actions as animations (row 17), the drag strip.
+Shared junkyard, barn and auction (row 15), seeing other players' actions as animations (row 17), the drag strip
+(Drag Racing DLC) and Workshop tracks.
 The game refuses blocked features with "... is not supported in multiplayer yet".

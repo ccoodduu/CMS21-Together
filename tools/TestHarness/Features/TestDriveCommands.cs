@@ -300,8 +300,8 @@ public static class TestDriveCommands
     [HarnessCommand("testdrive-skip-result")]
     private static object SkipResult(string args)
     {
-        CMS21Together.Logic.Car.Away.TestDriveSync.SkipNextResult = (args ?? "").Trim() == "on";
-        return new { skip = CMS21Together.Logic.Car.Away.TestDriveSync.SkipNextResult, newMileage = GlobalData.NewMileage };
+        CMS21Together.Logic.Car.Away.TrackDriveSync.SkipNextResult = (args ?? "").Trim() == "on";
+        return new { skip = CMS21Together.Logic.Car.Away.TrackDriveSync.SkipNextResult, newMileage = GlobalData.NewMileage };
     }
 
     [HarnessCommand("away-try")]

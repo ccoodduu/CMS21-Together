@@ -16,6 +16,7 @@ public sealed class LockSet
 	public readonly List<string> S = new List<string>();
 	public readonly List<long> Items = new List<long>();
 	public int Place = -1;
+	public string Expect;
 
 	public IEnumerable<string> AllKeys => X.Concat(S);
 
@@ -298,6 +299,14 @@ public static class LockSets
 			if (relations.EngineParts.Contains(key)) shared.Add(LockKeys.Engine);
 		}
 		Finish(set, shared);
+		return set;
+	}
+
+	public static LockSet ForBonus(int loader, int slot, string expect)
+	{
+		var set = new LockSet { Loader = loader, Kind = CarLockKind.BonusPart, Expect = expect };
+		set.X.Add(LockKeys.Bonus(slot));
+		Finish(set, new List<string>());
 		return set;
 	}
 
