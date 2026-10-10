@@ -180,6 +180,36 @@ public static class CarPlacementCommands
         return result;
     }
 
+    // car-pose <loader> [part key]: the car root's yaw and the entrance angle, and the world position of a part (by
+    // default the sub part farthest from the root, so another client can be asked for the same key).
+    [HarnessCommand("car-pose")]
+    private static object CarPose(string args)
+    {
+        var parts = (args ?? "").Split(new[] { ' ' }, StringSplitOptions.RemoveEmptyEntries);
+        if (parts.Length < 1 || parts.Length > 2) throw new ArgumentException("usage: car-pose <loader> [part key]");
+        var carLoader = CarLoaderPlaces.Get().GetCarLoaderByIndex(int.Parse(parts[0])) ?? throw new ArgumentException($"no car loader {parts[0]}");
+        var root = CMS21Together.Logic.Visuals.VisualScope.CarRoot(carLoader);
+        var registry = CMS21Together.Logic.Car.Parts.PartRegistry.Build(carLoader);
+        string key = parts.Length > 1 ? parts[1]
+            : registry.SubKeys.Where(k => registry.Sub(k) != null).OrderByDescending(k => Vector3.Distance(registry.Sub(k).transform.position, root.position)).ThenBy(k => k, StringComparer.Ordinal).FirstOrDefault();
+        var part = key == null ? null : registry.Sub(key);
+        var ground = carLoader.groundPosition;
+        var rotation = ground == null ? null : ground.GetComponent<CarPlaceRotation>();
+        return new Dictionary<string, object>
+        {
+            ["carToLoad"] = carLoader.carToLoad,
+            ["place"] = ground == null ? null : CarLoaderPlaces.Get().TransformToCarPlace(ground).ToString(),
+            ["placeRotation"] = rotation == null ? null : new[] { rotation.yawRange.x, rotation.yawRange.y },
+            ["additionalCarRot"] = Math.Round(carLoader.additionalCarRot, 4),
+            ["yaw"] = Math.Round(root.eulerAngles.y, 4),
+            ["root"] = Precise(root.position),
+            ["key"] = key,
+            ["part"] = part == null ? null : Precise(part.transform.position),
+        };
+    }
+
+    private static object Precise(Vector3 v) => new { x = Math.Round(v.x, 4), y = Math.Round(v.y, 4), z = Math.Round(v.z, 4) };
+
     private static (CarLoader, CarPlace) LoaderAndPlace(string args, string usage)
     {
         var parts = (args ?? "").Split(new[] { ' ' }, StringSplitOptions.RemoveEmptyEntries);

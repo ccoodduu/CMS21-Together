@@ -13,6 +13,9 @@ poses, ghosts).
 1. **Fix.** (a) send the angle with placement and spawn and store it on the server (protocol and save change);
    (b) seed the roll from data every client shares (loader, spawn number, place), no protocol change;
    (c) leave it and run `ping` on a lift. **Default:** (b), built tonight unless you say otherwise.
+   Built on `fix/entrance-car-angle` (not merged): the roll is seeded from car name, loader and place, and a saved
+   angle is replaced by the same roll, so a car points the same way on every client and after every reload. A car's
+   angle on a given place is therefore fixed (a respawn or move back gives the same angle).
 
 ## Open — row 19 state-merges-and-contention (2026-10-08)
 
