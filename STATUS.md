@@ -2,6 +2,30 @@
 
 Newest first. One entry per work session.
 
+## 2026-10-10 (01:30–02:30) — fix/place-same ready for merge (lane 2)
+
+- `fix/place-same` with `main` merged in (`5d744a8`). Fixes: `348159e` (the move lock covers the target place, so a
+  second move to the same free place is refused before the game moves anything, "<name> is moving a car there."; a move
+  the server still refuses answers with every car's place, then the lift states), `a76e45f` (a car snapshot waits for
+  `LoadCarFromFile` to end: the examined flags after an unpark), `5a8fb16` (local moves tracked per coroutine; lift
+  states kept with the places until the local move ends). `place-same` is out of `soak-contention-known.txt`.
+- Proofs: `car-place-same` fails on `84beea6` (`20261008-231901_L2`, `20261008-232111_L2`) and passes
+  (`20261008-232642_L2`); `park-return` fails on `348159e` (`20261008-233419_L2`, `20261008-233527_L2`, the soak's 7
+  parts) and passes (`20261008-233709_L2`). After the merge, smoke plus `car-place-same`, `park-return`, `locks-car`,
+  `car-placement`, `car-placement-race`: `20261010-013846_regression.json`, all passed. Earlier, smoke plus 17 touched
+  scenarios: `20261009-011337_regression.json` (`locks-select-2`, `desync-autofix` FLAKY).
+- Soak `Run-Soak.ps1 -Lane 2 -ContentionKinds place-same -Hours 0.25`: `20261010-020148_L2_soak`, 12 of 12
+  `place-same` groups passed (rules 8 and 9 pass, no confirmed desync). Rule 1 fails from checkpoint 4 on: one part's
+  `blocked` flag (`s:29.3` on loader 4, a sibling of `s:29.1` that C unmounted and mounted with `part-fast-*`) is set on
+  D only. That flag is not synced and not in the digests; the same drift is in the soak `20261008-210843_L2` from row
+  19 part 2 (not this branch). Not fixed here.
+- `locks-select-2` "after B's release the move options are as before" is pre-existing: the game's own pie input
+  (`PieMenuController.HandleInput` -> `NotificationCenter.ButtonAccept`) accepts `move_carLift1` while the harness holds
+  the pie open, with no mouse button or Return the game sees, and A's car moves. On `c4bd1c3` alone: fails
+  `20261009-220034_L2`, `20261009-220954_L2` (spurious accepts also in the passing `20261009-220207_L2`,
+  `20261009-221126_L2`); on the branch 1 of 4 (`20261009-220342_L2`). Base runs copied to
+  `CMS21-Together-wt\place-same\tools\runs\base-c4bd1c3`; the `place-same-base` worktree is removed. Harness fix not done.
+
 ## 2026-10-09/10 (23:00–01:40) — playtest 3 (dev.1169/1170), findings
 
 - New session start values (`e159fff`): `new_session_money` 4000 and `new_session_level` 1 by default (the game's
@@ -20,22 +44,6 @@ Newest first. One entry per work session.
   name tag (only on the receiving player); magenta wheels (only on the receiving player; car sold before a test);
   no remote oil drain animation; the bonus parts (row 25 part 2) and `fix/place-same` branches are paused.
 
-## 2026-10-09 (20:30–23:00) — fix/place-same: locks-select-2 checked; soak not run (paused for a playtest)
-
-- `fix/place-same` (lane 2) has `main` merged in (`5d79fe8`, main at `c4bd1c3`). Commits: `348159e` (move lock covers the
-  target place; a refused move answers with every car's place, then lift states), `a76e45f` (a car snapshot waits for
-  `LoadCarFromFile` to end), `5a8fb16` (local moves tracked per coroutine; lift states kept with the places),
-  `5153af3` (`locks-select-2` prints the pie after B's release).
-- `locks-select-2` "after B's release the move options are as before (8 of 10)" is pre-existing, not the branch: the
-  game's own pie input (`PieMenuController.HandleInput` -> `NotificationCenter.ButtonAccept`) accepts `move_carLift1`
-  while the harness has the pie open, without any mouse button or Return the game sees, and A's car moves to
-  CarLifter1. Alone runs on `c4bd1c3`: fails `20261009-220034_L2`, `20261009-220954_L2` (passed on rerun), spurious
-  accepts also in the passing `20261009-220207_L2`, `20261009-221126_L2`. On the branch: fails `20261009-220342_L2`,
-  passes `20261009-220513_L2`, `220819_L2`, `221300_L2`. The base runs are copied to
-  `CMS21-Together-wt\place-same\tools\runs\base-c4bd1c3`; the `place-same-base` worktree is removed. A harness fix
-  (keep the game's pie input from accepting while `lock-pie` holds it open) is not done.
-- Not done: the 15-min soak `Run-Soak.ps1 -Lane 2 -ContentionKinds place-same -Hours 0.25 -Deploy` (it waited for the
-  user to be idle and was stopped for the playtest). Resume with that command; then merge.
 ## 2026-10-09 (22:00–23:00) — row 25 part 1, tuning at the dyno (`feat/tuning-window`, lane 1)
 
 - `GearboxTab.ApplyAction` marks the car's tuning dirty; one tuner per car through the new lock kind `Tune` (keys
