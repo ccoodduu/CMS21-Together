@@ -9,8 +9,8 @@ using CMS21_Together_Server.Network;
 
 namespace CMS21_Together_Server.Data.Cars
 {
-	// sync-test-drive-and-diagnostics D1/D10: one runtime "away" claim per car (test track, test path, dyno), separate
-	// from the part claims. Callers hold StateLock.
+	// sync-test-drive-and-diagnostics D1/D10: one runtime "away" claim per car (a track, the test path, the dyno),
+	// separate from the part claims. Callers hold StateLock.
 	public static class CarAwayRegistry
 	{
 		private const float ReturnGraceSeconds = 60f;
@@ -50,6 +50,9 @@ namespace CMS21_Together_Server.Data.Cars
 
 		public static bool IsOwner(int loader, int clientId, CarAwayKind kind, int spawnSeq) =>
 			claims.TryGetValue(loader, out var away) && away.Owner == clientId && away.Kind == kind && away.SpawnSeq == spawnSeq;
+
+		public static bool IsTrackOwner(int loader, int clientId, int spawnSeq) =>
+			claims.TryGetValue(loader, out var away) && away.Owner == clientId && TrackScenes.IsTrackKind(away.Kind) && away.SpawnSeq == spawnSeq;
 
 		public static void OnRequest(int clientId, CarAwayRequestPacket packet, float now)
 		{
@@ -104,10 +107,10 @@ namespace CMS21_Together_Server.Data.Cars
 			foreach (var pair in claims.Where(c => c.Value.Owner == clientId).ToList())
 			{
 				var away = pair.Value;
-				if (away.Kind == CarAwayKind.TestTrack)
+				if (TrackScenes.IsTrackKind(away.Kind))
 				{
 					if (to == GameScene.Garage) away.BackInGarageSince = ServerTime.Time;
-					else if (to != GameScene.Loading && to != GameScene.TestTrack) Release(pair.Key, $"owner went to {to}");
+					else if (to != GameScene.Loading && to != TrackScenes.SceneOf(away.Kind)) Release(pair.Key, $"owner went to {to}");
 				}
 				else if (from == GameScene.Garage)
 				{
@@ -121,9 +124,9 @@ namespace CMS21_Together_Server.Data.Cars
 			foreach (var pair in claims.ToList())
 			{
 				var away = pair.Value;
-				if (away.Kind == CarAwayKind.TestTrack && away.BackInGarageSince >= 0f && now - away.BackInGarageSince > ReturnGraceSeconds)
+				if (TrackScenes.IsTrackKind(away.Kind) && away.BackInGarageSince >= 0f && now - away.BackInGarageSince > ReturnGraceSeconds)
 					Release(pair.Key, "watchdog: owner back in the garage for 60 s");
-				else if (away.Kind != CarAwayKind.TestTrack && now - away.Since > GarageActivitySeconds)
+				else if (!TrackScenes.IsTrackKind(away.Kind) && now - away.Since > GarageActivitySeconds)
 					Release(pair.Key, "watchdog: older than 15 min");
 			}
 		}

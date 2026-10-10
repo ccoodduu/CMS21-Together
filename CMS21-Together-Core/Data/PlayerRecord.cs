@@ -14,4 +14,6 @@ public class PlayerRecord
 	public Vector3Serializable Position;
 	public QuaternionSerializable Rotation;
 	[JsonConverter(typeof(StringEnumConverter))] public GameScene Scene = GameScene.Unknown;
+	public long BestLapMs;
+	public int TopSpeedKmh;
 }

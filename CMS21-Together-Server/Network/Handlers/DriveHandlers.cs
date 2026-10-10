@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using System.Linq;
 using CMS21_Together_Core;
 using CMS21_Together_Core.Data;
 using CMS21_Together_Core.Data.Enum;
@@ -20,7 +21,7 @@ namespace CMS21_Together_Server.Network.Handlers
 		public const int MaxBlobBytes = 512 * 1024;
 		private const float WarnIntervalSeconds = 60f;
 
-		private static readonly HashSet<GameScene> driveScenes = new HashSet<GameScene> { GameScene.TestTrack };
+		private static readonly HashSet<GameScene> driveScenes = new HashSet<GameScene>(TrackScenes.All.Select(t => t.Scene));
 
 		private class Budget
 		{

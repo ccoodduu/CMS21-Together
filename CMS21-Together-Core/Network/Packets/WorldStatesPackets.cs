@@ -21,6 +21,8 @@ public class WorldState : INetworkData
 	public int Exp;
 	public int Scraps;
 	[OptionalField] public int Barns;
+	[OptionalField] public ModTrackRecord GroupBestLap;
+	[OptionalField] public ModTrackRecord GroupTopSpeed;
 }
 
 [Serializable]

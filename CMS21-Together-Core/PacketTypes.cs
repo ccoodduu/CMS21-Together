@@ -147,5 +147,8 @@ public enum PacketTypes
 	JobStatsAward,
 	GarageLookUpdate,
 	GarageLookClaim,
-	GarageLookClaimResult
+	GarageLookClaimResult,
+
+	TrackRecord,
+	TrackRecordUpdate
 }

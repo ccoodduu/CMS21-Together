@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Runtime.Serialization;
 using CMS21_Together_Core.Data;
 using CMS21_Together_Core.Data.Enum;
 using CMS21_Together_Core.Data.GameType;
@@ -52,4 +53,6 @@ public class PlayerRestorePacket : INetworkData
 {
 	public Vector3Serializable Position;
 	public QuaternionSerializable Rotation;
+	[OptionalField] public long BestLapMs;
+	[OptionalField] public int TopSpeedKmh;
 }
