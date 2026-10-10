@@ -14,6 +14,7 @@ public class HarnessMod : MelonMod
     public static MelonLogger.Instance Log { get; private set; }
     public static string Dir { get; private set; }
     public static string InstanceName { get; private set; } = "?";
+    public static bool Background { get; private set; }
 
     private bool mute;
     private int windowWidth;
@@ -34,6 +35,8 @@ public class HarnessMod : MelonMod
         {
             if (arg == "--harness.mute")
                 mute = true;
+            else if (arg == "--harness.background")
+                Background = true;
             else if (arg.StartsWith("--harness.name="))
                 InstanceName = arg.Substring("--harness.name=".Length);
             else if (arg.StartsWith("--harness.window="))
@@ -46,7 +49,8 @@ public class HarnessMod : MelonMod
                 }
             }
         }
-        Log.Msg($"[Harness] instance {InstanceName}, dir {Dir}");
+        Log.Msg($"[Harness] instance {InstanceName}, dir {Dir}{(Background ? ", background window" : "")}");
+        if (Background) Features.BackgroundWindow.Start();
     }
 
     public override void OnSceneWasLoaded(int buildIndex, string sceneName) => StartupSkipper.OnSceneLoaded(sceneName);
@@ -61,7 +65,8 @@ public class HarnessMod : MelonMod
     {
         if (!Application.runInBackground) Application.runInBackground = true;
         if (mute && AudioListener.volume > 0f) AudioListener.volume = 0f;
-        if (Application.isBatchMode && Cursor.lockState != CursorLockMode.None) Cursor.lockState = CursorLockMode.None;
+        if ((Application.isBatchMode || Background) && Cursor.lockState != CursorLockMode.None) Cursor.lockState = CursorLockMode.None;
+        if (Background) Features.BackgroundWindow.Update();
         Features.InputGuard.Update();
         Features.LockTraceCommands.Update();
         Features.SeatPoseCommands.Update();
@@ -81,7 +86,7 @@ public class HarnessMod : MelonMod
 
     private void ApplyWindow()
     {
-        if (windowWidth <= 0 || Application.isBatchMode) return;
+        if (windowWidth <= 0 || Application.isBatchMode || Background) return;
         if (Screen.fullScreenMode == FullScreenMode.Windowed && Screen.width == windowWidth && Screen.height == windowHeight) return;
         Screen.SetResolution(windowWidth, windowHeight, FullScreenMode.Windowed);
     }

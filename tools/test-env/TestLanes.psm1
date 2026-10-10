@@ -310,7 +310,19 @@ function Start-HarnessInstance {
         if ($Headless) { $arguments += @("-batchmode", "-nographics", "--melonloader.hideconsole") }
         $arguments += @($ExtraArguments | Where-Object { $_ } | ForEach-Object { $_.Replace("{port}", "$($laneInfo.Port)") })
         $launch = [pscustomobject]@{ Instance = $Instance; Started = Get-Date; SteamMark = Get-SteamLogMark; Headless = [bool]$Headless }
-        Start-Process -FilePath (Join-Path $dir "$script:ProductName.exe") -WorkingDirectory $dir -ArgumentList $arguments | Out-Null
+        $exe = Join-Path $dir "$script:ProductName.exe"
+        if (-not $Headless -and $env:CMS21_TEST_BACKGROUND) {
+            # cmd's "start /min" asks for a minimized, inactive window, but Unity restores and activates it at start-up; the
+            # harness then minimizes it again and hands the foreground back to the window that had it at launch.
+            if (-not ("Native.LaunchFocus" -as [type])) {
+                Add-Type -Namespace Native -Name LaunchFocus -MemberDefinition '[DllImport("user32.dll")] public static extern System.IntPtr GetForegroundWindow();'
+            }
+            $arguments += @("--harness.background", "--harness.returnfocus=$([Native.LaunchFocus]::GetForegroundWindow().ToInt64())")
+            $line = "/c start `"`" /min /d `"$dir`" `"$exe`" $($arguments -join ' ')"
+            Start-Process -FilePath "cmd.exe" -ArgumentList $line -WindowStyle Hidden | Out-Null
+        } else {
+            Start-Process -FilePath $exe -WorkingDirectory $dir -ArgumentList $arguments | Out-Null
+        }
         Write-Host "Started instance $Instance$(if ($Headless) { ' (headless)' })"
         if (-not $NoWait) {
             $late = @(Wait-HarnessInstances -Launches @($launch))
