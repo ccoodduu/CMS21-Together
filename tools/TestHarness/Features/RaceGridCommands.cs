@@ -198,10 +198,15 @@ public static class RaceGridCommands
             else fov = F(i);
         }
         var rotation = ortho > 0f ? Quaternion.LookRotation(Vector3.down, Quaternion.Euler(0f, yaw, 0f) * Vector3.forward) : Quaternion.Euler(pitch, yaw, 0f);
+        StartShot(file, w, h, position, rotation, fov, ortho, frames);
+        return new { file, position = Vec(position), euler = Vec(rotation.eulerAngles), fov, ortho, frames };
+    }
+
+    internal static void StartShot(string file, int w, int h, Vector3 position, Quaternion rotation, float fov, float ortho, int frames)
+    {
         lastShot = null;
         lastShotError = null;
         MelonCoroutines.Start(Render(file, w, h, position, rotation, fov, ortho, frames));
-        return new { file, position = Vec(position), euler = Vec(rotation.eulerAngles), fov, ortho, frames };
     }
 
     [HarnessCommand("grid-shot-state")]

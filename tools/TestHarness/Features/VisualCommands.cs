@@ -287,17 +287,85 @@ public static class VisualCommands
         if (!PresenceManager.HasLocalMotor) throw new InvalidOperationException("no local player in this scene");
         float metres = float.Parse(parts[1], CultureInfo.InvariantCulture);
         var motor = PresenceManager.LocalMotor;
-        var target = carLoader.transform.position + carLoader.transform.right * (1f + metres);
+        var root = CarRoot(carLoader);
+        var target = root.position + root.right * (1f + metres);
         target.y = motor.transform.position.y;
         var controller = motor.GetComponent<CharacterController>();
         bool wasEnabled = controller != null && controller.enabled;
         if (controller != null) controller.enabled = false;
         motor.transform.position = target;
-        motor.transform.rotation = Quaternion.LookRotation(-carLoader.transform.right, Vector3.up);
+        motor.transform.rotation = Quaternion.LookRotation(-root.right, Vector3.up);
         if (controller != null) controller.enabled = wasEnabled;
         Movement.ForceSend();
         return new { x = Round(target.x), y = Round(target.y), z = Round(target.z) };
     }
+
+    // vfx-shot <file> <loader> <car|part:<key>|body:<name>|player:<name>> <right> <up> <forward> [aim=<metres up>]
+    // [fov=<deg>] [size=<w>x<h>]: renders a camera of our own (RaceGridCommands.StartShot, works with the window
+    // minimized) placed at the target plus the offset in the loader's axes, looking at the target. For a part the right
+    // and forward offsets are mirrored to the part's side of the car, so positive ones look from outside the car. Poll
+    // grid-shot-state for the file.
+    [HarnessCommand("vfx-shot")]
+    private static object Shot(string args)
+    {
+        args = args ?? "";
+        int cut = args.IndexOf(".png", StringComparison.OrdinalIgnoreCase);
+        if (cut < 0) throw new ArgumentException("vfx-shot needs a .png file path first");
+        var parts = new[] { args.Substring(0, cut + 4) }.Concat(Args(args.Substring(cut + 4))).ToArray();
+        if (parts.Length < 6) throw new ArgumentException("usage: vfx-shot <file> <loader> <car|part:<key>|player:<name>> <right> <up> <forward> [aim=<m>] [fov=<deg>] [size=<w>x<h>]");
+        float F(string s) => float.Parse(s, CultureInfo.InvariantCulture);
+        var carLoader = CarLoaderPlaces.Get().GetCarLoaderByIndex(int.Parse(parts[1])) ?? throw new ArgumentException($"no car loader {parts[1]}");
+        var axes = CarRoot(carLoader);
+        Vector3 target;
+        bool outside = false;
+        if (parts[2] == "car") target = axes.position;
+        else if (parts[2].StartsWith("part:"))
+        {
+            var script = PartRegistry.Build(carLoader).Sub(parts[2].Substring(5)) ?? throw new ArgumentException($"no part {parts[2]}");
+            target = script.transform.position;
+            outside = true;
+        }
+        else if (parts[2].StartsWith("body:"))
+        {
+            var body = carLoader.GetCarPart(parts[2].Substring(5)) ?? throw new ArgumentException($"no body part {parts[2]}");
+            target = body.handle.transform.position;
+            outside = true;
+        }
+        else if (parts[2].StartsWith("player:"))
+        {
+            string name = parts[2].Substring(7);
+            var player = PresenceManager.Roster.Values.FirstOrDefault(p => p.Record.Username == name);
+            if (player == null || !player.HasAvatar) throw new ArgumentException($"no visible player '{name}'");
+            target = player.Avatar.transform.position;
+        }
+        else throw new ArgumentException($"unknown target {parts[2]}");
+
+        float aim = 0f, fov = 60f;
+        int w = 1280, h = 720;
+        foreach (var option in parts.Skip(6))
+        {
+            if (option.StartsWith("aim=")) aim = F(option.Substring(4));
+            else if (option.StartsWith("fov=")) fov = F(option.Substring(4));
+            else if (option.StartsWith("size="))
+            {
+                var size = option.Substring(5).Split('x');
+                w = int.Parse(size[0]);
+                h = int.Parse(size[1]);
+            }
+            else throw new ArgumentException($"unknown option {option}");
+        }
+        var fromCenter = target - axes.position;
+        float right = F(parts[3]) * (outside && Vector3.Dot(fromCenter, axes.right) < 0f ? -1f : 1f);
+        float forward = F(parts[5]) * (outside && Vector3.Dot(fromCenter, axes.forward) < 0f ? -1f : 1f);
+        var position = target + axes.right * right + Vector3.up * F(parts[4]) + axes.forward * forward;
+        var lookAt = target + Vector3.up * aim;
+        var rotation = Quaternion.LookRotation(lookAt - position, Vector3.up);
+        RaceGridCommands.StartShot(parts[0], w, h, position, rotation, fov, -1f, 10);
+        return new { file = parts[0], target = Offset(target), position = Offset(position), loader = Offset(carLoader.transform.position), root = Offset(axes.position) };
+    }
+
+    // The CarLoader object stays where it is; the car itself (its root) moves with the car's place.
+    private static Transform CarRoot(CarLoader carLoader) => carLoader.root != null ? carLoader.root.transform : carLoader.transform;
 
     internal static void Reset(List<string> changed)
     {
