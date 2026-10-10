@@ -53,6 +53,10 @@ namespace CMS21_Together_Core.Network.Packets
 
         public static bool IsFluid(string key) => key != null && key.StartsWith("f:", StringComparison.Ordinal);
 
+        public static string Place(int place) => $"p:{place}";
+
+        public static bool IsPlace(string key) => key != null && key.StartsWith("p:", StringComparison.Ordinal);
+
         public static bool IsWellFormed(string key)
         {
             if (key == Car || key == Engine || key == Tune) return true;
@@ -106,6 +110,7 @@ namespace CMS21_Together_Core.Network.Packets
         public int ExtendLockId;
         public int OtherLoaderID = -1;
         public int OtherSpawnSeq;
+        public int Place = -1;
     }
 
     [Serializable]
@@ -137,6 +142,7 @@ namespace CMS21_Together_Core.Network.Packets
         public List<string> X = new List<string>();
         public List<string> S = new List<string>();
         public List<long> Items = new List<long>();
+        public int Place = -1;
     }
 
     [Serializable]

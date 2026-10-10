@@ -36,22 +36,24 @@ public static class LockPie
 		var carLoader = GameScript.Get()?.GetIOMouseOverCarLoader2();
 		int loader = LockFluidHooks.LoaderOf(carLoader);
 		if (loader < 0) return null;
-		string message = CarBlocked(loader, out _);
+		string message = CarBlocked(loader, place, out _);
 		if (message != null)
 		{
 			CarLockMirror.Count("blockedAtSelection.pie");
 			return message;
 		}
 		int other = place == NoPlace ? -1 : LockCarHooks.LoaderAtPlace(place, carLoader);
-		if (other < 0 || CarBlocked(other, out int holder) == null) return null;
+		if (other < 0 || CarBlocked(other, NoPlace, out int holder) == null) return null;
 		CarLockMirror.Count("blockedAtSelection.pie");
 		return holder >= 0 ? LockMessages.OtherCar(holder) : "The car there is moving.";
 	}
 
-	private static string CarBlocked(int loader, out int holder)
+	private static string CarBlocked(int loader, int place, out int holder)
 	{
 		if (CarMotion.IsMoving(loader, out holder)) return LockMessages.Moving(loader, holder);
-		var conflict = CarLockMirror.Conflict(LockSets.ForCar(loader, CarLockKind.Move));
+		var set = LockSets.ForCar(loader, CarLockKind.Move);
+		set.Place = place;
+		var conflict = CarLockMirror.Conflict(set);
 		holder = conflict?.Holder ?? -1;
 		return conflict == null ? null : LockMessages.ForConflict(loader, conflict, LockKeys.Car);
 	}

@@ -48,6 +48,12 @@ namespace CMS21Together.Logic.Hook
                     Client.Instance.Send(packet);
                 }
 
+                int amount = __instance.currentAmount;
+                string name = GameInventory.Instance?.GetItemLocalizeName(modItem.ID) ?? modItem.ID;
+                UIManager.Get()?.ShowPopup("PopUp_NewItem", amount > 1 ? $"{name} x{amount}" : name, PopupType.Buy);
+                try { SoundManager.Get()?.PlaySFXOneShot("Popup"); }
+                catch (System.Exception) { }
+
                 // Close the buy window just like the original logic did
                 __instance.Hide(false);
 

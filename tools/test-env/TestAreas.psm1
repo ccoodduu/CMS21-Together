@@ -46,6 +46,8 @@ tools/TestHarness/Features/Visual*                             visuals
 tools/TestHarness/Features/Drive*                              driving
 tools/TestHarness/Features/Lock*                               locks
 tools/TestHarness/Features/Ping*                               ping
+tools/TestHarness/Features/PartShader*                         parts, visuals
+tools/TestHarness/Features/ShopBuy*                            economy
 tools/TestHarness/*                                            full
 tools/release/*                                                release
 CMS21-Together-*/Network/Handlers/Admin*                       hosting
