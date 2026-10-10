@@ -86,14 +86,29 @@ public sealed class DrainEffect : FluidEffect
 		if (particles == null) return false;
 		var emission = particles.emission;
 		emission.enabled = true;
-		float condition = carLoader.FluidsData.Oil?.Condition ?? 1f;
-		var color = Color.Lerp(Color.black, Color.white, condition);
-		color.a = StreamAlpha;
-		var main = particles.main;
-		main.startColor = new ParticleSystem.MinMaxGradient(color);
+		Tint();
 		particles.Play();
 		StartLoop(Sound, LoopStart, LoopEnd);
 		return true;
+	}
+
+	// Unhollower's MinMaxGradient(Color) constructor throws (it uses the object before allocating it); the fields are
+	// set on an allocated one instead. A failed tint leaves the stream in its default colour.
+	private void Tint()
+	{
+		float condition = carLoader.FluidsData.Oil?.Condition ?? 1f;
+		var color = Color.Lerp(Color.black, Color.white, condition);
+		color.a = StreamAlpha;
+		try
+		{
+			var gradient = new ParticleSystem.MinMaxGradient { m_Mode = ParticleSystemGradientMode.Color, m_ColorMin = color, m_ColorMax = color };
+			var main = particles.main;
+			main.startColor = gradient;
+		}
+		catch (System.Exception e)
+		{
+			Log.Warn($"[Visuals] Drain stream colour not set: {e.Message}");
+		}
 	}
 
 	public void HidePlug()

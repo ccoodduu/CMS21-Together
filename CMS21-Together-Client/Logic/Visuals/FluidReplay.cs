@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using CMS21_Together_Core.Data.GameType;
+using CMS21_Together_Core.Logging;
 using CMS21_Together_Core.Network.Packets;
 using CMS21Together.Data;
 using CMS21Together.Logic.Car.Locks;
@@ -78,18 +79,7 @@ public static class FluidReplay
 			return;
 		}
 
-		using (VisualScope.Enter())
-		{
-			var effect = new DrainEffect(loader, LockSets.OilKey, playerId, carLoader, plug);
-			if (!effect.Build(source))
-			{
-				effect.DestroyCopy();
-				VisualScope.Skip(VisualKind.Drain, "noParticles");
-				return;
-			}
-			VisualScope.Start(effect);
-			effect.HidePlug();
-		}
+		Launch(new DrainEffect(loader, LockSets.OilKey, playerId, carLoader, plug), e => e.Build(source))?.HidePlug();
 	}
 
 	private static void TryPour(int playerId, PlayerActivityState activity)
@@ -107,16 +97,30 @@ public static class FluidReplay
 		}
 		if (VisualScope.Admit(VisualKind.Pour, loader, cap.transform.position) != null) return;
 
+		Launch(new PourEffect(loader, playerId, activity, carLoader, cap), e => e.Build(refill));
+	}
+
+	private static T Launch<T>(T effect, System.Func<T, bool> build) where T : FluidEffect
+	{
 		using (VisualScope.Enter())
 		{
-			var effect = new PourEffect(loader, playerId, activity, carLoader, cap);
-			if (!effect.Build(refill))
+			string reason = "noParticles";
+			try
 			{
-				effect.DestroyCopy();
-				VisualScope.Skip(VisualKind.Pour, "noParticles");
-				return;
+				if (build(effect))
+				{
+					VisualScope.Start(effect);
+					return effect;
+				}
 			}
-			VisualScope.Start(effect);
+			catch (System.Exception e)
+			{
+				reason = "failed";
+				Log.Error($"[Visuals] {effect.Kind} on loader {effect.Loader} for player {effect.PlayerId} failed to start: {e}");
+			}
+			effect.DestroyCopy();
+			VisualScope.Skip(effect.Kind, reason);
+			return null;
 		}
 	}
 
