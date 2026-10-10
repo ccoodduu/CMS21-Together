@@ -92,6 +92,39 @@ public static partial class EconomyCommands
         return "sent";
     }
 
+    [HarnessCommand("upgrade-request")]
+    private static object UpgradeRequestCommand(string args)
+    {
+        var parts = Split(args);
+        if (parts.Length != 3) throw new ArgumentException("usage: upgrade-request money|points <id> <level>");
+        Client.Instance.Send(new UpgradeRequest { id = parts[1], level = int.Parse(parts[2]), type = UpgradeKind(parts[0]) });
+        return "sent";
+    }
+
+    [HarnessCommand("upgrades-missing")]
+    private static object UpgradesMissing(string args)
+    {
+        var parts = Split(args);
+        if (parts.Length != 1) throw new ArgumentException("usage: upgrades-missing money|points");
+        var system = GameData.Instance?.GarageTools?.upgradeSystem ?? throw new InvalidOperationException("no UpgradeSystem");
+        var list = UpgradeKind(parts[0]) == CMS21_Together_Core.Data.Enum.UpgradeType.Money ? system.UpgradesForMoney : system.UpgradesForPoints;
+        var missing = new List<string>();
+        foreach (var upgrade in list)
+        {
+            if (upgrade?.Unlocked == null) continue;
+            for (int i = 0; i < upgrade.Unlocked.Length; i++)
+                if (!upgrade.Unlocked[i]) missing.Add($"{upgrade.ID}:{i}");
+        }
+        return missing;
+    }
+
+    private static CMS21_Together_Core.Data.Enum.UpgradeType UpgradeKind(string text) => text switch
+    {
+        "money" => CMS21_Together_Core.Data.Enum.UpgradeType.Money,
+        "points" => CMS21_Together_Core.Data.Enum.UpgradeType.Points,
+        _ => throw new ArgumentException("money|points"),
+    };
+
     public static object EconomySection() => new Dictionary<string, object>
     {
         ["unattributed"] = EconomyAudit.Unattributed,

@@ -97,4 +97,4 @@ Each has the default the draft works with.
 4. **Offline contributor.** **Default:** no award later.
 5. **Upgrade achievements** (`stat_full_garage`, `stat_unlock_allupgrade` from `UpgradeSystem.CheckForAchievements`):
    upgrades are shared, but only the buyer's game runs that check today. **Default:** out of scope; a note in
-   QUESTIONS.md for a later decision.
+   QUESTIONS.md for a later decision. **Answered 2026-10-10:** every player gets them; see the design amendment.

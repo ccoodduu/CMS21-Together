@@ -266,6 +266,7 @@ public static class JobsSync
 			GlobalData.MissionsFinished = mirror.Missions.MissionsFinished;
 			GlobalData.CurrentMissionDone = mirror.Missions.CurrentMissionDone;
 			GlobalData.IsStoryMissionInProgress = mirror.Missions.IsStoryMissionInProgress;
+			Achievements.SharedAchievements.AfterMissions();
 			int maxId = mirror.Orders.Select(o => o.Job.id).Concat(mirror.ActiveJobs.Select(a => a.Job.id)).DefaultIfEmpty(0).Max();
 			if (generator.LastUId < maxId) generator.LastUId = maxId;
 			UIManager.Get()?.UpdateJobs(jobs, null);

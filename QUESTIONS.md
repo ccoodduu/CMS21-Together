@@ -123,7 +123,14 @@ Row 30 `shared-job-achievements` (built 2026-10-09):
 
 7. **Garage upgrade achievements** (`stat_full_garage`, `stat_unlock_allupgrade`, from
    `UpgradeSystem.CheckForAchievements`): upgrades are shared, but only the buyer's game runs that check. Default: out
-   of scope, only the buyer gets them. **Answered 2026-10-10:** everyone gets every achievement that follows from shared save state.
+   of scope, only the buyer gets them. **Answered 2026-10-10:** everyone gets every achievement that follows from shared save state. Built on `feat/shared-achievements` (`docs/spikes/shared-achievements.md`).
+
+Shared achievements (2026-10-10):
+
+8. **Event stats on shared things** (`stat_buy_carsalon`/`_carjunkyard`/`_barn`, `stat_sell_car`, `stat_sell_fix_car`,
+   `stat_win_car`, `stat_scrap`, `stat_buy_parts`, `stat_sell_junk`): they count a purchase, sale or scrap event, not a
+   state another client can check, so sharing them needs a server award (a new packet). **Default:** the player who
+   acted keeps them; say if cars bought/sold should go to everyone and the packet gets built.
 
 ## Answered
 - **Answered by the user on 2026-10-10 (row 31 scope):** B. The fixed wait after the own track car is ready goes from

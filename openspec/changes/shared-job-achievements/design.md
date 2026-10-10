@@ -83,3 +83,12 @@ keeps the contribution (short key). A server restart during a job keeps the cont
 
 New packet appended; `jobs` section version bump with a default (taker only). Client and server update together (the
 version check enforces it). Rollback: revert; saved contributor lists are ignored by older servers.
+
+## Amendment 2026-10-10: achievements from shared save state
+
+User decision: every achievement that follows from shared save state goes to every player (open question 5 answered).
+Details and the full stat list in `docs/spikes/shared-achievements.md`. Each client re-runs the game's own check when the
+shared state arrives: `UpgradeSystem.CheckForAchievements` after a garage state that unlocks an upgrade or skill (and on
+the first of a session), `stat_unlock_parking` at 10 shared parking levels, `stat_finish_allmissions` when the shared
+mission counters reach `MissionsAmount`. D3 changes accordingly: a receiver no longer adds `stat_finish_allmissions` for
+`MissionFinished` (the field stays in the packet). `stat_level` is only raised, never lowered.
