@@ -104,6 +104,7 @@ public static class DriveCommands
             },
             ["statesReceived"] = RemoteCars.StatesReceived,
             ["statesIgnored"] = RemoteCars.StatesIgnored,
+            ["readyAt"] = Round(RemoteCars.SceneReadyAt),
             ["cars"] = RemoteCars.All.Select(Car).ToList(),
         };
     }
@@ -141,6 +142,8 @@ public static class DriveCommands
             ["buildSeconds"] = Round(car.BuildSeconds),
             ["longestFrame"] = Round(car.LongestFrame),
             ["shownAfter"] = Round(car.ShownAfter),
+            ["shownAt"] = Round(car.ShownAt),
+            ["waitSeconds"] = Round(car.WaitSeconds),
             ["buildMb"] = Round(car.BuildBytes / 1048576f),
             ["collider"] = CollideCommands.Car(car),
         };

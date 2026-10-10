@@ -53,7 +53,8 @@ function Arrive([string]$What) {
     $offPath = Distance $car.position $truth.position
     $behind = $local.time - $car.renderTime
     Check ($offPath -le 1.5 -and $behind -le 1.0) "$What`: A's car on B is where A is now ($([math]::Round($offPath, 2)) m from A's path, $([math]::Round($behind, 2)) s behind A)"
-    $Ctx.Result.notes += "$What`: car shown $($car.shownAfter) s after the drive reached B (spec: 2 s; build $($car.buildSeconds) s, longest frame $($car.longestFrame) s)"
+    Check ($car.shownAfter -le 1.5) "$What`: A's car shown within 1.5 s of the drive reaching B ($($car.shownAfter) s)"
+    $Ctx.Result.notes += "$What`: car shown $($car.shownAfter) s after the drive reached B (build $($car.buildSeconds) s, longest frame $($car.longestFrame) s)"
 }
 
 foreach ($name in $Ctx.Instances) {

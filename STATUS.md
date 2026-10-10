@@ -2,6 +2,39 @@
 
 Newest first. One entry per work session.
 
+## 2026-10-10 (11:45–12:40) — row 31 faster-remote-cars built, scope B (lane 2)
+
+- `change/faster-remote-cars` (lane 2, not merged; main merged in). User chose scope B: only the wait.
+  - `43082bc`: the wait after the own track car is ready is 0.5 s instead of 3 s, and "ready since" is tracked every
+    frame on a track, so a player already driving does not wait again. Dump `waitSeconds`, `shownAt`,
+    `remoteCars.readyAt`; harness `remote-build state`. The D2 prototype `remote-stage` is removed.
+  - `09ddce1`: proof `remote-car-timing` (both arrival orders, 60 fps cap): fails on the old 3 s wait
+    (`20261010-120734_L2`: 3.2–3.4 s), passes (`20261010-121219_L2`: arrival → shown 0.65–0.69 s, already driving
+    0.22–0.27 s). Frames are unchanged (first copy 85–130 ms with lane 1 busy), so the hard bound is 0.2 s with a WARN
+    note above 0.13 s; one run had a 130.4 ms frame (`20261010-121423_L2`). `drive-latejoin` checks ≤ 1.5 s.
+- Regression `20261010-121718_regression.json`: smoke, `remote-car-timing`, `drive-*`, `race-*`, `ride-along` all
+  passed (`guard` FLAKY in the batch: "no PieMenuController in this scene", passed alone).
+- After merging main with row 27c (`372f798`, `RemoteCars.cs` keeps both the wait and the collider hooks):
+  `20261010-123858_regression.json` with smoke, `remote-car-timing` (shown 0.62–0.65 s after arrival, frames
+  87–93 ms), `track-collide`, `race-start`, `drive-latejoin`, `ride-along`: all passed (`guard` FLAKY again in the
+  batch, "Inventory did not open after the blocked mode change", passed alone).
+
+## 2026-10-10 (10:30–11:30) — row 31 faster-remote-cars: spike and design (lane 2)
+
+- `change/faster-remote-cars` (lane 2, not merged; design only, no client change). Probe `remote-car-spike` with the
+  harness `remote-build` (build trace, settle override, extra copies, counts), `frame-log` (real-clock frame times)
+  and the D2 prototype `remote-stage`; headless, lane 1 busy, 60 fps cap.
+  - Today another player's car shows 3.3–3.6 s after arrival, not ~10 s: the 6.5 s load predates the 2026-10-08
+    freeze fix; the build takes 0.22–0.5 s and the rest is the 3 s settle (`20261010-104439_L2`, `103952_L2`). The
+    first copy in a scene visit has one 92–120 ms frame: the game's `LoadCar` does `CreateChassis` (31–33 ms),
+    `CreateEngine` (22–24) and `CreateParts` (24–27) in one frame (`105528_L2`). No wait at all: shown 0.22–0.29 s
+    after the start, no freeze (`105122_L2`).
+  - Design: 0.5 s settle after the own car is ready (D1) and the game's own load stages one per frame for the copy
+    (D2, record-and-replay prefixes, `LoadCar` held meanwhile). Prototype: frames 39–56 ms, identical copies, start →
+    shown 0.77–0.79 s (`110209_L2`, `110523_L2`, `110957_L2`). Proof plan `remote-car-timing` fails on the old code
+    (shown 3.2–3.6 s > 1.5 s, frame 92–120 ms > 75 ms). `openspec validate --strict` passes.
+  - `method-time` on all of `CarLoader` hung the arriving game (`103549_L2`); patch named methods only.
+
 ## 2026-10-10 (09:30–12:05) — row 27c, collisions on the tracks (`feat/track-collisions`, lane 1)
 
 - Spike 1.1 (`collide-spike`; runs `20261010-094840`, `-100150`, `-101506`, `-111733`): **GO**. The local car's only

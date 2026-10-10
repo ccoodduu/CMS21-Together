@@ -86,7 +86,8 @@ Not questions for the user; open bugs from the first playtest, fixed one by one.
 8. **Another player's car on the test track appears after about 10 s** (7 s when you are already there), not the
    2 s the spec asks: loading another car takes about 6.5 s, and it waits 3 s after your own car is ready (starting
    earlier froze the game). **Default:** accept it for 1.1; a faster way (keeping the copy between drives, loading it
-   before you arrive) would be a follow-up.
+   before you arrive) would be a follow-up. *Row 31 (2026-10-10): the 6.5 s predated the freeze fix; with the wait
+   cut to 0.5 s the car shows ~0.7 s after arrival.*
 
 ## Accepted defaults (user, 2026-10-06)
 
@@ -131,6 +132,10 @@ Row 30 `shared-job-achievements` (built 2026-10-09):
    of scope, only the buyer gets them.
 
 ## Answered
+- **Answered by the user on 2026-10-10 (row 31 scope):** B. The fixed wait after the own track car is ready goes from
+  3 s to 0.5 s (another player's car shows ~0.7 s after arrival); no spreading of the game's `LoadCar` over frames, so
+  the first copy's one-frame load (85–130 ms headless with lane 1 busy) stays as it was.
+
 Answered by the user on 2026-10-08 (evening):
 
 - **Row 16 scope:** no full port and no decompiled game logic on the server. Kept: seeded job cars (extra tasks,
