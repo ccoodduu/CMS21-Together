@@ -30,8 +30,8 @@ in 27a); spectator UI beyond the result toast.
 Participants[{ PlayerId, Laps, TotalMs, BestLapMs, Finished, Dnf }] }`. `RaceStartRequest` is refused (`RaceRefused`,
 D16) when a race runs on that scene, the requester has no `ActiveDrives` entry on the race track, the requester is a
 ride-along passenger, or `Laps` is outside 1–20. Otherwise the participants are every player whose presence scene is
-the race track with an active drive; `StartAtUtc` = now + 5 s (enough for the light sequence); the server broadcasts
-`RaceCountdown` with `StartInMs = 5000` to the players in that scene.
+the race track with an active drive; `StartAtUtc` = now + 10 s (the restart and the light sequence; spike 1.1); the
+server broadcasts `RaceCountdown` with `StartInMs = 10000` to the players in that scene.
 
 ### D2. Countdown on the client
 
@@ -41,6 +41,20 @@ LightsDuration` (measured by spike 1.1), calls `RaceTrackManager.Restart`; the g
 marked so the quit hook ignores it. If spike 1.1 shows the light sequence is not deterministic (fade, physics reload),
 the client instead freezes the car at the start, shows our own countdown overlay and starts the game's timer at zero at
 `localStart`. A non-participant on the track sees the countdown toast only.
+
+**Spike 1.1 result (2026-10-10, `20261010-050051_L1_race-spike`, headless, 10 runs; static `native\out\tracks27a_clean`).**
+`Restart` is not deterministic as a whole: fade in, `WaitForSeconds(1)`, `Prepare` (`PrepareCarPhysics.LoadCar`,
+`WaitForSeconds(1.5)`, fade out), 4.34 s from `RunRestart` to the end in every run. Then `_Prepare_d__19` waits in
+state 3/4 for the player's **throttle** (`carInput.throttle > 0`) and only then runs the lights: three
+`YieldInstructions.WaitForSecond` (`WaitForSeconds(1)`), then the green sprites, `canMove`, `readySetGo`; the timer
+starts in the next `Update`. Throttle to green was 3067–3076 ms at 15 fps (3 s plus one frame). So D2 keeps the
+game's lights, with this timing: the racer calls `RunRestart` as soon as the countdown arrives, a prefix on
+`_Prepare_d__19.MoveNext` holds the throttle at 0 in states 3/4 until `localStart − LightsMs` (`LightsMs` = 3000) and
+then sets it to 1 for that step, so the game's own lights turn green at `localStart` plus at most a frame. The
+overlay fallback is not needed. `StartInMs` is 10 s instead of 5 s (4.3 s restart + 3 s lights + margin); a restart
+that reaches the throttle wait late releases at once and the log names the delay. `WaitForEndOfFrame` resumes in the
+headless games (the arrival `Prepare` reached the throttle wait). Start area: `PrepareCarPhysics` has one
+`StartPosition`, so every racer starts on the same spot (27c).
 
 ### D3. Laps, quit and DNF
 

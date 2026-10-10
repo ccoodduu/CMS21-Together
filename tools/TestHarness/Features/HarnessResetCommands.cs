@@ -39,6 +39,7 @@ public static class HarnessResetCommands
         TuneCommands.Reset(changed);
         EngineBuildCommands.Reset(changed);
         ShopBuyCommands.Reset(changed);
+        RaceSpikeCommands.Reset(changed);
         return new Dictionary<string, object> { ["reset"] = changed };
     }
 }
