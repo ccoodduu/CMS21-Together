@@ -129,7 +129,7 @@ public static class CarPlacementSync
 	{
 		var carLoader = CarLoaderPlaces.Get()?.GetCarLoaderByIndex(packet.CarLoaderID);
 		if (carLoader == null || string.IsNullOrEmpty(carLoader.carToLoad)) return;
-		if (!carLoader.IsCarLoaded())
+		if (!carLoader.IsCarLoaded() || CarLoading.IsLoading(packet.CarLoaderID))
 		{
 			pendingPlaces[packet.CarLoaderID] = packet.Place;
 			Log.Info($"[Placement] Loader {packet.CarLoaderID}: place {packet.Place} kept until the car has loaded.");
