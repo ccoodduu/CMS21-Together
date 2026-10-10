@@ -2,6 +2,7 @@ using System.Collections.Generic;
 using System.Linq;
 using CMS21_Together_Core.Data.Enum;
 using CMS21Together.Data;
+using CMS21Together.Logic.Driving;
 using CMS21Together.Session;
 using UnityEngine;
 using UnityEngine.SceneManagement;
@@ -174,6 +175,31 @@ public static class ImguiView
 		return y + 4f;
 	}
 
+	private static float DrawRace(float x, float y, float w)
+	{
+		GUI.Label(new Rect(x, y, w, 26f), "Race", titleStyle);
+		y += 30f;
+		int laps = TrackRaceSync.LapsChoice;
+		if (GUI.Button(new Rect(x, y, 30f, 26f), "-")) TrackRaceSync.LapsChoice = Mathf.Max(TrackRaceSync.MinLaps, laps - 1);
+		GUI.Label(new Rect(x + 36f, y, 70f, 26f), laps == 1 ? "1 lap" : $"{laps} laps", labelStyle);
+		if (GUI.Button(new Rect(x + 106f, y, 30f, 26f), "+")) TrackRaceSync.LapsChoice = Mathf.Min(TrackRaceSync.MaxLaps, laps + 1);
+		if (GUI.Button(new Rect(x + 146f, y, 120f, 26f), "Start race")) TrackRaceSync.RequestStart(TrackRaceSync.LapsChoice);
+		y += 30f;
+		string status = TrackRaceSync.Status();
+		if (!string.IsNullOrEmpty(status))
+		{
+			GUI.Label(new Rect(x, y, w, 40f), status, labelStyle);
+			y += 44f;
+		}
+		var last = TrackRaceSync.LastResult;
+		if (last != null)
+		{
+			GUI.Label(new Rect(x, y, w, 40f), $"Last race: {TrackRaceSync.Summary(last)}", smallStyle);
+			y += 44f;
+		}
+		return y + 4f;
+	}
+
 	private const float SessionPanelWidth = 480f;
 	private static float sessionPanelHeight = 300f;
 
@@ -200,6 +226,7 @@ public static class ImguiView
 		}
 		if (rows.Count > 0) y += 6f;
 
+		if (TrackRaceSync.PanelShown) y = DrawRace(x, y, w);
 		y = DrawFriends(x, y, w);
 		if (!string.IsNullOrEmpty(MultiplayerMenuModel.ActionMessage))
 		{

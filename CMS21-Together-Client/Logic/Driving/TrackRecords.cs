@@ -111,7 +111,11 @@ public static class TrackRecords
 	[HarmonyPostfix]
 	private static void AfterLastTime()
 	{
-		if (pendingLapMs > 0 && Connected) Send(GameScene.RaceTrack, pendingLapMs);
+		if (pendingLapMs > 0 && Connected)
+		{
+			Send(GameScene.RaceTrack, pendingLapMs);
+			TrackRaceSync.OnLapDone(pendingLapMs);
+		}
 		pendingLapMs = -1;
 	}
 

@@ -66,6 +66,7 @@ public class ClientUDP
             int _packetLength = _packet.ReadInt();
             byte[] _dataBytes = _packet.ReadBytes(_packetLength);
 
+            long receivedMs = PacketClock.NowMs;
             ThreadManager.ExecuteOnMainThread<object>((_) =>
             {
                 using (Packet packet = new Packet(_dataBytes))
@@ -74,6 +75,7 @@ public class ClientUDP
                     try 
                     {
                         object dataObject = packet.Read<object>();
+                        PacketClock.Dispatching(receivedMs);
                         PacketRouter.Dispatch((PacketTypes)packetId, dataObject, 0);
                     }
                     catch (Exception e)

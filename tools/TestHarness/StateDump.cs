@@ -76,6 +76,7 @@ public static class StateDump
         dump["remoteCars"] = Features.DriveCommands.Dump();
         dump["ride"] = Features.RideCommands.Dump();
         dump["tracks"] = Features.TrackCommands.Dump();
+        dump["race"] = Features.RaceCommands.Dump();
         dump["pings"] = Features.PingCommands.Dump();
         dump["garageLook"] = Features.GarageLookCommands.Dump();
         dump["lifterButtonsEnabled"] = Features.ToolsCommands.LifterButtons();

@@ -89,6 +89,7 @@ public class ClientTCP
 
     private static void OnPacket(byte[] packetBytes)
     {
+        long receivedMs = PacketClock.NowMs;
         ThreadManager.ExecuteOnMainThread<object>((_) =>
         {
             using (Packet packet = new Packet(packetBytes))
@@ -97,6 +98,7 @@ public class ClientTCP
                 try
                 {
                     object dataObject = packet.Read<object>();
+                    PacketClock.Dispatching(receivedMs);
                     PacketRouter.Dispatch((PacketTypes)packetId, dataObject, 0);
                 }
                 catch (Exception ex)
