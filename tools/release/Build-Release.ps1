@@ -7,8 +7,9 @@ Each zip is checked against the expected file list and the version built into it
 
 -Release builds the plain version (no label). It refuses unless the tree is clean, CHANGELOG.md has a
 "## [<version>]" section and HEAD carries the tag v<version>; it prints the tag command instead of tagging.
--DraftGitHubRelease (with -Release, only when the user asks for it) creates a draft GitHub release for the pushed tag
-with the changelog section and both zips.
+-DraftGitHubRelease (with -Release, only when the user asks for it) creates a draft GitHub release on origin's
+repository for HEAD with the changelog section and both zips. The tag needs no push: GitHub creates it on HEAD when
+the draft is published.
 -AllowDirty builds from uncommitted changes (the full version then ends in .dirty); not with -Release.
 -DropFromStaging removes staged files (paths relative to the staging folder, e.g. client\UserLibs\steam_api64.dll)
 before zipping, to test the content check.
@@ -163,7 +164,6 @@ if ($Release) {
     if ($tag -notin $tagsAtHead) {
         Write-Host "HEAD ($commit) does not carry the tag $tag. After checking the changelog, tag it with:"
         Write-Host "  git tag -a $tag -m `"CMS21 Together $version`""
-        Write-Host "  git push origin $tag"
         throw "Tag $tag missing on HEAD; nothing was built."
     }
     $label = ""
@@ -265,8 +265,11 @@ Write-Host "  $serverZipName"
 if ($DraftGitHubRelease) {
     $notes = Join-Path $OutDir "release-notes-$version.md"
     Set-Content -LiteralPath $notes -Value $changelog -Encoding utf8
-    & gh release create $tag --draft --verify-tag --title "CMS21 Together $version" --notes-file $notes `
+    $originUrl = (Invoke-Git remote get-url origin).Trim()
+    if ($originUrl -notmatch 'github\.com[:/](?<repo>[^/]+/[^/]+?)(\.git)?$') { throw "origin is not a GitHub repository: $originUrl" }
+    $headSha = (Invoke-Git rev-parse HEAD).Trim()
+    & gh release create $tag --repo $Matches.repo --draft --target $headSha --title "CMS21 Together $version" --notes-file $notes `
         (Join-Path $OutDir $clientZipName) (Join-Path $OutDir $serverZipName) (Join-Path $OutDir "SHA256SUMS.txt")
-    if ($LASTEXITCODE -ne 0) { throw "gh release create failed (is the tag $tag pushed to GitHub?)" }
+    if ($LASTEXITCODE -ne 0) { throw "gh release create failed." }
     Write-Host "Draft GitHub release $tag created; publishing it is a separate, manual step."
 }
