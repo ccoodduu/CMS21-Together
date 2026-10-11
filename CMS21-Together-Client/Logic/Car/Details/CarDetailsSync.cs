@@ -21,6 +21,7 @@ public static class CarDetailsSync
 {
 	private const float PollSeconds = 1f;
 	private const float FlushDelaySeconds = 0.5f;
+	private const float HoldDirtySeconds = 10f;
 	private const int MaxSendCopies = 16;
 	private const float SendCopySeconds = 10f;
 
@@ -36,6 +37,7 @@ public static class CarDetailsSync
 	private static readonly Dictionary<int, List<SendCopy>> sendCopies = new Dictionary<int, List<SendCopy>>();
 	private static readonly Dictionary<int, CarDetailSection> dirty = new Dictionary<int, CarDetailSection>();
 	private static readonly Dictionary<int, float> dirtySince = new Dictionary<int, float>();
+	private static readonly HashSet<int> heldLogged = new HashSet<int>();
 	private static readonly HashSet<int> awaiting = new HashSet<int>();
 	private static readonly HashSet<int> applying = new HashSet<int>();
 	private static int nextSeq = 1;
@@ -57,6 +59,7 @@ public static class CarDetailsSync
 		sendCopies.Clear();
 		dirty.Clear();
 		dirtySince.Clear();
+		heldLogged.Clear();
 		awaiting.Clear();
 		applying.Clear();
 	}
@@ -66,6 +69,9 @@ public static class CarDetailsSync
 	public static bool IsApplying(int loader) => applying.Contains(loader);
 
 	public static bool IsDirty(int loader) => dirty.ContainsKey(loader);
+
+	public static string KnownSignature(int loader, string entry) =>
+		lastKnown.TryGetValue(loader, out var known) && known.TryGetValue(entry, out string value) ? value : null;
 
 	public static int KeptSends(int loader) => sendCopies.TryGetValue(loader, out var copies) ? copies.Count : 0;
 
@@ -141,10 +147,31 @@ public static class CarDetailsSync
 		{
 			if (now - dirtySince[loader] < FlushDelaySeconds) continue;
 			var sections = dirty[loader];
+			string held = HeldBecause(loader);
+			if (held != null && now - dirtySince[loader] < HoldDirtySeconds)
+			{
+				if (heldLogged.Add(loader)) Log.Info($"[CarDetails] Loader {loader}: change of {sections} held: {held}.");
+				continue;
+			}
 			dirty.Remove(loader);
-			Flush(loader, sections);
+			bool wasHeld = heldLogged.Remove(loader);
+			if (held != null)
+			{
+				Log.Info($"[CarDetails] Loader {loader}: change of {sections} dropped after {HoldDirtySeconds:0} s: {held}.");
+				continue;
+			}
+			bool sent = Flush(loader, sections);
+			if (wasHeld) Log.Info($"[CarDetails] Loader {loader}: held change of {sections} {(sent ? "sent" : "had no change left")}.");
 		}
 	}
+
+	private static string HeldBecause(int loader) =>
+		awaiting.Contains(loader) ? "awaiting the server's details"
+		: applying.Contains(loader) ? "applying details"
+		: Time.realtimeSinceStartup < TestApplyingUntil ? "test apply window"
+		: !CarPartsSync.IsReady(loader) ? "car parts not ready"
+		: !lastKnown.ContainsKey(loader) ? "no details snapshot yet"
+		: null;
 
 	public enum FlushResult
 	{
