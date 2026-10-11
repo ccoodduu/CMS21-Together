@@ -33,7 +33,8 @@ M4).
 - The garage look (all visual garage customization) is shared.
 - Players sitting in a car in the garage are shown seated.
 - Achievements and Steam stats that follow from the shared save are earned by every player, and so are the job
-  achievements of everyone who worked on a job.
+  achievements of everyone who worked on a job. Buying, selling, winning and scrapping cars and parts counts for every
+  player's stats too.
 - New sessions start with the game's start values: level 1 and 4000 money (`new_session_level`,
   `new_session_money`).
 

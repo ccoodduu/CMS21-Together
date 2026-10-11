@@ -1,6 +1,6 @@
 <Project>
     <PropertyGroup>
-        <TogetherVersion>0.6.0</TogetherVersion>
+        <TogetherVersion>1.0.0</TogetherVersion>
         <TogetherBuildLabel>local</TogetherBuildLabel>
         <TogetherDirty>false</TogetherDirty>
     </PropertyGroup>
