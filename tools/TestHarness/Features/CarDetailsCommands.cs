@@ -107,7 +107,9 @@ public static class CarDetailsCommands
         if (parts.Length > 4) current.Condition = Float(parts[4]);
         CarDetailsIO.Apply(carLoader, new ModCarDetails { Fluids = new List<ModFluidLevel> { current } });
         CarDetailsSync.MarkDirty(carLoader, CarDetailSection.Fluids);
-        return Entries(carLoader, CarDetailSection.Fluids, CarDetailEntries.Fluid(type, id));
+        var entries = Entries(carLoader, CarDetailSection.Fluids, CarDetailEntries.Fluid(type, id));
+        MelonLoader.MelonLogger.Msg($"[Harness] cardetails-fluid {parts[0]} {type}.{id} reads back {entries.Values.FirstOrDefault()}; last sent {CarDetailsSync.KnownSignature(int.Parse(parts[0]), CarDetailEntries.Fluid(type, id)) ?? "none"}");
+        return entries;
     }
 
     [HarnessCommand("cardetails-wheel")]

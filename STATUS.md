@@ -2,6 +2,22 @@
 
 Newest first. One entry per work session.
 
+## 2026-10-11 (04:50–05:10) — car details change while busy (`fix/details-held-flush`, lanes 1 and 2)
+
+- Found while looking at contention 251: `CarDetailsSync.Update` removed the dirty mark before `Flush`, which refused
+  silently while the loader awaited or applied details or was not Ready. Polled sections (fluids, wheels, alignment,
+  info) came back on the next poll; plates, paint, cosmetics, tuning and bonus parts were lost, and the reconcile then
+  rolled them back on the player who made them. Fix `e17b269`: the change waits up to 10 s, is sent when the loader is
+  free, and the wait, drop and outcome are logged with the reason. Expect two such lines per car spawn ("held: awaiting
+  the server's details", "had no change left").
+- Proof `details-held-flush` (new, a rear plate changed inside a 3 s test apply window): fails on the old client code
+  (`20261011-045406_L1_details-held-flush-oldcode`, A's own plate rolled back too), passes
+  (`20261011-045532_L1_details-held-flush`). Details area plus smoke, lanes 1 and 2: 15/15 PASSED
+  (`20261011-045632_regression.json`).
+- 251 itself is still unexplained: D's change was a fluid, which the poll would have sent later. The harness verb
+  `cardetails-fluid` now logs the value it reads back and the last sent value, so the next soak shows whether the game
+  kept the value or the client thought it was already sent.
+
 ## 2026-10-11 (04:20–05:00) — jobs digest while an order is claimed (`fix/jobs-digest-claimed`, lanes 1 and 2)
 
 - Open item from the night soak ("order:38.open - vs 1"). Chosen: "not ready" instead of a per-client projection;
