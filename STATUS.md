@@ -2,6 +2,19 @@
 
 Newest first. One entry per work session.
 
+## 2026-10-11 (04:20–05:00) — jobs digest while an order is claimed (`fix/jobs-digest-claimed`, lanes 1 and 2)
+
+- Open item from the night soak ("order:38.open - vs 1"). Chosen: "not ready" instead of a per-client projection;
+  the server's jobs projection returns nothing while any order is claimed (`e40ea71`), as the taking client already
+  does during its own take. `--check-merges` has a check for it.
+- Proof `jobs-claim-digest` (new): A's `OrderActionResult` is held, so the order stays claimed for 25 s. Fails on the
+  old server code (`20261011-042704_L1_jobs-claim-digest-oldcode`: confirmed jobs mismatch for B), passes with the fix
+  in `20261011-042904_regression.json` (jobs and resync areas plus smoke, lanes 1 and 2, 24/24 PASSED).
+- Next: `details-same` 251. D's log shows the `cardetails-fluid` command and nothing sent during the hold (held
+  outgoing 0), and the server got A, B and C's updates at 22:36:47 but none from D. `CarDetailsSync.Update` dropped a
+  dirty change silently when `Flush` refused; the change now waits up to 10 s with a logged reason, and the harness
+  logs what the fluid reads back and the last sent value (in progress, not built).
+
 ## 2026-10-11 (03:25–03:40) — release 1.0.0 as a draft
 
 - Merged `feat/shared-event-stats`. The actor is also awarded scrap, parts-shop and junk-by-condition stats, because
