@@ -8,11 +8,34 @@ The milestones M1 to M4 below were played as development builds of 0.6.0 (`0.6.0
 releases. 1.0.0 (milestone M6) is the first release of this fork. Upstream's own releases (0.4.x, 0.5.0) are listed on
 [Fozkais/CMS21-Together](https://github.com/Fozkais/CMS21-Together/releases).
 
-## [Unreleased]
+## [1.0.0] - 2026-10-11
 
-Work towards 1.0.0 (milestones M5 "Robust sessions" and M6 "Release 1.0").
+The first release of this fork (milestones M5 "Robust sessions" and M6 "Release 1.0", plus everything built after
+M4).
 
 ### Added
+
+- Junkyard, barn and auction are shared: players who travel there together share one visit, its piles and its cars.
+- Part locks: the server gives one player at a time a part, its connected parts, a fluid or the whole car. Pie menus,
+  mount previews and the item chooser show what another player holds.
+- Ping: the middle mouse button marks a part or a spot for the other players, in the game's highlight colour.
+- A shared shopping list, kept by the server and in the save.
+- See what the others do: their work poses, bolts, fluids being drained and poured, and the part they are working on.
+- Story missions work in multiplayer.
+- The same order gives the same job car on every take. The server owns the order clock and the order limit.
+- Driving: another player's car on the test track, race track and speed track; riding along as a passenger; a
+  **Drive** pie option that opens the map.
+- Races on the race track: **Start race** in the session panel (**F9**), a shared countdown on the game's own start
+  lights, the painted start grid in arrival order, lap times and results.
+- Collisions between the players' cars on the tracks. The host can turn them off with `track_collisions`.
+- Tuning (gear ratios), bonus parts and building new engines on the engine stand.
+- The car salon: buying a car there is checked by the server like the other car purchases.
+- The garage look (all visual garage customization) is shared.
+- Players sitting in a car in the garage are shown seated.
+- Achievements and Steam stats that follow from the shared save are earned by every player, and so are the job
+  achievements of everyone who worked on a job.
+- New sessions start with the game's start values: level 1 and 4000 money (`new_session_level`,
+  `new_session_money`).
 
 - Cars bought outside the garage (junkyard, barn, auction, car salon) go to the shared parking. The server checks the
   money and a free parking slot and takes the price once.
@@ -44,6 +67,18 @@ Work towards 1.0.0 (milestones M5 "Robust sessions" and M6 "Release 1.0").
 - Taking a car out of the parking could stop the window tint and other paint details from being applied for the
   other players.
 - Mounting a part with nothing selected logged an error.
+- Clicking the mod's menu panels also clicked the game's menu under them (for example the news, which opened a Steam
+  page).
+- Every refused action now reaches the player who tried it, with a plain message.
+- Another player's car on a track no longer freezes the game while it is built, and appears after about a second.
+- A part mounted by another player could land in the wrong slot, look rusty, or keep the job's star after it counted
+  as repaired.
+- Rims could turn magenta or hollow and tires could disappear after a wheel change.
+- No buy sound or pop-up when buying in the shop.
+- Cars on the entrance places pointed in slightly different directions for each player.
+- Lifts could get stuck for one player, or stand at different heights for different players, after a car was moved
+  onto or off a lift while it was moving, or onto a lift that is not built.
+- A car could be put back on its old place when it was moved while it was still loading.
 
 ## M4: The full workshop - 2026-10-06/07
 
