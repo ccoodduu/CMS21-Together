@@ -74,6 +74,7 @@ namespace CMS21_Together_Core.Network.Packets
         [OptionalField] public int SourceInstanceId;
         [OptionalField] public int SourceCarIndex = -1;
         [OptionalField] public int SourceLot = -1;
+        [OptionalField] public int CarFrom;
     }
 
     [Serializable]

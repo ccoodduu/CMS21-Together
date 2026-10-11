@@ -31,6 +31,7 @@ public static class CarPurchaseSync
 	private const float ResultTimeoutSeconds = 15f;
 	private const int FirstRequestId = 100000;
 	private const string ParkingTarget = "Parking";
+	private const string AuctionSource = "Auction";
 
 	private sealed class Capture
 	{
@@ -42,6 +43,7 @@ public static class CarPurchaseSync
 		public int SourceInstanceId;
 		public int SourceCarIndex = -1;
 		public int SourceLot = -1;
+		public int CarFrom;
 	}
 
 	private static readonly Dictionary<int, Capture> sent = new Dictionary<int, Capture>();
@@ -99,7 +101,7 @@ public static class CarPurchaseSync
 	[HarmonyPrefix]
 	private static bool BeforeReceiveCar(AuctionBidding __instance, out EconomyScopeEntry __state)
 	{
-		bool run = Begin("Auction", __instance.auctionManager?.playerCarLoader, __instance.currentBid, out __state, AuctionSync.CurrentLot(__instance));
+		bool run = Begin(AuctionSource, __instance.auctionManager?.playerCarLoader, __instance.currentBid, out __state, AuctionSync.CurrentLot(__instance));
 		if (run && __state != null) locationBypass = FeatureGuard.Bypass();
 		return run;
 	}
@@ -135,6 +137,7 @@ public static class CarPurchaseSync
 		{
 			RequestId = nextRequestId++, Price = price, Source = source, Car = carLoader?.carToLoad,
 			SourceInstanceId = OutdoorSession.InstanceId, SourceCarIndex = sourceLot < 0 ? OutdoorCarSync.IndexOf(carLoader) : -1, SourceLot = sourceLot,
+			CarFrom = (int)(source == AuctionSource ? global::CarFrom.Auction : carLoader?.CarInfoData.CarFrom ?? global::CarFrom.None),
 		};
 		Log.Info($"[Purchase] {source}: capture {open.RequestId} opened for {open.Car} at {price} in {ClientScene.LocalScene}" +
 		         (open.SourceInstanceId > 0 ? $" (instance {open.SourceInstanceId}, car {open.SourceCarIndex}, lot {open.SourceLot})." : "."));
@@ -218,7 +221,8 @@ public static class CarPurchaseSync
 		Client.Instance.Send(new CarParkRequestPacket
 		{
 			RequestId = capture.RequestId, CarLoaderID = -1, PreferredSlot = -1, Car = car, Price = capture.Price,
-			SourceInstanceId = capture.SourceInstanceId, SourceCarIndex = capture.SourceCarIndex, SourceLot = capture.SourceLot
+			SourceInstanceId = capture.SourceInstanceId, SourceCarIndex = capture.SourceCarIndex, SourceLot = capture.SourceLot,
+			CarFrom = capture.CarFrom
 		});
 		MelonCoroutines.Start(WarnIfUnanswered(capture));
 	}

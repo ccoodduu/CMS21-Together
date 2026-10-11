@@ -5,6 +5,7 @@ using CMS21_Together_Core;
 using CMS21_Together_Core.Data.GameType;
 using CMS21_Together_Core.Network;
 using CMS21_Together_Core.Network.Packets;
+using CMS21_Together_Server.Data.Achievements;
 using CMS21_Together_Server.Log;
 using CMS21_Together_Server.Network;
 using CMS21_Together_Server.Network.Handlers;
@@ -119,6 +120,25 @@ namespace CMS21_Together_Server.Data.Economy
 					result.RequestId = 0;
 					Server.SendToClients(result, client);
 				}
+			}
+			AwardEventStats(client, request, outcome);
+		}
+
+		private static void AwardEventStats(int client, EconomyRequestPacket request, EconomyOutcome outcome)
+		{
+			switch (request.Reason)
+			{
+				case EconomyReason.CarSale:
+					EventStats.CarSold(client, Math.Max(0, Math.Min(request.Arg, EconomyRules.MaxCarSalePrice)), request.Arg2 == 1);
+					break;
+				case EconomyReason.ScrapItem:
+				case EconomyReason.ScrapPerCondition:
+				case EconomyReason.ScrapUpgrade:
+					EventStats.Scrapped(client, outcome.Scraps, false);
+					break;
+				case EconomyReason.CrateScrap:
+					EventStats.Scrapped(client, outcome.Scraps, true);
+					break;
 			}
 		}
 

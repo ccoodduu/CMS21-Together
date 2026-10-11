@@ -4,6 +4,7 @@ using CMS21_Together_Core;
 using CMS21_Together_Core.Network;
 using CMS21_Together_Core.Network.Packets;
 using CMS21_Together_Server.Data;
+using CMS21_Together_Server.Data.Achievements;
 using CMS21_Together_Server.Data.Cars;
 using CMS21_Together_Server.Data.Outdoor;
 using CMS21_Together_Server.Log;
@@ -53,6 +54,7 @@ namespace CMS21_Together_Server.Network.Handlers
                         Logger.Debug($"[ShopHandlers] Buy successful. Client {clientId} bought item. New Money: {state.WorldState.Money}");
                         Server.SendToClients(packet);
                         Server.SendToClients(state.WorldState);
+                        if (packet.FromPartsShop) EventStats.PartsBought((int)clientId, 1);
                     }
                     else
                     {
@@ -75,6 +77,7 @@ namespace CMS21_Together_Server.Network.Handlers
                     InventoryChanges.NoteRemoved(item, (int)clientId);
                     state.WorldState.Money += price;
                     Logger.Info($"[Shop] Sale of item {packet.ItemUID} from client {clientId}: sold for {price}.");
+                    EventStats.JunkSold((int)clientId, 1, true);
                     
                     Server.SendToClients(packet);
                     Server.SendToClients(state.WorldState);
@@ -89,6 +92,7 @@ namespace CMS21_Together_Server.Network.Handlers
                         InventoryChanges.NoteRemoved(groupItem, (int)clientId);
                         state.WorldState.Money += price;
                         Logger.Info($"[Shop] Sale of group {packet.ItemUID} from client {clientId}: sold for {price}.");
+                        EventStats.JunkSold((int)clientId, 1, true);
                         
                         Server.SendToClients(packet);
                         Server.SendToClients(state.WorldState);
@@ -99,6 +103,7 @@ namespace CMS21_Together_Server.Network.Handlers
             else if (packet.Action == ShopActionType.SellCondition)
             {
                 int totalEarned = 0;
+                int sold = 0;
                 
                 for (int i = state.InventoryState.InventoryItems.Count - 1; i >= 0; i--)
                 {
@@ -108,7 +113,8 @@ namespace CMS21_Together_Server.Network.Handlers
                         totalEarned += PricingCalculator.GetPrice(item, SellPriceFactor);
                         state.InventoryState.InventoryItems.RemoveAt(i);
                         InventoryChanges.NoteRemoved(item, (int)clientId);
-                        
+                        sold++;
+
                         Server.SendToClients(new InventoryItemActionPacket 
                         { 
                             Action = ItemActionType.Remove, 
@@ -135,7 +141,8 @@ namespace CMS21_Together_Server.Network.Handlers
                         totalEarned += (int)(PricingCalculator.GetPrice(groupItem) * SellPriceFactor);
                         state.InventoryState.InventoryGroupItems.RemoveAt(i);
                         InventoryChanges.NoteRemoved(groupItem, (int)clientId);
-                        
+                        sold++;
+
                         Server.SendToClients(new InventoryGroupItemActionPacket 
                         { 
                             Action = ItemActionType.Remove, 
@@ -149,6 +156,7 @@ namespace CMS21_Together_Server.Network.Handlers
                     state.WorldState.Money += totalEarned;
                     Server.SendToClients(state.WorldState);
                 }
+                EventStats.JunkSold((int)clientId, sold, false);
             }
         }
 

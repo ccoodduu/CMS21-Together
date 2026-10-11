@@ -5,6 +5,7 @@ using CMS21_Together_Core.Data;
 using CMS21_Together_Core.Network;
 using CMS21_Together_Core.Network.Packets;
 using CMS21_Together_Server.Data;
+using CMS21_Together_Server.Data.Achievements;
 using CMS21_Together_Server.Data.Cars;
 using CMS21_Together_Server.Data.Economy;
 using CMS21_Together_Server.Data.Outdoor;
@@ -108,6 +109,7 @@ namespace CMS21_Together_Server.Network.Handlers
 				Server.SendToClients(world);
 			}
 			Reply(client, request, ParkRefusal.None, slot);
+			EventStats.CarBought(client, request.CarFrom);
 		}
 
 		[PacketHandler(PacketTypes.CarUnparkRequest)]

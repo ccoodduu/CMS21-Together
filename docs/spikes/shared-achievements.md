@@ -20,7 +20,8 @@ Callers, from `dxref.py strings.tsv '^(stat_|achiv_|sandbox_)'` and `xref.py` (d
 ## Classification
 
 (a) shared state: every player, by re-running the game's own check against the shared state. (b) personal action:
-stays with the player who did it (job stats: row 30 contributors). (c) unclear: listed with the default used.
+stays with the player who did it (job stats: row 30 contributors). (c) event on shared things: every player, by a
+server award (user decision 2026-10-11, QUESTIONS.md item 8; "Event stats" below).
 
 | Stat | Achievements (`ProgressMax`) | Set by | Class | How |
 |---|---|---|---|---|
@@ -41,12 +42,12 @@ stays with the player who did it (job stats: row 30 contributors). (c) unclear: 
 | `stat_finish_testtrack`, `stat_finish_testpath` | 1 (path also 25) | `TestTrackManager.DoneTest`, `PathTestManager.<ExitFromCar>` | b | the driver |
 | `stat_timeattack` | 1 | `RaceTrackManager.LastTime` | b | the driver |
 | `stat_dragrace_all`/`_win`/`_moneywon` | none in the file | drag strip, `DragResultsWindow`, `DragChampionshipLadderWindow` | b | |
-| `stat_buy_carsalon`/`_carjunkyard`/`_barn` | 1 (junkyard, barn also 30) | `CarSummaryTab.<BuyCar>g__BuyCarAction` | c | **default: the buyer.** The car and the money are shared, but this counts a purchase event; no other client can tell a purchase from its state, so sharing needs a server award (protocol change) |
-| `stat_sell_car` (amount), `stat_sell_fix_car` | 5000, 50000; 1, 50 | `CarSummaryTab.<SellCar>g__SellCarAction` | c | **default: the seller**, same reason |
-| `stat_win_car` | 5, 25 | `AuctionBidding.ReceiveCarAction` | c | **default: the bidder**, same reason |
-| `stat_scrap` (amount, also negative) | 500, 2000 | `GlobalData.AddPlayerScraps` | c | **default: the player whose action changes the scrap** (the shared scrap total moves for many reasons; a delta on other clients would also count resyncs) |
-| `stat_buy_parts` | 100, 3000 | `ShopBuyWindow.BuyItem` | c | **default: the buyer** |
-| `stat_sell_junk` | 1000 | `Inventory.SellPerCondition`, `NotificationCenter.NewButtonAccept` | c | **default: the seller** |
+| `stat_buy_carsalon`/`_carjunkyard`/`_barn` | 1 (junkyard, barn also 30) | `CarSummaryTab.<BuyCar>g__BuyCarAction` | c | the buyer's game; the others when the server accepts the purchase (`CarParkRequest` from outside the garage, `CarFrom` names the source) |
+| `stat_sell_car` (amount), `stat_sell_fix_car` | 5000, 50000; 1, 50 | `CarSummaryTab.<SellCar>g__SellCarAction` | c | the seller's game; the others on the accepted `CarSale` (profit `sellPrice - BuyPrice` and the full-condition flag read from the summary tab, sent as `Arg`/`Arg2`) |
+| `stat_win_car` | 5, 25 | `AuctionBidding.ReceiveCarAction` | c | the bidder's game; the others on the accepted purchase (`CarFrom` Auction) |
+| `stat_scrap` (amount, also negative) | 500, 2000 | `GlobalData.AddPlayerScraps`, `Inventory.ScrapPerCondition` | c | the server's amount of each accepted `ScrapItem`, `ScrapPerCondition` and `ScrapUpgrade` (negative) to everyone, the actor too (the mod skips those game methods); `CrateScrap` to the others (the opener's game counts it). Resyncs and admin changes of the scrap total count nothing |
+| `stat_buy_parts` | 100, 3000 | `ShopBuyWindow.BuyItem` (parts shop only) | c | every accepted `ShopAction` Buy marked `FromPartsShop`, 1 each, to everyone (the mod skips `BuyItem`) |
+| `stat_sell_junk` | 1000 | `Inventory.SellPerCondition`, `NotificationCenter.NewButtonAccept` | c | single sale: the seller's game, the others on the accepted `SellSingle`; sale per condition: the number of sold items to everyone (the mod skips the game's sale) |
 
 Not a stat: money, cars owned, barn maps (`BarnsAmount`) and garage looks have no stat or achievement, so there is
 nothing to share for them. `sandbox_<id>` is the same stat in difficulty mode 2.
@@ -79,6 +80,28 @@ no double count: the checks are the game's (or mirror the game's trigger), and e
   `StatsGuard` blocks `SetStat`, `StoreStats` and `SetAchievement`), because the user's own account may already have
   the stat and the game would skip the check.
 
-Server-side awards are not used: every (a) stat has a check the client can run from state it already has. The (c)
-stats would need one (for example a `StatAward { Stats }` the server sends after an accepted car purchase, sale or
-auction win); left for a decision.
+Every (a) stat has a check the client can run from state it already has, so they need no server award.
+
+## Event stats (2026-10-11)
+
+The (c) stats count an event, not a state another client can check, so the server awards them when it accepts the
+event: `EventStatsAward { Event, Actor, Stats: [{ Id, Amount }] }` (appended to `PacketTypes`), built by
+`EventStats` (server, `Data/Achievements`). Each receiver's game calls `PlatformManager.IncrementStat(Id, Amount)`, the
+game's normal path, so achievements unlock at the game's thresholds.
+
+- **Receivers** mirror `JobStatsAward`: connected players in session (`SyncState.InSession`, with an identity). A
+  player who is not connected when it happens gets nothing, and nothing is stored for later.
+- **No double count:** the actor is left out when its own game ran the method that counts the stat (car purchase,
+  auction win, car sale, single item sale, crate scrap). When the mod skips that game method and asks the server
+  instead (`MakeScrap`, `ScrapPerConditionWindow.AcceptAction`, `ScrapUpgrade`, `ShopBuyWindow.BuyItem`,
+  `SellPerConditionWindow.AcceptAction`), the actor counted nothing, so it is awarded too. Before this change nobody
+  got those stats while connected.
+- **Amounts** are the server's where it has them (scrap amount, number of sold items, one per bought part). The
+  facts it lacks come with the request: `CarParkRequest.CarFrom` (optional field; 0 = none, no stat) and, for
+  `CarSale`, `Arg` = profit and `Arg2` = 1 for a full-condition car that is not from the salon, read from the
+  game's `CarSummaryTab` (a sale not made through the tab counted nothing in the seller's game, so it sends 0).
+  `ShopAction.FromPartsShop` (optional) marks a buy in the parts shop (`ShopType.Main`), the only one the game counts.
+- A refused event awards nothing; the actor's own count of a refused purchase or sale stays as before (the game
+  counted it before asking).
+- Harness: `event-stats` (salon purchase with B in the garage, a scrap, two parts bought) checks the counts with
+  `stats-trace`.
