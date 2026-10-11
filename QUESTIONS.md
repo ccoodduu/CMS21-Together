@@ -144,7 +144,8 @@ Shared achievements (2026-10-10):
 8. **Event stats on shared things** (`stat_buy_carsalon`/`_carjunkyard`/`_barn`, `stat_sell_car`, `stat_sell_fix_car`,
    `stat_win_car`, `stat_scrap`, `stat_buy_parts`, `stat_sell_junk`): they count a purchase, sale or scrap event, not a
    state another client can check, so sharing them needs a server award (a new packet). **Default:** the player who
-   acted keeps them; say if cars bought/sold should go to everyone and the packet gets built.
+   acted keeps them; say if cars bought/sold should go to everyone and the packet gets built. **Answered
+   2026-10-11:** shared — every player gets these event stats; the server award packet gets built.
 
 ## Answered
 - **Answered by the user on 2026-10-10 (row 31 scope):** B. The fixed wait after the own track car is ready goes from
