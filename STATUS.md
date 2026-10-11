@@ -2,6 +2,18 @@
 
 Newest first. One entry per work session.
 
+## 2026-10-11 (00:20–03:05) — daily regression, release prep
+
+- Daily full regression on main `38d7645` (with the night soak fixes) from the pinned worktree:
+  `20261011-002137_regression.json`, **119 of 119 PASSED**, no scenario failed in a batch.
+- Answered (QUESTIONS item 8): event stats on shared things are shared; `feat/shared-event-stats` in progress.
+- Release 1.0.0 (user: draft only, the repo is public): changelog section `[1.0.0]` (`9ea6f2a`);
+  `Build-Release.ps1 -DraftGitHubRelease` now creates the draft on origin's repository (gh defaulted to upstream) for
+  HEAD without a pushed tag (`a662da1`). Version bump, zips, `release-smoke` and the draft follow after the event stats
+  merge.
+- Open from the night soak: jobs digest counts a claimed order as open; `details-same` 251 (D's fluid change never
+  sent); game memory slope up to 442 MB/h in the 6 h soak.
+
 ## 2026-10-10/11 (18:35–00:20) — the night soak's lift desyncs and harness failures (`worktree-agent-abc33d5c63f52c9b6`, all lanes)
 
 - Night soak `20261010-173029_L3_soak` (6 h, VERDICT FAIL). Analysed from its logs while it ran; tests after it ended.
