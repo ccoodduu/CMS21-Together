@@ -2,6 +2,19 @@
 
 Newest first. One entry per work session.
 
+## 2026-10-11 (05:10–05:25) — night soak leftovers: DeleteCar NRE and game memory
+
+- `CarLoader::DeleteCar` NRE (A 1, C 5 in `20261010-173029_L3_soak`): all at the harness `quit`, right after "session
+  ended". Already allow-listed in `scenarios/soak-allow.txt` since 2026-10-07 (vanilla `CarLoader.OnDestroy` at game
+  quit after `GameManager` is gone). Nothing to fix.
+- Game memory "123–442 MB/h": the per-process slopes (`perf_processes.csv`, after 5 min load) are inflated by scene
+  visits. D's 10-minute minimum is bimodal, about 1.6–1.9 GB in the garage and 3.1–3.4 GB while it was away (track,
+  junkyard), switching back and forth from 20:20. The garage baseline grew 1098 → 1936 MB in 5.8 h (≈ 145 MB/h); A, B
+  and C are 125–280 MB/h per process life. Handles stay flat (≈ 1000). The 2026-10-08 soak shows the same range
+  (90–416 MB/h), so it is not new. A 4-hour play session would add well under 1 GB in the garage. Not analysed
+  further; the next concrete question would be "does memory grow while connected and idle in the garage" (1 h, two
+  clients, no actions) to tell the mod's share from the game's car spawns.
+
 ## 2026-10-11 (04:50–05:10) — car details change while busy (`fix/details-held-flush`, lanes 1 and 2)
 
 - Found while looking at contention 251: `CarDetailsSync.Update` removed the dirty mark before `Flush`, which refused
