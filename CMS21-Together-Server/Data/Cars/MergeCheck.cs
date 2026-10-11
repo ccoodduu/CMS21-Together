@@ -208,12 +208,14 @@ namespace CMS21_Together_Server.Data.Cars
 			skills["cheaper_parking"][0] = true;
 			DifferentHash("garage", state, DigestMappers.GarageKey, "", DigestMappers.Garage(upgrades, skills, 2, look));
 
-			state.JobsState.Orders.Add(new OrderEntry { Job = new ModJob { id = 5 }, Status = OrderStatus.Claimed });
+			state.JobsState.Orders.Add(new OrderEntry { Job = new ModJob { id = 5 } });
 			state.JobsState.Orders.Add(new OrderEntry { Job = new ModJob { id = 4 } });
 			state.JobsState.ActiveJobs.Add(new ActiveJobEntry { Job = new ModJob { id = 2, carLoaderID = -1 }, CarLoaderId = 1 });
 			var orders = new[] { 4, 5 };
 			SameHash("jobs", state, DigestMappers.JobsKey, "", DigestMappers.Jobs(orders, new[] { new KeyValuePair<int, int>(2, 1) }));
 			DifferentHash("jobs", state, DigestMappers.JobsKey, "", DigestMappers.Jobs(orders, new[] { new KeyValuePair<int, int>(2, 0) }));
+			state.JobsState.Orders[0].Status = OrderStatus.Claimed;
+			Check("jobs are not compared while an order is claimed", ReconciliationService.ProjectState(state, DigestMappers.JobsKey, "") == null);
 		}
 
 		private static ModGameState Reseq(ModGameState state, int spawnSeq)

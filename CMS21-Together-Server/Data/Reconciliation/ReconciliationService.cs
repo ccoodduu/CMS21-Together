@@ -321,6 +321,7 @@ namespace CMS21_Together_Server.Data.Reconciliation
 				case DigestMappers.GarageKey:
 					return DigestMappers.Garage(state.GarageState.GarageUpgradeLevels, state.GarageState.PlayerUpgradeLevels, state.WorldState.Barns, state.GarageState.Look);
 				case DigestMappers.JobsKey:
+					if (state.JobsState.Orders.Any(o => o.Status == OrderStatus.Claimed)) return null;
 					return DigestMappers.Jobs(state.JobsState.Orders.Select(o => o.Job.id),
 						state.JobsState.ActiveJobs.Select(a => new KeyValuePair<int, int>(a.Job.id, a.CarLoaderId)));
 				default:
