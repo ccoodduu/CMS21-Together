@@ -2,6 +2,16 @@
 
 Newest first. One entry per work session.
 
+## 2026-10-11 (03:25–03:40) — release 1.0.0 as a draft
+
+- Merged `feat/shared-event-stats`. The actor is also awarded scrap, parts-shop and junk-by-condition stats, because
+  the mod replaces those game methods (otherwise nobody got them while connected); kept, it matches "shared".
+- `chore: release 1.0.0` (`8a0a1e8`, version 1.0.0, changelog). Tag `v1.0.0` exists only locally.
+- `Build-Release.ps1 -Release`; `release-smoke` on the installed zips PASSED (`20261011-032139_L1_release-smoke`,
+  A and B run `1.0.0+8a0a1e8`).
+- Draft GitHub release on `ccoodduu/CMS21-Together` with both zips and `SHA256SUMS.txt`, target `8a0a1e8`; no tag on
+  GitHub until the user publishes it. After publishing: `git fetch --tags`, then bump to the next version.
+
 ## 2026-10-11 (00:20–03:05) — daily regression, release prep
 
 - Daily full regression on main `38d7645` (with the night soak fixes) from the pinned worktree:
