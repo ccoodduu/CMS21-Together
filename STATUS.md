@@ -2,6 +2,27 @@
 
 Newest first. One entry per work session.
 
+## 2026-10-11 (02:55–03:25) — shared event stats (`feat/shared-event-stats`, lanes 1 and 2)
+
+- `feat/shared-event-stats` (not merged). QUESTIONS.md item 8, answered 2026-10-11: the event stats on shared things
+  go to every player. `16470d7`: new packet `EventStatsAward { Event, Actor, Stats[{ Id, Amount }] }` (appended),
+  sent by the server's `EventStats` to the players in session when it accepts a car purchase from the salon,
+  junkyard or barn or an auction win (`CarParkRequest.CarFrom`, optional), a car sale (`stat_sell_car` profit and
+  `stat_sell_fix_car` read from the game's summary tab, sent as `Arg`/`Arg2`), a scrap (`ScrapItem`,
+  `ScrapPerCondition`, `ScrapUpgrade` negative as in the game, crate scrap), a parts-shop buy
+  (`ShopAction.FromPartsShop`, optional) or a junk sale (single and per condition). Receivers call
+  `PlatformManager.IncrementStat`. The actor is left out when its own game ran the counting method (purchase,
+  auction, sale, single item sale, crate); where the mod skips the game method and asks the server (scrapping, the
+  parts shop, sale per condition) nobody counted these stats before, so the actor is awarded too. Players not
+  connected get nothing (as `JobStatsAward`). Design: `docs/spikes/shared-achievements.md` "Event stats".
+- Proof: `event-stats` (new; salon purchase with B in the garage, a scrap, two parts bought) fails on the old code
+  (`20261011-031208_L1_event-stats-oldcode`: B 0 `stat_buy_carsalon`, nobody `stat_scrap` or `stat_buy_parts`) and
+  passes (`20261011-031034_L1_event-stats`). Smoke + `event-stats` + `shared-achievements`, lanes 1 and 2: 8/8 passed
+  (`20261011-031451_regression.json`).
+- Open: car sale through the summary tab, auction win, junkyard/barn purchase and junk sales are covered by the code
+  path but not by a scenario (the harness's `econ-sell-car` calls `GameScript.SellCar` directly, so it sends no sale
+  stats).
+
 ## 2026-10-10/11 (18:35–00:20) — the night soak's lift desyncs and harness failures (`worktree-agent-abc33d5c63f52c9b6`, all lanes)
 
 - Night soak `20261010-173029_L3_soak` (6 h, VERDICT FAIL). Analysed from its logs while it ran; tests after it ended.
