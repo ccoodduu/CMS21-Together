@@ -8,6 +8,14 @@ The milestones M1 to M4 below were played as development builds of 0.6.0 (`0.6.0
 releases. 1.0.0 (milestone M6) is the first release of this fork. Upstream's own releases (0.4.x, 0.5.0) are listed on
 [Fozkais/CMS21-Together](https://github.com/Fozkais/CMS21-Together/releases).
 
+## [Unreleased]
+
+### Fixed
+
+- The server no longer resends the job list to every player while one player's order is being claimed.
+- A car detail changed while that car's details were busy (for example a licence plate) now reaches the other players
+  once they are free, instead of being lost.
+
 ## [1.0.0] - 2026-10-11
 
 The first release of this fork (milestones M5 "Robust sessions" and M6 "Release 1.0", plus everything built after
