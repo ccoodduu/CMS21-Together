@@ -23,6 +23,7 @@ public class ShopActionPacket : INetworkData
     public ModItem ItemToBuy;
     public ModGroupItem GroupItemToBuy;
     public bool IsGroupItem;
+    [OptionalField] public bool FromPartsShop;
 
     // For SellSingle
     public long ItemUID; // UID of the item or group item to sell

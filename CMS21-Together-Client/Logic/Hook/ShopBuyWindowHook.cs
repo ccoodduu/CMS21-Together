@@ -1,3 +1,4 @@
+using CMS.UI.Logic;
 using CMS.UI.Windows;
 using CMS21_Together_Core.Data.GameType;
 using CMS21_Together_Core.Logging;
@@ -42,7 +43,8 @@ namespace CMS21Together.Logic.Hook
                     {
                         Action = ShopActionType.Buy,
                         IsGroupItem = false,
-                        ItemToBuy = modItem
+                        ItemToBuy = modItem,
+                        FromPartsShop = __instance.shopType == ShopType.Main
                     };
                     
                     Client.Instance.Send(packet);

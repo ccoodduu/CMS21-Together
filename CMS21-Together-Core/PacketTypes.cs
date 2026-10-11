@@ -157,5 +157,7 @@ public enum PacketTypes
 	RaceCountdown,
 	RaceLap,
 	RaceQuit,
-	RaceResult
+	RaceResult,
+
+	EventStatsAward
 }

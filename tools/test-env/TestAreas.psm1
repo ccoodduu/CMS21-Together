@@ -61,6 +61,7 @@ CMS21-Together-*/Network/Handlers/Lock*                        locks, parts, pla
 CMS21-Together-*/Network/Handlers/Car*                         cars, parts
 CMS21-Together-*/Network/Handlers/Digest*                      resync
 CMS21-Together-*/Network/Handlers/Economy*                     economy
+CMS21-Together-*/Network/Handlers/Achievement*                 economy, placement
 CMS21-Together-*/Network/Handlers/Outdoor*                     outdoor, economy, presence
 CMS21-Together-*/Network/Handlers/GarageLook*                  garage
 CMS21-Together-*/Network/Handlers/GarageUpgrade*               economy, placement
@@ -178,6 +179,7 @@ CMS21-Together-Server/Data/Cars/AwayCheck*                     testdrive, cars
 CMS21-Together-Server/Data/Cars/InventoryChanges.cs            parts, economy
 CMS21-Together-Server/Data/Cars/*                              cars, parts
 CMS21-Together-Server/Data/Economy/*                           economy
+CMS21-Together-Server/Data/Achievements/*                      economy, placement
 CMS21-Together-Server/Data/Outdoor/*                           outdoor, economy, presence
 CMS21-Together-Server/Data/PricingCalculator.cs                economy
 CMS21-Together-Server/Data/Jobs/*                              jobs
