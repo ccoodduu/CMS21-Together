@@ -2,6 +2,16 @@
 
 Newest first. One entry per work session.
 
+## 2026-10-11 (08:35–08:45) — release 1.0.0 published, version 1.1.0
+
+- The user asked me to publish the draft (they could not from the phone). Published as is:
+  https://github.com/ccoodduu/CMS21-Together/releases/tag/v1.0.0, marked Latest. GitHub created the tag `v1.0.0` on
+  `8a0a1e8`, the commit the zips were built from. The local annotated tag points at the same commit, so `git fetch
+  --tags` reports "would clobber"; that is harmless.
+- The two fixes from this night (jobs digest while an order is claimed, held car details change) came after
+  `8a0a1e8` and are not in 1.0.0. They are now under `## [Unreleased]` in `CHANGELOG.md`.
+- `TogetherVersion` raised to 1.1.0 (`docs/versioning.md`: the first commit after a release).
+
 ## 2026-10-11 (05:10–05:25) — night soak leftovers: DeleteCar NRE and game memory
 
 - `CarLoader::DeleteCar` NRE (A 1, C 5 in `20261010-173029_L3_soak`): all at the harness `quit`, right after "session
